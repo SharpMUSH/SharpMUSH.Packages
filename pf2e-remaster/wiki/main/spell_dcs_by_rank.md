@@ -1,4 +1,4 @@
-The DC for a spell of a given rank, such as to Identify a Spell. Adjust it for an uncommon or rare spell with [[DC Adjustments|Table:DC Adjustments]].
+The DC for a spell of a given rank, such as to Identify a Spell. Adjust it for an uncommon or rare spell with [[DC Adjustments]].
 
 | Spell Rank | DC |
 |---|---|

@@ -29,7 +29,7 @@ The DC for a subject of a given level: a creature to Recall Knowledge about, a t
 | 24 | 48 |
 | 25 | 50 |
 
-Characters who train a skill pass DCs of their own level more and more easily as they rise in level. For spells, use [[Spell DCs by Rank|Table:Spell DCs by Rank]].
+Characters who train a skill pass DCs of their own level more and more easily as they rise in level. For spells, use [[Spell DCs by Rank]].
 
 *Source: GM Core, p. 53.*
 

@@ -2,11 +2,12 @@
 
 A rules reference for Pathfinder Second Edition (Remaster), installed as wiki pages: every
 condition from Player Core and the difficulty class tables from GM Core. Players read them in the
-portal's wiki and with `+wiki`; the tables are wiki tables other packages can look values up in.
+portal's wiki and with `+wiki`.
 
-This is a **content pack**. It carries no objects or softcode. The rules that act on these pages
-(rolling checks, applying conditions to characters) belong in a separate package, which will
-depend on the dice package.
+This is a **content pack**: documentation only, with no objects or softcode. Softcode never reads
+these pages. The rules themselves, with the DC tables as game data, belong in a separate
+implementation package that depends on the dice package; that package may write its tables to the
+wiki, but never the other way round.
 
 Not published, endorsed or approved by Paizo. Pathfinder is a trademark of Paizo Inc.
 
@@ -15,8 +16,7 @@ Not published, endorsed or approved by Paizo. Pathfinder is a trademark of Paizo
 | Namespace | Pages |
 |---|---|
 | Category | Conditions (pinned to the wiki home), its groups (Attitudes, Death and Dying, Degrees of Detection, Lowered Abilities, Senses), Difficulty Classes (pinned) |
-| Main | 42 conditions, Degrees of Success |
-| Table | Simple DCs, DCs by Level, Spell DCs by Rank, DC Adjustments |
+| Main | 42 conditions, Degrees of Success, Simple DCs, DCs by Level, Spell DCs by Rank, DC Adjustments |
 | Help | ORC License Notice (wiki admins only may edit or delete it) |
 
 Every page ends with a line linking the ORC License Notice page.
