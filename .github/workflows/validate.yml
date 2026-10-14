@@ -25,12 +25,15 @@ jobs:
           path: sharpmush
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           global-json-file: sharpmush/global.json
 
+      # Run from the SharpMUSH checkout so its global.json picks the SDK; from the
+      # workspace root, dotnet would take the newest SDK on the runner instead.
       - name: Validate manifests (strict)
-        run: dotnet run --project sharpmush/tools/PackageValidator -- packages --strict
+        working-directory: sharpmush
+        run: dotnet run --project tools/PackageValidator -- ../packages --strict
 
   immutable-tags:
     # Release tags (<pkg>/vX.Y.Z) are immutable: this job fails any push that
