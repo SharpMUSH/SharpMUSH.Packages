@@ -36,6 +36,7 @@ constraints checked before anything is planned.
 | [`who-where/`](who-where/) | 1.2.0 | `+who` and `+where` commands with a shared formatting object |
 | [`starter-area/`](starter-area/) | 1.0.0 | Two rooms and linked exits |
 | [`bbs-lite/`](bbs-lite/) | 0.9.0-beta | Tiny bulletin board; dependencies, typed configure params, cross-package refs |
+| [`pf2e-remaster/`](pf2e-remaster/) | 1.0.0 | Pathfinder Second Edition (Remaster) conditions and DC tables as wiki pages; a content pack under the ORC License |
 
 These currently double as the reference implementations for package authors —
 each README explains which manifest features it demonstrates. The curated
@@ -136,6 +137,7 @@ and released versions are never rewritten — bump the version instead.
 ## License
 
 Same license as SharpMUSH unless a package declares otherwise in its
-manifest. Package manifests are softcode — inspect anything you install; the
-admin panel's review screen flags dangerous patterns (`@force`, `@toad`, …)
+manifest. `pf2e-remaster/` is one that does: its rules text is under the ORC
+License, with the notice in [`pf2e-remaster/NOTICE.md`](pf2e-remaster/NOTICE.md).
+Package manifests are softcode — inspect anything you install; the admin panel's review screen flags dangerous patterns (`@force`, `@toad`, …)
 to help.
