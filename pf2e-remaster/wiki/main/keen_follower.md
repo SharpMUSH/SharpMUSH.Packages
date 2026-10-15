@@ -1,0 +1,14 @@
+**General Feat 3**  
+**Traits:** General
+
+---
+
+Your keen observation of your allies has made you better at following their lead. When using the Follow the Expert activity in exploration mode, you gain a +3 circumstance bonus if the ally you are following is an expert and a +4 circumstance bonus if your ally is a master.
+
+You can share your observations with others to help further coordinate the group. If the ally you are following has Quiet Allies or another skill feat that allows the group to roll a single skill check for an exploration activity and use the lowest modifier, they can instead use your modifier, even if it's not the lowest.
+
+*Source: Player Core 2.*
+
+---
+
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

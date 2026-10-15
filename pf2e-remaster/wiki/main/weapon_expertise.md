@@ -1,0 +1,29 @@
+**Class Feature 5**  
+**Traits:** [[Champion|main:champion]], [[Druid|main:druid]], Exemplar, Guardian, [[Investigator|main:investigator]], Kineticist, Magus, Necromancer, [[Oracle|main:oracle]], Psychic, Runesmith, [[Sorcerer|main:sorcerer]], [[Swashbuckler|main:swashbuckler]], Thaumaturge, [[Witch|main:witch]], [[Wizard|main:wizard]]  
+**Class:** [[Champion|main:champion]], [[Druid|main:druid]], [[Investigator|main:investigator]], [[Oracle|main:oracle]], [[Sorcerer|main:sorcerer]], [[Swashbuckler|main:swashbuckler]], [[Witch|main:witch]], [[Wizard|main:wizard]]
+
+---
+
+**Champion, Exemplar, Investigator, Magus, Runesmith** You've dedicated yourself to learning the intricacies of your weapons. Your proficiency ranks for simple weapons, martial weapons, and unarmed attacks increase to expert.
+
+**Druid, Kineticist** You've improved your combat skill. Your proficiency rank for simple weapons and unarmed attacks increases to expert.
+
+**Guardian** Sometimes, the best defense is a good offense. Your proficiency ranks for simple weapons, martial weapons, and unarmed attacks increase to expert.
+
+**Necromancer, Oracle** You've dedicated yourself to learning the intricacies of your weapons. Your proficiency ranks for simple weapons and unarmed attacks increase to expert.
+
+**Psychic** Training has improved your weapon technique, possibly enhanced by your occult magic. Your proficiency rank for simple weapons and unarmed attacks increases to expert.
+
+**Sorcerer** You've improved your combat skill. Your proficiency ranks for simple weapons and unarmed attacks increase to expert.
+
+**Swashbuckler** You've dedicated yourself to learning the intricacies of your weapons. Your proficiency ranks for simple weapons, martial weapons, and unarmed attacks increase to expert. You gain access to the critical specialization effects of all weapons for which you have expert proficiency.
+
+**Thaumaturge** You've learned the secret ways your weapons work most effectively. Your proficiency ranks for unarmed attacks, simple weapons, and martial weapons increase to expert.
+
+**Witch, Wizard** Through sheer experience, you've improved your technique with your weapons. Your proficiency ranks for simple weapons and unarmed attacks increase to expert.
+
+*Source: Player Core.*
+
+---
+
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

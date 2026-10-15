@@ -1,8 +1,10 @@
 # pf2e-remaster
 
-A rules reference for Pathfinder Second Edition (Remaster), installed as wiki pages: every
-condition from Player Core and the difficulty class tables from GM Core. Players read them in the
-portal's wiki and with `+wiki`.
+A rules reference for Pathfinder Second Edition (Remaster), installed as wiki pages: the classes,
+ancestries, heritages, backgrounds, feats, spells, actions, equipment and familiar abilities of
+Player Core, Player Core 2 and GM Core, a page for every skill, a character sheet overview, every
+condition, the difficulty class tables and rules overviews. Players read them in the portal's wiki
+and with `+wiki`.
 
 This is a **content pack**: documentation only, with no objects or softcode. Softcode never reads
 these pages. The rules themselves, with the DC tables as game data, belong in a separate
@@ -15,9 +17,15 @@ Not published, endorsed or approved by Paizo. Pathfinder is a trademark of Paizo
 
 | Namespace | Pages |
 |---|---|
-| Category | Conditions (pinned to the wiki home), its groups (Attitudes, Death and Dying, Degrees of Detection, Lowered Abilities, Senses), Difficulty Classes (pinned) |
-| Main | 42 conditions, Degrees of Success, Simple DCs, DCs by Level, Spell DCs by Rank, DC Adjustments |
+| Category | Character Creation, Rules, Conditions and Difficulty Classes (all four pinned to the wiki home), and under them Classes, Class Features, Ancestries, Heritages (one per ancestry, plus Versatile Heritages), Backgrounds, Skills, Feats (Ancestry, Class, General, Skill and Archetype Feats, with one category per class and per ancestry), Spells (Cantrips, Rank 1 to Rank 10, Focus Spells, Rituals, and one per tradition), Actions (Basic, Specialty Basic, Skill, Exploration, Downtime, Subsystem, Other), Equipment (Weapons, Armor, Shields, Ammunition, Consumables and their kinds, Runes, Staves, Wands, Worn and Held Items, Adventuring Gear, Treasure and more), Familiar Abilities, and the condition groups |
+| Main | 16 classes, 341 class features, 16 ancestries, 106 heritages, 63 backgrounds, 1,814 feats, 659 spells, 166 actions, 1,241 items, 55 familiar abilities, 17 skills, Proficiency Ranks, Character Sheet, 37 rules overviews, 42 conditions, Degrees of Success and the four DC tables |
 | Help | ORC License Notice (wiki admins only may edit or delete it) |
+
+Each class page gives its key attribute, Hit Points, initial proficiencies, feat levels, class
+features by level and its class feats; each ancestry its Hit Points, size, Speed, boosts and flaws,
+languages, heritages and ancestry feats. Feats show level, traits, prerequisites and action cost;
+spells their rank, traditions, casting, range, area, targets, defense, duration and heightening;
+items their level, price, Bulk, traits, usage and weapon, armor or shield stats.
 
 Every page ends with a line linking the ORC License Notice page.
 
@@ -48,7 +56,11 @@ When you change a page:
 - don't add material from Paizo's Fan Content Policy or Community Use Policy; those can't be
   mixed with ORC rules content.
 
-The text was written for this pack from Player Core and GM Core, not copied from another site.
+The conditions, DC tables, skill pages, Proficiency Ranks and Character Sheet were written for this
+pack from Player Core and GM Core. Everything else was transcribed from the Foundry VTT pf2e game
+system, taking only items it marks as ORC-licensed from Player Core, Player Core 2 and GM Core;
+pages that name a deity, place, organization or other setting term were reworded to leave it out,
+or left out where the name is the rule.
 
 ## Files
 

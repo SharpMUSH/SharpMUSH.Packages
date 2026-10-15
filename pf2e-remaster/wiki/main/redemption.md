@@ -1,0 +1,24 @@
+**Class Feature 1**  
+**Traits:** [[Champion|main:champion]]
+
+---
+
+Yearning for all to live in harmony, you make every attempt to redeem those others might slay or dismiss.
+
+**Edicts** try to redeem those who commit wicked deeds, show compassion to others regardless of their authority or station
+
+**Anathema** kill a sapient enemy without first offering a chance at redemption
+
+---
+
+**Champion's Reaction** [[Glimpse of Redemption|main:glimpse_of_redemption]]
+
+**Relentless Reaction (9th Level)** If the enemy refuses, it takes persistent spirit damage equal to your Charisma modifier.
+
+**Exalted Reaction (11th Level)** If the enemy refuses, you can choose to grant the resistance to yourself and all allies in your champion's aura, including the triggering ally. If you do, the resistance is reduced by 2 for all.
+
+*Source: Player Core 2.*
+
+---
+
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

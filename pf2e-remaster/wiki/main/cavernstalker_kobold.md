@@ -1,0 +1,12 @@
+**Heritage**  
+**Ancestry:** [[Kobold|main:kobold]]
+
+---
+
+You hatched in a warren with narrow tunnels that was also home to a being of primal earth energy, which has made you limber and flexible. When [[Climbing|main:climb]] rock walls, stalactites, and other natural stone features, you move at half your Speed on a success and at full Speed on a critical success (and you move at full Speed on a success if you have [[Quick Climb|main:quick_climb]]). This doesn't affect you if you're using a climb Speed. If you roll a success on an Acrobatics check to [[Squeeze|main:squeeze]], you get a critical success instead.
+
+*Source: Player Core 2.*
+
+---
+
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

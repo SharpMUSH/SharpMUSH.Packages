@@ -1,0 +1,12 @@
+**Class Feat 1**  
+**Traits:** [[Investigator|main:investigator]]
+
+---
+
+You've collected a cross-section of information on various disciplines you can refer to when preparing for various tasks. During your daily preparations, you can cram on a certain subject to become temporarily trained in one skill of your choice. This proficiency lasts until you prepare again. As this proficiency is temporary, you can't use it as a prerequisite for a permanent character option like a skill increase or a feat.
+
+*Source: Player Core 2.*
+
+---
+
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

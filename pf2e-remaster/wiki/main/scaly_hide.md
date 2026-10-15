@@ -1,0 +1,16 @@
+**Ancestry Feat 1**  
+**Traits:** [[Dragonblood|main:dragonblood]]
+
+---
+
+You were born with a layer of scales across your entire body that resemble those of your draconic progenitor. When you're unarmored, the scales give you a +1 item bonus to AC with a Dexterity cap of +3. The item bonus to AC increases to +2 at 5th level. The item bonus to AC from these scales is cumulative with armor potency runes on your explorer's clothing, the [[Mystic Armor|main:mystic_armor]] spell, or [[Bands of Force|main:bands_of_force]].
+
+---
+
+**Special** You can select this feat only at 1st level, and you can't retrain into or out of this feat.
+
+*Source: Player Core 2.*
+
+---
+
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

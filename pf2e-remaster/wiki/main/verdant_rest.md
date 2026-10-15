@@ -1,0 +1,13 @@
+**Action** (1 action)  
+**Traits:** Concentrate  
+**Frequency:** once per hour
+
+---
+
+You turn into a tree or other non-creature plant. This has the effect of using [[One with Plants|main:one_with_plants]] to turn into a plant, except that your AC is 30. You can Dismiss this effect to turn back. If you rest for 10 minutes in this form in natural sunlight, you recover half your maximum Hit Points. If you take your daily rest in this form, the rest restores you to maximum Hit Points and removes all non-permanent [[Drained|main:drained]], [[Enfeebled|main:enfeebled]], [[Clumsy|main:clumsy]], and [[Stupefied|main:stupefied]] conditions, as well as all poisons and diseases of 19th level or lower.
+
+*Source: Player Core.*
+
+---
+
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

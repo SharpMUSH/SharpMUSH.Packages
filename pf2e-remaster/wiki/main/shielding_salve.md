@@ -1,0 +1,17 @@
+**Item 1**  
+**Traits:** Consumable, Magical, Oil  
+**Price:** 4 gp  
+**Bulk:** L  
+**Usage:** held in two hands
+
+---
+
+**Activate** (1 action) Interact
+
+This shimmering paste has many properties of a [[Shield|main:shield]] spell. When you slather it onto a creature or object, the target gains a +1 circumstance bonus to AC for 1 round. The first time a physical attack or a force barrage hits the target during that round, the oil prevents 5 damage from that attack or spell, and then the oil's effect ends.
+
+*Source: Player Core 2.*
+
+---
+
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

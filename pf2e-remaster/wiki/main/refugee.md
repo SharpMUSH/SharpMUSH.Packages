@@ -1,0 +1,17 @@
+**Background**  
+**Attribute boosts:** Constitution or Wisdom, free  
+**Trained skills:** [[Society|main:society]]
+
+---
+
+You come from a land very distant from the one you now find yourself in, driven by war, plague, or simply in the pursuit of opportunity. Regardless of your origin or the reason you left your home, you find yourself an outsider in this new land. Adventuring is a way to support yourself while offering hope to those who need it most.
+
+Choose two attribute boosts. One must be to **Constitution** or **Wisdom**, and one is a free attribute boost.
+
+You're trained in the Society skill and a Lore skill related to the settlement you came from. You gain the [[Streetwise|main:streetwise]] skill feat.
+
+*Source: Player Core 2.*
+
+---
+
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

@@ -1,0 +1,35 @@
+Spells of rank 6.
+
+- [[Blanket of Stars|main:blanket_of_stars]]
+- [[Blessed Boundary|main:blessed_boundary]]
+- [[Blinding Fury|main:blinding_fury]]
+- [[Chain Lightning|main:chain_lightning]]
+- [[Collective Transposition|main:collective_transposition]]
+- [[Cursed Metamorphosis|main:cursed_metamorphosis]]
+- [[Disintegrate|main:disintegrate]]
+- [[Dominate|main:dominate]]
+- [[Dragon Form|main:dragon_form]]
+- [[Field of Life|main:field_of_life]]
+- [[Mislead|main:mislead]]
+- [[Never Mind|main:never_mind]]
+- [[Petrify|main:petrify]]
+- [[Phantasmal Calamity|main:phantasmal_calamity]]
+- [[Raise Dead|main:raise_dead]]
+- [[Repulsion|main:repulsion]]
+- [[Sacred Form|main:sacred_form]]
+- [[Scintillating Safeguard|main:scintillating_safeguard]]
+- [[Scrying|main:scrying]]
+- [[Spellwrack|main:spellwrack]]
+- [[Spirit Blast|main:spirit_blast]]
+- [[Tangling Creepers|main:tangling_creepers]]
+- [[Teleport|main:teleport]]
+- [[Tree of Seasons|main:tree_of_seasons]]
+- [[Truesight|main:truesight]]
+- [[Vampiric Exsanguination|main:vampiric_exsanguination]]
+- [[Vibrant Pattern|main:vibrant_pattern]]
+- [[Wall of Force|main:wall_of_force]]
+- [[Zealous Conviction|main:zealous_conviction]]
+
+---
+
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

@@ -1,0 +1,14 @@
+**Item 0**  
+**Price:** 1 gp  
+**Bulk:** 1  
+**Usage:** held in two hands
+
+---
+
+This entry is a catchall for basic hand tools that don't have a specific adventuring purpose. A hoe, shovel, or sledgehammer is a long tool, and a hand drill, ice hook, or trowel is a short tool. A tool can usually be used as an improvised weapon, dealing 1d6 damage. The GM determines the damage type that's appropriate or adjusts the damage if needed.
+
+*Source: Player Core.*
+
+---
+
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

@@ -1,0 +1,12 @@
+**Heritage**  
+**Ancestry:** [[Elf|main:elf]]
+
+---
+
+Your ears are finely tuned, able to detect even the slightest whispers of sound. You gain a +2 circumstance bonus when using the [[Seek|main:seek]] action to find [[Hidden|main:hidden]] or [[Undetected|main:undetected]] creatures within 30 feet of you. When you target an opponent that is [[Concealed|main:concealed]] from you or hidden from you, reduce the DC of the flat check to 3 for a concealed target or 9 for a hidden one. This benefit doesn't apply if you can't hear or if the creature is incapable of making sound (for example, if it's affected by a [[Silence|main:silence]] spell).
+
+*Source: Player Core.*
+
+---
+
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

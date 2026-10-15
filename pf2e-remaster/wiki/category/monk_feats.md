@@ -1,0 +1,17 @@
+Class feats for the [[Monk|main:monk]].
+
+- **Level 1:** [[Crane Stance|main:crane_stance]], [[Dragon Stance|main:dragon_stance]], [[Monastic Archer Stance|main:monastic_archer_stance]], [[Monastic Weaponry|main:monastic_weaponry]], [[Mountain Stance|main:mountain_stance]], [[Qi Spells|main:qi_spells]], [[Stumbling Stance|main:stumbling_stance]], [[Tiger Stance|main:tiger_stance]], [[Wolf Stance|main:wolf_stance]]
+- **Level 2:** [[Crushing Grab|main:crushing_grab]], [[Dancing Leaf|main:dancing_leaf]], [[Elemental Fist|main:elemental_fist]], [[Shooting Stars Stance|main:shooting_stars_stance]], [[Stunning Blows|main:stunning_blows]]
+- **Level 4:** [[Cobra Stance|main:cobra_stance]], [[Deflect Projectile|main:deflect_projectile]], [[Flurry of Maneuvers|main:flurry_of_maneuvers]], [[Flying Kick|main:flying_kick]], [[Guarded Movement|main:guarded_movement]], [[Harmonize Self (feat)|main:harmonize_self_feat]], [[Stand Still|main:stand_still]]
+- **Level 6:** [[Advanced Qi Spells|main:advanced_qi_spells]], [[Align Qi|main:align_qi]], [[Crane Flutter|main:crane_flutter]], [[Dragon Roar|main:dragon_roar]], [[Mountain Stronghold|main:mountain_stronghold]], [[One-Inch Punch|main:one_inch_punch]], [[Return Fire|main:return_fire]], [[Stumbling Feint|main:stumbling_feint]], [[Tiger Slash|main:tiger_slash]], [[Water Step|main:water_step]], [[Whirling Throw|main:whirling_throw]], [[Wolf Drag|main:wolf_drag]]
+- **Level 8:** [[Clinging Shadows Initiate|main:clinging_shadows_initiate]], [[Ironblood Stance|main:ironblood_stance]], [[Mixed Maneuver|main:mixed_maneuver]], [[Pinning Fire|main:pinning_fire]], [[Projectile Snatching|main:projectile_snatching]], [[Tangled Forest Stance|main:tangled_forest_stance]], [[Wall Run|main:wall_run]], [[Wild Winds Initiate|main:wild_winds_initiate]]
+- **Level 10:** [[Cobra Envenom|main:cobra_envenom]], [[Knockback Strike|main:knockback_strike]], [[Prevailing Position|main:prevailing_position]], [[Sleeper Hold|main:sleeper_hold]], [[Wind Jump (feat)|main:wind_jump_feat]], [[Winding Flow|main:winding_flow]]
+- **Level 12:** [[Disrupt Qi|main:disrupt_qi]], [[Dodging Roll|main:dodging_roll]], [[Focused Shot|main:focused_shot]], [[Improved Knockback|main:improved_knockback]], [[Meditative Focus|main:meditative_focus]], [[Overwhelming Breath|main:overwhelming_breath]], [[Reflexive Stance|main:reflexive_stance]]
+- **Level 14:** [[Ironblood Surge|main:ironblood_surge]], [[Mountain Quake|main:mountain_quake]], [[Peerless Form|main:peerless_form]], [[Shadow's Web (feat)|main:shadows_web_feat]], [[Tangled Forest Rake|main:tangled_forest_rake]], [[Whirling Blade Stance|main:whirling_blade_stance]], [[Wild Winds Gust|main:wild_winds_gust]]
+- **Level 16:** [[Fuse Stance|main:fuse_stance]], [[Master of Many Styles|main:master_of_many_styles]], [[Master Qi Spells|main:master_qi_spells]], [[One-Millimeter Punch|main:one_millimeter_punch]], [[Shattering Strike (Monk)|main:shattering_strike_monk]]
+- **Level 18:** [[Diamond Fists|main:diamond_fists]], [[Grandmaster Qi Spells|main:grandmaster_qi_spells]], [[Qi Center|main:qi_center]], [[Swift River|main:swift_river]], [[Triangle Shot|main:triangle_shot]]
+- **Level 20:** [[Enduring Quickness|main:enduring_quickness]], [[Godbreaker|main:godbreaker]], [[Immortal Techniques|main:immortal_techniques]], [[Impossible Technique|main:impossible_technique]], [[Lightning Qi|main:lightning_qi]]
+
+---
+
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

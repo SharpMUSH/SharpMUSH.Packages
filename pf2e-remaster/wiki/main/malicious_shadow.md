@@ -1,0 +1,22 @@
+**Focus 3**  
+**Traits:** Uncommon, Attack, Concentrate, Focus, Hex, Manipulate, Shadow, [[Witch|main:witch]]  
+**Cast:** (2 actions)  
+**Range:** 30 feet  
+**Targets:** 1 creature  
+**Duration:** sustained up to 1 minute
+
+---
+
+Your patron warps the target's shadow into a deadly form, such as strangling hands, a dangerous weapon, harrying runes, or the like. The shadow moves along with the target, always remaining within reach. When you Cast the Spell, and each time you Sustain it, the shadow Strikes the target. The shadow's Strikes are melee spell attacks that deal 2d10 damage. You choose the type of damage (bludgeoning, piercing, or slashing) when you Cast the Spell. The shadow uses and contributes to your multiple attack penalty. The shadow doesn't take up space, grant flanking, or have any other attributes a creature would. The shadow can't make any attacks other than its Strike.
+
+The shadow vanishes if the target ceases to cast a shadow (usually if it moves into complete darkness or light). If another effect is controlling the target's shadow when you cast *malicious shadow*, you can attempt to counteract that effect to temporarily take control of the shadow for *malicious shadow*'s duration.
+
+---
+
+**Heightened (+2)** The Strike damage increases by 1d10.
+
+*Source: Player Core.*
+
+---
+
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

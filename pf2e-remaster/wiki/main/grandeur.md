@@ -1,0 +1,24 @@
+**Class Feature 1**  
+**Traits:** [[Champion|main:champion]]
+
+---
+
+The glowing grandeur of the immaculate celestial realms inspires you, and you exhort their virtues to bring humility to the denizens of other grim worlds.
+
+**Edicts** provide a shining example for others, enjoy and share the beauty around you, keep yourself tidy and well groomed
+
+**Anathema** despoil yourself by associating with fiends and unholy forces.
+
+---
+
+**Champion's Reaction** [[Flash of Grandeur|main:flash_of_grandeur]]
+
+**Relentless Reaction (9th Level)** The enemy also takes persistent spirit damage equal to your Charisma modifier, and it can't recover from this persistent damage while affected by the revealing light from your Flash of Grandeur.
+
+**Exalted Reaction (11th Level)** In addition to the enemy affected by Flash of Grandeur, each other enemy in your champion's aura is affected by the revealing light spell for 1 round.
+
+*Source: Player Core 2.*
+
+---
+
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

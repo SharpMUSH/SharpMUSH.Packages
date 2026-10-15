@@ -1,0 +1,38 @@
+Rituals take a long time to cast and need a primary caster and often secondary casters, each attempting a skill check.
+
+- [[Animate Object|main:animate_object]] (rank 2)
+- [[Astral Projection|main:astral_projection]] (rank 5)
+- [[Atone|main:atone]] (rank 4)
+- [[Awaken Animal|main:awaken_animal]] (rank 6)
+- [[Binding Circle|main:binding_circle]] (rank 6)
+- [[Blight|main:blight]] (rank 4)
+- [[Call Spirit|main:call_spirit]] (rank 5)
+- [[Clone|main:clone]] (rank 9)
+- [[Collective Memories|main:collective_memories]] (rank 7)
+- [[Commune|main:commune]] (rank 6)
+- [[Consecrate|main:consecrate]] (rank 2)
+- [[Control Weather|main:control_weather]] (rank 8)
+- [[Create Undead|main:create_undead]] (rank 2)
+- [[Fantastic Facade|main:fantastic_facade]] (rank 9)
+- [[Fortifying Brew|main:fortifying_brew]] (rank 5)
+- [[Gathering Call|main:gathering_call]] (rank 7)
+- [[Geas|main:geas]] (rank 3)
+- [[Heartbond|main:heartbond]] (rank 2)
+- [[Inveigle|main:inveigle]] (rank 2)
+- [[Phantasmal Custodians|main:phantasmal_custodians]] (rank 3)
+- [[Planar Displacement|main:planar_displacement]] (rank 7)
+- [[Planar Servitor|main:planar_servitor]] (rank 5)
+- [[Plant Growth|main:plant_growth]] (rank 4)
+- [[Primal Call|main:primal_call]] (rank 6)
+- [[Reincarnate|main:reincarnate]] (rank 3)
+- [[Rest Eternal|main:rest_eternal]] (rank 4)
+- [[Resurrect|main:resurrect]] (rank 5)
+- [[Rune Trap|main:rune_trap]] (rank 3)
+- [[Shadow Double|main:shadow_double]] (rank 4)
+- [[Teleportation Circle|main:teleportation_circle]] (rank 7)
+- [[Ward Domain|main:ward_domain]] (rank 6)
+- [[Wish|main:wish]] (rank 10)
+
+---
+
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

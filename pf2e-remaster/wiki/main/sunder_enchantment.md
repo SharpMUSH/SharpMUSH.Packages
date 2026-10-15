@@ -1,0 +1,13 @@
+**Class Feat 14**  
+**Traits:** [[Barbarian|main:barbarian]]  
+**Prerequisites:** [[Sunder Spell|main:sunder_spell]]
+
+---
+
+You can focus your superstition to break the magic of an item, in addition to destroying freestanding spells and those active on creatures. When you [[Sunder a Spell|main:sunder_spell]], you can instead attempt to counteract either an unattended magic item or one of your target's magic items. If your counteract attempt succeeds, the item becomes a mundane item of its type for 10 minutes. If you target an artifact, an intelligent item, or a similarly particularly powerful item, your counteract attempt automatically fails.
+
+*Source: Player Core 2.*
+
+---
+
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

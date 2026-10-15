@@ -1,0 +1,16 @@
+**Ancestry Feat 1**  
+**Traits:** [[Lizardfolk|main:lizardfolk]]
+
+---
+
+Your connection to your iruxi ancestors manifests as a simple primal spell that you cast using a fragment of an ancestor's bones. Choose one cantrip from either the occult spell list or the primal spell list. You can cast this cantrip as an innate spell at will, and it's heightened to a spell rank equal to half your level rounded up.
+
+---
+
+**Special** Choose when you gain this feat whether your innate spells are primal or occult; this choice applies to all innate spells you gain from lizardfolk ancestry feats that have Bone Magic as a prerequisite.
+
+*Source: Player Core 2.*
+
+---
+
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*
