@@ -1,4 +1,4 @@
-The rules pages of the pf2e-remaster package (the [[Conditions|Category:Conditions]] and [[Difficulty Classes|Category:Difficulty Classes]] categories and every page and table in them) are licensed under the ORC License. This notice covers them and nothing else on this wiki.
+The rules pages of the pf2e-remaster package (the [[Conditions|category:conditions]] and [[Difficulty Classes|category:difficulty_classes]] categories and every page and table in them) are licensed under the ORC License. This notice covers them and nothing else on this wiki.
 
 ## ORC Notice
 

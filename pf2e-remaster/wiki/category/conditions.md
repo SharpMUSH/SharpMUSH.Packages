@@ -9,18 +9,18 @@ Conditions are lasting effects on a creature or object, such as being frightened
 
 ## Groups
 
-- [[Attitudes|Category:Attitudes]]: [[Friendly]], [[Helpful]], [[Hostile]], [[Indifferent]], [[Unfriendly]]
-- [[Death and Dying|Category:Death and Dying]]: [[Doomed]], [[Dying]], [[Unconscious]], [[Wounded]]
-- [[Degrees of Detection|Category:Degrees of Detection]]: [[Hidden]], [[Observed]], [[Undetected]], [[Unnoticed]]
-- [[Lowered Abilities|Category:Lowered Abilities]]: [[Clumsy]], [[Drained]], [[Enfeebled]], [[Stupefied]]
-- [[Senses|Category:Senses]]: [[Blinded]], [[Concealed]], [[Dazzled]], [[Deafened]], [[Invisible]]
+- [[Attitudes|category:attitudes]]: [[Friendly|main:friendly]], [[Helpful|main:helpful]], [[Hostile|main:hostile]], [[Indifferent|main:indifferent]], [[Unfriendly|main:unfriendly]]
+- [[Death and Dying|category:death_and_dying]]: [[Doomed|main:doomed]], [[Dying|main:dying]], [[Unconscious|main:unconscious]], [[Wounded|main:wounded]]
+- [[Degrees of Detection|category:degrees_of_detection]]: [[Hidden|main:hidden]], [[Observed|main:observed]], [[Undetected|main:undetected]], [[Unnoticed|main:unnoticed]]
+- [[Lowered Abilities|category:lowered_abilities]]: [[Clumsy|main:clumsy]], [[Drained|main:drained]], [[Enfeebled|main:enfeebled]], [[Stupefied|main:stupefied]]
+- [[Senses|category:senses]]: [[Blinded|main:blinded]], [[Concealed|main:concealed]], [[Dazzled|main:dazzled]], [[Deafened|main:deafened]], [[Invisible|main:invisible]]
 
 ## Others
 
-[[Broken]], [[Confused]], [[Controlled]], [[Encumbered]], [[Fascinated]], [[Fatigued]], [[Fleeing]], [[Frightened]], [[Grabbed]], [[Immobilized]], [[Off-Guard]], [[Paralyzed]], [[Persistent Damage]], [[Petrified]], [[Prone]], [[Quickened]], [[Restrained]], [[Sickened]], [[Slowed]], [[Stunned]]
+[[Broken|main:broken]], [[Confused|main:confused]], [[Controlled|main:controlled]], [[Encumbered|main:encumbered]], [[Fascinated|main:fascinated]], [[Fatigued|main:fatigued]], [[Fleeing|main:fleeing]], [[Frightened|main:frightened]], [[Grabbed|main:grabbed]], [[Immobilized|main:immobilized]], [[Off-Guard|main:off-guard]], [[Paralyzed|main:paralyzed]], [[Persistent Damage|main:persistent_damage]], [[Petrified|main:petrified]], [[Prone|main:prone]], [[Quickened|main:quickened]], [[Restrained|main:restrained]], [[Sickened|main:sickened]], [[Slowed|main:slowed]], [[Stunned|main:stunned]]
 
 *Source: Player Core, pp. 442-447.*
 
 ---
 
-*Rules text under the ORC License. See [[ORC License Notice|Help:ORC License Notice]].*
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

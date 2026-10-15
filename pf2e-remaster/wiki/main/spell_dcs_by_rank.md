@@ -1,4 +1,4 @@
-The DC for a spell of a given rank, such as to Identify a Spell. Adjust it for an uncommon or rare spell with [[DC Adjustments]].
+The DC for a spell of a given rank, such as to Identify a Spell. Adjust it for an uncommon or rare spell with [[DC Adjustments|main:dc_adjustments]].
 
 | Spell Rank | DC |
 |---|---|
@@ -17,4 +17,4 @@ The DC for a spell of a given rank, such as to Identify a Spell. Adjust it for a
 
 ---
 
-*Rules text under the ORC License. See [[ORC License Notice|Help:ORC License Notice]].*
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

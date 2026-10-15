@@ -8,4 +8,4 @@ Fear grips you and you struggle to keep your nerve. Frightened always has a valu
 
 ---
 
-*Rules text under the ORC License. See [[ORC License Notice|Help:ORC License Notice]].*
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

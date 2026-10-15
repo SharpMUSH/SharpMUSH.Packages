@@ -9,4 +9,4 @@ You have lost blood, life force or some other essence. Drained always has a valu
 
 ---
 
-*Rules text under the ORC License. See [[ORC License Notice|Help:ORC License Notice]].*
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

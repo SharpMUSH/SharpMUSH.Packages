@@ -7,4 +7,4 @@ Your thoughts and instincts are clouded. Stupefied always has a value.
 
 ---
 
-*Rules text under the ORC License. See [[ORC License Notice|Help:ORC License Notice]].*
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

@@ -1,11 +1,11 @@
 You are asleep or knocked out and can't act.
 
-- You take a -4 status penalty to AC, Perception and Reflex saves, and you are [[Blinded]] and [[Off-Guard]].
-- When you fall unconscious you fall [[Prone]] and drop what you hold, unless the effect says otherwise or the GM decides your position prevents it.
+- You take a -4 status penalty to AC, Perception and Reflex saves, and you are [[Blinded|main:blinded]] and [[Off-Guard|main:off-guard]].
+- When you fall unconscious you fall [[Prone|main:prone]] and drop what you hold, unless the effect says otherwise or the GM decides your position prevents it.
 
 **Waking up** depends on why you are unconscious:
 
-- **Dying:** you can't wake while at 0 Hit Points. Restored to 1 Hit Point or more, you lose [[Dying]] and unconscious and act normally on your next turn.
+- **Dying:** you can't wake while at 0 Hit Points. Restored to 1 Hit Point or more, you lose [[Dying|main:dying]] and unconscious and act normally on your next turn.
 - **At 0 Hit Points but not dying:** after enough time, from 10 minutes to several hours as the GM decides, you return to 1 Hit Point and wake. Healing wakes you, and you act normally on your next turn.
 - **Above 0 Hit Points** (asleep, or knocked out by an effect), any of these wakes you:
   - you take damage (if it drops you to 0 Hit Points you stay unconscious and become dying as normal);
@@ -18,4 +18,4 @@ You are asleep or knocked out and can't act.
 
 ---
 
-*Rules text under the ORC License. See [[ORC License Notice|Help:ORC License Notice]].*
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

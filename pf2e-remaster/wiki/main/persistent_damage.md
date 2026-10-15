@@ -9,10 +9,10 @@ An ongoing effect, such as being on fire, keeps damaging you. It is written "X p
 
 **Immunities, resistances and weaknesses** apply to persistent damage, separately from any initial damage. If an effect negates the initial damage, it usually negates the persistent damage too.
 
-**More than one.** You can have several persistent damage conditions of different types. For the same type, the higher amount overrides the lower; when it isn't clear which is higher, the GM chooses. All persistent damage happens at once, so it triggers things that react to damage only once (for example, it raises [[Dying]] only once).
+**More than one.** You can have several persistent damage conditions of different types. For the same type, the higher amount overrides the lower; when it isn't clear which is higher, the GM chooses. All persistent damage happens at once, so it triggers things that react to damage only once (for example, it raises [[Dying|main:dying]] only once).
 
 *Source: Player Core, p. 445.*
 
 ---
 
-*Rules text under the ORC License. See [[ORC License Notice|Help:ORC License Notice]].*
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

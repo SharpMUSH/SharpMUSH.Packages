@@ -1,6 +1,6 @@
 A powerful force is drawing you toward death. Doomed always has a value.
 
-- The [[Dying]] value at which you die is lowered by your doomed value. If that maximum reaches 0, you die at once.
+- The [[Dying|main:dying]] value at which you die is lowered by your doomed value. If that maximum reaches 0, you die at once.
 - When you die, you are no longer doomed.
 
 **Ends:** the value drops by 1 after each full night's rest.
@@ -9,4 +9,4 @@ A powerful force is drawing you toward death. Doomed always has a value.
 
 ---
 
-*Rules text under the ORC License. See [[ORC License Notice|Help:ORC License Notice]].*
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

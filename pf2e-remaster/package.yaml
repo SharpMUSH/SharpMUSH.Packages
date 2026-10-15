@@ -12,334 +12,279 @@ keywords: [pathfinder, pf2e, rules, conditions, wiki]
 locale: en
 
 wiki:
-  - page: orc_license_notice
-    namespace: help
+  - page: help:orc_license_notice
     title: ORC License Notice
     requires:
       edit: [wiki.admin]
       delete: [wiki.admin]
     file: wiki/help/orc_license_notice.md
 
-  - page: conditions
-    namespace: category
+  - page: category:conditions
     title: Conditions
     pin: true
     file: wiki/category/conditions.md
 
-  - page: attitudes
-    namespace: category
+  - page: category:attitudes
     title: Attitudes
     categories: [Conditions]
     file: wiki/category/attitudes.md
 
-  - page: death_and_dying
-    namespace: category
+  - page: category:death_and_dying
     title: Death and Dying
     categories: [Conditions]
     file: wiki/category/death_and_dying.md
 
-  - page: degrees_of_detection
-    namespace: category
+  - page: category:degrees_of_detection
     title: Degrees of Detection
     categories: [Conditions]
     file: wiki/category/degrees_of_detection.md
 
-  - page: lowered_abilities
-    namespace: category
+  - page: category:lowered_abilities
     title: Lowered Abilities
     categories: [Conditions]
     file: wiki/category/lowered_abilities.md
 
-  - page: senses
-    namespace: category
+  - page: category:senses
     title: Senses
     categories: [Conditions]
     file: wiki/category/senses.md
 
-  - page: blinded
-    namespace: main
+  - page: main:blinded
     title: Blinded
     categories: [Conditions, Senses]
     file: wiki/main/blinded.md
 
-  - page: broken
-    namespace: main
+  - page: main:broken
     title: Broken
     categories: [Conditions]
     file: wiki/main/broken.md
 
-  - page: clumsy
-    namespace: main
+  - page: main:clumsy
     title: Clumsy
     categories: [Conditions, Lowered Abilities]
     file: wiki/main/clumsy.md
 
-  - page: concealed
-    namespace: main
+  - page: main:concealed
     title: Concealed
     categories: [Conditions, Senses]
     file: wiki/main/concealed.md
 
-  - page: confused
-    namespace: main
+  - page: main:confused
     title: Confused
     categories: [Conditions]
     file: wiki/main/confused.md
 
-  - page: controlled
-    namespace: main
+  - page: main:controlled
     title: Controlled
     categories: [Conditions]
     file: wiki/main/controlled.md
 
-  - page: dazzled
-    namespace: main
+  - page: main:dazzled
     title: Dazzled
     categories: [Conditions, Senses]
     file: wiki/main/dazzled.md
 
-  - page: deafened
-    namespace: main
+  - page: main:deafened
     title: Deafened
     categories: [Conditions, Senses]
     file: wiki/main/deafened.md
 
-  - page: doomed
-    namespace: main
+  - page: main:doomed
     title: Doomed
     categories: [Conditions, Death and Dying]
     file: wiki/main/doomed.md
 
-  - page: drained
-    namespace: main
+  - page: main:drained
     title: Drained
     categories: [Conditions, Lowered Abilities]
     file: wiki/main/drained.md
 
-  - page: dying
-    namespace: main
+  - page: main:dying
     title: Dying
     categories: [Conditions, Death and Dying]
     file: wiki/main/dying.md
 
-  - page: encumbered
-    namespace: main
+  - page: main:encumbered
     title: Encumbered
     categories: [Conditions]
     file: wiki/main/encumbered.md
 
-  - page: enfeebled
-    namespace: main
+  - page: main:enfeebled
     title: Enfeebled
     categories: [Conditions, Lowered Abilities]
     file: wiki/main/enfeebled.md
 
-  - page: fascinated
-    namespace: main
+  - page: main:fascinated
     title: Fascinated
     categories: [Conditions]
     file: wiki/main/fascinated.md
 
-  - page: fatigued
-    namespace: main
+  - page: main:fatigued
     title: Fatigued
     categories: [Conditions]
     file: wiki/main/fatigued.md
 
-  - page: fleeing
-    namespace: main
+  - page: main:fleeing
     title: Fleeing
     categories: [Conditions]
     file: wiki/main/fleeing.md
 
-  - page: friendly
-    namespace: main
+  - page: main:friendly
     title: Friendly
     categories: [Conditions, Attitudes]
     file: wiki/main/friendly.md
 
-  - page: frightened
-    namespace: main
+  - page: main:frightened
     title: Frightened
     categories: [Conditions]
     file: wiki/main/frightened.md
 
-  - page: grabbed
-    namespace: main
+  - page: main:grabbed
     title: Grabbed
     categories: [Conditions]
     file: wiki/main/grabbed.md
 
-  - page: helpful
-    namespace: main
+  - page: main:helpful
     title: Helpful
     categories: [Conditions, Attitudes]
     file: wiki/main/helpful.md
 
-  - page: hidden
-    namespace: main
+  - page: main:hidden
     title: Hidden
     categories: [Conditions, Degrees of Detection]
     file: wiki/main/hidden.md
 
-  - page: hostile
-    namespace: main
+  - page: main:hostile
     title: Hostile
     categories: [Conditions, Attitudes]
     file: wiki/main/hostile.md
 
-  - page: immobilized
-    namespace: main
+  - page: main:immobilized
     title: Immobilized
     categories: [Conditions]
     file: wiki/main/immobilized.md
 
-  - page: indifferent
-    namespace: main
+  - page: main:indifferent
     title: Indifferent
     categories: [Conditions, Attitudes]
     file: wiki/main/indifferent.md
 
-  - page: invisible
-    namespace: main
+  - page: main:invisible
     title: Invisible
     categories: [Conditions, Senses]
     file: wiki/main/invisible.md
 
-  - page: observed
-    namespace: main
+  - page: main:observed
     title: Observed
     categories: [Conditions, Degrees of Detection]
     file: wiki/main/observed.md
 
-  - page: off-guard
-    namespace: main
+  - page: main:off-guard
     title: Off-Guard
     categories: [Conditions]
     file: wiki/main/off-guard.md
 
-  - page: paralyzed
-    namespace: main
+  - page: main:paralyzed
     title: Paralyzed
     categories: [Conditions]
     file: wiki/main/paralyzed.md
 
-  - page: persistent_damage
-    namespace: main
+  - page: main:persistent_damage
     title: Persistent Damage
     categories: [Conditions]
     file: wiki/main/persistent_damage.md
 
-  - page: petrified
-    namespace: main
+  - page: main:petrified
     title: Petrified
     categories: [Conditions]
     file: wiki/main/petrified.md
 
-  - page: prone
-    namespace: main
+  - page: main:prone
     title: Prone
     categories: [Conditions]
     file: wiki/main/prone.md
 
-  - page: quickened
-    namespace: main
+  - page: main:quickened
     title: Quickened
     categories: [Conditions]
     file: wiki/main/quickened.md
 
-  - page: restrained
-    namespace: main
+  - page: main:restrained
     title: Restrained
     categories: [Conditions]
     file: wiki/main/restrained.md
 
-  - page: sickened
-    namespace: main
+  - page: main:sickened
     title: Sickened
     categories: [Conditions]
     file: wiki/main/sickened.md
 
-  - page: slowed
-    namespace: main
+  - page: main:slowed
     title: Slowed
     categories: [Conditions]
     file: wiki/main/slowed.md
 
-  - page: stunned
-    namespace: main
+  - page: main:stunned
     title: Stunned
     categories: [Conditions]
     file: wiki/main/stunned.md
 
-  - page: stupefied
-    namespace: main
+  - page: main:stupefied
     title: Stupefied
     categories: [Conditions, Lowered Abilities]
     file: wiki/main/stupefied.md
 
-  - page: unconscious
-    namespace: main
+  - page: main:unconscious
     title: Unconscious
     categories: [Conditions, Death and Dying]
     file: wiki/main/unconscious.md
 
-  - page: undetected
-    namespace: main
+  - page: main:undetected
     title: Undetected
     categories: [Conditions, Degrees of Detection]
     file: wiki/main/undetected.md
 
-  - page: unfriendly
-    namespace: main
+  - page: main:unfriendly
     title: Unfriendly
     categories: [Conditions, Attitudes]
     file: wiki/main/unfriendly.md
 
-  - page: unnoticed
-    namespace: main
+  - page: main:unnoticed
     title: Unnoticed
     categories: [Conditions, Degrees of Detection]
     file: wiki/main/unnoticed.md
 
-  - page: wounded
-    namespace: main
+  - page: main:wounded
     title: Wounded
     categories: [Conditions, Death and Dying]
     file: wiki/main/wounded.md
 
-  - page: difficulty_classes
-    namespace: category
+  - page: category:difficulty_classes
     title: Difficulty Classes
     pin: true
     file: wiki/category/difficulty_classes.md
 
-  - page: degrees_of_success
-    namespace: main
+  - page: main:degrees_of_success
     title: Degrees of Success
     categories: [Difficulty Classes]
     file: wiki/main/degrees_of_success.md
 
-  - page: simple_dcs
-    namespace: main
+  - page: main:simple_dcs
     title: Simple DCs
     categories: [Difficulty Classes]
     file: wiki/main/simple_dcs.md
 
-  - page: dcs_by_level
-    namespace: main
+  - page: main:dcs_by_level
     title: DCs by Level
     categories: [Difficulty Classes]
     file: wiki/main/dcs_by_level.md
 
-  - page: spell_dcs_by_rank
-    namespace: main
+  - page: main:spell_dcs_by_rank
     title: Spell DCs by Rank
     categories: [Difficulty Classes]
     file: wiki/main/spell_dcs_by_rank.md
 
-  - page: dc_adjustments
-    namespace: main
+  - page: main:dc_adjustments
     title: DC Adjustments
     categories: [Difficulty Classes]
     file: wiki/main/dc_adjustments.md
