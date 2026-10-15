@@ -1,0 +1,12 @@
+**Class Feature 1**  
+**Traits:** Curse, Divine, [[Oracle|main:oracle]]
+
+---
+
+You have a link to true divine knowledge, but your mortal mind struggles to process and act on what you know. Loose materials around you, such as dust, grains of rice, and droplets of water, slowly shift to form strange runes or faint, indecipherable writing, and you sometimes speak unintelligible truths or statements in unknown languages without realizing it. You take a status penalty to Perception checks and Will saving throws equal to your Cursebound value due to the torrential distractions of unasked-for knowledge flooding your mind. If you are cursebound 4, you additionally can't speak, use linguistic effects, or otherwise communicate with your allies. You can still cast spells, but you're [[Stupefied 1|main:stupefied]].
+
+*Source: Player Core 2.*
+
+---
+
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

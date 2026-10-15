@@ -1,0 +1,647 @@
+format: 1.3
+package: roll-tables
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Roll tables: weather, encounters and names kept as softcode data, shown with +table, rolled in the room with +table/roll, and published to the wiki."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
+keywords: [tables, dice, random, gm]
+requires_server: ">=0.1"
+
+# plus-help carries the +help topics.
+depends:
+  - package: plus-help
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+
+# One permission: making and changing tables. Who may read one table is that table's own lock
+# (TABLE`<NAME>`LOCK), so a GM-only table is a lock key such as role^gm, not a permission per table.
+categories:
+  roles:
+    - name: Tables
+      description: Roles for the people who keep the game's roll tables.
+  permissions:
+    - name: Tables
+      description: Keeping the roll tables.
+permissions:
+  - name: softcode.tables.admin
+    category: Tables
+    description: Create, change, lock, publish and delete roll tables, and read every table.
+roles:
+  - slug: table-keeper
+    name: Table Keeper
+    category: Tables
+    priority: 11
+    permissions:
+      softcode.tables.admin: allow
+
+objects:
+  # The command object. WIZARD so that @remit reaches the roller's room wherever it is, @wiki can
+  # write the page a table is published to, and STARTUP can add the command. +table is added with
+  # @command/add/noparse and hooked to CMD`TABLE, so what a player types reaches the code exactly as
+  # typed: a row such as Storm: [u(FN`TABLE`ROLL,squall)] is stored as code, not rolled on the way in.
+  # The object also sits in the master room, so +table answers as a $-command before STARTUP has run.
+  #
+  # Trees: CMD` the $-command, INC`TABLE` one routine per switch, INC`NEED` the guards they share,
+  # INC`PUBLISH` the two ways a page is written, FN`COMMAND` the parse. Registers hold what one command
+  # shares across its steps, led by their subject: cmd_ (the parsed command), table_ (the table it
+  # names), row_ (a row being written), page_ (a page being published).
+  - ref: roll_tables
+    type: thing
+    name: Roll Tables
+    location: "{{$master_room}}"
+    flags: [WIZARD]
+    attributes:
+      # Commands added with @command/add and their hooks last until a restart, so STARTUP sets them on
+      # every boot. /noparse and /rsnoparse hand the hook the text as typed; /inline runs it in place.
+      STARTUP: |-
+        @command/add/noparse/rsnoparse +table; @hook/override/inline +table={{roll_tables}},CMD`TABLE
+      AINSTALL: |-
+        @trigger {{roll_tables}}/STARTUP
+      AUPDATE: |-
+        @trigger {{roll_tables}}/STARTUP
+      CMD`TABLE:
+        value: |-
+          $(?is)^\+table(/\S*)?(?\: +(.*))?$:think u(FN`COMMAND`PARSE,%1,%2); @assert strlen(%q<cmd_route>)=@pemit %#=notice(TABLES,There is no +table/%q<cmd_bad>. +help tables lists the switches.,warn); @include me/INC`TABLE`%q<cmd_route>
+        flags: [REGEXP]
+      # %0 the switches as typed (/roll/private/2), %1 everything after the first space.
+      FN`COMMAND`PARSE: |-
+        setqm(
+          cmd_words, lcstr(trim(edit(%0,/,%b))),
+          cmd_page, firstof(first(iter(%q<cmd_words>,if(isint(%i0),%i0))),1),
+          cmd_private, member(%q<cmd_words>,private),
+          cmd_other, squish(iter(%q<cmd_words>,if(cor(isint(%i0),strmatch(%i0,private)),,%i0))),
+          cmd_action, first(%q<cmd_other>),
+          cmd_bad, firstof(first(rest(%q<cmd_other>)),if(%q<cmd_private>,%q<cmd_action>/private,%q<cmd_action>)),
+          cmd_lhs, trim(before(%1,=)),
+          cmd_rhs, trim(after(%1,=)),
+          cmd_equals, pos(=,%1),
+          cmd_route, u(FN`COMMAND`ROUTE))
+      # The routine the parsed switches name, or nothing when they name none.
+      FN`COMMAND`ROUTE: |-
+        cond(
+          gt(words(%q<cmd_other>),1),,
+          cand(%q<cmd_private>,strlen(%q<cmd_action>),not(strmatch(%q<cmd_action>,roll))),,
+          %q<cmd_private>, ROLL,
+          not(strlen(%q<cmd_action>)), if(strlen(%q<cmd_lhs>),SHOW,LIST),
+          member(list roll lookup create row delrow die title lock delete publish,%q<cmd_action>), ucstr(%q<cmd_action>))
+
+      # ---- guards ----------------------------------------------------------------------------
+      # A table named on the left of =, that exists and that the player may read: table_key.
+      INC`NEED`TABLE: |-
+        @assert strlen(%q<cmd_lhs>)=@pemit %#=notice(TABLES,Which table? +table/list shows the tables you can read.,warn); @assert strlen(setr(table_key,u({{table_functions}}/FN`TABLE`FIND,%q<cmd_lhs>,%#)))=@pemit %#=notice(TABLES,There is no table called %q<cmd_lhs>.,warn)
+      INC`NEED`STAFF: |-
+        @assert permission(%#,softcode.tables.admin)=@pemit %#=notice(TABLES,Only a table keeper can change tables.,error)
+      # A table that has rows, for rolling and publishing.
+      INC`NEED`ROWS: |-
+        @assert words(u({{table_functions}}/FN`TABLE`ROWS,%q<table_key>))=@pemit %#=notice(TABLES,u({{table_functions}}/FN`TABLE`TITLE,%q<table_key>) has no rows yet.,warn)
+      # A die for /create and /die: none, weight, or a formula roll() can read with a lowest and highest total.
+      INC`NEED`DIE: |-
+        @assert strlen(%q<cmd_rhs>)=@pemit %#=notice(TABLES,Give the die: a formula such as d20 or 2d6%, weight%, or none.,warn); @assert u({{table_functions}}/FN`DIE`VALID,%q<cmd_rhs>)=@pemit %#=notice(TABLES,%q<cmd_rhs> is not a die. Use a formula such as d20 or 2d6%, weight%, or none.,warn)
+
+      # ---- reading ---------------------------------------------------------------------------
+      INC`TABLE`LIST: |-
+        @assert lte(%q<cmd_page>,u({{table_functions}}/FN`PAGE`LAST,words(u({{table_functions}}/FN`TABLE`READABLE,%#))))=@pemit %#=notice(TABLES,There is no page %q<cmd_page> of tables.,warn); @pemit %#=u({{table_functions}}/FN`SCREEN`LIST,%#,%q<cmd_page>)
+      INC`TABLE`SHOW: |-
+        @include me/INC`NEED`TABLE; @assert lte(%q<cmd_page>,u({{table_functions}}/FN`PAGE`LAST,words(u({{table_functions}}/FN`TABLE`ROWS,%q<table_key>))))=@pemit %#=notice(TABLES,u({{table_functions}}/FN`TABLE`TITLE,%q<table_key>) has no page %q<cmd_page>.,warn); @pemit %#=u({{table_functions}}/FN`SCREEN`TABLE,%q<table_key>,%q<cmd_page>,%#)
+      INC`TABLE`ROLL: |-
+        @include me/INC`NEED`TABLE; @include me/INC`NEED`ROWS; @assert cor(not(strlen(%q<cmd_rhs>)),cand(isint(%q<cmd_rhs>),gt(%q<cmd_rhs>,0),lte(%q<cmd_rhs>,20)))=@pemit %#=notice(TABLES,Roll a table 1 to 20 times: +table/roll %q<cmd_lhs>=3,warn); @break %q<cmd_private>=@pemit %#=u({{table_functions}}/FN`ROLL`LINE,%q<table_key>,firstof(%q<cmd_rhs>,1),You privately roll); @remit %l=u({{table_functions}}/FN`ROLL`LINE,%q<table_key>,firstof(%q<cmd_rhs>,1),tone(strong,name(%#)) rolls)
+      INC`TABLE`LOOKUP: |-
+        @include me/INC`NEED`TABLE; @assert strlen(%q<cmd_rhs>)=@pemit %#=notice(TABLES,Look up what? +table/lookup %q<cmd_lhs>=<number or key>,warn); @pemit %#=u({{table_functions}}/FN`LOOKUP`LINE,%q<table_key>,%q<cmd_rhs>)
+
+      # ---- keeping ---------------------------------------------------------------------------
+      INC`TABLE`CREATE: |-
+        @include me/INC`NEED`STAFF; @assert strlen(setr(table_key,u({{table_functions}}/FN`TABLE`KEY,%q<cmd_lhs>)))=@pemit %#=notice(TABLES,A table name is one word of letters%, digits%, - and _.,warn); @assert not(u({{table_functions}}/FN`TABLE`EXISTS,%q<table_key>))=@pemit %#=notice(TABLES,There is a table called [lcstr(%q<table_key>)] already.,warn); @include me/INC`NEED`DIE; &TABLE`%q<table_key>`DIE {{table_data}}=u({{table_functions}}/FN`DIE`CLEAN,%q<cmd_rhs>); &TABLE`%q<table_key>`TITLE {{table_data}}=capstr(lcstr(edit(%q<table_key>,_,%b,-,%b))); @pemit %#=notice(TABLES,Table [lcstr(%q<table_key>)] is made. Add rows with +table/row [lcstr(%q<table_key>)]=<key>|<result>.,ok)
+      # /row <table>=<key>|<result> adds a row; /row <table>/<n>=<key>|<result> replaces row n.
+      INC`TABLE`ROW: |-
+        @include me/INC`NEED`STAFF; think setqm(row_table,before(%q<cmd_lhs>,/),row_number,after(%q<cmd_lhs>,/),row_key,if(pos(|,%q<cmd_rhs>),trim(before(%q<cmd_rhs>,|))),row_text,trim(if(pos(|,%q<cmd_rhs>),after(%q<cmd_rhs>,|),%q<cmd_rhs>))); @assert strlen(setr(table_key,u({{table_functions}}/FN`TABLE`FIND,%q<row_table>,%#)))=@pemit %#=notice(TABLES,There is no table called %q<row_table>.,warn); @assert cor(not(strlen(%q<row_number>)),cand(isint(%q<row_number>),hasattr({{table_data}},TABLE`%q<table_key>`ROW`%q<row_number>)))=@pemit %#=notice(TABLES,u({{table_functions}}/FN`TABLE`TITLE,%q<table_key>) has no row %q<row_number>.,warn); @assert strlen(%q<row_text>)=@pemit %#=notice(TABLES,+table/row [lcstr(%q<table_key>)]=<key>|<result>,warn); @break strlen(setr(row_problem,u({{table_functions}}/FN`KEY`PROBLEM,%q<table_key>,%q<row_key>,%q<row_number>)))=@pemit %#=notice(TABLES,%q<row_problem>,warn); think setqm(row_number,firstof(%q<row_number>,inc(firstof(last(u({{table_functions}}/FN`TABLE`ROWS,%q<table_key>)),0))),row_key,firstof(%q<row_key>,%q<row_number>)); &TABLE`%q<table_key>`ROW`%q<row_number> {{table_data}}=%q<row_text>; &TABLE`%q<table_key>`ROW`%q<row_number>`KEY {{table_data}}=%q<row_key>; @pemit %#=notice(TABLES,Row %q<row_number> of [u({{table_functions}}/FN`TABLE`TITLE,%q<table_key>)] is %q<row_key>: %q<row_text>,ok)
+      INC`TABLE`DELROW: |-
+        @include me/INC`NEED`STAFF; think setqm(row_table,before(%q<cmd_lhs>,/),row_number,after(%q<cmd_lhs>,/)); @assert strlen(setr(table_key,u({{table_functions}}/FN`TABLE`FIND,%q<row_table>,%#)))=@pemit %#=notice(TABLES,There is no table called %q<row_table>.,warn); @assert cand(isint(%q<row_number>),hasattr({{table_data}},TABLE`%q<table_key>`ROW`%q<row_number>))=@pemit %#=notice(TABLES,+table/delrow [lcstr(%q<table_key>)]/<row number>: +table [lcstr(%q<table_key>)] shows the numbers.,warn); &TABLE`%q<table_key>`ROW`%q<row_number>`KEY {{table_data}}; &TABLE`%q<table_key>`ROW`%q<row_number> {{table_data}}; @pemit %#=notice(TABLES,Row %q<row_number> of [u({{table_functions}}/FN`TABLE`TITLE,%q<table_key>)] is gone.,ok)
+      # Changing the die checks that every row's key still fits it.
+      INC`TABLE`DIE: |-
+        @include me/INC`NEED`STAFF; @include me/INC`NEED`TABLE; @include me/INC`NEED`DIE; @break strlen(setr(row_problem,u({{table_functions}}/FN`DIE`PROBLEM,%q<table_key>,%q<cmd_rhs>)))=@pemit %#=notice(TABLES,%q<row_problem>,warn); &TABLE`%q<table_key>`DIE {{table_data}}=u({{table_functions}}/FN`DIE`CLEAN,%q<cmd_rhs>); @pemit %#=notice(TABLES,u({{table_functions}}/FN`TABLE`TITLE,%q<table_key>) rolls [u({{table_functions}}/FN`DIE`CLEAN,%q<cmd_rhs>)] now.,ok)
+      INC`TABLE`TITLE: |-
+        @include me/INC`NEED`STAFF; @include me/INC`NEED`TABLE; @assert strlen(%q<cmd_rhs>)=@pemit %#=notice(TABLES,+table/title [lcstr(%q<table_key>)]=<title>,warn); &TABLE`%q<table_key>`TITLE {{table_data}}=%q<cmd_rhs>; @pemit %#=notice(TABLES,Table [lcstr(%q<table_key>)] is called %q<cmd_rhs> now.,ok)
+      # /lock <table>=<lock key> limits who may read it; /lock <table>= opens it to everyone.
+      INC`TABLE`LOCK: |-
+        @include me/INC`NEED`STAFF; @include me/INC`NEED`TABLE; @assert %q<cmd_equals>=@pemit %#=notice(TABLES,+table/lock [lcstr(%q<table_key>)]=<lock key> or +table/lock [lcstr(%q<table_key>)]= to open it.,warn); @break not(strlen(%q<cmd_rhs>))={&TABLE`%q<table_key>`LOCK {{table_data}}; @pemit %#=notice(TABLES,Everyone can read [u({{table_functions}}/FN`TABLE`TITLE,%q<table_key>)] now.,ok)}; @assert not(strmatch(testlock(%q<cmd_rhs>,%#),#-*))=@pemit %#=notice(TABLES,%q<cmd_rhs> is not a lock key. +help @lock explains them.,warn); &TABLE`%q<table_key>`LOCK {{table_data}}=%q<cmd_rhs>; @pemit %#=notice(TABLES,Only those who pass %q<cmd_rhs> can read [u({{table_functions}}/FN`TABLE`TITLE,%q<table_key>)] now.,ok)
+      # /delete <table> says what would go; /delete <table>=yes removes it.
+      INC`TABLE`DELETE: |-
+        @include me/INC`NEED`STAFF; @include me/INC`NEED`TABLE; @assert strmatch(%q<cmd_rhs>,yes)=@pemit %#=notice(TABLES,This removes [u({{table_functions}}/FN`TABLE`TITLE,%q<table_key>)] and its [words(u({{table_functions}}/FN`TABLE`ROWS,%q<table_key>))] rows. +table/delete [lcstr(%q<table_key>)]=yes to go ahead.,warn); @wipe {{table_data}}/TABLE`%q<table_key>`**; &TABLE`%q<table_key>` {{table_data}}; @pemit %#=notice(TABLES,Table [lcstr(%q<table_key>)] is gone.,ok)
+
+      # ---- publishing ------------------------------------------------------------------------
+      # The page is output: nothing here reads the wiki. A page this table published before is edited;
+      # any other name is created, so publishing never overwrites a page the package did not write.
+      INC`TABLE`PUBLISH: |-
+        @include me/INC`NEED`STAFF; @include me/INC`NEED`TABLE; @include me/INC`NEED`ROWS; @assert strlen(%q<cmd_rhs>)=@pemit %#=notice(TABLES,+table/publish [lcstr(%q<table_key>)]=<namespace:page>,warn); @assert cand(permission(%#,wiki.create),permission(%#,wiki.edit))=@pemit %#=notice(TABLES,Publishing a table needs the wiki.create and wiki.edit permissions.,error); @assert not(strmatch(setr(page_body,u({{table_functions}}/FN`TABLE`MARKDOWN,%q<table_key>)),#-*))=@pemit %#=notice(TABLES,This server cannot write a table as Markdown yet. Publishing needs a server whose MarkupString has the Markdown format %(2.20 or later%).,error); @include me/INC`PUBLISH`[if(strmatch(get({{table_data}}/TABLE`%q<table_key>`PAGE),u({{table_functions}}/FN`PAGE`NAME,%q<cmd_rhs>)),EDIT,CREATE)]
+      INC`PUBLISH`EDIT: |-
+        @wiki/edit %q<cmd_rhs>=%q<page_body>; @assert not(strmatch(%>,#-*))=@pemit %#=notice(TABLES,%q<cmd_rhs> was not written. The wiki said: %>,error); @pemit %#=notice(TABLES,u({{table_functions}}/FN`TABLE`TITLE,%q<table_key>) is published again to %q<cmd_rhs>.,ok)
+      INC`PUBLISH`CREATE: |-
+        @wiki/create %q<cmd_rhs>=%q<page_body>; @assert not(strmatch(%>,#-*))=@pemit %#=notice(TABLES,%q<cmd_rhs> was not written: a table only overwrites a page it created itself. The wiki said: %>,error); &TABLE`%q<table_key>`PAGE {{table_data}}=u({{table_functions}}/FN`PAGE`NAME,%q<cmd_rhs>); @pemit %#=notice(TABLES,u({{table_functions}}/FN`TABLE`TITLE,%q<table_key>) is published to %q<cmd_rhs>.,ok)
+
+  # The functions. Commands and other code call them here, so they run as this object; a row that
+  # rolls another table calls u(FN`TABLE`ROLL,<name>) on the data object, which finds it through its
+  # parent. FN`TABLE`ROLL and FN`TABLE`LOOKUP are VISUAL so any object's code can call them.
+  #
+  # FN`TABLE` one table, FN`ROW` and FN`RANGE` row keys, FN`DIE` dice, FN`KEY` checking a key,
+  # FN`ROLL` and FN`LOOKUP` what a roll or lookup says, FN`SCREEN` whole screens, FN`PAGE` paging and
+  # wiki pages.
+  - ref: table_functions
+    type: thing
+    name: Roll Tables Functions
+    location: "{{roll_tables}}"
+    flags: [NO_COMMAND]
+    attributes:
+      # The branches above the two public functions are VISUAL too: a leaf is only as readable as
+      # the branches it hangs from.
+      FN:
+        value: |-
+          Roll table functions. FN`TABLE`ROLL and FN`TABLE`LOOKUP are for any object's code.
+        flags: [VISUAL]
+      FN`TABLE:
+        value: |-
+          One table.
+        flags: [VISUAL]
+      # ---- the public functions --------------------------------------------------------------
+      # u(FN`TABLE`ROLL,<table>): one roll's result, rows that roll other tables rolled too. Empty when
+      # the roll lands in a gap; #-1 NO SUCH TABLE when there is none the caller (%#) may read.
+      FN`TABLE`ROLL:
+        value: |-
+          u(FN`TABLE`ROLLKEY,u(FN`TABLE`FIND,%0,%#))
+        flags: [VISUAL]
+      # u(FN`TABLE`LOOKUP,<table>,<key>): the row a number falls in (a row 11-16 holds 14) or whose key
+      # is <key>, evaluated as a roll would be; #-1 NO SUCH ROW or #-1 NO SUCH TABLE.
+      FN`TABLE`LOOKUP:
+        value: |-
+          u(FN`TABLE`LOOKUPKEY,u(FN`TABLE`FIND,%0,%#),%1)
+        flags: [VISUAL]
+      FN`TABLE`ROLLKEY: |-
+        if(strlen(%0),u(FN`ROW`RESULT,%0,rest(u(FN`TABLE`PICKS,%0,1))),#-1 NO SUCH TABLE)
+      FN`TABLE`LOOKUPKEY: |-
+        if(strlen(%0),u(FN`LOOKUP`RESULT,%0,u(FN`TABLE`WHICH,%0,%1)),#-1 NO SUCH TABLE)
+      FN`LOOKUP`RESULT: |-
+        if(isint(%1),u(FN`ROW`TEXT,%0,%1),#-1 NO SUCH ROW)
+
+      # ---- one table -------------------------------------------------------------------------
+      # A typed name as the key its attributes use, or nothing when it cannot be one.
+      FN`TABLE`KEY: |-
+        if(cand(strlen(%0),eq(words(%0),1),not(pos(`,%0)),not(pos(*,%0)),not(pos(?,%0)),valid(attrname,TABLE`%0`DIE)),ucstr(%0))
+      FN`TABLE`EXISTS: |-
+        hasattr({{table_data}},TABLE`%0`DIE)
+      # %0 a key, %1 who: 1 when they may read it. No lock means everyone may.
+      FN`TABLE`CANREAD: |-
+        cor(not(strlen(get({{table_data}}/TABLE`%0`LOCK))),permission(%1,softcode.tables.admin),testlock(get({{table_data}}/TABLE`%0`LOCK),%1))
+      # %0 a typed name, %1 who: its key when it exists and they may read it.
+      FN`TABLE`FIND: |-
+        iter(u(FN`TABLE`KEY,%0),if(cand(u(FN`TABLE`EXISTS,%i0),u(FN`TABLE`CANREAD,%i0,%1)),%i0))
+      FN`TABLE`ALL: |-
+        sort(iter(lattr({{table_data}}/TABLE`*`DIE),extract(%i0,2,1,`)))
+      FN`TABLE`READABLE: |-
+        squish(iter(u(FN`TABLE`ALL),if(u(FN`TABLE`CANREAD,%i0,%0),%i0)))
+      FN`TABLE`TITLE: |-
+        default({{table_data}}/TABLE`%0`TITLE,capstr(lcstr(%0)))
+      # The row numbers, in order. Numbers are names, not places: deleting row 3 leaves 1 2 4.
+      FN`TABLE`ROWS: |-
+        sort(edit(lattr({{table_data}}/TABLE`%0`ROW`*),TABLE`%0`ROW`,),n)
+      FN`TABLE`KIND: |-
+        u(FN`DIE`KIND,get({{table_data}}/TABLE`%0`DIE))
+      FN`TABLE`WEIGHT: |-
+        words(u(FN`TABLE`DECK,%0))
+
+      # ---- drawing rows ----------------------------------------------------------------------
+      # Every draw works from a list built once per command, so a table of hundreds of rows costs
+      # one pass over its rows however many times it is rolled.
+      #
+      # A die table's faces: one <number>:<row> for every number a row holds, row 4 keyed 11-16
+      # giving 11:4 12:4 ... 16:4. A number no row holds has none. grab() finds a roll's row.
+      FN`TABLE`FACES: |-
+        iter(u(FN`TABLE`ROWS,%0),u(FN`FACES`ROW,u(FN`RANGE`PAIR,get({{table_data}}/TABLE`%0`ROW`%i0`KEY)),%i0))
+      FN`FACES`ROW: |-
+        edit(lnum(first(%0,:),last(%0,:)),%b,:%1%b):%1
+      # %0 faces, %1 a number: the row that holds it, or nothing.
+      FN`FACE`ROW: |-
+        after(grab(%0,%1:*),:)
+      # A weight table's deck: each row's number as many times as its weight, so one rand() over the
+      # summed weights picks a row.
+      FN`TABLE`DECK: |-
+        iter(u(FN`TABLE`ROWS,%0),u(FN`DECK`ROW,get({{table_data}}/TABLE`%0`ROW`%i0`KEY),%i0))
+      FN`DECK`ROW: |-
+        if(cand(isint(%0),gt(%0,0)),repeat(%1%b,%0))
+      # %0 a key, %1 times: that many draws, each "<rolled> <row>", "|" between them; a die landing
+      # where no row is gives an empty row. A none table deals without repeats (shuffle), so it gives
+      # at most one draw per row; dice and weights roll each time afresh.
+      FN`TABLE`PICKS: |-
+        switch(u(FN`TABLE`KIND,%0),none,iter(extract(shuffle(u(FN`TABLE`ROWS,%0)),1,%1),#@ %i0,%b,|),weight,u(FN`DEAL`DECK,u(FN`TABLE`DECK,%0),%1),u(FN`DEAL`DIE,get({{table_data}}/TABLE`%0`DIE),u(FN`TABLE`FACES,%0),%1))
+      FN`DEAL`DECK: |-
+        iter(lnum(%1),u(FN`DEAL`CARD,%0,rand(1,max(1,words(%0)))),%b,|)
+      FN`DEAL`CARD: |-
+        %1 [extract(%0,%1,1)]
+      FN`DEAL`DIE: |-
+        iter(lnum(%2),u(FN`DEAL`FACE,%1,roll(%0)),%b,|)
+      FN`DEAL`FACE: |-
+        %1 [u(FN`FACE`ROW,%0,%1)]
+      # The row a lookup names: on a number, the row whose range holds it; otherwise, or when none
+      # does, the row whose key is the text, in any case.
+      FN`TABLE`WHICH: |-
+        firstof(if(isint(%1),u(FN`FACE`ROW,u(FN`TABLE`FACES,%0),%1)),u(FN`TABLE`KEYED,%0,lcstr(%1)))
+      FN`TABLE`KEYED: |-
+        iter(u(FN`TABLE`ROWS,%0),if(not(comp(lcstr(get({{table_data}}/TABLE`%0`ROW`%i0`KEY)),%1)),%i0[ibreak()]),%b,@@())
+
+      # ---- rows ------------------------------------------------------------------------------
+      # A row as the table shows it: a call that rolls another table reads (roll on <name>).
+      FN`ROW`SHOWN: |-
+        edit(%0,%[u%(FN`TABLE`ROLL%,,%(roll on%b,%)%],%))
+      FN`ROW`LABEL: |-
+        default({{table_data}}/TABLE`%0`ROW`%1`KEY,%1)
+      # A row's result, evaluated. Rows may roll other tables, at most five deep.
+      FN`ROW`TEXT: |-
+        if(gte(firstof(%q<table_depth>,0),5),tone(muted,%(too deep to roll%)),setq(table_depth,inc(firstof(%q<table_depth>,0)))[setq(table_text,u({{table_data}}/TABLE`%0`ROW`%1))][setq(table_depth,dec(%q<table_depth>))]%q<table_text>)
+      FN`ROW`RESULT: |-
+        if(isint(%1),u(FN`ROW`TEXT,%0,%1))
+      # A row key as low:high, 11-16 as 11:16 and 20 as 20. Only a - after a digit splits, so
+      # -3--1 is -3:-1.
+      FN`RANGE`PAIR: |-
+        regeditall(%0,%(?<=%[0-9%]%)-,:)
+      FN`RANGE`LOW: |-
+        first(u(FN`RANGE`PAIR,%0),:)
+      FN`RANGE`HIGH: |-
+        last(u(FN`RANGE`PAIR,%0),:)
+      FN`RANGE`VALID: |-
+        u(FN`PAIR`VALID,u(FN`RANGE`PAIR,%0))
+      FN`PAIR`VALID: |-
+        cand(lte(words(%0,:),2),isint(first(%0,:)),isint(last(%0,:)),lte(first(%0,:),last(%0,:)))
+
+      # ---- dice ------------------------------------------------------------------------------
+      FN`DIE`KIND: |-
+        switch(lcstr(%0),none,none,weight,weight,die)
+      FN`DIE`CLEAN: |-
+        if(member(none weight,lcstr(%0)),lcstr(%0),%0)
+      FN`DIE`VALID: |-
+        cor(member(none weight,lcstr(%0)),cand(valid(roll,%0),isint(roll(%0,,min)),isint(roll(%0,,max))))
+      FN`DIE`SENTENCE: |-
+        switch(u(FN`TABLE`KIND,%0),die,Rolled on [get({{table_data}}/TABLE`%0`DIE)]: a number no row holds gives no result.,weight,Weighted: a row's chance is its weight out of [u(FN`TABLE`WEIGHT,%0)].,Every row is equally likely.)
+      # %0 a key, %1 a new die: why its rows do not fit it, or nothing.
+      FN`DIE`PROBLEM: |-
+        firstof(uargs(me/FN`DIE`SHAPES,table,%0,die,%1,least,roll(%1,,min),most,roll(%1,,max)),if(cand(strmatch(u(FN`DIE`KIND,%1),die),u(FN`KEY`OVERLAP,%0)),Two rows overlap: a die table's ranges may not.))
+      FN`DIE`SHAPES: |-
+        first(squish(iter(u(FN`TABLE`ROWS,%<table>),uargs(me/FN`KEY`SHAPE,die,%<die>,key,get({{table_data}}/TABLE`%<table>`ROW`%i0`KEY),least,%<least>,most,%<most>),%b,|),|),|)
+
+      # ---- checking a key --------------------------------------------------------------------
+      # Named: die, key, least and most (what the die can roll). Why the key does not fit, or nothing.
+      FN`KEY`SHAPE: |-
+        switch(u(FN`DIE`KIND,%<die>),
+          none,,
+          weight,if(cand(isint(%<key>),gt(%<key>,0)),,A weight is a whole number above 0%, not %<key>.),
+          cond(
+            not(u(FN`RANGE`VALID,%<key>)),Give a number or a range such as 11-16%, not %<key>.,
+            lt(u(FN`RANGE`LOW,%<key>),%<least>),%<key> goes below %<least>%, the least %<die> can roll.,
+            gt(u(FN`RANGE`HIGH,%<key>),%<most>),%<key> goes above %<most>%, the most %<die> can roll.))
+      # %0 a table, %1 a row key, %2 the row it replaces: why it cannot be written, or nothing.
+      FN`KEY`PROBLEM: |-
+        firstof(if(cand(not(strlen(%1)),not(strmatch(u(FN`TABLE`KIND,%0),none))),Give the row's key before a |: +table/row [lcstr(%0)]=<key>|<result>.),uargs(me/FN`KEY`SHAPE,die,get({{table_data}}/TABLE`%0`DIE),key,%1,least,roll(get({{table_data}}/TABLE`%0`DIE),,min),most,roll(get({{table_data}}/TABLE`%0`DIE),,max)),if(strmatch(u(FN`TABLE`KIND,%0),die),uargs(me/FN`KEY`CLASH,table,%0,range,%1,except,%2,faces,u(FN`TABLE`FACES,%0))))
+      # Named: table, range, except (a row to leave out) and faces. The first other row holding a
+      # number of the range.
+      FN`KEY`CLASH: |-
+        u(FN`KEY`CLASHROW,%<table>,%<range>,first(setdiff(iter(lnum(u(FN`RANGE`LOW,%<range>),u(FN`RANGE`HIGH,%<range>)),u(FN`FACE`ROW,%<faces>,%i0)),%<except>)))
+      FN`KEY`CLASHROW: |-
+        if(strlen(%2),%1 overlaps row %2%, [get({{table_data}}/TABLE`%0`ROW`%2`KEY)].)
+      # 1 when two of a table's ranges overlap: some number is in its faces twice.
+      FN`KEY`OVERLAP: |-
+        u(FN`KEY`TWICE,regeditall(u(FN`TABLE`FACES,%0),:%[0-9%]+,))
+      FN`KEY`TWICE: |-
+        gt(words(%0),words(setunion(%0,)))
+
+      # ---- what a roll or a lookup says ------------------------------------------------------
+      # %0 a key, %1 times, %2 who rolls ("Ash rolls", "You privately roll"): the whole line.
+      FN`ROLL`LINE: |-
+        u(FN`ROLL`[if(eq(%1,1),ONE,MANY)],%0,%2,u(FN`TABLE`PICKS,%0,%1))
+      FN`ROLL`ONE: |-
+        %1[if(strmatch(u(FN`TABLE`KIND,%0),die),%b[first(%2)])] on [tone(primary,u(FN`TABLE`TITLE,%0))]: [u(FN`SAY`END,u(FN`ROLL`TEXT,%0,rest(%2)))]
+      FN`ROLL`MANY: |-
+        %1 on [tone(primary,u(FN`TABLE`TITLE,%0))] [words(%2,|)] times: [u(FN`SAY`END,iter(%2,u(FN`ROLL`ITEM,%0,%i0),|,;%b))]
+      FN`ROLL`ITEM: |-
+        u(FN`ROLL`TEXT,%0,rest(%1))[if(strmatch(u(FN`TABLE`KIND,%0),die),%b[tone(muted,%([first(%1)]%))])]
+      FN`ROLL`TEXT: |-
+        if(isint(%1),u(FN`ROW`TEXT,%0,%1),tone(muted,no result))
+      FN`LOOKUP`LINE: |-
+        u(FN`LOOKUP`SAY,%0,%1,u(FN`TABLE`WHICH,%0,%1))
+      FN`LOOKUP`SAY: |-
+        if(isint(%2),tone(primary,u(FN`TABLE`TITLE,%0)) [tone(strong,u(FN`ROW`LABEL,%0,%2))]: [u(FN`SAY`END,u(FN`ROW`TEXT,%0,%2))],notice(TABLES,u(FN`TABLE`TITLE,%0) has no row for %1.,warn))
+      # A sentence ends with a full stop unless it has one.
+      FN`SAY`END: |-
+        %0[if(member(. ! ?,right(%0,1)),,.)]
+
+      # ---- screens ---------------------------------------------------------------------------
+      # %0 a key, %1 the row numbers to show: the table, keys on the left, results as stored.
+      FN`TABLE`GRID: |-
+        datacolumns(
+          json(object,delim,json(string,%r),nowrap,json(string,1),min,json(string,%r12),grow,json(string,%r1)),
+          u(FN`TABLE`HEADING,%0)%r[iter(%1,u(FN`ROW`LABEL,%0,%i0),%b,%r)],
+          Result%r[iter(%1,u(FN`ROW`SHOWN,get({{table_data}}/TABLE`%0`ROW`%i0)),%b,%r)])
+      FN`TABLE`HEADING: |-
+        switch(u(FN`TABLE`KIND,%0),die,>Roll,weight,>Weight,Key)
+      # %0 a key, %1 the page, %2 the viewer.
+      FN`SCREEN`TABLE: |-
+        u(FN`SCREEN`TABLEPAGE,%0,u(FN`TABLE`ROWS,%0),%1)
+      FN`SCREEN`TABLEPAGE: |-
+        box(
+          if(words(%1),u(FN`TABLE`GRID,%0,u(FN`PAGE`SLICE,%1,%2)),No rows yet.)%r[rule()]%r[u(FN`DIE`SENTENCE,%0)][u(FN`PAGE`FOOTER,words(%1),%2,lcstr(%0))],
+          u(FN`TABLE`TITLE,%0))
+      # %0 the viewer, %1 the page.
+      FN`SCREEN`LIST: |-
+        u(FN`SCREEN`LISTPAGE,%0,u(FN`TABLE`READABLE,%0),%1)
+      FN`SCREEN`LISTPAGE: |-
+        box(
+          if(words(%1),u(FN`SCREEN`LISTGRID,%0,u(FN`PAGE`SLICE,%1,%2)),There are no tables you can read.)%r[rule()]%r+table <name> shows a table. +table/roll <name> rolls on it.[u(FN`PAGE`FOOTER,words(%1),%2,list)],
+          Roll Tables)
+      FN`SCREEN`LISTGRID: |-
+        datacolumns(
+          json(object,delim,json(string,%r),nowrap,json(string,1%r3%r4),grow,json(string,%r1)),
+          Table%r[iter(%1,lcstr(%i0),%b,%r)],
+          Title%r[iter(%1,u(FN`SCREEN`LISTTITLE,%i0,%0),%b,%r)],
+          Die%r[iter(%1,get({{table_data}}/TABLE`%i0`DIE),%b,%r)],
+          >Rows%r[iter(%1,words(lattr({{table_data}}/TABLE`%i0`ROW`*)),%b,%r)])
+      # Staff see which tables are locked.
+      FN`SCREEN`LISTTITLE: |-
+        u(FN`TABLE`TITLE,%0)[if(cand(strlen(get({{table_data}}/TABLE`%0`LOCK)),permission(%1,softcode.tables.admin)),%b[tone(warning,locked)])]
+
+      # ---- pages -----------------------------------------------------------------------------
+      # Fifty rows to a page; +table/2 <name> is the second.
+      FN`PAGE`SLICE: |-
+        extract(%0,inc(mul(dec(%1),50)),50)
+      FN`PAGE`LAST: |-
+        max(1,ceil(fdiv(%0,50)))
+      # %0 how many, %1 the page, %2 what follows the switch: where the next page is.
+      FN`PAGE`FOOTER: |-
+        if(gt(%0,50),%bPage %1 of [u(FN`PAGE`LAST,%0)].[if(lt(%1,u(FN`PAGE`LAST,%0)),%b+table/[if(strmatch(%2,list),list/)][inc(%1)][if(strmatch(%2,list),,%b%2)] shows the next.)])
+      # A wiki page name as typed, the way the table remembers it.
+      FN`PAGE`NAME: |-
+        lcstr(edit(trim(%0),%b,_))
+      # The page body: the table as Markdown, or render()'s #-1 error on a server without the format.
+      FN`TABLE`MARKDOWN: |-
+        u(FN`PAGE`BODY,%0,render(u(FN`TABLE`GRID,%0,u(FN`TABLE`ROWS,%0)),markdown))
+      FN`PAGE`BODY: |-
+        if(strmatch(%1,#-*),%1,u(FN`DIE`SENTENCE,%0)%r%r%1%r%r_This page is written from the game's roll table [lcstr(%0)]. Change the table in the game and publish it again: an edit made here is overwritten._)
+
+  # The tables, one attribute tree per table. Its parent is the functions object, so a row's
+  # u(FN`TABLE`ROLL,<table>) finds the function. NO_COMMAND: a row is never a $-command.
+  #
+  #   TABLE`<NAME>`DIE           a roll() formula (d20, 2d6, d100), weight, or none
+  #   TABLE`<NAME>`TITLE         what the table is called
+  #   TABLE`<NAME>`LOCK          optional lock key: who may read it
+  #   TABLE`<NAME>`PAGE          the wiki page it was published to, written by +table/publish
+  #   TABLE`<NAME>`ROW`<n>       one row's result, evaluated when it is rolled
+  #   TABLE`<NAME>`ROW`<n>`KEY   its key: a number or range (die), a weight, or a label (none)
+  - ref: table_data
+    type: thing
+    name: Roll Tables Data
+    location: "{{roll_tables}}"
+    parent: "{{table_functions}}"
+    flags: [NO_COMMAND]
+    attributes:
+      TABLE: |-
+        Roll tables, one branch per table. +help tables format describes the tree.
+      TABLE`WEATHER`DIE: |-
+        d20
+      TABLE`WEATHER`TITLE: |-
+        Weather on the coast road
+      TABLE`WEATHER`ROW`1: |-
+        Clear skies and a light breeze off the water
+      TABLE`WEATHER`ROW`1`KEY: |-
+        1-5
+      TABLE`WEATHER`ROW`2: |-
+        High thin cloud; the sea lies flat and grey
+      TABLE`WEATHER`ROW`2`KEY: |-
+        6-9
+      TABLE`WEATHER`ROW`3: |-
+        Sea fog rolls over the road by mid-morning and lifts by noon
+      TABLE`WEATHER`ROW`3`KEY: |-
+        10-12
+      TABLE`WEATHER`ROW`4: |-
+        Overcast, with a fine drizzle blowing in from the headland
+      TABLE`WEATHER`ROW`4`KEY: |-
+        13-15
+      TABLE`WEATHER`ROW`5: |-
+        Wind, [u(FN`TABLE`ROLL,wind)]
+      TABLE`WEATHER`ROW`5`KEY: |-
+        16-17
+      TABLE`WEATHER`ROW`6: |-
+        Heavy rain; the low crossings on the road flood by evening
+      TABLE`WEATHER`ROW`6`KEY: |-
+        18-19
+      TABLE`WEATHER`ROW`7: |-
+        Storm: [u(FN`TABLE`ROLL,squall)]
+      TABLE`WEATHER`ROW`7`KEY: |-
+        20
+      TABLE`WIND`DIE: |-
+        weight
+      TABLE`WIND`TITLE: |-
+        Wind off the sea
+      TABLE`WIND`ROW`1: |-
+        steady from the west
+      TABLE`WIND`ROW`1`KEY: |-
+        5
+      TABLE`WIND`ROW`2: |-
+        warm and wet from the south-west
+      TABLE`WIND`ROW`2`KEY: |-
+        3
+      TABLE`WIND`ROW`3: |-
+        cold from the north, sharp enough to sting
+      TABLE`WIND`ROW`3`KEY: |-
+        2
+      TABLE`WIND`ROW`4: |-
+        from the east, which the net-menders call a thief's wind
+      TABLE`WIND`ROW`4`KEY: |-
+        1
+      TABLE`SQUALL`DIE: |-
+        d6
+      TABLE`SQUALL`TITLE: |-
+        What the storm brings
+      TABLE`SQUALL`ROW`1: |-
+        lightning walks along the cliffs
+      TABLE`SQUALL`ROW`1`KEY: |-
+        1-2
+      TABLE`SQUALL`ROW`2: |-
+        waves break over the harbour wall
+      TABLE`SQUALL`ROW`2`KEY: |-
+        3-4
+      TABLE`SQUALL`ROW`3: |-
+        a fishing boat is overdue, and the lamps stay lit
+      TABLE`SQUALL`ROW`3`KEY: |-
+        5
+      TABLE`SQUALL`ROW`4: |-
+        hail, loud on every roof in town
+      TABLE`SQUALL`ROW`4`KEY: |-
+        6
+      TABLE`TIDE`DIE: |-
+        none
+      TABLE`TIDE`TITLE: |-
+        The tide at the causeway
+      TABLE`TIDE`ROW`1: |-
+        High water: the causeway is under the sea
+      TABLE`TIDE`ROW`1`KEY: |-
+        high
+      TABLE`TIDE`ROW`2: |-
+        Ebbing: the causeway shows its stones, wet and weedy
+      TABLE`TIDE`ROW`2`KEY: |-
+        ebb
+      TABLE`TIDE`ROW`3: |-
+        Low water: the causeway is dry and the sands are open
+      TABLE`TIDE`ROW`3`KEY: |-
+        low
+      TABLE`TIDE`ROW`4: |-
+        Flooding: the sea comes back faster than a person walks
+      TABLE`TIDE`ROW`4`KEY: |-
+        flood
+
+  # ---- help storage -------------------------------------------------------------------------
+  # A plain thing, not the WIZARD command object: the librarian cannot u() a privileged object's
+  # attributes. Bodies are evaluated, so brackets, parentheses and percent signs are escaped.
+  - ref: table_help
+    type: thing
+    name: Roll Tables Help
+    location: "{{roll_tables}}"
+    attributes:
+      HELP: |-
+        Roll tables: weather, encounters, names and anything else rolled at random.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree.
+      SEE`TABLES`PUBLISH: |-
+        wiki
+      HELP`TABLES: |-
+        A roll table turns a die roll into something that happens: the weather on the road, who is at the inn, what the storm brings. Rolling one tells everyone in the room what came up.
+
+        ## Reading
+
+        - `+table/list`: the tables you can read. A long list comes in pages: `+table/list/2`.
+        - `+table <name>`: one table, its rows and the die it rolls. `+table/2 <name>` is its second page of fifty rows.
+
+        ## Rolling
+
+        - `+table/roll <name>`: roll once and tell the room.
+        - `+table/roll <name>=<times>`: roll up to 20 times at once.
+        - `+table/roll/private <name>`: only you see the result. `+table/private <name>` is the same.
+        - `+table/lookup <name>=<number or key>`: the row a number falls in, or the row with that key, without rolling.
+
+        Example:
+
+        ```
+        +table/roll weather
+        ```
+
+        Output: everyone in the room sees a line such as Ash rolls 14 on Weather on the coast road: Overcast%, with a fine drizzle blowing in from the headland.
+
+        ## How a table rolls
+
+        - A **die** table rolls its formula, such as `d20`, `2d6` or `d100`, and each row holds a number or a range such as `11-16`. A number no row holds gives no result.
+        - A **weight** table picks one row, each as likely as its weight: a row of weight 3 comes up three times as often as a row of weight 1.
+        - A table with **none** for its die makes every row equally likely. Rolling it several times deals different rows, like cards from a deck, and its keys are names you can look up.
+
+        A row can roll another table as part of its result, as the weather's storm row does.
+
+        Staff keep the tables: see \[tables staff\]. For code, see \[tables code\].
+      HELP`TABLES`STAFF: |-
+        Table keepers, who hold the `softcode.tables.admin` permission %(the Table Keeper role gives it%), make and change tables with these commands. They can read every table.
+
+        ## Making a table
+
+        - `+table/create <name>=<die>`: a new, empty table. The name is one word; the die is a formula such as `d20` or `2d6`, `weight`, or `none`.
+        - `+table/title <name>=<title>`: what it is called on screen.
+        - `+table/die <name>=<die>`: roll it another way. Every row must fit the new die.
+
+        ## Rows
+
+        - `+table/row <name>=<key>|<result>`: add a row. The key is a number or range such as `11-16` on a die table, a whole number on a weight table, and a name on a none table, where it may be left out: `+table/row <name>=<result>`.
+        - `+table/row <name>/<number>=<key>|<result>`: replace a row. `+table <name>` shows the numbers.
+        - `+table/delrow <name>/<number>`: remove a row. The other rows keep their numbers.
+
+        On a die table the ranges may not overlap, and they must fit inside what the die can roll.
+
+        Example:
+
+        ```
+        +table/create omens=d6
+        +table/row omens=1-3|Gulls circle the harbour
+        +table/row omens=4-6|The bell buoy is silent
+        ```
+
+        Output: each command confirms the change, and +table omens then shows two rows rolled on d6.
+
+        ## Who may read a table
+
+        - `+table/lock <name>=<lock key>`: only someone who passes the key may read, roll or look up the table, for example `role^gm` or `perm^softcode.tables.admin`.
+        - `+table/lock <name>=`: everyone may read it again.
+
+        ## Removing a table
+
+        - `+table/delete <name>` says what would go, and `+table/delete <name>=yes` removes the table and all its rows.
+
+        To put a table on the wiki, see \[tables publish\]. To edit tables by hand, see \[tables format\].
+      HELP`TABLES`FORMAT: |-
+        Every table is an attribute tree on the Roll Tables Data object, so a table keeper with access to it can also edit tables by hand with `&`, `examine` and `@edit`.
+
+        ```
+        &TABLE`OMENS`DIE <data>=d6
+        &TABLE`OMENS`TITLE <data>=Omens at the harbour
+        &TABLE`OMENS`ROW`1 <data>=Gulls circle the harbour
+        &TABLE`OMENS`ROW`1`KEY <data>=1-3
+        ```
+
+        Output: none; the table omens then rolls d6 and has one row.
+
+        ## The tree
+
+        - ``TABLE`<NAME>`DIE``: a roll formula, `weight`, or `none`.
+        - ``TABLE`<NAME>`TITLE``: the title.
+        - ``TABLE`<NAME>`LOCK``: a lock key; who may read the table. Left out, everyone may.
+        - ``TABLE`<NAME>`ROW`<n>``: the result of row `<n>`, evaluated when it is rolled.
+        - ``TABLE`<NAME>`ROW`<n>`KEY``: its key: a number or range, a weight, or a name.
+        - ``TABLE`<NAME>`PAGE``: the wiki page the table was published to.
+
+        ## Why one attribute per row
+
+        Each row is a leaf of its own, so a row is edited, examined or removed without touching the others, an upgrade of this package merges row by row, and a table of several hundred rows still reads and rolls in well under a second. Row numbers are names rather than places: a table keeps them when a row is removed, and a new row takes the next number.
+      HELP`TABLES`CODE: |-
+        Two functions on the Roll Tables Functions object answer any object's code. Each checks that the enactor may read the table.
+
+        - ``u%(<functions>/FN`TABLE`ROLL,<name>%)``: one roll's result, or nothing when a die lands on a number no row holds.
+        - ``u%(<functions>/FN`TABLE`LOOKUP,<name>,<key>%)``: the row a number falls in, such as row `11-16` for 14, or the row whose key is `<key>`.
+
+        Both give `#-1 NO SUCH TABLE` for a table that does not exist or that the enactor may not read, and the lookup gives `#-1 NO SUCH ROW` when nothing matches.
+
+        ```
+        think u%(<functions>/FN`TABLE`LOOKUP,tide,low%)
+        ```
+
+        Output: Low water: the causeway is dry and the sands are open
+
+        ## Rows that roll other tables
+
+        A row's result is evaluated when it is rolled, as the Roll Tables Data object, so a row can roll another table with ``%[u%(FN`TABLE`ROLL,<name>%)%]``. Typed into `+table/row`, the call is stored as it is and runs at each roll. Rolls nest at most five deep; a sixth shows as too deep to roll.
+
+        ```
+        +table/row weather/7=20|Storm: %[u%(FN`TABLE`ROLL,squall%)%]
+        ```
+
+        Output: a confirmation; rolling a 20 on weather then rolls on squall as well.
+      HELP`TABLES`PUBLISH: |-
+        `+table/publish <name>=<namespace:page>` writes a table to a wiki page, so players can read it in the portal. Only a table keeper who also holds `wiki.create` and `wiki.edit` can publish.
+
+        ```
+        +table/publish weather=main:coast_weather
+        ```
+
+        Output: a confirmation naming the page, which then shows the table and the die it rolls.
+
+        - The table stays the source. Publishing again rewrites the page; an edit made on the wiki page is overwritten.
+        - The package never reads a page back, and only rewrites a page it created: a name that is already another page is refused.
+        - Publishing needs a server whose MarkupString has the Markdown format, which MarkupString 2.20 adds. On an older server the command says so and writes nothing.
+
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`ROLL-TABLES: |-
+        {{table_help}}

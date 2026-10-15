@@ -1,0 +1,14 @@
+**Ancestry Feat 1**  
+**Traits:** [[Aiuvarin|main:aiuvarin]]
+
+---
+
+Elves often struggle with underestimating aiuvarins, and you are experienced at telling stories of your accomplishments to gain their respect. You are trained in Performance. If you would automatically become trained in Performance (from your background or class, for example), you instead become trained in a skill of your choice.
+
+You gain the [[Impressive Performance|main:impressive_performance]] feat. When you attempt a Performance check to [[Make an Impression|main:make_an_impression]] on an elf, if you roll a critical failure, you get a failure instead.
+
+*Source: Player Core.*
+
+---
+
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

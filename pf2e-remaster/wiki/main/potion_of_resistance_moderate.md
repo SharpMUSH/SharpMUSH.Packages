@@ -1,0 +1,19 @@
+**Item 10**  
+**Traits:** Consumable, Magical, Potion  
+**Price:** 180 gp  
+**Bulk:** L  
+**Usage:** held in one hand
+
+---
+
+**Activate** (1 action) (manipulate)
+
+---
+
+Drinking this thick, fortifying potion grants 10 resistance against a single damage type for 1 hour. Each *potion of resistance* is created to defend against acid, cold, electricity, fire, or sonic damage (and is called a *lesser potion of fire resistance* or the like).
+
+*Source: GM Core.*
+
+---
+
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

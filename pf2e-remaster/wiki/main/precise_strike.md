@@ -1,0 +1,15 @@
+**Class Feature 1**  
+**Traits:** [[Swashbuckler|main:swashbuckler]]  
+**Class:** [[Swashbuckler|main:swashbuckler]]
+
+---
+
+When you make a Strike with an agile or finesse melee weapon or agile or finesse unarmed attack, you deal 2 additional precision damage. If the Strike is part of a finisher, the additional damage is 2d6 precision damage instead.
+
+As your swashbuckler level increases, so does your additional damage for precise strike. At 5th, 9th, 13th, and 17th level, increase the amount of additional damage on a Strike by 1 and the additional damage on a finisher by 1d6.
+
+*Source: Player Core 2.*
+
+---
+
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

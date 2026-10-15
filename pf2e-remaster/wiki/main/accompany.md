@@ -1,0 +1,16 @@
+**Class Feat 8** (reaction)  
+**Traits:** [[Bard|main:bard]], Concentrate, Manipulate
+
+---
+
+**Trigger** An ally within 30 feet Casts a Spell.
+
+---
+
+You use your performance to supplement an ally's spellcasting, providing magical energy for their spell in their stead. Attempt a Performance check, using a very high DC for the ally's level, and either spend a Focus Point (if the triggering spell is a focus spell) or expend a spell slot at least 1 rank higher than the triggering spell. If you succeed at your Performance check, your ally's spell doesn't cost the Focus Point or spell slot that ally would normally need to spend.
+
+*Source: Player Core.*
+
+---
+
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

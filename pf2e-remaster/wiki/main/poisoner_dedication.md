@@ -1,0 +1,13 @@
+**Archetype Feat 2**  
+**Traits:** Archetype, Dedication  
+**Prerequisites:** trained in [[Crafting|main:crafting]]
+
+---
+
+You make a point of always having a few toxins near at hand—you never know when some arsenic or the like might prove useful. You gain the advanced alchemy benefits. You can use advanced alchemy to create four alchemical poison consumables each day. You remember alchemical poison formulas and don't need a formula book for them.
+
+*Source: Player Core 2.*
+
+---
+
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

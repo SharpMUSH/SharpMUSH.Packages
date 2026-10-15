@@ -1,0 +1,13 @@
+**Skill Feat 2**  
+**Traits:** Uncommon, General, Skill  
+**Prerequisites:** expert in [[Society|main:society]]; Courtly Graces or Streetwise
+
+---
+
+You know the right people who can get things done for you in certain circles. Once per week, when you're in an area that has an established group of influential nobles, mercantile elites, or the like (if you have Courtly Graces), or a network of unsavory characters such as a thieves' guild (if you have Streetwise), you can use Society to Request a favor or aid from those people as if they were friendly to you. Your request must make sense for the type of people you contact. For instance, a member of the royal court could secure you a proper invitation to a fancy ball, while a local burglar could point out a way to stealthily infiltrate that same party. If you critically succeed this check, your connection gives a piece of helpful advice or lets you in on a small secret, granting you or a member of your party a +2 circumstance bonus to the first skill check you attempt when acting on the favor. If you critically fail this check, you might have to perform some service for your connection to get back in their good graces, as determined by the GM.
+
+*Source: Player Core 2.*
+
+---
+
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

@@ -1,0 +1,28 @@
+**Spell 2**  
+**Traits:** Concentrate, Incapacitation, Manipulate, Mental  
+**Traditions:** [[Arcane|category:arcane_spells]], [[Divine|category:divine_spells]], [[Occult|category:occult_spells]]  
+**Cast:** (2 actions)  
+**Range:** 30 feet  
+**Targets:** 1 creature  
+**Defense:** Will  
+**Duration:** varies
+
+---
+
+You speak on the virtue of charity, compelling the target to give away its possessions. The target must attempt a Will save. If the target has no items on its person, the spell fails.
+
+---
+
+**Critical Success** The target is unaffected.
+
+**Success** The target is [[Stunned 1|main:stunned]] as it wrestles with the urge.
+
+**Failure** On its next turn, before it does anything else, the target must present the nearest creature with an item in its possession; the target chooses which item to give, and if the only item it has is one that it's currently using to defend itself, such as a weapon during a combat encounter, it can choose to be stunned for 1 round instead of giving up the item. This might require the target to Interact to retrieve an item or move to reach the nearest creature, and passing the item off requires an Interact action as normal.
+
+**Critical Failure** As failure, except the duration is 4 rounds, and the target must repeat the effects of a failure on each of its turns. At the end of each of its turns, the target can attempt a new Will save to reduce the remaining duration by 1 round, ending the effects entirely on a critical success.
+
+*Source: Player Core 2.*
+
+---
+
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

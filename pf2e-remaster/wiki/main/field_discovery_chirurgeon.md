@@ -1,0 +1,12 @@
+**Class Feature 5**  
+**Traits:** [[Alchemist|main:alchemist]]
+
+---
+
+Your medicinal elixirs are quite fortifying. When a creature drinks an infused elixir with the healing trait that you have created, that creature gains a number of temporary Hit Points equal to your Intelligence modifier (minimum 0); these temporary Hit Points last for 1 minute.
+
+*Source: Player Core 2.*
+
+---
+
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

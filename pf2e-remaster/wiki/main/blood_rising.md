@@ -1,0 +1,20 @@
+**Class Feat 1** (reaction)  
+**Traits:** [[Sorcerer|main:sorcerer]]
+
+---
+
+**Trigger** A creature targets you with a spell of the same tradition as your bloodline.
+
+---
+
+The magic in your blood surges in response to your foe's spell. You generate a blood magic effect you know, even if you are already under the effects of blood magic. The target must be either you or the creature that triggered Blood Rising. If the blood magic effect grants you a bonus to AC or the appropriate saving throw, that bonus applies against the triggering spell. If the effect has a duration, it instead lasts until the beginning of your next turn.
+
+---
+
+**Special** This feat has the trait corresponding to the tradition of your bloodline.
+
+*Source: Player Core 2.*
+
+---
+
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

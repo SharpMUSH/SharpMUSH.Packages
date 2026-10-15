@@ -1,0 +1,19 @@
+**Item 13**  
+**Traits:** Magical  
+**Price:** 2500 gp  
+**Bulk:** —  
+**Usage:** etched onto a shield
+
+---
+
+Reinforcing runes make a shield significantly more durable, allowing it to effectively block more powerful attacks.
+
+---
+
+The shield's Hardness increases by 5, it gains an additional 80 Hit Points, and its BT increases by 40 (maximum 15 Hardness, 120 HP, and 60 BT).
+
+*Source: GM Core.*
+
+---
+
+*Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*
