@@ -1,26 +1,217 @@
 Magic items you wear, most of them invested.
 
-- **Level 0:** [[Clothing (Cold-Weather)|main:clothing_cold_weather]], [[Clothing (Fine)|main:clothing_fine]], [[Clothing (Ordinary)|main:clothing_ordinary]], [[Corrective Lenses|main:corrective_lenses]], [[Dueling Cape|main:dueling_cape]], [[Hearing Aid|main:hearing_aid]], [[Prosthesis|main:prosthesis]], [[Traveler's Chair|main:travelers_chair]], [[Wheelchair|main:wheelchair]]
-- **Level 1:** [[Aeon Stone (Consumed)|main:aeon_stone_consumed]], [[Magical Hearing Aid|main:magical_hearing_aid]], [[Ring of Sigils|main:ring_of_sigils]]
-- **Level 2:** [[Masquerade Scarf|main:masquerade_scarf]], [[Wayfinder|main:wayfinder]]
-- **Level 3:** [[Bracelet of Dashing|main:bracelet_of_dashing]], [[Bracers of Missile Deflection|main:bracers_of_missile_deflection]], [[Channel Protection Amulet|main:channel_protection_amulet]], [[Charlatan's Gloves|main:charlatans_gloves]], [[Clothing (High-Fashion Fine)|main:clothing_high_fashion_fine]], [[Concealed Sheath|main:concealed_sheath]], [[Coyote Cloak|main:coyote_cloak]], [[Crafter's Eyepiece|main:crafters_eyepiece]], [[Dancing Scarf|main:dancing_scarf]], [[Doubling Rings|main:doubling_rings]], [[Mage's Hat|main:mages_hat]], [[Pendant of the Occult|main:pendant_of_the_occult]], [[Persona Mask|main:persona_mask]], [[Shining Symbol|main:shining_symbol]], [[Tracker's Goggles|main:trackers_goggles]], [[Ventriloquist's Ring|main:ventriloquists_ring]]
-- **Level 4:** [[Alchemist Goggles|main:alchemist_goggles]], [[Demon Mask|main:demon_mask]], [[Healer's Gloves|main:healers_gloves]], [[Lifting Belt|main:lifting_belt]], [[Symbol of Conflict|main:symbol_of_conflict]]
-- **Level 5:** [[Aeon Stone (Preserving)|main:aeon_stone_preserving]], [[Arboreal Boots|main:arboreal_boots]], [[Diplomat's Badge|main:diplomats_badge]], [[Obsidian Goggles|main:obsidian_goggles]]
-- **Level 6:** [[Aeon Stone (Sprouting)|main:aeon_stone_sprouting]], [[Charm of Resistance|main:charm_of_resistance]], [[Choker of Elocution|main:choker_of_elocution]], [[Clandestine Cloak|main:clandestine_cloak]], [[Primeval Mistletoe|main:primeval_mistletoe]], [[Ring of Sigils (Greater)|main:ring_of_sigils_greater]]
-- **Level 7:** [[Aeon Stone (Delaying)|main:aeon_stone_delaying]], [[Aeon Stone (Nourishing)|main:aeon_stone_nourishing]], [[Aeon Stone (Smoothing)|main:aeon_stone_smoothing]], [[Alacritous Horseshoes|main:alacritous_horseshoes]], [[Boots of Bounding|main:boots_of_bounding]], [[Clawed Bracers|main:clawed_bracers]], [[Cloak of Illusions|main:cloak_of_illusions]], [[Cloak of Immolation|main:cloak_of_immolation]], [[Masquerade Scarf (Greater)|main:masquerade_scarf_greater]], [[Ring of Sustenance|main:ring_of_sustenance]]
-- **Level 8:** [[Aeon Stone (Envisioning)|main:aeon_stone_envisioning]], [[Bands of Force|main:bands_of_force]], [[Collar of Inconspicuousness|main:collar_of_inconspicuousness]], [[Lover's Gloves|main:lovers_gloves]]
-- **Level 9:** [[Arboreal Boots (Greater)|main:arboreal_boots_greater]], [[Armbands of Athleticism|main:armbands_of_athleticism]], [[Bracers of Missile Deflection (Greater)|main:bracers_of_missile_deflection_greater]], [[Charlatan's Gloves (Greater)|main:charlatans_gloves_greater]], [[Collar of Empathy|main:collar_of_empathy]], [[Coyote Cloak (Greater)|main:coyote_cloak_greater]], [[Dancing Scarf (Greater)|main:dancing_scarf_greater]], [[Eyes of the Cat|main:eyes_of_the_cat]], [[Guise of the Smirking Devil|main:guise_of_the_smirking_devil]], [[Healer's Gloves (Greater)|main:healers_gloves_greater]], [[Humbug Pocket|main:humbug_pocket]], [[Mage's Hat (Greater)|main:mages_hat_greater]], [[Messenger's Ring|main:messengers_ring]], [[Pendant of the Occult (Greater)|main:pendant_of_the_occult_greater]], [[Persona Mask (Greater)|main:persona_mask_greater]], [[Shining Symbol (Greater)|main:shining_symbol_greater]], [[Tracker's Goggles (Greater)|main:trackers_goggles_greater]], [[Ventriloquist's Ring (Greater)|main:ventriloquists_ring_greater]]
-- **Level 10:** [[Accolade Robe|main:accolade_robe]], [[Charlatan's Cape|main:charlatans_cape]], [[Charm of Resistance (Greater)|main:charm_of_resistance_greater]], [[Choker of Elocution (Greater)|main:choker_of_elocution_greater]], [[Clandestine Cloak (Greater)|main:clandestine_cloak_greater]], [[Crown of Witchcraft|main:crown_of_witchcraft]], [[Daredevil Boots|main:daredevil_boots]], [[Demon Mask (Greater)|main:demon_mask_greater]], [[Entertainer's Cincture|main:entertainers_cincture]], [[Fire-Jump Ring|main:fire_jump_ring]], [[Living Mantle|main:living_mantle]], [[Prognostic Veil|main:prognostic_veil]], [[Ring of Lies|main:ring_of_lies]], [[Sanguine Pendant|main:sanguine_pendant]], [[Sash of Prowess|main:sash_of_prowess]], [[Shadow Signet|main:shadow_signet]], [[Symbol of Conflict (Greater)|main:symbol_of_conflict_greater]], [[Winged Sandals|main:winged_sandals]]
-- **Level 11:** [[Alchemist Goggles (Greater)|main:alchemist_goggles_greater]], [[Crafter's Eyepiece (Greater)|main:crafters_eyepiece_greater]], [[Devoted Vestments|main:devoted_vestments]], [[Doubling Rings (Greater)|main:doubling_rings_greater]], [[Gorget of the Primal Roar|main:gorget_of_the_primal_roar]], [[Helm Of Zeal|main:helm_of_zeal]], [[Obsidian Goggles (Greater)|main:obsidian_goggles_greater]], [[Ring of Maniacal Devices|main:ring_of_maniacal_devices]]
-- **Level 12:** [[Berserker's Cloak|main:berserkers_cloak]], [[Cloak of Illusions (Greater)|main:cloak_of_illusions_greater]], [[Ring of Climbing|main:ring_of_climbing]], [[Ring of Swimming|main:ring_of_swimming]]
-- **Level 13:** [[Eye of Fortune|main:eye_of_fortune]], [[Hellfire Boots|main:hellfire_boots]], [[Propulsive Boots|main:propulsive_boots]]
-- **Level 14:** [[Alacritous Horseshoes (Greater)|main:alacritous_horseshoes_greater]], [[Bands of Force (Greater)|main:bands_of_force_greater]], [[Boots of Bounding (Greater)|main:boots_of_bounding_greater]], [[Charm of Resistance (Major)|main:charm_of_resistance_major]], [[Primeval Mistletoe (Greater)|main:primeval_mistletoe_greater]]
-- **Level 15:** [[Earthglide Cloak|main:earthglide_cloak]]
-- **Level 16:** [[Aeon Stone (Amplifying)|main:aeon_stone_amplifying]], [[Aeon Stone (Peering)|main:aeon_stone_peering]]
-- **Level 17:** [[Accolade Robe (Greater)|main:accolade_robe_greater]], [[Alchemist Goggles (Major)|main:alchemist_goggles_major]], [[Armbands of Athleticism (Greater)|main:armbands_of_athleticism_greater]], [[Belt of Long Life|main:belt_of_long_life]], [[Bracers of Strength|main:bracers_of_strength]], [[Cloak of Swiftness|main:cloak_of_swiftness]], [[Crown of Intellect|main:crown_of_intellect]], [[Daredevil Boots (Greater)|main:daredevil_boots_greater]], [[Dread Blindfold|main:dread_blindfold]], [[Entertainer's Cincture (Greater)|main:entertainers_cincture_greater]], [[Headwrap of Wisdom|main:headwrap_of_wisdom]], [[Humbug Pocket (Greater)|main:humbug_pocket_greater]], [[Messenger's Ring (Greater)|main:messengers_ring_greater]], [[Necklace of Allure|main:necklace_of_allure]], [[Sanguine Pendant (Greater)|main:sanguine_pendant_greater]], [[Sash of Prowess (Greater)|main:sash_of_prowess_greater]], [[Shining Symbol (Major)|main:shining_symbol_major]]
-- **Level 18:** [[Crown of Witchcraft (Greater)|main:crown_of_witchcraft_greater]], [[Genius Diadem|main:genius_diadem]], [[Helm Of Zeal (Greater)|main:helm_of_zeal_greater]], [[Inexplicable Apparatus|main:inexplicable_apparatus]], [[Living Mantle (Greater)|main:living_mantle_greater]], [[Obsidian Goggles (Major)|main:obsidian_goggles_major]], [[Prognostic Veil (Greater)|main:prognostic_veil_greater]], [[Ring of Maniacal Devices (Greater)|main:ring_of_maniacal_devices_greater]], [[Symbol of Conflict (Major)|main:symbol_of_conflict_major]]
-- **Level 19:** [[Berserker's Cloak (Greater)|main:berserkers_cloak_greater]], [[Guise of the Smirking Devil (Greater)|main:guise_of_the_smirking_devil_greater]], [[Third Eye|main:third_eye]]
-- **Level 20:** [[Bands of Force (Major)|main:bands_of_force_major]], [[Whisper of the First Lie|main:whisper_of_the_first_lie]]
+## Level 0
+
+- [[Clothing (Cold-Weather)|main:clothing_cold_weather]]
+- [[Clothing (Fine)|main:clothing_fine]]
+- [[Clothing (Ordinary)|main:clothing_ordinary]]
+- [[Corrective Lenses|main:corrective_lenses]]
+- [[Dueling Cape|main:dueling_cape]]
+- [[Hearing Aid|main:hearing_aid]]
+- [[Prosthesis|main:prosthesis]]
+- [[Traveler's Chair|main:travelers_chair]]
+- [[Wheelchair|main:wheelchair]]
+
+## Level 1
+
+- [[Aeon Stone (Consumed)|main:aeon_stone_consumed]]
+- [[Magical Hearing Aid|main:magical_hearing_aid]]
+- [[Ring of Sigils|main:ring_of_sigils]]
+
+## Level 2
+
+- [[Masquerade Scarf|main:masquerade_scarf]]
+- [[Wayfinder|main:wayfinder]]
+
+## Level 3
+
+- [[Bracelet of Dashing|main:bracelet_of_dashing]]
+- [[Bracers of Missile Deflection|main:bracers_of_missile_deflection]]
+- [[Channel Protection Amulet|main:channel_protection_amulet]]
+- [[Charlatan's Gloves|main:charlatans_gloves]]
+- [[Clothing (High-Fashion Fine)|main:clothing_high_fashion_fine]]
+- [[Concealed Sheath|main:concealed_sheath]]
+- [[Coyote Cloak|main:coyote_cloak]]
+- [[Crafter's Eyepiece|main:crafters_eyepiece]]
+- [[Dancing Scarf|main:dancing_scarf]]
+- [[Doubling Rings|main:doubling_rings]]
+- [[Mage's Hat|main:mages_hat]]
+- [[Pendant of the Occult|main:pendant_of_the_occult]]
+- [[Persona Mask|main:persona_mask]]
+- [[Shining Symbol|main:shining_symbol]]
+- [[Tracker's Goggles|main:trackers_goggles]]
+- [[Ventriloquist's Ring|main:ventriloquists_ring]]
+
+## Level 4
+
+- [[Alchemist Goggles|main:alchemist_goggles]]
+- [[Demon Mask|main:demon_mask]]
+- [[Healer's Gloves|main:healers_gloves]]
+- [[Lifting Belt|main:lifting_belt]]
+- [[Symbol of Conflict|main:symbol_of_conflict]]
+
+## Level 5
+
+- [[Aeon Stone (Preserving)|main:aeon_stone_preserving]]
+- [[Arboreal Boots|main:arboreal_boots]]
+- [[Diplomat's Badge|main:diplomats_badge]]
+- [[Obsidian Goggles|main:obsidian_goggles]]
+
+## Level 6
+
+- [[Aeon Stone (Sprouting)|main:aeon_stone_sprouting]]
+- [[Charm of Resistance|main:charm_of_resistance]]
+- [[Choker of Elocution|main:choker_of_elocution]]
+- [[Clandestine Cloak|main:clandestine_cloak]]
+- [[Primeval Mistletoe|main:primeval_mistletoe]]
+- [[Ring of Sigils (Greater)|main:ring_of_sigils_greater]]
+
+## Level 7
+
+- [[Aeon Stone (Delaying)|main:aeon_stone_delaying]]
+- [[Aeon Stone (Nourishing)|main:aeon_stone_nourishing]]
+- [[Aeon Stone (Smoothing)|main:aeon_stone_smoothing]]
+- [[Alacritous Horseshoes|main:alacritous_horseshoes]]
+- [[Boots of Bounding|main:boots_of_bounding]]
+- [[Clawed Bracers|main:clawed_bracers]]
+- [[Cloak of Illusions|main:cloak_of_illusions]]
+- [[Cloak of Immolation|main:cloak_of_immolation]]
+- [[Masquerade Scarf (Greater)|main:masquerade_scarf_greater]]
+- [[Ring of Sustenance|main:ring_of_sustenance]]
+
+## Level 8
+
+- [[Aeon Stone (Envisioning)|main:aeon_stone_envisioning]]
+- [[Bands of Force|main:bands_of_force]]
+- [[Collar of Inconspicuousness|main:collar_of_inconspicuousness]]
+- [[Lover's Gloves|main:lovers_gloves]]
+
+## Level 9
+
+- [[Arboreal Boots (Greater)|main:arboreal_boots_greater]]
+- [[Armbands of Athleticism|main:armbands_of_athleticism]]
+- [[Bracers of Missile Deflection (Greater)|main:bracers_of_missile_deflection_greater]]
+- [[Charlatan's Gloves (Greater)|main:charlatans_gloves_greater]]
+- [[Collar of Empathy|main:collar_of_empathy]]
+- [[Coyote Cloak (Greater)|main:coyote_cloak_greater]]
+- [[Dancing Scarf (Greater)|main:dancing_scarf_greater]]
+- [[Eyes of the Cat|main:eyes_of_the_cat]]
+- [[Guise of the Smirking Devil|main:guise_of_the_smirking_devil]]
+- [[Healer's Gloves (Greater)|main:healers_gloves_greater]]
+- [[Humbug Pocket|main:humbug_pocket]]
+- [[Mage's Hat (Greater)|main:mages_hat_greater]]
+- [[Messenger's Ring|main:messengers_ring]]
+- [[Pendant of the Occult (Greater)|main:pendant_of_the_occult_greater]]
+- [[Persona Mask (Greater)|main:persona_mask_greater]]
+- [[Shining Symbol (Greater)|main:shining_symbol_greater]]
+- [[Tracker's Goggles (Greater)|main:trackers_goggles_greater]]
+- [[Ventriloquist's Ring (Greater)|main:ventriloquists_ring_greater]]
+
+## Level 10
+
+- [[Accolade Robe|main:accolade_robe]]
+- [[Charlatan's Cape|main:charlatans_cape]]
+- [[Charm of Resistance (Greater)|main:charm_of_resistance_greater]]
+- [[Choker of Elocution (Greater)|main:choker_of_elocution_greater]]
+- [[Clandestine Cloak (Greater)|main:clandestine_cloak_greater]]
+- [[Crown of Witchcraft|main:crown_of_witchcraft]]
+- [[Daredevil Boots|main:daredevil_boots]]
+- [[Demon Mask (Greater)|main:demon_mask_greater]]
+- [[Entertainer's Cincture|main:entertainers_cincture]]
+- [[Fire-Jump Ring|main:fire_jump_ring]]
+- [[Living Mantle|main:living_mantle]]
+- [[Prognostic Veil|main:prognostic_veil]]
+- [[Ring of Lies|main:ring_of_lies]]
+- [[Sanguine Pendant|main:sanguine_pendant]]
+- [[Sash of Prowess|main:sash_of_prowess]]
+- [[Shadow Signet|main:shadow_signet]]
+- [[Symbol of Conflict (Greater)|main:symbol_of_conflict_greater]]
+- [[Winged Sandals|main:winged_sandals]]
+
+## Level 11
+
+- [[Alchemist Goggles (Greater)|main:alchemist_goggles_greater]]
+- [[Crafter's Eyepiece (Greater)|main:crafters_eyepiece_greater]]
+- [[Devoted Vestments|main:devoted_vestments]]
+- [[Doubling Rings (Greater)|main:doubling_rings_greater]]
+- [[Gorget of the Primal Roar|main:gorget_of_the_primal_roar]]
+- [[Helm Of Zeal|main:helm_of_zeal]]
+- [[Obsidian Goggles (Greater)|main:obsidian_goggles_greater]]
+- [[Ring of Maniacal Devices|main:ring_of_maniacal_devices]]
+
+## Level 12
+
+- [[Berserker's Cloak|main:berserkers_cloak]]
+- [[Cloak of Illusions (Greater)|main:cloak_of_illusions_greater]]
+- [[Ring of Climbing|main:ring_of_climbing]]
+- [[Ring of Swimming|main:ring_of_swimming]]
+
+## Level 13
+
+- [[Eye of Fortune|main:eye_of_fortune]]
+- [[Hellfire Boots|main:hellfire_boots]]
+- [[Propulsive Boots|main:propulsive_boots]]
+
+## Level 14
+
+- [[Alacritous Horseshoes (Greater)|main:alacritous_horseshoes_greater]]
+- [[Bands of Force (Greater)|main:bands_of_force_greater]]
+- [[Boots of Bounding (Greater)|main:boots_of_bounding_greater]]
+- [[Charm of Resistance (Major)|main:charm_of_resistance_major]]
+- [[Primeval Mistletoe (Greater)|main:primeval_mistletoe_greater]]
+
+## Level 15
+
+- [[Earthglide Cloak|main:earthglide_cloak]]
+
+## Level 16
+
+- [[Aeon Stone (Amplifying)|main:aeon_stone_amplifying]]
+- [[Aeon Stone (Peering)|main:aeon_stone_peering]]
+
+## Level 17
+
+- [[Accolade Robe (Greater)|main:accolade_robe_greater]]
+- [[Alchemist Goggles (Major)|main:alchemist_goggles_major]]
+- [[Armbands of Athleticism (Greater)|main:armbands_of_athleticism_greater]]
+- [[Belt of Long Life|main:belt_of_long_life]]
+- [[Bracers of Strength|main:bracers_of_strength]]
+- [[Cloak of Swiftness|main:cloak_of_swiftness]]
+- [[Crown of Intellect|main:crown_of_intellect]]
+- [[Daredevil Boots (Greater)|main:daredevil_boots_greater]]
+- [[Dread Blindfold|main:dread_blindfold]]
+- [[Entertainer's Cincture (Greater)|main:entertainers_cincture_greater]]
+- [[Headwrap of Wisdom|main:headwrap_of_wisdom]]
+- [[Humbug Pocket (Greater)|main:humbug_pocket_greater]]
+- [[Messenger's Ring (Greater)|main:messengers_ring_greater]]
+- [[Necklace of Allure|main:necklace_of_allure]]
+- [[Sanguine Pendant (Greater)|main:sanguine_pendant_greater]]
+- [[Sash of Prowess (Greater)|main:sash_of_prowess_greater]]
+- [[Shining Symbol (Major)|main:shining_symbol_major]]
+
+## Level 18
+
+- [[Crown of Witchcraft (Greater)|main:crown_of_witchcraft_greater]]
+- [[Genius Diadem|main:genius_diadem]]
+- [[Helm Of Zeal (Greater)|main:helm_of_zeal_greater]]
+- [[Inexplicable Apparatus|main:inexplicable_apparatus]]
+- [[Living Mantle (Greater)|main:living_mantle_greater]]
+- [[Obsidian Goggles (Major)|main:obsidian_goggles_major]]
+- [[Prognostic Veil (Greater)|main:prognostic_veil_greater]]
+- [[Ring of Maniacal Devices (Greater)|main:ring_of_maniacal_devices_greater]]
+- [[Symbol of Conflict (Major)|main:symbol_of_conflict_major]]
+
+## Level 19
+
+- [[Berserker's Cloak (Greater)|main:berserkers_cloak_greater]]
+- [[Guise of the Smirking Devil (Greater)|main:guise_of_the_smirking_devil_greater]]
+- [[Third Eye|main:third_eye]]
+
+## Level 20
+
+- [[Bands of Force (Major)|main:bands_of_force_major]]
+- [[Whisper of the First Lie|main:whisper_of_the_first_lie]]
+
 
 ---
 

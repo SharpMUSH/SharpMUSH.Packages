@@ -2,6 +2,16 @@
 
 Carrying especially heavy or unwieldy items can make it more difficult for you to move, as can overloading yourself with too much gear. The Bulk value of an item reflects how difficult the item is to handle, representing its size, weight, and general awkwardness. If you have a high Strength modifier, you usually don't need to worry about Bulk unless you're carrying numerous substantial items.
 
+## Ordinary carried equipment
+
+For Small and Medium characters, total the Bulk of held, worn and packed items. Ten light items make 1 Bulk; round the leftover light fraction down. Negligible items normally add none. Coins add 1 Bulk per 1,000, rounded down separately. You are encumbered above 5 + Strength modifier Bulk and cannot carry above 10 + Strength modifier. See [[Equipment Basics|main:equipment_basics]] for worn armor and the worked load.
+
+[Source: Player Core, p. 269, Bulk](https://2e.aonprd.com/Rules.aspx?ID=2153).
+
+## Bulk of creatures
+
+The following table is for carrying a creature; it is not a character's equipment allowance.
+
 | Size of Creature | Bulk |
 |---|---|
 | Tiny | 1 |
