@@ -28,6 +28,16 @@ The spellbook contains your choice of 10 arcane cantrips and five 1st-rank arcan
 
 Each time you gain a level, you add two arcane spells to your spellbook, of any spell rank for which you have spell slots, chosen from common spells of your tradition or others you gain access to. You can also add spells to your spellbook with the Learn a Spell activity. When you gain spell slots of a new rank, you also add an additional spell from your school's curriculum (unless it's the school of unified magical theory).
 
+### Prepare and cast your first spells
+
+[[Arcane School|main:arcane_school]] also adds one curriculum cantrip to your starting book, along with the two curriculum rank-1 spells described above. The [[School of Unified Magical Theory|main:school_of_unified_magical_theory]] has no curriculum and follows its own benefits.
+
+Use [[Spell Preparation|main:spell_preparation]] to distinguish book choices, ordinary slots, curriculum preparations, cantrips and focus. The [[Wizard Learning Guide|main:wizard_learning_guide]] supplies named level-1 choices, attack/DC arithmetic and a resource ledger. Follow [[Cast a Spell|main:cast_a_spell]] for casting and [[Basic Saving Throws|main:basic_saving_throws]] when a spell calls for a basic save.
+
+The full progression table referenced above is an external dependency: [full Wizard class progression and Wizard Spells per Day table (external primary reference)](https://2e.aonprd.com/Classes.aspx?ID=39). It is not reproduced on this page. The table excludes additional curriculum cantrips and spells, as clarified by the [official Player Core errata](https://paizo.com/pathfinder/faq). The learning guide's quantities cover level 1 only.
+
+*Procedure references: Player Core pp.195,198,297–299,403–404,439; [Arcane Schools](https://2e.aonprd.com/ArcaneSchools.aspx) and [Prepared Spells](https://2e.aonprd.com/Rules.aspx?ID=2223).*
+
 *Source: Player Core.*
 
 ---

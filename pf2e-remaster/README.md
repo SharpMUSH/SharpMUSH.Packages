@@ -27,7 +27,7 @@ or automatic check that a particular character meets every prerequisite.
 | Namespace | Pages |
 |---|---|
 | Category | Character Creation, Rules, Conditions and Difficulty Classes (all four pinned to the wiki home), and under them Classes, Class Features, Ancestries, Heritages (one per ancestry, plus Versatile Heritages), Backgrounds, Skills, Feats (Ancestry, Class, General, Skill and Archetype Feats, with one category per class and per ancestry), Spells (Cantrips, Rank 1 to Rank 10, Focus Spells, Rituals, and one per tradition), Actions (Basic, Specialty Basic, Skill, Exploration, Downtime, Subsystem, Other), Equipment (Weapons, Armor, Shields, Ammunition, Consumables and their kinds, Runes, Staves, Wands, Worn and Held Items, Adventuring Gear, Treasure and more), Familiar Abilities, and the condition groups |
-| Main | 16 classes, 341 class features, 16 ancestries, 106 heritages, 63 backgrounds, 1,814 feats, 659 spells, 166 actions, 1,241 items, 55 familiar abilities, 17 skills, Proficiency Ranks, Character Sheet, 37 rules overviews, 42 conditions, Degrees of Success and the four DC tables, and nine guided-learning pages |
+| Main | 16 classes, 341 class features, 16 ancestries, 106 heritages, 63 backgrounds, 1,814 feats, 659 spells, 166 actions, 1,241 items, 55 familiar abilities, 17 skills, Proficiency Ranks, Character Sheet, 37 rules overviews, 42 conditions, Degrees of Success and the four DC tables, and twelve guided-learning pages |
 | Help | ORC License Notice (wiki admins only may edit or delete it) |
 
 Each class page gives its key attribute, Hit Points, initial proficiencies, feat levels, class
@@ -44,7 +44,7 @@ The `wiki:` block uses manifest format 1.4. Current SharpMUSH supports file-back
 packages; its strict PackageValidator reads the complete manifest and bodies. Use a
 current server with content-pack support rather than a release predating that format.
 
-Version 1.2.0 adds nine guided-learning pages and linked corrections to the existing
+Version 1.2.0 adds twelve guided-learning pages and linked corrections to the existing
 reference. Its manifest/index version is prepared for review; it does not itself
 publish a package release or change an installed game.
 
@@ -80,3 +80,5 @@ or left out where the name is the rule.
 - `package.yaml`: the manifest.
 - `wiki/<namespace>/<page>.md`: one Markdown file per page.
 - `NOTICE.md`: the ORC notice.
+
+The Wizard learning route separately covers a level-1 casting ledger: book choices, ordinary and curriculum preparations, focus, spell attacks, basic saves, repeated preparation, Arcane Bond and daily reset. It assumes an explicitly stated Intelligence/proficiency input; it is not a complete alternate character build. The full higher-level Wizard Spells per Day table is an explicitly labelled external primary dependency.

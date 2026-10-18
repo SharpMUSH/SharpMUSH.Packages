@@ -1,3 +1,5 @@
+For a worked level-1 casting and preparation route, start at [[Wizard Learning Guide|main:wizard_learning_guide]]; use [[Spell Preparation|main:spell_preparation]] and [[Basic Saving Throws|main:basic_saving_throws]] for the ordinary procedures.
+
 Spells by rank and tradition. A spell's rank (1 to 10) sets how powerful it is; a cantrip is cast at will and heightens to half your level rounded up. Focus spells come from class features and feats and cost Focus Points. Rituals are long castings with several casters.
 
 - [[Cantrips|category:cantrips]]

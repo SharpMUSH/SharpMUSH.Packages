@@ -1,3 +1,5 @@
+A separate [[Wizard Learning Guide|main:wizard_learning_guide]] completes a level-1 spellbook/preparation example with explicit casting inputs; it does not replace the full character-creation checklist.
+
 Start with [[Learn PF2e|main:learn_pf2e]] and the ordered [[Character Creation Guide|main:character_creation_guide]]; compare the completed [[Dwarf Fighter Example|main:dwarf_fighter_example]].
 
 Everything that goes on a character sheet. Start with [[Character Sheet|main:character_sheet]] for an overview.
