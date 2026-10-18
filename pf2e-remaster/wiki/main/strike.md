@@ -11,6 +11,10 @@ You attack with a weapon you're wielding or with an unarmed attack, targeting on
 
 **Success** You make a damage roll according to the weapon or unarmed attack and deal damage.
 
+## Learn the procedure
+
+See [[Multiple Attack Penalty|main:multiple_attack_penalty]] for repeated attacks and [[First Encounter|main:first_encounter]] for a worked turn.
+
 *Source: Player Core.*
 
 ---

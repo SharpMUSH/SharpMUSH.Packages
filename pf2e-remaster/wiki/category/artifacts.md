@@ -1,6 +1,10 @@
 Artifacts.
 
-- **Level 25:** [[Mirror of Sorshen|main:mirror_of_sorshen]], [[Philosopher's Extractor|main:philosophers_extractor]]
+## Level 25
+
+- [[Mirror of Sorshen|main:mirror_of_sorshen]]
+- [[Philosopher's Extractor|main:philosophers_extractor]]
+
 
 ---
 

@@ -17,6 +17,10 @@ You try to knock a creature to the ground. Attempt an Athletics check against th
 
 **Critical Failure** You lose your balance, fall, and land prone.
 
+## Learn the procedure
+
+See [[Multiple Attack Penalty|main:multiple_attack_penalty]] and [[First Encounter|main:first_encounter]] for hand preparation and a Trip followed by a Strike.
+
 *Source: Player Core.*
 
 ---

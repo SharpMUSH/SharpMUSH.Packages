@@ -1,6 +1,10 @@
 Ancestry feats for [[Dromaar|main:dromaar]].
 
-- **Level 1:** [[Monstrous Peacemaker|main:monstrous_peacemaker]], [[Orc Sight|main:orc_sight]]
+## Level 1
+
+- [[Monstrous Peacemaker|main:monstrous_peacemaker]]
+- [[Orc Sight|main:orc_sight]]
+
 
 ---
 

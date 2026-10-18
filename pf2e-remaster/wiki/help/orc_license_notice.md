@@ -14,7 +14,7 @@ Pathfinder Player Core 2 © 2024 Paizo Inc., by Logan Bonner and Mark Seifter.
 
 Pathfinder GM Core © 2023 Paizo Inc., Designed by Logan Bonner and Mark Seifter. Authors: Amirali Attar Olyaee, Logan Bonner, Creighton Broadhurst, Jason Bulmahn, James Case, Jesse Decker, Eleanor Ferron, Fabby Garza Marroquín, Jaym Gates, Matthew Goetz, James Jacobs, Brian R. James, Jenny Jarzabski, Dustin Knight, Jason Lemaitre, Lyz Liddell, Luis Loza, Ron Lundeen, Stephen Radney-Macfarland, David N. Ross, Michael Sayre, Mark Seifter, Owen K.C. Stephens, Amber Stewart, Clark Valentine, Landon Winkler, and Linda Zayas-Palmer.
 
-The rules text was transcribed from the Foundry VTT pf2e game system (github.com/foundryvtt/pf2e), whose volunteer team entered these books' rules under the ORC License.
+The learning guides and worked examples were authored for this package from the rules in the books above; individual guides identify their rule references. Existing reference entries were transcribed from the Foundry VTT pf2e game system (github.com/foundryvtt/pf2e), whose volunteer team entered these books' rules under the ORC License.
 
 If you use our Licensed Material in your own published works, please credit us as follows:
 

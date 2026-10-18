@@ -1,3 +1,5 @@
+Begin with [[Dying and Recovery|main:dying_and_recovery]] for the defeat and recovery procedure, then use the condition entries below for their full effects.
+
 Conditions that track how close a character is to death and how hard it is to come back.
 
 Conditions in this group: [[Doomed|main:doomed]], [[Dying|main:dying]], [[Unconscious|main:unconscious]], [[Wounded|main:wounded]].

@@ -8,9 +8,6 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    # TODO: drop continue-on-error once the format v2 parser
-    # (feature/package-manager) merges to SharpMUSH main.
-    continue-on-error: true
     steps:
       - name: Checkout packages
         uses: actions/checkout@v4
@@ -34,6 +31,10 @@ jobs:
       - name: Validate manifests (strict)
         working-directory: sharpmush
         run: dotnet run --project tools/PackageValidator -- ../packages --strict
+
+      - name: Check PF2e navigation and notice links
+        working-directory: packages
+        run: python3 tools/check-pf2e-navigation.py
 
   immutable-tags:
     # Release tags (<pkg>/vX.Y.Z) are immutable: this job fails any push that

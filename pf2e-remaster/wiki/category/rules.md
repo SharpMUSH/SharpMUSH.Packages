@@ -1,3 +1,11 @@
+## Learn the standard procedures
+
+Begin at [[Learn PF2e|main:learn_pf2e]]. Use [[Encounter Mode|main:encounter_mode]], [[Multiple Attack Penalty|main:multiple_attack_penalty]], [[First Encounter|main:first_encounter]] and [[Dying and Recovery|main:dying_and_recovery]] for play. [[Equipment Basics|main:equipment_basics]] explains equipment fields; [[Leveling Up|main:leveling_up]] updates the sheet after play.
+
+## Rules reference and optional systems
+
+The directory below includes optional variants and GM tools as well as standard rules. Variant entries identify themselves; agree on them with your GM before applying them to a character.
+
 Rules overviews from Player Core and GM Core.
 
 - [[Ancestry Paragon|main:ancestry_paragon]]

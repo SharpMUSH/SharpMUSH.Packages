@@ -1,3 +1,5 @@
+Read [[Equipment Basics|main:equipment_basics]] to interpret prices, armor columns, hands, traits and Bulk. The [[Dwarf Fighter Example|main:dwarf_fighter_example]] includes an exact first-level budget.
+
 Weapons, armor, gear, consumables and magic items, each with its level, price and Bulk. See [[Bulk|main:bulk_and_encumbered]] for how much you can carry.
 
 - [[Adventuring Gear|category:adventuring_gear]]

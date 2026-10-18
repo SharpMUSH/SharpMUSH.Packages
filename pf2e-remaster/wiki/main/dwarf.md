@@ -9,6 +9,12 @@
 **Traits:** Dwarf, Humanoid  
 **Features:** Darkvision, Clan Dagger
 
+## Clan Dagger
+
+You receive one [[Clan Dagger|main:clan_dagger]] free at character creation. Add it to your inventory and Bulk without subtracting its price from starting money. See the [[Dwarf Fighter Example|main:dwarf_fighter_example]].
+
+[Source: Player Core, p. 43, Dwarf mechanics](https://2e.aonprd.com/Ancestries.aspx?ID=59).
+
 ## Heritages
 
 [[Ancient-Blooded Dwarf|main:ancient_blooded_dwarf]], [[Death Warden Dwarf|main:death_warden_dwarf]], [[Forge Dwarf|main:forge_dwarf]], [[Rock Dwarf|main:rock_dwarf]], [[Strong-Blooded Dwarf|main:strong_blooded_dwarf]]. You can choose one of the [[versatile heritages|category:versatile_heritages]] instead.

@@ -6,6 +6,10 @@ You are bleeding out or otherwise close to death. While dying you are [[Unconsci
 - You lose the condition and wake up whenever you have 1 Hit Point or more.
 - Whenever you lose the condition, you become [[Wounded|main:wounded]] 1, or your wounded value goes up by 1.
 
+## Learn the procedure
+
+See [[Dying and Recovery|main:dying_and_recovery]] for initial defeat, recovery checks, rescue, and repeated defeat.
+
 *Source: Player Core, p. 443.*
 
 ---

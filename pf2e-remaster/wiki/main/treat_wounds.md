@@ -3,6 +3,8 @@
 
 ---
 
+**Training** You must be trained in [[Medicine|main:medicine]].
+
 **Requirements** You're wearing or holding a [[Healer's Toolkit|main:healers_toolkit]].
 
 ---
@@ -22,6 +24,12 @@ The result of your Medicine check determines how many Hit Points the target rega
 **Success** The target regains 2d8 Hit Points, and loses the wounded condition.
 
 **Critical Failure** The target takes 1d8 untyped damage.
+
+## Equipment before treatment
+
+A worn healer's toolkit needs one free hand; a held toolkit needs two hands. The [[example dwarf|main:dwarf_fighter_example]] owns none. If borrowing an ally's toolkit, explicitly transfer it and free the needed hands before starting; return it afterward. Training does not supply equipment.
+
+Sources: [Treat Wounds, Player Core p. 242](https://2e.aonprd.com/Actions.aspx?ID=2399) and [Healer's Toolkit, Player Core p. 288](https://2e.aonprd.com/Equipment.aspx?ID=2727).
 
 *Source: Player Core.*
 

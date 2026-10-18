@@ -1,7 +1,13 @@
 Structures.
 
-- **Level 5:** [[Pocket Stage|main:pocket_stage]]
-- **Level 10:** [[Explorer's Yurt|main:explorers_yurt]]
+## Level 5
+
+- [[Pocket Stage|main:pocket_stage]]
+
+## Level 10
+
+- [[Explorer's Yurt|main:explorers_yurt]]
+
 
 ---
 

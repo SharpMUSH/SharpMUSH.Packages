@@ -1,21 +1,142 @@
 Potions.
 
-- **Level 1:** [[Gecko Potion|main:gecko_potion]], [[Healing Potion (Minor)|main:healing_potion_minor]], [[Potion of Acid Retaliation (Minor)|main:potion_of_acid_retaliation_minor]], [[Potion of Cold Retaliation (Minor)|main:potion_of_cold_retaliation_minor]], [[Potion of Electricity Retaliation (Minor)|main:potion_of_electricity_retaliation_minor]], [[Potion of Emergency Escape|main:potion_of_emergency_escape]], [[Potion of Fire Retaliation (Minor)|main:potion_of_fire_retaliation_minor]], [[Potion of Shared Memories|main:potion_of_shared_memories]], [[Ration Tonic|main:ration_tonic]]
-- **Level 3:** [[Healing Potion (Lesser)|main:healing_potion_lesser]], [[Potion of Acid Retaliation (Lesser)|main:potion_of_acid_retaliation_lesser]], [[Potion of Cold Retaliation (Lesser)|main:potion_of_cold_retaliation_lesser]], [[Potion of Electricity Retaliation (Lesser)|main:potion_of_electricity_retaliation_lesser]], [[Potion of Fire Retaliation (Lesser)|main:potion_of_fire_retaliation_lesser]], [[Potion of Water Breathing|main:potion_of_water_breathing]]
-- **Level 4:** [[Invisibility Potion|main:invisibility_potion]], [[Oak Potion|main:oak_potion]], [[Shrinking Potion|main:shrinking_potion]], [[Timeless Salts|main:timeless_salts]]
-- **Level 5:** [[Absolute Solvent (Lesser)|main:absolute_solvent_lesser]], [[Potion of Disguise (Lesser)|main:potion_of_disguise_lesser]], [[Potion of Leaping|main:potion_of_leaping]]
-- **Level 6:** [[Healing Potion (Moderate)|main:healing_potion_moderate]], [[Potion of Acid Resistance (Lesser)|main:potion_of_acid_resistance_lesser]], [[Potion of Acid Retaliation (Moderate)|main:potion_of_acid_retaliation_moderate]], [[Potion of Cold Resistance (Lesser)|main:potion_of_cold_resistance_lesser]], [[Potion of Cold Retaliation (Moderate)|main:potion_of_cold_retaliation_moderate]], [[Potion of Electricity Resistance (Lesser)|main:potion_of_electricity_resistance_lesser]], [[Potion of Electricity Retaliation (Moderate)|main:potion_of_electricity_retaliation_moderate]], [[Potion of Fire Resistance (Lesser)|main:potion_of_fire_resistance_lesser]], [[Potion of Fire Retaliation (Moderate)|main:potion_of_fire_retaliation_moderate]], [[Potion of Resistance (Lesser)|main:potion_of_resistance_lesser]], [[Potion of Sonic Resistance (Lesser)|main:potion_of_sonic_resistance_lesser]], [[Potion of Swimming|main:potion_of_swimming]], [[Truth Potion|main:truth_potion]]
-- **Level 7:** [[Energy Breath Potion (Acid, Lesser)|main:energy_breath_potion_acid_lesser]], [[Energy Breath Potion (Cold, Lesser)|main:energy_breath_potion_cold_lesser]], [[Energy Breath Potion (Electricity, Lesser)|main:energy_breath_potion_electricity_lesser]], [[Energy Breath Potion (Fire, Lesser)|main:energy_breath_potion_fire_lesser]], [[Energy Breath Potion (Sonic, Lesser)|main:energy_breath_potion_sonic_lesser]], [[Everlasting Adhesive|main:everlasting_adhesive]], [[Ration Tonic (Greater)|main:ration_tonic_greater]], [[Serum of Sex Shift|main:serum_of_sex_shift]], [[Skinstitch Salve|main:skinstitch_salve]]
-- **Level 8:** [[Potion of Disguise (Moderate)|main:potion_of_disguise_moderate]], [[Potion of Flying (Standard)|main:potion_of_flying_standard]], [[Potion of Quickness|main:potion_of_quickness]], [[Shrinking Potion (Greater)|main:shrinking_potion_greater]]
-- **Level 10:** [[Potion of Acid Resistance (Moderate)|main:potion_of_acid_resistance_moderate]], [[Potion of Cold Resistance (Moderate)|main:potion_of_cold_resistance_moderate]], [[Potion of Electricity Resistance (Moderate)|main:potion_of_electricity_resistance_moderate]], [[Potion of Resistance (Moderate)|main:potion_of_resistance_moderate]], [[Potion of Sonic Resistance (Moderate)|main:potion_of_sonic_resistance_moderate]]
-- **Level 11:** [[Potion of Disguise (Greater)|main:potion_of_disguise_greater]], [[Potion of Swimming (Greater)|main:potion_of_swimming_greater]]
-- **Level 12:** [[Absolute Solvent (Moderate)|main:absolute_solvent_moderate]], [[Energy Breath Potion (Acid, Moderate)|main:energy_breath_potion_acid_moderate]], [[Energy Breath Potion (Cold, Moderate)|main:energy_breath_potion_cold_moderate]], [[Energy Breath Potion (Electricity, Moderate)|main:energy_breath_potion_electricity_moderate]], [[Energy Breath Potion (Fire, Moderate)|main:energy_breath_potion_fire_moderate]], [[Energy Breath Potion (Sonic, Moderate)|main:energy_breath_potion_sonic_moderate]], [[Healing Potion (Greater)|main:healing_potion_greater]], [[Potion of Acid Retaliation (Greater)|main:potion_of_acid_retaliation_greater]], [[Potion of Cold Retaliation (Greater)|main:potion_of_cold_retaliation_greater]], [[Potion of Electricity Retaliation (Greater)|main:potion_of_electricity_retaliation_greater]], [[Potion of Fire Retaliation (Greater)|main:potion_of_fire_retaliation_greater]], [[Potion of Truespeech|main:potion_of_truespeech]]
-- **Level 13:** [[Panacea|main:panacea]], [[Time Shield Potion|main:time_shield_potion]]
-- **Level 14:** [[Potion of Acid Resistance (Greater)|main:potion_of_acid_resistance_greater]], [[Potion of Cold Resistance (Greater)|main:potion_of_cold_resistance_greater]], [[Potion of Electricity Resistance (Greater)|main:potion_of_electricity_resistance_greater]], [[Potion of Fire Resistance (Greater)|main:potion_of_fire_resistance_greater]], [[Potion of Resistance (Greater)|main:potion_of_resistance_greater]], [[Potion of Sonic Resistance (Greater)|main:potion_of_sonic_resistance_greater]]
-- **Level 15:** [[Potion of Flying (Greater)|main:potion_of_flying_greater]]
-- **Level 16:** [[Truesight Potion|main:truesight_potion]]
-- **Level 17:** [[Energy Breath Potion (Acid, Greater)|main:energy_breath_potion_acid_greater]], [[Energy Breath Potion (Cold, Greater)|main:energy_breath_potion_cold_greater]], [[Energy Breath Potion (Electricity, Greater)|main:energy_breath_potion_electricity_greater]], [[Energy Breath Potion (Fire, Greater)|main:energy_breath_potion_fire_greater]], [[Energy Breath Potion (Sonic, Greater)|main:energy_breath_potion_sonic_greater]]
-- **Level 18:** [[Absolute Solvent (Greater)|main:absolute_solvent_greater]], [[Healing Potion (Major)|main:healing_potion_major]], [[Potion of Acid Retaliation (Major)|main:potion_of_acid_retaliation_major]], [[Potion of Cold Retaliation (Major)|main:potion_of_cold_retaliation_major]], [[Potion of Electricity Retaliation (Major)|main:potion_of_electricity_retaliation_major]], [[Potion of Fire Retaliation (Major)|main:potion_of_fire_retaliation_major]], [[Potion of Undetectability|main:potion_of_undetectability]]
+## Level 1
+
+- [[Gecko Potion|main:gecko_potion]]
+- [[Healing Potion (Minor)|main:healing_potion_minor]]
+- [[Potion of Acid Retaliation (Minor)|main:potion_of_acid_retaliation_minor]]
+- [[Potion of Cold Retaliation (Minor)|main:potion_of_cold_retaliation_minor]]
+- [[Potion of Electricity Retaliation (Minor)|main:potion_of_electricity_retaliation_minor]]
+- [[Potion of Emergency Escape|main:potion_of_emergency_escape]]
+- [[Potion of Fire Retaliation (Minor)|main:potion_of_fire_retaliation_minor]]
+- [[Potion of Shared Memories|main:potion_of_shared_memories]]
+- [[Ration Tonic|main:ration_tonic]]
+
+## Level 3
+
+- [[Healing Potion (Lesser)|main:healing_potion_lesser]]
+- [[Potion of Acid Retaliation (Lesser)|main:potion_of_acid_retaliation_lesser]]
+- [[Potion of Cold Retaliation (Lesser)|main:potion_of_cold_retaliation_lesser]]
+- [[Potion of Electricity Retaliation (Lesser)|main:potion_of_electricity_retaliation_lesser]]
+- [[Potion of Fire Retaliation (Lesser)|main:potion_of_fire_retaliation_lesser]]
+- [[Potion of Water Breathing|main:potion_of_water_breathing]]
+
+## Level 4
+
+- [[Invisibility Potion|main:invisibility_potion]]
+- [[Oak Potion|main:oak_potion]]
+- [[Shrinking Potion|main:shrinking_potion]]
+- [[Timeless Salts|main:timeless_salts]]
+
+## Level 5
+
+- [[Absolute Solvent (Lesser)|main:absolute_solvent_lesser]]
+- [[Potion of Disguise (Lesser)|main:potion_of_disguise_lesser]]
+- [[Potion of Leaping|main:potion_of_leaping]]
+
+## Level 6
+
+- [[Healing Potion (Moderate)|main:healing_potion_moderate]]
+- [[Potion of Acid Resistance (Lesser)|main:potion_of_acid_resistance_lesser]]
+- [[Potion of Acid Retaliation (Moderate)|main:potion_of_acid_retaliation_moderate]]
+- [[Potion of Cold Resistance (Lesser)|main:potion_of_cold_resistance_lesser]]
+- [[Potion of Cold Retaliation (Moderate)|main:potion_of_cold_retaliation_moderate]]
+- [[Potion of Electricity Resistance (Lesser)|main:potion_of_electricity_resistance_lesser]]
+- [[Potion of Electricity Retaliation (Moderate)|main:potion_of_electricity_retaliation_moderate]]
+- [[Potion of Fire Resistance (Lesser)|main:potion_of_fire_resistance_lesser]]
+- [[Potion of Fire Retaliation (Moderate)|main:potion_of_fire_retaliation_moderate]]
+- [[Potion of Resistance (Lesser)|main:potion_of_resistance_lesser]]
+- [[Potion of Sonic Resistance (Lesser)|main:potion_of_sonic_resistance_lesser]]
+- [[Potion of Swimming|main:potion_of_swimming]]
+- [[Truth Potion|main:truth_potion]]
+
+## Level 7
+
+- [[Energy Breath Potion (Acid, Lesser)|main:energy_breath_potion_acid_lesser]]
+- [[Energy Breath Potion (Cold, Lesser)|main:energy_breath_potion_cold_lesser]]
+- [[Energy Breath Potion (Electricity, Lesser)|main:energy_breath_potion_electricity_lesser]]
+- [[Energy Breath Potion (Fire, Lesser)|main:energy_breath_potion_fire_lesser]]
+- [[Energy Breath Potion (Sonic, Lesser)|main:energy_breath_potion_sonic_lesser]]
+- [[Everlasting Adhesive|main:everlasting_adhesive]]
+- [[Ration Tonic (Greater)|main:ration_tonic_greater]]
+- [[Serum of Sex Shift|main:serum_of_sex_shift]]
+- [[Skinstitch Salve|main:skinstitch_salve]]
+
+## Level 8
+
+- [[Potion of Disguise (Moderate)|main:potion_of_disguise_moderate]]
+- [[Potion of Flying (Standard)|main:potion_of_flying_standard]]
+- [[Potion of Quickness|main:potion_of_quickness]]
+- [[Shrinking Potion (Greater)|main:shrinking_potion_greater]]
+
+## Level 10
+
+- [[Potion of Acid Resistance (Moderate)|main:potion_of_acid_resistance_moderate]]
+- [[Potion of Cold Resistance (Moderate)|main:potion_of_cold_resistance_moderate]]
+- [[Potion of Electricity Resistance (Moderate)|main:potion_of_electricity_resistance_moderate]]
+- [[Potion of Resistance (Moderate)|main:potion_of_resistance_moderate]]
+- [[Potion of Sonic Resistance (Moderate)|main:potion_of_sonic_resistance_moderate]]
+
+## Level 11
+
+- [[Potion of Disguise (Greater)|main:potion_of_disguise_greater]]
+- [[Potion of Swimming (Greater)|main:potion_of_swimming_greater]]
+
+## Level 12
+
+- [[Absolute Solvent (Moderate)|main:absolute_solvent_moderate]]
+- [[Energy Breath Potion (Acid, Moderate)|main:energy_breath_potion_acid_moderate]]
+- [[Energy Breath Potion (Cold, Moderate)|main:energy_breath_potion_cold_moderate]]
+- [[Energy Breath Potion (Electricity, Moderate)|main:energy_breath_potion_electricity_moderate]]
+- [[Energy Breath Potion (Fire, Moderate)|main:energy_breath_potion_fire_moderate]]
+- [[Energy Breath Potion (Sonic, Moderate)|main:energy_breath_potion_sonic_moderate]]
+- [[Healing Potion (Greater)|main:healing_potion_greater]]
+- [[Potion of Acid Retaliation (Greater)|main:potion_of_acid_retaliation_greater]]
+- [[Potion of Cold Retaliation (Greater)|main:potion_of_cold_retaliation_greater]]
+- [[Potion of Electricity Retaliation (Greater)|main:potion_of_electricity_retaliation_greater]]
+- [[Potion of Fire Retaliation (Greater)|main:potion_of_fire_retaliation_greater]]
+- [[Potion of Truespeech|main:potion_of_truespeech]]
+
+## Level 13
+
+- [[Panacea|main:panacea]]
+- [[Time Shield Potion|main:time_shield_potion]]
+
+## Level 14
+
+- [[Potion of Acid Resistance (Greater)|main:potion_of_acid_resistance_greater]]
+- [[Potion of Cold Resistance (Greater)|main:potion_of_cold_resistance_greater]]
+- [[Potion of Electricity Resistance (Greater)|main:potion_of_electricity_resistance_greater]]
+- [[Potion of Fire Resistance (Greater)|main:potion_of_fire_resistance_greater]]
+- [[Potion of Resistance (Greater)|main:potion_of_resistance_greater]]
+- [[Potion of Sonic Resistance (Greater)|main:potion_of_sonic_resistance_greater]]
+
+## Level 15
+
+- [[Potion of Flying (Greater)|main:potion_of_flying_greater]]
+
+## Level 16
+
+- [[Truesight Potion|main:truesight_potion]]
+
+## Level 17
+
+- [[Energy Breath Potion (Acid, Greater)|main:energy_breath_potion_acid_greater]]
+- [[Energy Breath Potion (Cold, Greater)|main:energy_breath_potion_cold_greater]]
+- [[Energy Breath Potion (Electricity, Greater)|main:energy_breath_potion_electricity_greater]]
+- [[Energy Breath Potion (Fire, Greater)|main:energy_breath_potion_fire_greater]]
+- [[Energy Breath Potion (Sonic, Greater)|main:energy_breath_potion_sonic_greater]]
+
+## Level 18
+
+- [[Absolute Solvent (Greater)|main:absolute_solvent_greater]]
+- [[Healing Potion (Major)|main:healing_potion_major]]
+- [[Potion of Acid Retaliation (Major)|main:potion_of_acid_retaliation_major]]
+- [[Potion of Cold Retaliation (Major)|main:potion_of_cold_retaliation_major]]
+- [[Potion of Electricity Retaliation (Major)|main:potion_of_electricity_retaliation_major]]
+- [[Potion of Fire Retaliation (Major)|main:potion_of_fire_retaliation_major]]
+- [[Potion of Undetectability|main:potion_of_undetectability]]
+
 
 ---
 
