@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -12,11 +15,13 @@ jobs:
       - name: Checkout packages
         uses: actions/checkout@v4
         with:
+          persist-credentials: false
           path: packages
 
       - name: Checkout SharpMUSH
         uses: actions/checkout@v4
         with:
+          persist-credentials: false
           repository: SharpMUSH/SharpMUSH
           ref: ${{ vars.SHARPMUSH_REF || 'main' }}
           path: sharpmush
@@ -44,6 +49,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          persist-credentials: false
           fetch-depth: 0
       - name: Check release tags still reachable
         run: |
