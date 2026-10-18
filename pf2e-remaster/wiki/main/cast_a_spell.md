@@ -12,6 +12,20 @@ A **locus** is an object that funnels or directs the magical energy of the spell
 
 **Disrupted and Lost Spells** Some abilities and spells can disrupt a spell, causing it to have no effect and be lost. When you lose a spell, you've already expended the spell slot and spent the spell's costs and actions. If a spell is disrupted during a [[Sustain|main:sustain]] action, the spell immediately ends.
 
+## Read the spell's traits and requirements
+
+The spell's own entry determines its actions, traits, range, targets and effects. Do not assume every spell takes two actions or uses the same traits.
+
+- **Concentrate** requires mental concentration and discipline. Effects that restrict concentrate actions can restrict a spell with this trait.
+- **Manipulate** requires physically manipulating an item or making gestures with a suitable appendage. Manipulate actions often trigger reactions; follow the particular reaction's trigger. This trait does not by itself state that every spell requires a free hand. The locus-retrieval rule above applies when a spell requires a locus.
+- **Attack** makes spell attacks subject to [[Multiple Attack Penalty|main:multiple_attack_penalty]]. A save-based spell without the attack trait, such as [[Electric Arc|main:electric_arc]], does not become an attack merely because it deals damage.
+
+Casting normally involves gestures and incantations, and being unable to speak prevents spellcasting for most casters. For a long-term disability affecting speech, work with the GM on an analogous way to cast. Spellcasting also normally has obvious sensory manifestations. Specific spell text and abilities can change how casting works; the printed traits still matter.
+
+Check whether you have the required preparation or Focus Point before casting. See [[Spell Preparation|main:spell_preparation]] for ordinary expenditure and daily recovery, the [[Wizard Learning Guide|main:wizard_learning_guide]] for a worked ledger, and [[Basic Saving Throws|main:basic_saving_throws]] for the target's damage outcomes when a spell specifies a basic save.
+
+*Procedure references: Player Core pp.299,402–404,454,458; [Casting Spells](https://2e.aonprd.com/Rules.aspx?ID=2233), [Concentrate](https://2e.aonprd.com/Traits.aspx?ID=561) and [Manipulate](https://2e.aonprd.com/Traits.aspx?ID=645).*
+
 *Source: Player Core.*
 
 ---

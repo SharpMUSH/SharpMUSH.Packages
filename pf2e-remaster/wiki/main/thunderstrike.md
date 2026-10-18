@@ -8,7 +8,7 @@
 
 ---
 
-You call down a tendril of lightning that cracks with thunder, dealing 1d12 electricity damage and 1d4 sonic damage to the target with a basic Reflex save. A target wearing metal armor or made of metal takes a –1 circumstance bonus to its save, and if damaged by the spell is [[Clumsy 1|main:clumsy]] for 1 round.
+You call down a tendril of lightning that cracks with thunder, dealing 1d12 electricity damage and 1d4 sonic damage to the target with a basic Reflex save. A target wearing metal armor or made of metal takes a –1 circumstance penalty to its save, and if damaged by the spell is [[Clumsy 1|main:clumsy]] for 1 round.
 
 ---
 

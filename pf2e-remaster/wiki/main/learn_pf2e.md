@@ -6,6 +6,12 @@ Start here to learn the core character and play procedures in this reference. Ke
 2. Compare your choices with the completed [[Dwarf Fighter Example|main:dwarf_fighter_example]]. It shows each boost, proficiency and purchase; it is one build, not the only valid one.
 3. Read [[Equipment Basics|main:equipment_basics]] before interpreting armor columns, weapon traits or carried Bulk.
 
+## Learn a spellcaster
+
+1. Use the [[Wizard Learning Guide|main:wizard_learning_guide]] as a separate level-1 casting route. It lists a complete spellbook and today's preparations, with explicitly assumed casting statistics; finish the rest of the character through Character Creation.
+2. Follow [[Spell Preparation|main:spell_preparation]] for book choices, repeated preparations, curriculum slots, cantrips, focus, daily reset and Arcane Bond.
+3. Read [[Cast a Spell|main:cast_a_spell]] and [[Basic Saving Throws|main:basic_saving_throws]], then work the guide's attack, save and resource examples.
+
 ## Play a first encounter
 
 1. Learn [[Proficiency Ranks|main:proficiency_ranks]] and [[Degrees of Success|main:degrees_of_success]].

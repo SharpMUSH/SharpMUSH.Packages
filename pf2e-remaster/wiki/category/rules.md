@@ -1,3 +1,5 @@
+Spellcasters can continue with [[Wizard Learning Guide|main:wizard_learning_guide]], [[Spell Preparation|main:spell_preparation]] and [[Basic Saving Throws|main:basic_saving_throws]].
+
 ## Learn the standard procedures
 
 Begin at [[Learn PF2e|main:learn_pf2e]]. Use [[Encounter Mode|main:encounter_mode]], [[Multiple Attack Penalty|main:multiple_attack_penalty]], [[First Encounter|main:first_encounter]] and [[Dying and Recovery|main:dying_and_recovery]] for play. [[Equipment Basics|main:equipment_basics]] explains equipment fields; [[Leveling Up|main:leveling_up]] updates the sheet after play.
