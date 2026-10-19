@@ -87,6 +87,14 @@ This local worked progression stops at level 2. For later levels, follow the [fu
 
 Review every affected sheet entry, including conditional DCs from Rock Dwarf and your new action's hand state. Continue with [[Encounter Mode|main:encounter_mode]], or return to [[Character Creation Guide|main:character_creation_guide]] for a different build.
 
+::: wiki-next-step
+### Continue playing
+
+Use [[Actions|category:actions]], [[Conditions|category:conditions]] and [[Spells|category:spells]] for rules lookups during play.
+
+Return to [[Learn PF2e|main:learn_pf2e]].
+:::
+
 ## Sources
 
 Original checklist and worked arithmetic based on *Player Core*: [Leveling Up, p. 29](https://2e.aonprd.com/Rules.aspx?ID=2065), [Fighter advancement and skill-feat qualification, pp. 138–139](https://2e.aonprd.com/Classes.aspx?ID=35), [Dueling Parry, p. 141](https://2e.aonprd.com/Feats.aspx?ID=4781), and [Hefty Hauler, p. 256](https://2e.aonprd.com/Feats.aspx?ID=5156). The fighter retains the equipment and attribute sources on [[Dwarf Fighter Example|main:dwarf_fighter_example]]. The Wizard update uses [Wizard advancement and spellcasting, Player Core pp.192–197](https://2e.aonprd.com/Classes.aspx?ID=39), the complete [[Dwarf Wizard Example|main:dwarf_wizard_example]], and the linked local Conceal Spell, Assurance, Breathe Fire and Sure Strike entries. Those entries supply the feat costs, qualification and spell options; the new ordinary slot count comes from the verified Wizard table.

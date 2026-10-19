@@ -80,6 +80,14 @@ Medicine training does not provide tools. This character cannot [[Treat Wounds|m
 
 Choose personal details, start at 0 XP and normally begin a session with 1 [[Hero Point|main:hero_points]]. This build grants no spells or Focus Points. Continue with [[First Encounter|main:first_encounter]], [[Dying and Recovery|main:dying_and_recovery]] and the fully worked [[Leveling Up|main:leveling_up]] update.
 
+::: wiki-next-step
+### Next step
+
+Use this fighter in [[First Encounter|main:first_encounter]]. Start from the listed exercise conditions; the Trip lesson is a separate reset.
+
+Return to [[Learn PF2e|main:learn_pf2e]].
+:::
+
 ## Sources
 
 Original worked arithmetic using the linked package entries, checked against *Player Core*: [Dwarf, p. 43](https://2e.aonprd.com/Ancestries.aspx?ID=59), [Rock Dwarf, p. 43](https://2e.aonprd.com/Heritages.aspx?ID=237), [Warrior, p. 88](https://2e.aonprd.com/Backgrounds.aspx?ID=445), [Fighter, pp. 138–139](https://2e.aonprd.com/Classes.aspx?ID=35), [Unburdened Iron, p. 44](https://2e.aonprd.com/Feats.aspx?ID=4393), [Vicious Swing, p. 141](https://2e.aonprd.com/Feats.aspx?ID=4775), [Chain Mail and traits, p. 273](https://2e.aonprd.com/Armor.aspx?ID=46), and [Clan Dagger, p. 277](https://2e.aonprd.com/Weapons.aspx?ID=368). Calculation rules: [Perception](https://2e.aonprd.com/Rules.aspx?ID=2040), [saves](https://2e.aonprd.com/Rules.aspx?ID=2041), [Strikes](https://2e.aonprd.com/Rules.aspx?ID=2042), [skills](https://2e.aonprd.com/Rules.aspx?ID=2043), [class DC](https://2e.aonprd.com/Rules.aspx?ID=2051), [AC](https://2e.aonprd.com/Rules.aspx?ID=2053), pp. 25–27. Item checks also use [Longsword, Player Core p. 278](https://2e.aonprd.com/Weapons.aspx?ID=386), [Steel Shield, Player Core p. 274](https://2e.aonprd.com/Shields.aspx?ID=19), and [Healing Potion, GM Core p. 259](https://2e.aonprd.com/Equipment.aspx?ID=2943). Equipment procedure sources are on [[Equipment Basics|main:equipment_basics]].

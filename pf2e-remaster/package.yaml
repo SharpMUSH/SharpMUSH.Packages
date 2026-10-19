@@ -1,6 +1,6 @@
 format: 1.13
 package: pf2e-remaster
-version: 1.3.0
+version: 1.3.1
 wiki_collection_name: Pathfinder 2e
 authors: [SharpMUSH project]
 description: >-
@@ -15,6 +15,11 @@ keywords: [pathfinder, pf2e, rules, character-creation, wiki]
 locale: en
 
 wiki:
+  - page: category:pf2e_start_here
+    title: Start here — Learn PF2e
+    pin: true
+    file: wiki/category/pf2e_start_here.md
+
   - page: help:orc_license_notice
     title: ORC License Notice
     requires:

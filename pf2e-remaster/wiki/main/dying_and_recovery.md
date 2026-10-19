@@ -51,6 +51,15 @@ Successful Treat Wounds healing removes wounded. Alternatively, recover to full 
 
 *Sources: linked condition and treatment pages; [Dying and related conditions](https://2e.aonprd.com/Rules.aspx?ID=2325), Player Core, pp. 411–412.*
 
+::: wiki-next-step
+### After play
+
+When the character earns a level, follow [[Leveling Up|main:leveling_up]] to update the sheet. Advancement is separate from recovering after an encounter.
+
+Return to [[Learn PF2e|main:learn_pf2e]].
+:::
+
+
 ---
 
 *Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

@@ -54,6 +54,14 @@ Your reaction is now spent: no Reactive Strike until it refreshes. At your next 
 
 Use [[Dying and Recovery|main:dying_and_recovery]] for defeat, an ally feeding your purchased potion, and the increased danger of a second defeat. An ally's healer's toolkit remains their equipment.
 
+::: wiki-next-step
+### Next step
+
+Continue with [[Dying and Recovery|main:dying_and_recovery]] to understand what happens if a character falls and how the group recovers.
+
+Return to [[Learn PF2e|main:learn_pf2e]].
+:::
+
 ## Sources
 
 The character's arithmetic and inventory are in the linked example. Action procedures are on [[Release|main:release]], [[Interact|main:interact]], [[Trip|main:trip]], [[Strike|main:strike]], [[Vicious Swing|main:vicious_swing]], [[Raise a Shield|main:raise_a_shield]], and [[Steel Shield|main:steel_shield]]. Primary Remaster checks: [Trip](https://2e.aonprd.com/Actions.aspx?ID=2382), Player Core p. 236; [Interact](https://2e.aonprd.com/Actions.aspx?ID=2297), p. 416; [Release](https://2e.aonprd.com/Actions.aspx?ID=2300), p. 417; [Vicious Swing](https://2e.aonprd.com/Feats.aspx?ID=4775), p. 141; [Shield Block](https://2e.aonprd.com/Feats.aspx?ID=5212), p. 262. Encounter and attack-count procedures are sourced on their linked guides.
