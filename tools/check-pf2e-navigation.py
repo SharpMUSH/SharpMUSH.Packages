@@ -100,6 +100,11 @@ def check():
     if START not in graph.get("category:pf2e_start_here", []):
         errors.append("Missing authored entrance link to learning path")
     for slug, required_next in NEXT_ACTIONS.items():
+        lesson_entry = re.findall(r"^  - page: main:" + re.escape(slug) + r"\n(.*?)(?=^  - page:|\Z)", manifest, re.M | re.S)
+        category_line = re.search(r"^    categories: \[([^\]\n]*)\]$", lesson_entry[0], re.M) if len(lesson_entry) == 1 else None
+        category_items = {item.strip() for item in category_line[1].split(",")} if category_line else set()
+        if "PF2e Start Here" not in category_items:
+            errors.append(f"Lesson missing authored starting-group membership: {slug}")
         key = f"main:{slug}"
         blocks = re.findall(r"^::: wiki-next-step\n(.*?)^:::$", pages.get(key, ""), re.M | re.S)
         if len(blocks) != 1 or not re.search(r"^### .+", blocks[0], re.M):
