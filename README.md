@@ -45,7 +45,7 @@ constraints checked before anything is planned.
 | [`http-handler/`](http-handler/) | 1.0.0 | Inbound HTTP verb routers using existing handler objects |
 | [`profile-handler/`](profile-handler/) | 1.0.0 | Read-only character directory and profile API; depends on HTTP Handler |
 | [`roll-tables/`](roll-tables/) | 1.0.0 | Random tables as softcode data: `+table/roll` tells the room, table keepers edit them by command, and a table can be published to a wiki page |
-| [`pf2e-remaster/`](pf2e-remaster/) | 1.2.0 | Pathfinder Second Edition (Remaster) core rules as wiki pages: classes, ancestries, heritages, backgrounds, feats, spells, actions, equipment, skills, conditions and DC tables; a content pack under the ORC License |
+| [`pf2e-remaster/`](pf2e-remaster/) | 1.2.1 | Pathfinder Second Edition (Remaster) core rules as wiki pages: classes, ancestries, heritages, backgrounds, feats, spells, actions, equipment, skills, conditions and DC tables; a content pack under the ORC License |
 
 These currently double as the reference implementations for package authors —
 each README explains which manifest features it demonstrates. The curated
