@@ -34,7 +34,22 @@ Each time you gain a level, you add two arcane spells to your spellbook, of any 
 
 Use [[Spell Preparation|main:spell_preparation]] to distinguish book choices, ordinary slots, curriculum preparations, cantrips and focus. The [[Wizard Learning Guide|main:wizard_learning_guide]] supplies named level-1 choices, attack/DC arithmetic and a resource ledger. Follow [[Cast a Spell|main:cast_a_spell]] for casting and [[Basic Saving Throws|main:basic_saving_throws]] when a spell calls for a basic save.
 
-The full progression table referenced above is an external dependency: [full Wizard class progression and Wizard Spells per Day table (external primary reference)](https://2e.aonprd.com/Classes.aspx?ID=39). It is not reproduced on this page. The table excludes additional curriculum cantrips and spells, as clarified by the [official Player Core errata](https://paizo.com/pathfinder/faq). The learning guide's quantities cover level 1 only.
+### Ordinary preparations at levels 1–2
+
+These are the **base Wizard preparations**, before any school's curriculum additions. Cantrips are prepared separately; they are not ranked spell slots.
+
+| Wizard level | Ordinary prepared cantrips | Ordinary rank-1 slots | Rank-2 or higher slots |
+|---|---|---|---|
+| 1 | 5 | 2 | None |
+| 2 | 5 | 3 | None |
+
+For this route's Battle Magic Wizard, add **one prepared curriculum cantrip and one separate rank-1 curriculum slot** at either level. That makes six prepared cantrips and three rank-1 preparations at level 1, or six cantrips and four rank-1 preparations at level 2. Each curriculum preparation must obey the school restrictions; these are not four unrestricted slots at level 2. Unified Magical Theory has no curriculum and follows its own benefits.
+
+Gaining level 2 adds two eligible arcane spells to the book, but does not unlock rank-2 slots or the new-rank curriculum book addition. Rank-2 slots first arrive at Wizard level 3. See [[Leveling Up|main:leveling_up]] for an actual level-2 book and preparation update, and [[Dwarf Wizard Example|main:dwarf_wizard_example]] for the starting sheet.
+
+*Source: [Wizard Spells per Day and Wizard Spellcasting, Player Core pp.192–197](https://2e.aonprd.com/Classes.aspx?ID=39). These base counts exclude curriculum additions; see the [official Player Core errata](https://paizo.com/pathfinder/faq).*
+
+The full level-3–20 progression remains an external dependency: [full Wizard class progression and Wizard Spells per Day table (external primary reference)](https://2e.aonprd.com/Classes.aspx?ID=39). The local table and worked route establish levels 1–2 only.
 
 *Procedure references: Player Core pp.195,198,297–299,403–404,439; [Arcane Schools](https://2e.aonprd.com/ArcaneSchools.aspx) and [Prepared Spells](https://2e.aonprd.com/Rules.aspx?ID=2223).*
 

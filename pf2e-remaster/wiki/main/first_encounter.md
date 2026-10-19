@@ -1,6 +1,22 @@
 This original exercise uses the [[Dwarf Fighter Example|main:dwarf_fighter_example]]. Read [[Encounter Mode|main:encounter_mode]], [[Multiple Attack Penalty|main:multiple_attack_penalty]] and [[Degrees of Success|main:degrees_of_success]] first.
 
-## Set the table
+## Exercise 1: move into reach, attack and defend
+
+Use a fresh copy of the level-1 fighter: **23 HP, AC 18, Speed 20, longsword +9 (1d8+4), steel shield 20 HP/Hardness 5**. Hold sword and shield; the shield starts unraised. Supply a Medium opponent **15 feet away along a clear straight line**, with **30 HP, AC 18, attack +7 and 6 slashing damage on a normal hit**. Both have ordinary 5-foot melee reach. For this exercise you act first; assume no terrain costs, movement reactions, cover, conditions or other modifiers. These are teaching inputs, not a monster entry.
+
+1. **Stride (action 1)** 10 feet toward the opponent, stopping 5 feet away. This is within your Speed 20 and puts it within your reach. See [[Stride|main:stride]] and [[Size and Reach|main:size_and_reach]].
+2. **Strike (action 2)** with your first attack this turn: supplied die 14 + 9 = **23 vs AC 18**, a success. Supplied damage die 4 + Strength 4 = **8**; the opponent has **22 HP**. Paying for movement did not increase your attack count.
+3. **Raise a Shield (action 3)** for **AC 20** until your next turn starts.
+
+The opponent uses its first Strike: supplied die 14 + 7 = **21 vs AC 20**, a success for 6 slashing damage. Spend your one reaction on [[Shield Block|main:shield_block]]: Hardness 5 prevents 5, then you and the shield each take 1. End this practice at **fighter 22 HP, opponent 22 HP, shield 19 HP**, with your reaction spent. The opponent ends its turn early.
+
+A [[Step|main:step]] would move only 5 feet, not the full approach in action 1. Read [[Encounter Mode|main:encounter_mode]] for Step's restrictions, movement reactions and the standard grid/diagonal rule.
+
+## Exercise 2: reset for the adjacent Trip lesson
+
+This is a **new teaching setup**, not round 2 of the approach above. Reset the fighter to 23 HP, the opponent to 30 HP and the steel shield to 20 HP. No items were consumed. Use the original inventory and all conditions below.
+
+### Set the table
 
 You have **23 HP, AC 18, Perception +7, Athletics +7, longsword +9 (1d8+4 slashing)**. Your chain mail is worn; sword and steel shield occupy one hand each. Your single minor healing potion and granted clan dagger are worn and readily accessible, neither held nor stowed in a backpack; you retain 2 gp. No container Bulk discount or storage benefit is assumed. No toolkit or other supplies appear for free.
 
@@ -8,7 +24,7 @@ The illustrative opponent is a Medium creature, already adjacent within your mel
 
 Initiative: your die 12 + Perception 7 = **19**; the GM supplies the opponent's **14**. You act first.
 
-## Round 1: free a hand, Trip, Strike
+### Round 1: free a hand, Trip, Strike
 
 At your turn's start, gain 3 actions and 1 reaction.
 
@@ -21,7 +37,9 @@ You finish holding sword and shield, with AC 18: no action remained to Raise a S
 
 The opponent spends one action to [[Stand|main:stand]], ending prone and restoring its AC to 18. Standing can trigger your [[Reactive Strike|main:reactive_strike]]; you choose to decline it in this exercise. Its next action is its first Strike: 15 + 7 = **22 vs your AC 18: success**, dealing 6 damage. You have **17 HP**. It ends its turn without using its third action. You cannot Shield Block: your shield was not raised.
 
-## Round 2: Vicious Swing and shield defense
+Stand's Move trigger happens at the end of that in-place action, after the opponent is upright; a Reactive Strike taken then would not inherit prone's off-guard effect. In this lesson, keep the declined reaction available; resolve only the opponent's following Strike. See [[Encounter Mode|main:encounter_mode]] for the timing source.
+
+### Round 2: Vicious Swing and shield defense
 
 Your new turn refreshes your three actions and one reaction; attack counting starts again.
 

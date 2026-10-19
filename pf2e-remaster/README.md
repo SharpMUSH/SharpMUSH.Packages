@@ -18,8 +18,8 @@ Not published, endorsed or approved by Paizo. Pathfinder is a trademark of Paizo
 The wiki collection is named **Pathfinder 2e**; its main learning article explains the Remaster scope.
 
 Start at **Learn PF2e** in the wiki, or use `+wiki Learn PF2e`. The guides walk through
-character creation, an exact-budget dwarf fighter, equipment, a two-turn encounter,
-defeat/recovery and advancement. Rules topics link to the complete option entries;
+character creation, complete dwarf fighter and wizard examples, equipment, movement
+and a separate two-turn adjacent encounter, defeat/recovery and worked level-2 advancement. Rules topics link to the complete option entries;
 spell-rank and feat-level indexes have headings for the wiki table of contents.
 This is a core learning path and reference, not an adventure, bestiary, rules engine
 or automatic check that a particular character meets every prerequisite.
@@ -29,7 +29,7 @@ or automatic check that a particular character meets every prerequisite.
 | Namespace | Pages |
 |---|---|
 | Category | Character Creation, Rules, Conditions and Difficulty Classes (all four pinned to the wiki home), and under them Classes, Class Features, Ancestries, Heritages (one per ancestry, plus Versatile Heritages), Backgrounds, Skills, Feats (Ancestry, Class, General, Skill and Archetype Feats, with one category per class and per ancestry), Spells (Cantrips, Rank 1 to Rank 10, Focus Spells, Rituals, and one per tradition), Actions (Basic, Specialty Basic, Skill, Exploration, Downtime, Subsystem, Other), Equipment (Weapons, Armor, Shields, Ammunition, Consumables and their kinds, Runes, Staves, Wands, Worn and Held Items, Adventuring Gear, Treasure and more), Familiar Abilities, and the condition groups |
-| Main | 16 classes, 341 class features, 16 ancestries, 106 heritages, 63 backgrounds, 1,814 feats, 659 spells, 166 actions, 1,241 items, 55 familiar abilities, 17 skills, Proficiency Ranks, Character Sheet, 37 rules overviews, 42 conditions, Degrees of Success and the four DC tables, and twelve guided-learning pages |
+| Main | 16 classes, 341 class features, 16 ancestries, 106 heritages, 63 backgrounds, 1,814 feats, 659 spells, 166 actions, 1,241 items, 55 familiar abilities, 17 skills, Proficiency Ranks, Character Sheet, 37 rules overviews, 42 conditions, Degrees of Success and the four DC tables, and thirteen guided-learning pages |
 | Help | ORC License Notice (wiki admins only may edit or delete it) |
 
 Each class page gives its key attribute, Hit Points, initial proficiencies, feat levels, class
@@ -46,9 +46,10 @@ Requires a SharpMUSH server and strict PackageValidator supporting manifest form
 1.13 and its `wiki_collection_name` metadata ([SharpMUSH #2050](https://github.com/SharpMUSH/SharpMUSH/issues/2050)).
 The validator checks the complete manifest and file-backed wiki bodies.
 
-Version 1.2.1 names the collection **Pathfinder 2e** and explains its Remaster scope
-in the main learning article. It retains the twelve guided-learning pages and linked
-corrections introduced in 1.2.0. This source revision prepares the manifest/index
+Version 1.3.0 adds the complete Dwarf Wizard Example, locally checked level-1/2
+Wizard slot counts and advancement, actual movement practice, consistent heroic
+recovery timing and currency guidance. The collection remains **Pathfinder 2e**;
+its main learning article explains the Remaster scope. There are thirteen guided-learning pages. This source revision prepares the manifest/index
 version; it does not itself publish a release or change an installed game.
 
 ## Editing and upgrades
@@ -84,4 +85,4 @@ or left out where the name is the rule.
 - `wiki/<namespace>/<page>.md`: one Markdown file per page.
 - `NOTICE.md`: the ORC notice.
 
-The Wizard learning route separately covers a level-1 casting ledger: book choices, ordinary and curriculum preparations, focus, spell attacks, basic saves, repeated preparation, Arcane Bond and daily reset. It assumes an explicitly stated Intelligence/proficiency input; it is not a complete alternate character build. The full higher-level Wizard Spells per Day table is an explicitly labelled external primary dependency.
+The Wizard route links its complete starting sheet to the named book and casting ledger: ordinary and curriculum preparations, focus, spell attacks, basic saves, repeated preparation, Arcane Bond and daily reset. A worked level-2 update includes actual feat/book/preparation choices. Local base-slot counts cover levels 1–2; the full higher-level Wizard Spells per Day table remains an explicitly labelled external primary dependency. Source navigation checks do not certify live rendering, rules completeness or usability for every player.

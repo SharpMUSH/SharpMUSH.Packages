@@ -4,8 +4,6 @@
 
 ---
 
-**Frequency** once per day
-
 **Requirements** Your bonded item is on your person.
 
 ---

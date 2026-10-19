@@ -14,12 +14,12 @@ LINK = re.compile(r"\[\[([^\]\r\n]+)\]\]")
 START = "main:learn_pf2e"
 JOURNEYS = {
     "check": ["main:character_sheet", "main:proficiency_ranks", "main:degrees_of_success"],
-    "creation": ["main:character_creation_guide", "main:dwarf_fighter_example", "main:dwarf", "main:warrior", "main:fighter"],
+    "creation": ["main:character_creation_guide", "main:dwarf_fighter_example", "main:dwarf_wizard_example", "main:dwarf", "main:warrior", "main:fighter"],
     "equipment": ["main:equipment_basics", "main:longsword", "main:chain_mail", "main:steel_shield", "main:clan_dagger"],
-    "encounter": ["main:encounter_mode", "main:multiple_attack_penalty", "main:first_encounter", "main:trip", "main:strike"],
+    "encounter": ["main:encounter_mode", "main:multiple_attack_penalty", "main:first_encounter", "main:stride", "main:step", "main:size_and_reach", "main:trip", "main:strike"],
     "recovery": ["main:dying_and_recovery", "main:dying", "main:wounded", "main:unconscious", "main:hero_points"],
     "between encounters": ["main:treat_wounds", "main:medicine", "main:healers_toolkit"],
-    "advancement": ["main:leveling_up", "main:dueling_parry", "main:hefty_hauler"],
+    "advancement": ["main:leveling_up", "main:dueling_parry", "main:hefty_hauler", "main:conceal_spell", "main:assurance"],
     "wizard": ["main:wizard_learning_guide", "main:spell_preparation", "main:basic_saving_throws", "main:wizard", "main:arcane_school", "main:school_of_battle_magic", "main:ignition", "main:electric_arc", "main:force_barrage", "main:force_bolt"],
     "reference": ["category:spells", "category:conditions", "category:dwarf_feats", "category:fighter_feats"],
 }
@@ -28,9 +28,20 @@ JOURNEYS = {
 # Instructional routes must be present on the decision page itself; reaching an
 # option through an alphabetical directory does not repair a detached workflow.
 DIRECT_EDGES = {
-    "main:learn_pf2e": {"main:wizard_learning_guide"},
-    "main:wizard_learning_guide": {"main:spell_preparation", "main:basic_saving_throws", "main:arcane_school"},
-    "main:wizard_spellcasting": {"main:spell_preparation", "main:cast_a_spell"},
+    "main:learn_pf2e": {"main:wizard_learning_guide", "main:dwarf_wizard_example", "main:first_encounter", "main:leveling_up"},
+    "main:character_creation_guide": {"main:dwarf_fighter_example", "main:dwarf_wizard_example"},
+    "main:dwarf_wizard_example": {
+        "main:character_creation_guide", "main:wizard_learning_guide", "main:leveling_up",
+        "main:dwarf", "main:rock_dwarf", "main:warrior", "main:wizard", "main:spellbook_blank",
+    },
+    "main:encounter_mode": {"main:stride", "main:step", "main:size_and_reach", "main:stand", "main:first_encounter"},
+    "main:first_encounter": {"main:stride", "main:step", "main:size_and_reach", "main:encounter_mode", "main:dying_and_recovery"},
+    "main:leveling_up": {"main:dwarf_wizard_example", "main:wizard_spellcasting", "main:conceal_spell", "main:assurance", "main:breathe_fire", "main:sure_strike"},
+    "main:hero_points": {"main:dying", "main:wounded", "main:dying_and_recovery"},
+    "main:dying": {"main:hero_points", "main:dying_and_recovery"},
+    "main:wounded": {"main:hero_points"},
+    "main:wizard_learning_guide": {"main:dwarf_wizard_example", "main:leveling_up", "main:spell_preparation", "main:basic_saving_throws", "main:arcane_school"},
+    "main:wizard_spellcasting": {"main:spell_preparation", "main:cast_a_spell", "main:leveling_up", "main:dwarf_wizard_example"},
     "main:arcane_school": {
         "main:school_of_ars_grammatica", "main:school_of_battle_magic",
         "main:school_of_civic_wizardry", "main:school_of_mentalism",

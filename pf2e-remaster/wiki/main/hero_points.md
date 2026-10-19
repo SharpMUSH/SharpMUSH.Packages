@@ -2,7 +2,9 @@ Give out 1 Hero Point to each PC at the start of the session. Give out roughly 1
 
 **Spend 1 Hero Point** to reroll a check and use the second result. This is a fortune effect.
 
-**Spend all your Hero Points** to avoid death when your dying condition would increase. Lose dying and stabilize with 0 HP. Don't gain or increase your wounded value from losing the dying condition in this way, but if you already had that condition you don't lose it.
+**Heroic recovery:** while dying, spend all your remaining Hero Points (**at least one**) at the start of your turn or when your dying value would increase. Remove [[Dying|main:dying]] and stabilize at 0 HP. This does not grant positive HP or remove unconscious. Unlike ordinary loss of dying, it does not give or increase [[Wounded|main:wounded]]; keep any wounded value you already had. Follow [[Dying and Recovery|main:dying_and_recovery]] for the rest of the defeat procedure.
+
+*Specific timing and exception: [Heroic Recovery](https://2e.aonprd.com/Rules.aspx?ID=2263), alongside [Hero Points](https://2e.aonprd.com/Rules.aspx?ID=2333), Player Core.*
 
 *Source: Player Core, p. 413.*
 

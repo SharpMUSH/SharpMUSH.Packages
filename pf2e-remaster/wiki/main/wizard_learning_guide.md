@@ -1,17 +1,17 @@
 Use this route to learn a level-1 Wizard's spell choices, daily preparations and casting. Start with [[Wizard|main:wizard]], [[Wizard Spellcasting|main:wizard_spellcasting]], [[Arcane School|main:arcane_school]], [[Arcane Thesis|main:arcane_thesis]] and [[Arcane Bond|main:arcane_bond]]. Then read [[Spell Preparation|main:spell_preparation]], [[Cast a Spell|main:cast_a_spell]] and [[Basic Saving Throws|main:basic_saving_throws]].
 
-This is a **casting example, not a complete character build**. Finish ancestry, background, boosts, feats, skills, equipment, HP and defenses through the [[Character Creation Guide|main:character_creation_guide]] and [[Character Sheet|main:character_sheet]]. The [[Dwarf Fighter Example|main:dwarf_fighter_example]] is a separate build; its statistics and purchases do not belong to this Wizard.
+Use the completed [[Dwarf Wizard Example|main:dwarf_wizard_example]] alongside this casting lesson. It supplies the ancestry/background/class choices, boost ledger, languages, skills, inventory, HP and defenses. The [[Character Creation Guide|main:character_creation_guide]] explains how to make other choices. The [[Dwarf Fighter Example|main:dwarf_fighter_example]] is a separate build; its statistics and purchases do not belong to this Wizard.
 
 ## Set the example's inputs
 
-Assume a level-1 Wizard with Intelligence +4 and trained spell attacks and spell DC. Choose the [[School of Battle Magic|main:school_of_battle_magic]] and the [[Spell Substitution|main:spell_substitution]] thesis. No bonus spells, feats, scrolls, staff charges or magic items are used here.
+The [[Dwarf Wizard Example|main:dwarf_wizard_example]] derives Intelligence +4 and trained spellcasting at level 1. It chooses the [[School of Battle Magic|main:school_of_battle_magic]] and the [[Spell Substitution|main:spell_substitution]] thesis. Use that sheet here. No extra spell grants, scrolls, staff charges or magic items are added for the exercise.
 
 Trained [[Proficiency|main:proficiency_ranks]] at level 1 contributes 1 + 2 = +3. With no other modifiers:
 
 - Spell attack modifier: Intelligence +4 + proficiency +3 = **+7**.
 - Spell DC: 10 + Intelligence +4 + proficiency +3 = **17**.
 
-These are assumed inputs for arithmetic, not a complete attribute-boost ledger. Do not add Intelligence to the damage of the spells used below.
+These values come from the completed character's attribute and proficiency ledger. Its ordinary AC is 15 before any spell is cast; preparing Mystic Armor in slot C does not activate it. Do not add Intelligence to the damage of the spells used below.
 
 ## Record the complete spellbook
 
@@ -107,9 +107,11 @@ Spell Substitution could separately take ten minutes to replace the still-ready 
 
 After resting and making the next allowed daily preparations, regain slots, choose the same legal preparations or different ones, refill focus and reset the daily bond use. Designate the owned book again. You still have the same 11 cantrips and seven rank-1 spells recorded in it.
 
-## Continue beyond level 1
+## Continue to level 2
 
-Use [[Leveling Up|main:leveling_up]] and the [full Wizard class progression and Wizard Spells per Day table (external primary reference)](https://2e.aonprd.com/Classes.aspx?ID=39). This guide verifies level 1 only; its counts are not a progression table. The full Wizard table excludes additional curriculum preparations. Follow the full class, school and thesis entries as you gain levels.
+The local [[Wizard Spellcasting|main:wizard_spellcasting]] table gives ordinary level-1 and level-2 preparation counts, with curriculum additions kept separate. Follow [[Leveling Up|main:leveling_up]] for the completed Dwarf Wizard's level-2 sheet update, two new book spells, feat choices and named preparations. This is the next supported early-level example; do not simply add the level-1 spent-slot ledger to a fresh day's preparations.
+
+For level 3 and beyond, use the [full Wizard class progression and Wizard Spells per Day table (external primary reference)](https://2e.aonprd.com/Classes.aspx?ID=39), plus the class, school and thesis entries. This package's worked route covers levels 1–2, not the complete level-20 progression. The full table excludes additional curriculum preparations.
 
 Return to [[Learn PF2e|main:learn_pf2e]].
 

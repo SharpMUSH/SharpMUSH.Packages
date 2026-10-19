@@ -1,4 +1,4 @@
-Use this checklist with a blank sheet and the linked option pages. For numbers filled in at every stage, keep [[Dwarf Fighter Example|main:dwarf_fighter_example]] beside it. [[Character Sheet|main:character_sheet]] explains the fields.
+Use this checklist with a blank sheet and the linked option pages. For numbers filled in at every stage, keep the completed [[Dwarf Fighter Example|main:dwarf_fighter_example]] or [[Dwarf Wizard Example|main:dwarf_wizard_example]] beside it. [[Character Sheet|main:character_sheet]] explains the fields.
 
 ## 1. Agree on a concept
 
@@ -12,7 +12,7 @@ Write Strength, Dexterity, Constitution, Intelligence, Wisdom and Charisma, all 
 
 Open [[Ancestries|category:ancestries]], then an ancestry's page. Record HP, size, Speed, traits, languages, senses and other granted features. Choose one eligible heritage and one eligible level-1 ancestry feat. Apply the ancestry's listed boosts and flaw, choosing any free boost without duplicating another boost in this allocation. Record granted equipment too: [[Dwarf|main:dwarf]] grants a [[Clan Dagger|main:clan_dagger]].
 
-You may instead replace the ancestry's entire listed boost/flaw allocation with two free boosts to different attributes. This replaces it; it is not two additional boosts. Voluntary flaws are optional roleplaying choices and grant no extra boosts. The worked dwarf uses the printed ancestry allocation.
+You may instead replace the ancestry's entire listed boost/flaw allocation with two free boosts to different attributes. This replaces it; it is not two additional boosts. Voluntary flaws are optional roleplaying choices and grant no extra boosts. The Fighter example uses the printed ancestry allocation; the Wizard example uses the alternative two boosts. Do not mix their rows.
 
 ## 4. Add a background
 
