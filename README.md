@@ -1,8 +1,14 @@
 # SharpMUSH Packages
 
-The official softcode package repository for
-[SharpMUSH](https://github.com/SharpMUSH/SharpMUSH) — a modern .NET MUSH
-server targeting PennMUSH compatibility.
+**Give your world new things to do.**
+
+Official softcode packages for [SharpMUSH](https://github.com/SharpMUSH/SharpMUSH): connected starter rooms, player directories, bulletin boards, roll tables and reference content.
+
+**[Browse packages](#packages)** · **[Install a package](#using-this-repo)** · **[Write your own](#contributing-a-package)**
+
+<p align="center">
+  <img src="assets/branding/sharpie/marketing/sharpie-package-workbench.png" width="320" alt="Sharpie connects reusable room and conversation modules on a small workbench." />
+</p>
 
 A **package** is a declarative description of softcode: the objects that
 should exist on a MUSH and the attributes, flags, locks, and parent
@@ -13,7 +19,7 @@ reviews it, and only then is anything written. Upgrades three-way-merge
 against stored baselines so your local customizations survive, every apply is
 recorded as a revision, and installs can be rolled back.
 
-No more pasting `.mush` files and hoping the dbrefs line up.
+Packages use symbolic object references instead of hardcoded dbrefs.
 
 ## Using this repo
 
@@ -21,7 +27,7 @@ Add it as a remote in the SharpMUSH admin panel
 (**Admin → Packages → Remotes**):
 
 ```
-https://github.com/SharpMUSH/SharpMUSH-Packages
+https://github.com/SharpMUSH/SharpMUSH.Packages
 ```
 
 Then browse, pick a package and version, review the changeset, and apply.
@@ -36,8 +42,10 @@ constraints checked before anything is planned.
 | [`who-where/`](who-where/) | 1.2.0 | `+who` and `+where` commands with a shared formatting object |
 | [`starter-area/`](starter-area/) | 1.0.0 | Two rooms and linked exits |
 | [`bbs-lite/`](bbs-lite/) | 0.9.0-beta | Tiny bulletin board; dependencies, typed configure params, cross-package refs |
+| [`http-handler/`](http-handler/) | 1.0.0 | Inbound HTTP verb routers using existing handler objects |
+| [`profile-handler/`](profile-handler/) | 1.0.0 | Read-only character directory and profile API; depends on HTTP Handler |
 | [`roll-tables/`](roll-tables/) | 1.0.0 | Random tables as softcode data: `+table/roll` tells the room, table keepers edit them by command, and a table can be published to a wiki page |
-| [`pf2e-remaster/`](pf2e-remaster/) | 1.1.1 | Pathfinder Second Edition (Remaster) core rules as wiki pages: classes, ancestries, heritages, backgrounds, feats, spells, actions, equipment, skills, conditions and DC tables; a content pack under the ORC License |
+| [`pf2e-remaster/`](pf2e-remaster/) | 1.2.0 | Pathfinder Second Edition (Remaster) core rules as wiki pages: classes, ancestries, heritages, backgrounds, feats, spells, actions, equipment, skills, conditions and DC tables; a content pack under the ORC License |
 
 These currently double as the reference implementations for package authors —
 each README explains which manifest features it demonstrates. The curated
@@ -81,7 +89,7 @@ depends:
   - package: some-dependency    # optional, with version constraints
     version: ">=1.0 <2.0"
     source:                     # where to find it if not installed
-      repo: https://github.com/SharpMUSH/SharpMUSH-Packages
+      repo: https://github.com/SharpMUSH/SharpMUSH.Packages
       path: some-dependency/
 
 configure:
