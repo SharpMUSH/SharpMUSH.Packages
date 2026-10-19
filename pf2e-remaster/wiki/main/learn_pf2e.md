@@ -1,3 +1,5 @@
+This **Pathfinder 2e** collection covers the **Remaster** rules, primarily from *Player Core*, *Player Core 2* and *GM Core*.
+
 Start here to learn the core character and play procedures in this reference. Keep this page open as your route back from individual options.
 
 ## Make your first character

@@ -1,4 +1,4 @@
-# pf2e-remaster
+# Pathfinder 2e
 
 A rules reference for Pathfinder Second Edition (Remaster), installed as wiki pages: the classes,
 ancestries, heritages, backgrounds, feats, spells, actions, equipment and familiar abilities of
@@ -14,6 +14,8 @@ wiki, but never the other way round.
 Not published, endorsed or approved by Paizo. Pathfinder is a trademark of Paizo Inc.
 
 ## Learn and play
+
+The wiki collection is named **Pathfinder 2e**; its main learning article explains the Remaster scope.
 
 Start at **Learn PF2e** in the wiki, or use `+wiki Learn PF2e`. The guides walk through
 character creation, an exact-budget dwarf fighter, equipment, a two-turn encounter,
@@ -40,13 +42,14 @@ Every page ends with a line linking the ORC License Notice page.
 
 ## Requirements
 
-The `wiki:` block uses manifest format 1.4. Current SharpMUSH supports file-backed wiki
-packages; its strict PackageValidator reads the complete manifest and bodies. Use a
-current server with content-pack support rather than a release predating that format.
+Requires a SharpMUSH server and strict PackageValidator supporting manifest format
+1.13 and its `wiki_collection_name` metadata ([SharpMUSH #2050](https://github.com/SharpMUSH/SharpMUSH/issues/2050)).
+The validator checks the complete manifest and file-backed wiki bodies.
 
-Version 1.2.0 adds twelve guided-learning pages and linked corrections to the existing
-reference. Its manifest/index version is prepared for review; it does not itself
-publish a package release or change an installed game.
+Version 1.2.1 names the collection **Pathfinder 2e** and explains its Remaster scope
+in the main learning article. It retains the twelve guided-learning pages and linked
+corrections introduced in 1.2.0. This source revision prepares the manifest/index
+version; it does not itself publish a release or change an installed game.
 
 ## Editing and upgrades
 
