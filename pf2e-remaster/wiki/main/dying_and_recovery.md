@@ -31,7 +31,9 @@ At dying 0, remove dying; at 0 HP you remain unconscious. Healing to at least 1 
 
 *Sources: [Taking Damage](https://2e.aonprd.com/Rules.aspx?ID=2327) and [Losing the Dying Condition](https://2e.aonprd.com/Rules.aspx?ID=2328), Player Core, p. 411; [Instant Death](https://2e.aonprd.com/Rules.aspx?ID=2330), Player Core, p. 411.*
 
-[[Hero Points|main:hero_points]] provide a specific exception: spend all remaining points (at least one), at your turn’s start or when dying would increase, for heroic recovery. This stabilizes at 0 HP without adding wounded; it does not erase existing wounded. Ordinary stabilization does add wounded.
+[[Hero Points|main:hero_points]] provide a specific exception: spend all remaining points (at least one), at your turn’s start or when dying would increase, for heroic recovery. This removes dying and stabilizes at 0 HP without adding wounded; it does not erase existing wounded or supply positive HP. Ordinary stabilization does add wounded.
+
+*Specific exception: [Heroic Recovery](https://2e.aonprd.com/Rules.aspx?ID=2263) and [Hero Points](https://2e.aonprd.com/Rules.aspx?ID=2333), Player Core.*
 
 ## An ally administers the potion
 

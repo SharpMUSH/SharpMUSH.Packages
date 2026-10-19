@@ -19,10 +19,6 @@ You snap your fingers and point at a target, which begins to smolder. Make a spe
 
 **Heightened (+1)** The initial damage increases by 1d4 and the persistent fire damage on a critical hit increases by 1d4.
 
-Scaling Persistent Fire Damage
-
-Scaling Persistent Fire Damage (Melee)
-
 *Source: Player Core.*
 
 ---

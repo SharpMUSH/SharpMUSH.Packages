@@ -10,7 +10,7 @@ Start here to learn the core character and play procedures in this reference. Ke
 
 ## Learn a spellcaster
 
-1. Use the [[Wizard Learning Guide|main:wizard_learning_guide]] as a separate level-1 casting route. It lists a complete spellbook and today's preparations, with explicitly assumed casting statistics; finish the rest of the character through Character Creation.
+1. Start with the complete [[Dwarf Wizard Example|main:dwarf_wizard_example]]: choices, attribute ledger, skills, languages, free book, equipment and calculated defenses. Then use [[Wizard Learning Guide|main:wizard_learning_guide]] for its named spellbook, preparations and casting/resource ledger.
 2. Follow [[Spell Preparation|main:spell_preparation]] for book choices, repeated preparations, curriculum slots, cantrips, focus, daily reset and Arcane Bond.
 3. Read [[Cast a Spell|main:cast_a_spell]] and [[Basic Saving Throws|main:basic_saving_throws]], then work the guide's attack, save and resource examples.
 
@@ -18,9 +18,9 @@ Start here to learn the core character and play procedures in this reference. Ke
 
 1. Learn [[Proficiency Ranks|main:proficiency_ranks]] and [[Degrees of Success|main:degrees_of_success]].
 2. Follow [[Encounter Mode|main:encounter_mode]] and [[Multiple Attack Penalty|main:multiple_attack_penalty]].
-3. Work through [[First Encounter|main:first_encounter]] with the example fighter, checking hands, actions and reactions.
+3. Work through [[First Encounter|main:first_encounter]] with the example fighter: first approach into reach, attack and defend; then reset for the separate adjacent Trip lesson. Check [[Stride|main:stride]], [[Step|main:step]] and [[Size and Reach|main:size_and_reach]], as well as hands, actions and reactions.
 4. Read [[Dying and Recovery|main:dying_and_recovery]] before resolving defeat, healing or another knock-out.
-5. After play, use [[Leveling Up|main:leveling_up]] to update the whole sheet.
+5. After play, use [[Leveling Up|main:leveling_up]] for worked level-2 Fighter and Wizard updates. The local Wizard base-slot table covers levels 1–2; the full higher-level table remains an external primary reference.
 
 ## Look something up
 

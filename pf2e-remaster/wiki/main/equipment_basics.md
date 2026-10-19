@@ -1,5 +1,11 @@
 Read this with an item page open. [[Dwarf Fighter Example|main:dwarf_fighter_example]] supplies a complete shopping ledger; [[Equipment|category:equipment]] contains the options.
 
+## Read money and prices
+
+**gp** means gold pieces, **sp** silver, **cp** copper and **pp** platinum. Adjacent denominations differ by ten: **1 pp = 10 gp; 1 gp = 10 sp; 1 sp = 10 cp**. Thus the Wizard's free-book limit of 10 sp equals the ordinary blank book's 1 gp price; do not buy a second book just to satisfy a free grant. Record actual purchases and remaining coins separately from granted items, then use the Bulk rules for the coins actually carried.
+
+*Source: [Currency, Player Core p.10](https://2e.aonprd.com/Rules.aspx?ID=3295). The [[Dwarf Wizard Example|main:dwarf_wizard_example]] records the free book and retained starting money.*
+
 ## Read a weapon
 
 Category selects your proficiency. Damage lists dice and type: B means bludgeoning, P piercing, S slashing. Hands says how many hands wield it; owning it or carrying it without holding it is not wielding it. Group matters only when an ability uses that group.

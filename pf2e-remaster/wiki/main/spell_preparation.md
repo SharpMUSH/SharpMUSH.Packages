@@ -34,7 +34,7 @@ At level 1, a Wizard with a curriculum school has five ordinary prepared cantrip
 
 The [[Arcane School|main:arcane_school]] rules separately add curriculum spells to your book. These book additions are not additional ordinary slots. The [[School of Unified Magical Theory|main:school_of_unified_magical_theory]] has no curriculum and uses its own benefits instead; do not give it this extra preparation ledger.
 
-These counts describe level 1. For later levels, consult the [full Wizard class progression and Wizard Spells per Day table (external primary reference)](https://2e.aonprd.com/Classes.aspx?ID=39). That table excludes the school's additional curriculum preparations.
+For the ordinary level-1 and level-2 counts, use the local table in [[Wizard Spellcasting|main:wizard_spellcasting]]: level 2 has five ordinary cantrips and three ordinary rank-1 slots, before curriculum additions. Follow [[Leveling Up|main:leveling_up]] for the worked level-2 preparations. The [full higher-level Wizard Spells per Day table (external primary reference)](https://2e.aonprd.com/Classes.aspx?ID=39) remains external and excludes the school's additional curriculum preparations.
 
 ## Focus, Refocus and Arcane Bond
 
