@@ -31,6 +31,15 @@ Start here to learn the core character and play procedures in this reference. Ke
 
 This is a reference and a guided core example, not an adventure, bestiary or automated character validator. Special abilities can override general rules; follow their full entries and your table's decisions. Source references on the guides identify the fuller rules for unusual cases.
 
+::: wiki-next-step
+### Next step
+
+Follow the [[Character Creation Guide|main:character_creation_guide]], then choose the Fighter or Wizard example.
+
+Return to [[Start here — Learn PF2e|category:pf2e_start_here]].
+:::
+
+
 ---
 
 *Rules text under the ORC License. See [[ORC License Notice|help:orc_license_notice]].*

@@ -40,6 +40,14 @@ Record languages, personal details, XP and [[Hero Points|main:hero_points]]. Ope
 
 Compare the ledger, inventory and derived numbers with the [[worked example|main:dwarf_fighter_example]], then read [[Encounter Mode|main:encounter_mode]] and [[First Encounter|main:first_encounter]]. After earning a level, use [[Leveling Up|main:leveling_up]].
 
+::: wiki-next-step
+### Choose a worked character
+
+Continue with the [[Dwarf Fighter Example|main:dwarf_fighter_example]] or the [[Dwarf Wizard Example|main:dwarf_wizard_example]]. Both show a complete level-1 sheet.
+
+Return to [[Learn PF2e|main:learn_pf2e]].
+:::
+
 ## Sources
 
 Original tutorial based on *Player Core*: [attribute boosts and flaws, p. 19](https://2e.aonprd.com/Rules.aspx?ID=2027), [ancestry and alternative boosts, pp. 23–24](https://2e.aonprd.com/Rules.aspx?ID=2033), [finish attributes, p. 24](https://2e.aonprd.com/Rules.aspx?ID=2036), [class details and duplicate skills, p. 24](https://2e.aonprd.com/Rules.aspx?ID=2037), [equipment, p. 25](https://2e.aonprd.com/Rules.aspx?ID=2038), and [Warrior, p. 88](https://2e.aonprd.com/Backgrounds.aspx?ID=445). See [the complete character-creation procedure](https://2e.aonprd.com/Rules.aspx?ID=2027) for other builds.

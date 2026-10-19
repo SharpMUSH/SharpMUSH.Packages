@@ -75,6 +75,14 @@ During daily preparations, designate the owned book as the bonded item and keep 
 
 Choose your own name, concept and other personal details. Start at 0 XP and normally 1 [[Hero Point|main:hero_points]] at session start. After play, use the complete level-2 Wizard update in [[Leveling Up|main:leveling_up]]. Return to [[Learn PF2e|main:learn_pf2e]] for the other learning routes.
 
+::: wiki-next-step
+### Next step
+
+Follow the [[Wizard Learning Guide|main:wizard_learning_guide]] to prepare and cast using this character’s book and starting resources.
+
+Return to [[Learn PF2e|main:learn_pf2e]].
+:::
+
 ## Sources
 
 Original ledger and arithmetic using the linked local entries and *Player Core*: [Dwarf, p.43](https://2e.aonprd.com/Ancestries.aspx?ID=59), [Rock Dwarf, p.43](https://2e.aonprd.com/Heritages.aspx?ID=237), [Warrior, p.88](https://2e.aonprd.com/Backgrounds.aspx?ID=445), [Wizard, pp.192–197](https://2e.aonprd.com/Classes.aspx?ID=39), [Unburdened Iron, p.44](https://2e.aonprd.com/Feats.aspx?ID=4393), and [Clan Dagger, p.277](https://2e.aonprd.com/Weapons.aspx?ID=368). Attribute allocation and statistic formulas are sourced on [[Character Creation Guide|main:character_creation_guide]] and [[Character Sheet|main:character_sheet]]; the book's named choices and school/thesis/preparation sources are on [[Wizard Learning Guide|main:wizard_learning_guide]]. [Currency, Player Core p.10](https://2e.aonprd.com/Rules.aspx?ID=3295).

@@ -27,6 +27,18 @@ JOURNEYS = {
 
 # Instructional routes must be present on the decision page itself; reaching an
 # option through an alphabetical directory does not repair a detached workflow.
+NEXT_ACTIONS = {
+    "learn_pf2e": {"main:character_creation_guide"},
+    "character_creation_guide": {"main:dwarf_fighter_example", "main:dwarf_wizard_example"},
+    "dwarf_fighter_example": {"main:first_encounter"},
+    "dwarf_wizard_example": {"main:wizard_learning_guide"},
+    "wizard_learning_guide": {"main:dying_and_recovery", "main:leveling_up"},
+    "first_encounter": {"main:dying_and_recovery"},
+    "dying_and_recovery": {"main:leveling_up"},
+    "leveling_up": {"category:actions", "category:conditions", "category:spells"},
+}
+
+
 DIRECT_EDGES = {
     "main:learn_pf2e": {"main:wizard_learning_guide", "main:dwarf_wizard_example", "main:first_encounter", "main:leveling_up"},
     "main:character_creation_guide": {"main:dwarf_fighter_example", "main:dwarf_wizard_example"},
@@ -76,6 +88,32 @@ def check():
         for target in sorted(required):
             if target not in graph.get(origin, []):
                 errors.append(f"Missing direct instruction edge: {origin} -> {target}")
+    # This is a source-authoring check for the curated entrance, not a YAML parser;
+    # the actual PackageValidator remains the manifest authority.
+    manifest = (ROOT.parent / "package.yaml").read_text(encoding="utf-8")
+    entries = re.findall(r"^  - page: category:pf2e_start_here\n(.*?)(?=^  - page:|\Z)", manifest, re.M | re.S)
+    if len(entries) != 1 or any(line not in entries[0].splitlines() for line in (
+        "    title: Start here — Learn PF2e", "    pin: true",
+        "    file: wiki/category/pf2e_start_here.md",
+    )):
+        errors.append("Missing unique pinned authored entrance manifest binding")
+    if START not in graph.get("category:pf2e_start_here", []):
+        errors.append("Missing authored entrance link to learning path")
+    for slug, required_next in NEXT_ACTIONS.items():
+        lesson_entry = re.findall(r"^  - page: main:" + re.escape(slug) + r"\n(.*?)(?=^  - page:|\Z)", manifest, re.M | re.S)
+        category_line = re.search(r"^    categories: \[([^\]\n]*)\]$", lesson_entry[0], re.M) if len(lesson_entry) == 1 else None
+        category_items = {item.strip() for item in category_line[1].split(",")} if category_line else set()
+        if "PF2e Start Here" not in category_items:
+            errors.append(f"Lesson missing authored starting-group membership: {slug}")
+        key = f"main:{slug}"
+        blocks = re.findall(r"^::: wiki-next-step\n(.*?)^:::$", pages.get(key, ""), re.M | re.S)
+        if len(blocks) != 1 or not re.search(r"^### .+", blocks[0], re.M):
+            errors.append(f"Missing unique named next-step block: {key}")
+            continue
+        targets = [match[1].split("|", 1)[-1] for match in LINK.finditer(blocks[0])]
+        return_target = "category:pf2e_start_here" if key == START else START
+        if return_target not in targets or not required_next.issubset(targets):
+            errors.append(f"Missing next action or return link in block: {key}")
     if START not in pages:
         errors.append(f"Missing learning entry: {START}")
     reachable = {START} if START in pages else set()
