@@ -49,8 +49,6 @@ Example: you are at 0 HP, dying 1, not wounded. An adjacent ally starts with a h
 
 Successful Treat Wounds healing removes wounded. Alternatively, recover to full HP and rest 10 minutes to remove it. Ending combat alone removes neither dying nor wounded. If stabilized at 0 without healing, the GM determines when you wake (at least 10 minutes, possibly hours); see [[Unconscious|main:unconscious]].
 
-*Sources: linked condition and treatment pages; [Dying and related conditions](https://2e.aonprd.com/Rules.aspx?ID=2325), Player Core, pp. 411–412.*
-
 ::: wiki-next-step
 ### After play
 
@@ -58,6 +56,8 @@ When the character earns a level, follow [[Leveling Up|main:leveling_up]] to upd
 
 Return to [[Learn PF2e|main:learn_pf2e]].
 :::
+
+*Sources: linked condition and treatment pages; [Dying and related conditions](https://2e.aonprd.com/Rules.aspx?ID=2325), Player Core, pp. 411–412.*
 
 
 ---

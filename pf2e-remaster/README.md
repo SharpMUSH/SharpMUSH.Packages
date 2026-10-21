@@ -92,3 +92,9 @@ and explicit next-step/return links across the core learning path. The learning
 order is authored content; category and related-page lists remain reference
 navigation. The `wiki-next-step` Markdown container uses ordinary wiki links and
 remains readable without the portal’s optional visual treatment.
+
+Version 1.3.2 declares **Learn PF2e** as the collection entrance (`wiki_landing_page`,
+manifest format 1.14), so the portal shows it under **Start here** on the collection page.
+It also adds a first-roll primer (GM and player roles, dice notation, DC, AC, HP) to
+Learn PF2e, makes the Degrees of Success ranges disjoint with boundary examples, and
+explains how typed and untyped penalties stack.
