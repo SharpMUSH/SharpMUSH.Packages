@@ -26,9 +26,11 @@ Typically come from spells, other magical effects, or something applying a helpf
 
 ## Penalties
 
-Penalties work very much like bonuses. You can have **circumstance penalties**, **status penalties**, and sometimes even **item** penalties. Like bonuses of the same type, you take only the worst all of various penalties of a given type.
+For **circumstance**, **status** and **item** penalties, apply only the most severe penalty of each type. A bonus and a penalty of the same type can both apply: a +1 status bonus and a -2 status penalty give a net -1.
 
-*Source: Player Core, p. 400.*
+**Untyped penalties** add together. For example, the [[Multiple Attack Penalty|main:multiple_attack_penalty]] and a range penalty both apply when relevant to the same attack; neither replaces the other.
+
+*Source: Player Core, p. 400; [Checks — Bonuses and Penalties](https://2e.aonprd.com/Rules.aspx?ID=2278).*
 
 ---
 

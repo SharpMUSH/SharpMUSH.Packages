@@ -2,6 +2,19 @@ This **Pathfinder 2e** collection covers the **Remaster** rules, primarily from 
 
 Start here to learn the core character and play procedures in this reference. Keep this page open as your route back from individual options.
 
+## Before your first roll
+
+The **Game Master (GM)** presents the world, plays other creatures and decides how the rules apply. Each player usually controls one **player character (PC)**, describing what that character tries to do. Your group makes the rolls and resolves their effects; this wiki supplies the reference and practice examples.
+
+Dice notation tells you what to roll:
+
+- **d20** means a 20-sided die. For a check, roll it and add the applicable modifier from your sheet.
+- **1d8+4** means roll one 8-sided die, then add 4.
+- **2d8+4** means roll two 8-sided dice, add their results, then add 4 **once**. Rolls of 3 and 6 give `3 + 6 + 4 = 13`.
+- **2d4** means roll two 4-sided dice and add their results.
+
+**Difficulty Class (DC)** is the target number for a check. **Armor Class (AC)** is the target DC for Strikes and spell attack rolls; other actions with the attack trait can target different DCs. **Hit Points (HP)** track how much harm a creature can take. Use [[Degrees of Success|main:degrees_of_success]] to interpret a check, then [[Encounter Mode|main:encounter_mode]] for the order of turns and actions.
+
 ## Make your first character
 
 1. Follow the [[Character Creation Guide|main:character_creation_guide]], using the [[Character Sheet|main:character_sheet]] as your checklist of numbers.

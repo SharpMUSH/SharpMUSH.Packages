@@ -115,8 +115,6 @@ For level 3 and beyond, use the [full Wizard class progression and Wizard Spells
 
 Return to [[Learn PF2e|main:learn_pf2e]].
 
-*Sources: Player Core pp.192–199,297–299,323,328,331–333,336,340,343,346,351–352,354,356,362–363,387,400–407,439; [Wizard](https://2e.aonprd.com/Classes.aspx?ID=39), [Arcane Schools](https://2e.aonprd.com/ArcaneSchools.aspx), [Battle Magic](https://2e.aonprd.com/ArcaneSchools.aspx?ID=22), [Arcane Theses](https://2e.aonprd.com/ArcaneThesis.aspx), [Ignition](https://2e.aonprd.com/Spells.aspx?ID=1565), [Electric Arc](https://2e.aonprd.com/Spells.aspx?ID=1509), [Force Barrage](https://2e.aonprd.com/Spells.aspx?ID=1536), [Force Bolt](https://2e.aonprd.com/Spells.aspx?ID=1896), [Prepared Spells](https://2e.aonprd.com/Rules.aspx?ID=2223), [Focus Spells](https://2e.aonprd.com/Rules.aspx?ID=2228), [Basic Saving Throws](https://2e.aonprd.com/Rules.aspx?ID=2297), [Rest and Daily Preparations](https://2e.aonprd.com/Rules.aspx?ID=2440), and [official Player Core errata](https://paizo.com/pathfinder/faq).*
-
 ::: wiki-next-step
 ### Next step
 
@@ -124,6 +122,8 @@ Read [[Dying and Recovery|main:dying_and_recovery]] before resolving defeat or h
 
 Return to [[Learn PF2e|main:learn_pf2e]].
 :::
+
+*Sources: Player Core pp.192–199,297–299,323,328,331–333,336,340,343,346,351–352,354,356,362–363,387,400–407,439; [Wizard](https://2e.aonprd.com/Classes.aspx?ID=39), [Arcane Schools](https://2e.aonprd.com/ArcaneSchools.aspx), [Battle Magic](https://2e.aonprd.com/ArcaneSchools.aspx?ID=22), [Arcane Theses](https://2e.aonprd.com/ArcaneThesis.aspx), [Ignition](https://2e.aonprd.com/Spells.aspx?ID=1565), [Electric Arc](https://2e.aonprd.com/Spells.aspx?ID=1509), [Force Barrage](https://2e.aonprd.com/Spells.aspx?ID=1536), [Force Bolt](https://2e.aonprd.com/Spells.aspx?ID=1896), [Prepared Spells](https://2e.aonprd.com/Rules.aspx?ID=2223), [Focus Spells](https://2e.aonprd.com/Rules.aspx?ID=2228), [Basic Saving Throws](https://2e.aonprd.com/Rules.aspx?ID=2297), [Rest and Daily Preparations](https://2e.aonprd.com/Rules.aspx?ID=2440), and [official Player Core errata](https://paizo.com/pathfinder/faq).*
 
 
 ---
