@@ -1,6 +1,7 @@
-format: 1.14
+format: "1.17"
 package: pf2e-remaster
-version: 1.3.2
+title: Pathfinder 2e
+version: 1.4.0
 wiki_landing_page: main:learn_pf2e
 wiki_collection_name: Pathfinder 2e
 authors: [SharpMUSH project]
@@ -14,6 +15,36 @@ license: LicenseRef-ORC
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages/tree/main/pf2e-remaster
 keywords: [pathfinder, pf2e, rules, character-creation, wiki]
 locale: en
+
+wiki_properties:
+  pf2e:level:
+    type: number
+    label: Level
+    description: The level of a feat, item or creature, or the level a class feature is gained at.
+  pf2e:rank:
+    type: number
+    label: Rank
+    description: A spell's rank, 1 to 10; 0 for a cantrip.
+  pf2e:tradition:
+    type: keyword
+    multiple: true
+    values: [arcane, divine, occult, primal]
+    label: Tradition
+    description: The magical traditions a spell belongs to.
+  pf2e:class:
+    type: page
+    multiple: true
+    label: Class
+    description: The class pages a feat, feature or spell belongs to.
+  pf2e:ancestry:
+    type: page
+    label: Ancestry
+    description: The ancestry page a heritage or ancestry feat belongs to.
+  pf2e:source-book:
+    type: keyword
+    values: [player core, player core 2, gm core]
+    label: Source book
+    description: The book the rules come from.
 
 wiki:
   - page: category:pf2e_start_here

@@ -40,10 +40,16 @@ items their level, price, Bulk, traits, usage and weapon, armor or shield stats.
 
 Every page ends with a line linking the ORC License Notice page.
 
+It also defines six wiki fact properties, so pages can state them and be found by them:
+`pf2e:level` and `pf2e:rank` (numbers), `pf2e:tradition` (arcane, divine, occult, primal; several
+per page), `pf2e:class` (class pages; several per page), `pf2e:ancestry` (an ancestry page) and
+`pf2e:source-book` (player core, player core 2, gm core). Uninstalling removes the properties; pages
+keep the facts they state.
+
 ## Requirements
 
 Requires a SharpMUSH server and strict PackageValidator supporting manifest format
-1.13 and its `wiki_collection_name` metadata ([SharpMUSH #2050](https://github.com/SharpMUSH/SharpMUSH/issues/2050)).
+1.17, for its `wiki_properties` ([SharpMUSH #2227](https://github.com/SharpMUSH/SharpMUSH/pull/2227)).
 The validator checks the complete manifest and file-backed wiki bodies.
 
 Version 1.3.0 adds the complete Dwarf Wizard Example, locally checked level-1/2
@@ -98,3 +104,6 @@ manifest format 1.14), so the portal shows it under **Start here** on the collec
 It also adds a first-roll primer (GM and player roles, dice notation, DC, AC, HP) to
 Learn PF2e, makes the Degrees of Success ranges disjoint with boundary examples, and
 explains how typed and untyped penalties stack.
+
+Version 1.4.0 defines the PF2e wiki fact properties (`wiki_properties`, manifest format 1.17)
+and names the package (`title`).
