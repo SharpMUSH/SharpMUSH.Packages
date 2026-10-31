@@ -1,0 +1,335 @@
+(@spell.level*2)-1
+-(2 + @item.origin.level)
+-1 * @item.badge.value
+-1+@item.level
+-@actor.conditions.cursebound.value
+-@actor.level
+-@actor.level*@actor.conditions.cursebound.value
+-@item.badge.value
+-@weapon.system.damage.dice
+1 + 2*floor((@item.level -3)/2)
+1 + @actor.system.skills.crafting.rank
+1 + @armor.system.runes.potency
+1+@item.level
+10 + (@item.level - 2) * 3
+10 + 5*floor((@item.level -6)/2)
+10*ceil(@actor.level/2)
+15 + @actor.level
+16 + @actor.level
+17 + @actor.level
+18 + @actor.level
+19 + @actor.level
+2 * @actor.level
+2 * @item.level
+2 * @target.conditions.frightened.badge.value
+2 + (@item.origin.level/2)
+2 + 2*@item.level
+2 + @actor.system.abilities.int.mod
+2 + @armor.system.runes.potency
+2 + min(3,floor(@actor.level / 6))
+2* @weapon.system.damage.dice
+2*(@item.level)+3
+2*(ceil(@item.origin.level/2))
+2*@actor.level
+2*@item.flags.system.rulesSelections.rank
+2*@item.level
+2*@item.level + @actor.abilities.str.mod
+2*floor(@item.level/2)
+2+@item.level
+20 + @actor.level
+21 + @actor.level
+22 + @actor.level
+25 * (5 + @actor.abilities.con.mod)
+25 + @actor.level
+3 * @actor.flags.system.barbarian.archetypeFeatCount
+3 * @actor.flags.system.championDedicationCount
+3 * @actor.flags.system.fighterDedicationCount
+3 * @actor.flags.system.rangerDedicationCount
+3 + @actor.abilities.con.mod
+3 + @armor.system.runes.potency
+3*@actor.flags.system.monkDedicationCount
+3*floor(@item.level/2)
+3+@item.origin.abilities.cha.mod
+4 + (2 * @item.timesTaken)
+4 + @actor.system.abilities.int.mod
+4 + @armor.system.runes.potency
+4 + @item.level
+4 + @item.timesTaken
+4+@item.flags.system.rulesSelections.rank
+5 * @item.badge.value
+5 + 3*floor((@item.level -4)/2)
+5 + 5*floor((@item.level -3)/2)
+5 + 5*floor((@item.level -4)/2)
+5 + 5*floor(@item.level/2)
+5 + @armor.system.runes.potency
+5 + @item.badge.value * 10
+5 + floor(@actor.abilities.con.mod)
+5*(@item.level - 1)
+5*(floor((@actor.level + 5)/4))
+5*(floor((@actor.level + 5)/8))
+5*ceil(@item.level/2)
+5*floor((@actor.level + 5) / 4)
+6 + @actor.system.abilities.int.mod
+6 + @armor.system.runes.potency
+8 + @actor.abilities.con.mod
+<p>@Localize[PF2E.SpecificRule.Rogue.Debilitation.Trigger]</p> <p>@Localize[PF2E.SpecificRule.Rogue.Debilitation.Bloody.Note]</p>
+<p>@Localize[PF2E.SpecificRule.Rogue.Debilitation.Trigger]</p> <p>@Localize[PF2E.SpecificRule.Rogue.Debilitation.Clumsy.Note]</p>
+<p>@Localize[PF2E.SpecificRule.Rogue.Debilitation.Trigger]</p> <p>@Localize[PF2E.SpecificRule.Rogue.Debilitation.Critical.Note]</p>
+<p>@Localize[PF2E.SpecificRule.Rogue.Debilitation.Trigger]</p> <p>@Localize[PF2E.SpecificRule.Rogue.Debilitation.Enfeebled.Note]</p>
+<p>@Localize[PF2E.SpecificRule.Rogue.Debilitation.Trigger]</p> <p>@Localize[PF2E.SpecificRule.Rogue.Debilitation.Frightened.Note]</p>
+<p>@Localize[PF2E.SpecificRule.Rogue.Debilitation.Trigger]</p> <p>@Localize[PF2E.SpecificRule.Rogue.Debilitation.OffGuard.Note]</p>
+<p>@Localize[PF2E.SpecificRule.Rogue.Debilitation.Trigger]</p> <p>@Localize[PF2E.SpecificRule.Rogue.Debilitation.PrecisionDamage.Note]</p>
+<p>@Localize[PF2E.SpecificRule.Rogue.Debilitation.Trigger]</p> <p>@Localize[PF2E.SpecificRule.Rogue.Debilitation.PreventFlanking.Note]</p>
+<p>@Localize[PF2E.SpecificRule.Rogue.Debilitation.Trigger]</p> <p>@Localize[PF2E.SpecificRule.Rogue.Debilitation.PreventReactions.Note]</p>
+<p>@Localize[PF2E.SpecificRule.Rogue.Debilitation.Trigger]</p> <p>@Localize[PF2E.SpecificRule.Rogue.Debilitation.PreventStep.Note]</p>
+<p>@Localize[PF2E.SpecificRule.Rogue.Debilitation.Trigger]</p> <p>@Localize[PF2E.SpecificRule.Rogue.Debilitation.ReduceCover.Note]</p>
+<p>@Localize[PF2E.SpecificRule.Rogue.Debilitation.Trigger]</p> <p>@Localize[PF2E.SpecificRule.Rogue.Debilitation.SpeedPenalty.Note]</p>
+<p>@Localize[PF2E.SpecificRule.Rogue.Debilitation.Trigger]</p> <p>@Localize[PF2E.SpecificRule.Rogue.Debilitation.Stupefied.Note]</p>
+<p>@Localize[PF2E.SpecificRule.Rogue.Debilitation.Trigger]</p> <p>@Localize[PF2E.SpecificRule.Rogue.Debilitation.Weakness.Note]</p>
+<p>@Localize[PF2E.SpecificRule.Rogue.Debilitation.Trigger]</p> <p>@Localize[PF2E.SpecificRule.Rogue.Debilitation.WeaknessHeartless.Note]</p>
+@Localize[PF2E.AttackEffectGrab] <span class="action-glyph">1</span>
+@Localize[PF2E.AttackEffectKnockdown] <span class="action-glyph">1</span>
+@Localize[PF2E.NPC.Abilities.Glossary.Grab]
+@Localize[PF2E.NPC.Abilities.Glossary.Knockdown]
+@UUID[Compendium.pf2e.feat-effects.Item.Effect: Aberrant Blood Magic]
+@UUID[Compendium.pf2e.feat-effects.Item.Effect: Angelic Blood Magic]
+@UUID[Compendium.pf2e.feat-effects.Item.Effect: Blood Sovereignty]
+@UUID[Compendium.pf2e.feat-effects.Item.Effect: Channeling Block]
+@UUID[Compendium.pf2e.feat-effects.Item.Effect: Deity's Protection]
+@UUID[Compendium.pf2e.feat-effects.Item.Effect: Demonic Blood Magic]
+@UUID[Compendium.pf2e.feat-effects.Item.Effect: Diabolic Blood Magic (Self)]
+@UUID[Compendium.pf2e.feat-effects.Item.Effect: Draconic Blood Magic]
+@UUID[Compendium.pf2e.feat-effects.Item.Effect: Elemental Blood Magic (Self)]
+@UUID[Compendium.pf2e.feat-effects.Item.Effect: Energy Ablation]
+@UUID[Compendium.pf2e.feat-effects.Item.Effect: Familiar of Balanced Luck]
+@UUID[Compendium.pf2e.feat-effects.Item.Effect: Familiar of Keen Senses]
+@UUID[Compendium.pf2e.feat-effects.Item.Effect: Familiar of Restored Spirit]
+@UUID[Compendium.pf2e.feat-effects.Item.Effect: Fey Blood Magic]
+@UUID[Compendium.pf2e.feat-effects.Item.Effect: Hag Blood Magic]
+@UUID[Compendium.pf2e.feat-effects.Item.Effect: Heroic Recovery]
+@UUID[Compendium.pf2e.feat-effects.Item.Effect: Imperial Blood Magic]
+@UUID[Compendium.pf2e.feat-effects.Item.Effect: Mutagenist Field Benefit]
+@UUID[Compendium.pf2e.feat-effects.Item.Effect: Share Hunter's Edge (Flurry)]
+@UUID[Compendium.pf2e.feat-effects.Item.Effect: Share Hunter's Edge (Flurry, Masterful)]
+@UUID[Compendium.pf2e.feat-effects.Item.Effect: Share Hunter's Edge (Outwit)]
+@UUID[Compendium.pf2e.feat-effects.Item.Effect: Share Hunter's Edge (Outwit, Masterful)]
+@UUID[Compendium.pf2e.feat-effects.Item.Effect: Share Hunter's Edge (Precision)]
+@UUID[Compendium.pf2e.feat-effects.Item.Effect: Share Hunter's Edge (Precision, Masterful)]
+@UUID[Compendium.pf2e.feat-effects.Item.Effect: Undead Blood Magic]
+@UUID[Compendium.pf2e.spell-effects.Item.Spell Effect: Shields of the Spirit (Security)]
+@actor.abilities.cha.mod
+@actor.abilities.con.mod+3
+@actor.abilities.int.mod
+@actor.abilities.str.mod
+@actor.classDCs.alchemist.mod
+@actor.conditions.cursebound.value
+@actor.conditions.dying.badge.value
+@actor.flags.system.animalSkinBonus
+@actor.flags.system.champion.aura
+@actor.flags.system.followTheExpertProficiency+1
+@actor.flags.system.multilingualTaken
+@actor.flags.system.predictable
+@actor.flags.system.rageTempHP
+@actor.flags.system.ragingResistance
+@actor.flags.system.remainingAir.rounds
+@actor.flags.system.revelInRetribution
+@actor.flags.system.scalyHideBonus
+@actor.flags.system.sneakAttackDamage.number
+@actor.flags.system.swashbuckler.preciseStrike
+@actor.heldShield.acBonus
+@actor.level
+@actor.level + @actor.abilities.cha.mod
+@actor.level + @actor.abilities.con.mod
+@actor.level + @actor.abilities.dex.mod
+@actor.level + clamp(-2,floor((@actor.level - 7) / 2),0)
+@actor.masterAttributeModifier
+@actor.system.abilities.con.mod
+@actor.system.abilities.int.mod
+@actor.system.attributes.classDC.totalModifier
+@actor.system.attributes.shield.ac
+@actor.system.movement.speeds.land.value
+@actor.system.movement.speeds.land.value*0.5
+@actor.system.proficiencies.attacks.simple.rank
+@actor.system.proficiencies.defenses.medium.rank
+@actor.system.skills.crafting.rank - 1
+@item.badge.value
+@item.flags.system.rulesSelections.acBonus
+@item.flags.system.rulesSelections.aidBonus
+@item.flags.system.rulesSelections.bonus
+@item.flags.system.rulesSelections.comeAndGetMe*@actor.system.abilities.con.mod
+@item.flags.system.rulesSelections.cover.bonus
+@item.flags.system.rulesSelections.dragonForm.speeds.burrow
+@item.flags.system.rulesSelections.dragonForm.speeds.climb
+@item.flags.system.rulesSelections.dragonForm.speeds.swim
+@item.flags.system.rulesSelections.endemicHerbs.bonus
+@item.flags.system.rulesSelections.energyAblationRank
+@item.flags.system.rulesSelections.familiarOfBalancedLuck
+@item.flags.system.rulesSelections.followTheExpertProficiency
+@item.flags.system.rulesSelections.fortissimoBonus
+@item.flags.system.rulesSelections.magicsVesselRank
+@item.flags.system.rulesSelections.modifier
+@item.flags.system.rulesSelections.outcome
+@item.flags.system.rulesSelections.overstuff.badge
+@item.flags.system.rulesSelections.penalty
+@item.flags.system.rulesSelections.pointedQuestion
+@item.flags.system.rulesSelections.predictable
+@item.flags.system.rulesSelections.rank
+@item.flags.system.rulesSelections.speedPenalty
+@item.level
+@item.level * 2
+@item.level * 2 - 1
+@item.level -1
+@item.level -6
+@item.level*2
+@item.level*4
+@item.origin.abilities.cha.mod
+@item.origin.abilities.int.mod
+@item.origin.abilities.wis.mod
+@item.origin.conditions.cursebound.value
+@item.origin.flags.system.bombersEyeElixir
+@item.origin.flags.system.highestWeaponDamageDice
+@item.origin.flags.system.shiningSymbolPenalty
+@item.origin.flags.system.shiningSymbolWeakness
+@item.origin.level
+@item.origin.level+2
+@item.origin.system.attributes.shield.ac
+@item.system.badge.value * 3
+@item.system.badge.value - 1
+@spell.level
+@spell.level + ternary(gte(@actor.conditions.cursebound.value,3),3,0)
+@spell.rank
+@spell.rank * 2
+@weapon.system.damage.dice
+@weapon.system.damage.dice * -1
+@weapon.system.damage.dice * 2
+@weapon.system.splashDamage.value
+You ignore the target's @UUID[Compendium.pf2e.conditionitems.Item.Concealed] condition.
+ceil(1+(@item.level / 2))
+ceil(@actor.level/4) + 1
+ceil(@item.level/2)*5 -5
+ceil(@item.level/2)*5+5
+ceil(@item.level/2)+1
+ceil(@item.level/4)
+floor(( @item.level ) / 2 )
+floor((@actor.level + 3)/4)
+floor((@actor.level+3)/4)
+floor((@item.flags.system.rulesSelections.bonus * @actor.level) / 2)
+floor((@item.level - 5) / 2)
+floor(@actor.level / 2)
+floor(@actor.level/2)
+floor(@actor.level/2)+@actor.abilities.con.mod
+floor(@actor.level/@item.flags.system.rulesSelections.outcome) + @actor.abilities.con.mod
+floor(@actor.system.movement.speeds.land.value*0.5)
+floor(@actor.system.movement.speeds.land.value/2)
+floor(@item.level/2)
+floor(@item.level/2)*{item|flags.system.rulesSelections.fungalInfestation}
+floor(@item.origin.level / 2)
+floor(@item.origin.level/2)
+match(when(btwn(@actor.level, 8, 10), 4), when(btwn(@actor.level, 11, 14), 6), when(gte(@actor.level, 15), 8))
+match(when(btwn(@item.level, 5, 5), 10), when(gte(@item.level, 6), 15))
+match(when(eq(@item.level, 10), 70), when(gte(@item.level, 8), 60), when(gte(@item.level, 6), 50), 40)
+match(when(gte(@actor.level, 15), 4), when(gte(@actor.level, 7), 3),when(gte(@actor.level, 3), 2),1)
+match(when(gte(@actor.system.skills.occultism.rank, 4), 2),1)
+match(when(gte(@actor.system.skills.society.rank, 4), 2),1)
+match(when(gte(@item.level, 8), 20))
+match(when(lte(@actor.level, 10), 2), when(btwn(@actor.level, 11, 16), 3), when(gte(@actor.level, 17), 4))
+match(when(lte(@actor.level, 13), 2), when(gte(@actor.level, 14), 3))
+match(when(lte(@actor.level, 5), 1), when(btwn(@actor.level, 6, 11), 2), when(btwn(@actor.level, 12, 17), 3), when(gte(@actor.level, 18), 4))
+match(when(lte(@item.level, 5), 0), when(btwn(@item.level, 6, 9), 2), when(gte(@item.level, 10), 4))
+max(0,@actor.system.abilities.int.mod) + floor(@actor.level / 2)
+max(1,@actor.level) * @item.badge.value
+max(1,floor(@actor.level/2))
+max(2,@weapon.system.damage.dice)
+max(20,(@actor.system.movement.speeds.land.value))
+max(20,@actor.system.movement.speeds.land.value)
+max(4,2*@actor.system.skills.crafting.rank)
+max(4,2*@actor.system.skills.survival.rank)
+max(60,@actor.system.movement.speeds.land.value)
+max(@actor.system.proficiencies.defenses.light.rank,@actor.system.proficiencies.defenses.medium.rank,ternary(gte(@actor.level,13),min(@actor.system.proficiencies.defenses.unarmored.rank,2),1))
+max(@actor.system.proficiencies.defenses.light.rank,ternary(gte(@actor.level,13),min(@actor.system.proficiencies.defenses.unarmored.rank,2),1))
+max(@actor.system.proficiencies.defenses.medium.rank,ternary(gte(@actor.level,13),min(@actor.system.proficiencies.defenses.unarmored.rank,2),1))
+max(@actor.system.skills.stealth.rank - 1, 0)
+max(@item.level -1,0)
+max(@item.level*2,8)+2
+max(floor(@item.origin.level/2),1)
+max(floor(@item.origin.level/@item.flags.system.rulesSelections.outcome),1)
+max(floor(@spell.level/2), 1)
+max(floor(@weapon.level/4), 1)
+min(-1 * @actor.level,-1) * @item.badge.value
+min(floor(@actor.level/4),5)
+ternary(eq(@actor.system.proficiencies.spellcasting.rank,4),3,ternary(eq(@actor.system.proficiencies.spellcasting.rank,3),2,1))
+ternary(eq(@actor.system.skills.society.rank, 4), 2, ternary(eq(@actor.system.skills.society.rank, 3), 1, 0))
+ternary(eq(@item.origin.skills.occultism.rank,4),3,ternary(gt(@item.origin.skills.occultism.rank,1),2,1))
+ternary(gte(@actor.conditions.cursebound.value,3),2,1)
+ternary(gte(@actor.conditions.cursebound.value,3),20,10)
+ternary(gte(@actor.conditions.cursebound.value,3),5+@actor.level,2)
+ternary(gte(@actor.conditions.cursebound.value,3),6,2)
+ternary(gte(@actor.conditions.cursebound.value,3),@actor.level,2)
+ternary(gte(@actor.conditions.cursebound.value,4),-2,-1)
+ternary(gte(@actor.level, 18), 18, ternary(gte(@actor.level, 12), 12, ternary(gte(@actor.level, 4), 4, 1)))
+ternary(gte(@actor.level, 18), 3, ternary(gte(@actor.level, 10), 2, 1))
+ternary(gte(@actor.level, 18), 6, ternary(gte(@actor.level, 10), 4, 2))
+ternary(gte(@actor.level,13),2,1)
+ternary(gte(@actor.level,14),ternary(gte(@actor.flags.system.sneakAttackDamage.number,3),2,1),1)
+ternary(gte(@actor.level,15),15,10)
+ternary(gte(@actor.level,15),4,ternary(gte(@actor.level,7),3,2))
+ternary(gte(@actor.level,16),10,8) + @actor.system.abilities.int.mod
+ternary(gte(@actor.level,16),3,ternary(gte(@actor.level,9),2,1))
+ternary(gte(@actor.level,17),3,2)
+ternary(gte(@actor.level,18),2,1)
+ternary(gte(@actor.level,18),3,2)
+ternary(gte(@actor.level,18),3,ternary(gte(@actor.level,10),2,1))
+ternary(gte(@actor.level,19),2,1)
+ternary(gte(@actor.level,19),3,2)
+ternary(gte(@actor.level,19),3,ternary(gte(@actor.level,13),2,1))
+ternary(gte(@actor.level,19),6,ternary(gte(@actor.level,16),5,ternary(gte(@actor.level,12),4,ternary(gte(@actor.level,9),3,ternary(gte(@actor.level,5),2,1)))))
+ternary(gte(@actor.level,5),2,1)
+ternary(gte(@actor.level,6),2,1)
+ternary(gte(@actor.system.skills.crafting.rank,3),2,1)
+ternary(gte(@actor.system.skills.performance.rank,3),2,1)
+ternary(gte(@actor.system.skills.thievery.rank,3),2,1)
+ternary(gte(@item.badge.value,2),30,5)
+ternary(gte(@item.level, 10), 20, ternary(gte(@item.level, 6), 10, 5))
+ternary(gte(@item.level, 10), 20, ternary(gte(@item.level, 6), 15, 5))
+ternary(gte(@item.level, 10), 4, ternary(gte(@item.level, 6), 3, 2))
+ternary(gte(@item.level, 5), 2, 1)
+ternary(gte(@item.level, 6), 2, 1)
+ternary(gte(@item.level, 7), 2, 1)
+ternary(gte(@item.level, 8), 4, 3)
+ternary(gte(@item.level, 9), 3, 2)
+ternary(gte(@item.level, 9),2,1)
+ternary(gte(@item.level,10),20,ternary(gte(@item.level,8),15,ternary(gte(@item.level,6),10,5)))
+ternary(gte(@item.level,10),3,ternary(gte(@item.level,6),2,1))
+ternary(gte(@item.level,10),3,ternary(gte(@item.level,8),2,1))
+ternary(gte(@item.level,18),3,ternary(gte(@item.level,12),2,1))
+ternary(gte(@item.level,18),4,ternary(gte(@item.level,12),3,ternary(gte(@item.level,4),2,1)))
+ternary(gte(@item.level,4),120,40)
+ternary(gte(@item.level,4),60,20)
+ternary(gte(@item.level,5),2,1)
+ternary(gte(@item.level,5),3,2)
+ternary(gte(@item.level,5),3,ternary(gte(@item.level,3),2,1))
+ternary(gte(@item.level,6),2,1)
+ternary(gte(@item.level,7),15,ternary(gte(@item.level,4),10,5))
+ternary(gte(@item.level,7),2,1)
+ternary(gte(@item.level,7),3,ternary(gte(@item.level,4),2,1))
+ternary(gte(@item.level,7),4,3)
+ternary(gte(@item.level,8),-3,ternary(gte(@item.level,5),-2,-1))
+ternary(gte(@item.level,8),15,ternary(gte(@item.level,5),10,5))
+ternary(gte(@item.level,8),2,1)
+ternary(gte(@item.level,8),3,ternary(gte(@item.level,5),2,1))
+ternary(gte(@item.level,9), 60, 40)
+ternary(gte(@item.level,9),10,5)
+ternary(gte(@item.level,9),18,12)
+ternary(gte(@item.level,9),20,15)
+ternary(gte(@item.level,9),20,ternary(gte(@item.level,6),10,0))
+ternary(gte(@item.level,9),3,2)
+ternary(gte(@item.level,9),3,ternary(gte(@item.level,5),2,1))
+ternary(gte(@item.level,9),3,ternary(gte(@item.level,6),2,1))
+ternary(gte(@item.origin.skills.crafting.rank,4),3,ternary(gte(@item.origin.skills.crafting.rank,3),2,1))
+ternary(gte(@weapon.system.runes.potency,3),2,1)
+ternary(gte(ceil(@actor.level / 2),4),120,40)
+ternary(gte(ceil(@actor.level / 2),4),60,20)
+ternary(lt(@actor.level, 5), 1, ternary(lt(@actor.level, 11), 2, ternary(lt(@actor.level, 17), 3, 4)))
+ternary(lt(@actor.level, 6), 4, 6)
+ternary(lt(@actor.level,11),1,ternary(lt(@actor.level,19),2,3))
+{item|description} @UUID[Compendium.pf2e.feat-effects.Item.Effect: Rage] @UUID[Compendium.pf2e.feat-effects.Item.Effect: Rage Temporary Hit Points Immunity]
