@@ -101,8 +101,8 @@ objects:
       # statement must hold.
       FUN`PREDICATE`TEST:
         value: |-
-          @@(Foundry Predicate.test: every statement in the array %0 holds for the roll options %1)
-          [switch(json_query(%0,type),
+          @@(Foundry Predicate.test: every statement in the array %0 holds for the roll options %1)[
+          switch(json_query(%0,type),
             array, not(member(u(FUN`PREDICATE`RESULTS,%0,%1),0)),
             0)]
         flags: [funsyntax]
@@ -122,9 +122,9 @@ objects:
       # A statement that is an object: one operator and its operands, or if/then.
       FUN`PREDICATE`COMPOUND:
         value: |-
-          @@(%0 a statement object, %1 the roll options)
-          [setq(predicate_op,lcstr(json_map(me/FUN`PREDICATE`KEY,%0)))]
-          [switch(%q<predicate_op>,
+          @@(%0 a statement object, %1 the roll options)[
+          setq(predicate_op,lcstr(json_map(me/FUN`PREDICATE`KEY,%0)))][
+          switch(%q<predicate_op>,
             and, not(member(u(FUN`PREDICATE`RESULTS,json_query(%0,get,and),%1),0)),
             or, neq(member(u(FUN`PREDICATE`RESULTS,json_query(%0,get,or),%1),1),0),
             nand, neq(member(u(FUN`PREDICATE`RESULTS,json_query(%0,get,nand),%1),0),0),
@@ -152,8 +152,8 @@ objects:
       # if/then holds unless "if" holds and "then" does not.
       FUN`PREDICATE`CONDITIONAL:
         value: |-
-          @@(%0 an if/then statement, %1 the roll options)
-          [cor(not(u(FUN`PREDICATE`RESULTS,\[[json_query(%0,get,if)]\],%1)),
+          @@(%0 an if/then statement, %1 the roll options)[
+          cor(not(u(FUN`PREDICATE`RESULTS,\[[json_query(%0,get,if)]\],%1)),
             u(FUN`PREDICATE`RESULTS,\[[json_query(%0,get,then)]\],%1))]
         flags: [funsyntax]
       # iff holds when its statements all hold or all fail. %0 their results.
@@ -164,9 +164,9 @@ objects:
       # eq: two strings are compared as text; a string and a number test the option <string>:<number>.
       FUN`PREDICATE`EQUAL:
         value: |-
-          @@(%0 the operand array, %1 the roll options)
-          [setq(predicate_left,json_query(%0,extract,$\[0\]),predicate_right,json_query(%0,extract,$\[1\]))]
-          [switch(json_query(json_query(%0,get,1),type),
+          @@(%0 the operand array, %1 the roll options)[
+          setq(predicate_left,json_query(%0,extract,$\[0\]),predicate_right,json_query(%0,extract,$\[1\]))][
+          switch(json_query(json_query(%0,get,1),type),
             string, not(comp(%q<predicate_left>,%q<predicate_right>)),
             neq(member(%1,%q<predicate_left>:%q<predicate_right>),0))]
         flags: [funsyntax]
@@ -174,21 +174,21 @@ objects:
       # statement holds when some left value beats every right value, as in Foundry.
       FUN`PREDICATE`COMPARE:
         value: |-
-          @@(%0 the operator, %1 the operand array, %2 the roll options)
-          [setq(predicate_lefts,u(FUN`PREDICATE`VALUES,json_query(%1,extract,$\[0\]),%2))]
-          [setq(predicate_rights,u(FUN`PREDICATE`VALUES,json_query(%1,extract,$\[1\]),%2))]
-          [cand(words(%q<predicate_lefts>),words(%q<predicate_rights>),
+          @@(%0 the operator, %1 the operand array, %2 the roll options)[
+          setq(predicate_lefts,u(FUN`PREDICATE`VALUES,json_query(%1,extract,$\[0\]),%2))][
+          setq(predicate_rights,u(FUN`PREDICATE`VALUES,json_query(%1,extract,$\[1\]),%2))][
+          cand(words(%q<predicate_lefts>),words(%q<predicate_rights>),
             words(iter(%q<predicate_lefts>,if(u(FUN`PREDICATE`BEATS`ALL,%0,%i0,%q<predicate_rights>),%i0))))]
         flags: [funsyntax]
       FUN`PREDICATE`BEATS`ALL:
         value: |-
-          @@(%0 the operator, %1 one left value, %2 every right value)
-          [not(words(iter(%2,if(switch(%0,gt,gt(%1,%i0),gte,gte(%1,%i0),lt,lt(%1,%i0),lte(%1,%i0)),,%i0))))]
+          @@(%0 the operator, %1 one left value, %2 every right value)[
+          not(words(iter(%2,if(switch(%0,gt,gt(%1,%i0),gte,gte(%1,%i0),lt,lt(%1,%i0),lte(%1,%i0)),,%i0))))]
         flags: [funsyntax]
       FUN`PREDICATE`VALUES:
         value: |-
-          @@(%0 an operand, %1 the roll options)
-          [if(isnum(%0),%0,
+          @@(%0 an operand, %1 the roll options)[
+          if(isnum(%0),%0,
             squish(iter(%1,if(cand(strmatch(%i0,%0:*),
               not(strmatch(after(%i0,%0:),*:*)),
               isnum(after(%i0,%0:))),
@@ -201,30 +201,30 @@ objects:
       # first of equals. Gives type~value~slug for each.
       FUN`MODIFIER`CHOSEN:
         value: |-
-          @@(%0 Foundry modifier objects, %1 the roll options)
-          [setq(mod_all,json_map(me/FUN`MODIFIER`FLAT,%0,%b,%1))]
-          [setq(mod_types,setdiff(iter(%q<mod_all>,first(%i0,~)),untyped ability))]
-          [squish(
-            [u(FUN`MODIFIER`OF`TYPE,untyped,%q<mod_all>)]%b
-            [u(FUN`MODIFIER`BEST`ABILITY,u(FUN`MODIFIER`OF`TYPE,ability,%q<mod_all>))]%b
-            [iter(%q<mod_types>,u(FUN`MODIFIER`BEST`OF`TYPE,u(FUN`MODIFIER`OF`TYPE,%i0,%q<mod_all>)))])]
+          @@(%0 Foundry modifier objects, %1 the roll options)[
+          setq(mod_all,json_map(me/FUN`MODIFIER`FLAT,%0,%b,%1))][
+          setq(mod_types,setdiff(iter(%q<mod_all>,first(%i0,~)),untyped ability))][
+          squish(
+            [u(FUN`MODIFIER`OF`TYPE,untyped,%q<mod_all>)]%b[
+            u(FUN`MODIFIER`BEST`ABILITY,u(FUN`MODIFIER`OF`TYPE,ability,%q<mod_all>))]%b[
+            iter(%q<mod_types>,u(FUN`MODIFIER`BEST`OF`TYPE,u(FUN`MODIFIER`OF`TYPE,%i0,%q<mod_all>)))])]
         flags: [funsyntax]
       FUN`MODIFIER`TOTAL:
         value: |-
-          @@(%0 Foundry modifier objects, %1 the roll options)
-          [ladd(0 [iter(u(FUN`MODIFIER`CHOSEN,%0,%1),elements(%i0,2,~))])]
+          @@(%0 Foundry modifier objects, %1 the roll options)[
+          ladd(0 [iter(u(FUN`MODIFIER`CHOSEN,%0,%1),elements(%i0,2,~))])]
         flags: [funsyntax]
       FUN`MODIFIER`ENABLED:
         value: |-
-          @@(%0 Foundry modifier objects, %1 the roll options: the slugs of the modifiers that count)
-          [iter(u(FUN`MODIFIER`CHOSEN,%0,%1),elements(%i0,3,~))]
+          @@(%0 Foundry modifier objects, %1 the roll options: the slugs of the modifiers that count)[
+          iter(u(FUN`MODIFIER`CHOSEN,%0,%1),elements(%i0,3,~))]
         flags: [funsyntax]
       # json_map's callback: %1 one modifier object, %3 the roll options. Gives type~value~slug~force, or
       # nothing when the modifier is ignored or its predicate fails. An unknown type is untyped.
       FUN`MODIFIER`FLAT:
         value: |-
-          @@(%1 one modifier object, %3 the roll options)
-          [if(cand(not(json_query(%1,extract,$.ignored)),
+          @@(%1 one modifier object, %3 the roll options)[
+          if(cand(not(json_query(%1,extract,$.ignored)),
             u(FUN`PREDICATE`TEST,firstof(json_query(%1,get,predicate),\[\]),%3)),
             [u(FUN`MODIFIER`TYPE,json_query(%1,extract,$.type))]~[add(0,json_query(%1,extract,$.modifier))]~[firstof(json_query(%1,extract,$.slug),modifier)]~[t(json_query(%1,extract,$.force))])]
         flags: [funsyntax]
@@ -234,42 +234,42 @@ objects:
         flags: [funsyntax]
       FUN`MODIFIER`OF`TYPE:
         value: |-
-          @@(%0 a type, %1 type~value~slug~force entries)
-          [iter(%1,if(strmatch(first(%i0,~),%0),%i0))]
+          @@(%0 a type, %1 type~value~slug~force entries)[
+          iter(%1,if(strmatch(first(%i0,~),%0),%i0))]
         flags: [funsyntax]
       FUN`MODIFIER`BEST`ABILITY:
         value: |-
-          @@(%0 the ability entries: the last forced one, else the first highest)
-          [setq(mod_forced,iter(%0,if(elements(%i0,4,~),%i0)))]
-          [if(words(%q<mod_forced>),last(%q<mod_forced>),u(FUN`MODIFIER`FIRST`AT,%0,lmax(iter(%0,elements(%i0,2,~)))))]
+          @@(%0 the ability entries: the last forced one, else the first highest)[
+          setq(mod_forced,iter(%0,if(elements(%i0,4,~),%i0)))][
+          if(words(%q<mod_forced>),last(%q<mod_forced>),u(FUN`MODIFIER`FIRST`AT,%0,lmax(iter(%0,elements(%i0,2,~)))))]
         flags: [funsyntax]
       FUN`MODIFIER`BEST`OF`TYPE:
         value: |-
-          @@(%0 the entries of one type: the first highest bonus and the first lowest penalty)
-          [setq(mod_bonuses,iter(%0,if(gte(elements(%i0,2,~),0),%i0)))]
-          [setq(mod_penalties,iter(%0,if(lt(elements(%i0,2,~),0),%i0)))]
-          [squish(
-            [u(FUN`MODIFIER`FIRST`AT,%q<mod_bonuses>,lmax(iter(%q<mod_bonuses>,elements(%i0,2,~))))]%b
-            [u(FUN`MODIFIER`FIRST`AT,%q<mod_penalties>,lmin(iter(%q<mod_penalties>,elements(%i0,2,~))))])]
+          @@(%0 the entries of one type: the first highest bonus and the first lowest penalty)[
+          setq(mod_bonuses,iter(%0,if(gte(elements(%i0,2,~),0),%i0)))][
+          setq(mod_penalties,iter(%0,if(lt(elements(%i0,2,~),0),%i0)))][
+          squish(
+            [u(FUN`MODIFIER`FIRST`AT,%q<mod_bonuses>,lmax(iter(%q<mod_bonuses>,elements(%i0,2,~))))]%b[
+            u(FUN`MODIFIER`FIRST`AT,%q<mod_penalties>,lmin(iter(%q<mod_penalties>,elements(%i0,2,~))))])]
         flags: [funsyntax]
       FUN`MODIFIER`FIRST`AT:
         value: |-
-          @@(%0 entries, %1 a value: the first entry with that value; nothing when there are no entries)
-          [if(words(%0),first(iter(%0,if(eq(elements(%i0,2,~),%1),%i0))))]
+          @@(%0 entries, %1 a value: the first entry with that value; nothing when there are no entries)[
+          if(words(%0),first(iter(%0,if(eq(elements(%i0,2,~),%1),%i0))))]
         flags: [funsyntax]
       FUN`DEGREE: Degrees of success, 0 critical failure, 1 failure, 2 success, 3 critical success.
       # Foundry's DegreeOfSuccess: 10 over the DC is a critical success and 10 under a critical failure;
       # a natural 20 raises the degree one step and a natural 1 lowers it.
       FUN`DEGREE`OF`CHECK:
         value: |-
-          @@(%0 the check's total, %1 the DC, %2 the d20's face)
-          [setq(degree_base,
+          @@(%0 the check's total, %1 the DC, %2 the d20's face)[
+          setq(degree_base,
             switch(1,
               gte(sub(%0,%1),10), 3,
               gte(sub(%1,%0),10), 0,
               gte(%0,%1), 2,
-              1))]
-          [switch(%2,
+              1))][
+          switch(%2,
             20, min(3,inc(%q<degree_base>)),
             1, max(0,dec(%q<degree_base>)),
             %q<degree_base>)]
@@ -280,8 +280,8 @@ objects:
       # data. A formula that names something the data lacks gives the default (%2), as in Foundry.
       FUN`FORMULA`VALUE:
         value: |-
-          @@(%0 the value as JSON, %1 the roll data, %2 the default)
-          [switch(json_query(%0,type),
+          @@(%0 the value as JSON, %1 the roll data, %2 the default)[
+          switch(json_query(%0,type),
             number, json_query(%0,extract,$),
             string, u(FUN`FORMULA`TEXT,trim(u(FUN`FORMULA`INJECT,json_query(%0,extract,$),%1)),%1,%2),
             boolean, json_query(%0,extract,$),
@@ -289,47 +289,47 @@ objects:
         flags: [funsyntax]
       FUN`FORMULA`TEXT:
         value: |-
-          @@(%0 the text with injected properties resolved, %1 the roll data, %2 the default)
-          [switch(1,
+          @@(%0 the text with injected properties resolved, %1 the roll data, %2 the default)[
+          switch(1,
             regmatch(%0,^-?\\d+$), %0,
             not(strmatch(%0,*@*)), %0,
             u(FUN`FORMULA`ROLL,roll(%0,%1),%2))]
         flags: [funsyntax]
       FUN`FORMULA`ROLL:
         value: |-
-          @@(%0 what roll gave, %1 the default)
-          [if(strmatch(%0,#-*),%1,%0)]
+          @@(%0 what roll gave, %1 the default)[
+          if(strmatch(%0,#-*),%1,%0)]
         flags: [funsyntax]
       # {actor|<path>}, {item|<path>} and {rule|<path>} replaced by the value at that path in the roll data.
       FUN`FORMULA`INJECT:
         value: |-
-          @@(%0 text, %1 the roll data)
-          [if(regmatch(%0,\\x7B),
+          @@(%0 text, %1 the roll data)[
+          if(regmatch(%0,\\x7B),
             regeditall(%0,\\x7B%(actor|item|rule%)\\|%(.*?%)\\x7D,u(FUN`FORMULA`PROPERTY,$1.$2,%1)),
             %0)]
         flags: [funsyntax]
       FUN`FORMULA`PROPERTY:
         value: |-
-          @@(%0 a dotted path, %1 the roll data)
-          [firstof(json_query(%1,extract,$.%0),undefined)]
+          @@(%0 a dotted path, %1 the roll data)[
+          firstof(json_query(%1,extract,$.%0),undefined)]
         flags: [funsyntax]
       FUN`SHEET: The sheet's ledger, read once into entries. FUN`SHEET`ENTRIES takes the ledger, a JSON array of entry objects each with n (its number) and kind; every other FUN`SHEET` takes the entries it gives. A later entry wins; a revoke entry takes back the entry it names.
       # Entry kinds: level {level}, ability {ability, mod}, rank {stat, rank}, grant {pack, id, badge},
       # revoke {entry}. The ledger only grows: a change is a new entry, so the sheet's history is the ledger.
       FUN`SHEET`ENTRIES:
         value: |-
-          @@(%0 the ledger: kind~key~value~n for each entry not revoked, oldest first)
-          [setq(sheet_all,json_map(me/FUN`SHEET`ENTRY,%0,%b))]
-          [setq(sheet_revoked,u(FUN`SHEET`REVOKED,%q<sheet_all>))]
-          [squish(iter(%q<sheet_all>,if(member(%q<sheet_revoked>,elements(%i0,4,~)),,%i0)))]
+          @@(%0 the ledger: kind~key~value~n for each entry not revoked, oldest first)[
+          setq(sheet_all,json_map(me/FUN`SHEET`ENTRY,%0,%b))][
+          setq(sheet_revoked,u(FUN`SHEET`REVOKED,%q<sheet_all>))][
+          squish(iter(%q<sheet_all>,if(member(%q<sheet_revoked>,elements(%i0,4,~)),,%i0)))]
         flags: [funsyntax]
       # json_map's callback, %1 one entry. The key is what a later entry of the kind replaces it by:
       # the attribute, the statistic, or pack|id for a grant.
       FUN`SHEET`ENTRY:
         value: |-
-          @@(%1 one entry)
-          [setq(sheet_kind,json_query(%1,extract,$.kind))]
-          [%q<sheet_kind>]~[switch(%q<sheet_kind>,
+          @@(%1 one entry)[
+          setq(sheet_kind,json_query(%1,extract,$.kind))][
+          %q<sheet_kind>]~[switch(%q<sheet_kind>,
             ability, json_query(%1,extract,$.ability),
             rank, json_query(%1,extract,$.stat),
             grant, [json_query(%1,extract,$.pack)]|[ucstr(json_query(%1,extract,$.id))])]~[switch(%q<sheet_kind>,
@@ -341,48 +341,48 @@ objects:
         flags: [funsyntax]
       FUN`SHEET`REVOKED:
         value: |-
-          @@(%0 entries: the numbers of the entries their revokes name)
-          [iter(graball(%0,revoke~*),elements(%i0,3,~))]
+          @@(%0 entries: the numbers of the entries their revokes name)[
+          iter(graball(%0,revoke~*),elements(%i0,3,~))]
         flags: [funsyntax]
       FUN`SHEET`VALUE:
         value: |-
-          @@(%0 entries, %1 a kind, %2 a key: the value of the last entry of that kind and key)
-          [elements(last(graball(%0,%1~%2~*)),3,~)]
+          @@(%0 entries, %1 a kind, %2 a key: the value of the last entry of that kind and key)[
+          elements(last(graball(%0,%1~%2~*)),3,~)]
         flags: [funsyntax]
       FUN`SHEET`LEVEL:
         value: |-
-          @@(%0 entries: the character's level, 1 when none is set)
-          [firstof(u(FUN`SHEET`VALUE,%0,level,),1)]
+          @@(%0 entries: the character's level, 1 when none is set)[
+          firstof(u(FUN`SHEET`VALUE,%0,level,),1)]
         flags: [funsyntax]
       FUN`SHEET`ABILITY:
         value: |-
-          @@(%0 entries, %1 an attribute such as str: its modifier)
-          [firstof(u(FUN`SHEET`VALUE,%0,ability,%1),0)]
+          @@(%0 entries, %1 an attribute such as str: its modifier)[
+          firstof(u(FUN`SHEET`VALUE,%0,ability,%1),0)]
         flags: [funsyntax]
       FUN`SHEET`RANK:
         value: |-
-          @@(%0 entries, %1 a statistic such as athletics or will: its proficiency rank, 0 untrained to 4 legendary)
-          [firstof(u(FUN`SHEET`VALUE,%0,rank,%1),0)]
+          @@(%0 entries, %1 a statistic such as athletics or will: its proficiency rank, 0 untrained to 4 legendary)[
+          firstof(u(FUN`SHEET`VALUE,%0,rank,%1),0)]
         flags: [funsyntax]
       FUN`SHEET`GRANTS:
         value: |-
-          @@(%0 entries: n~pack~id~badge for each grant, badge empty when it has none)
-          [iter(graball(%0,grant~*),[elements(%i0,4,~)]~[edit(elements(%i0,2,~),|,~)]~[elements(%i0,3,~)])]
+          @@(%0 entries: n~pack~id~badge for each grant, badge empty when it has none)[
+          iter(graball(%0,grant~*),[elements(%i0,4,~)]~[edit(elements(%i0,2,~),|,~)]~[elements(%i0,3,~)])]
         flags: [funsyntax]
       FUN`ITEM: Items from the data objects. An item is the feed's ITEM` JSON, which is Foundry's item less its description.
       FUN`ITEM`GET:
         value: |-
-          @@(%0 a pack such as feats, %1 a Foundry id: the item, empty when the game lacks it)
-          [setq(item_store,v(DATA`PACK`%0))]
-          [if(strlen(%q<item_store>),get(%q<item_store>/ITEM`%1))]
+          @@(%0 a pack such as feats, %1 a Foundry id: the item, empty when the game lacks it)[
+          setq(item_store,v(DATA`PACK`%0))][
+          if(strlen(%q<item_store>),get(%q<item_store>/ITEM`%1))]
         flags: [funsyntax]
       # An item named by its Foundry id or by its name, from a book the game uses. Names are looked up
       # through the NAME`<slug> index the updater keeps on each data object.
       FUN`ITEM`FIND:
         value: |-
-          @@(%0 a pack, %1 an id or a name: the item's id, empty when no item from a book the game uses matches)
-          [setq(item_store,v(DATA`PACK`%0))]
-          [if(strlen(%q<item_store>),
+          @@(%0 a pack, %1 an id or a name: the item's id, empty when no item from a book the game uses matches)[
+          setq(item_store,v(DATA`PACK`%0))][
+          if(strlen(%q<item_store>),
             first(iter(
               squish([if(strlen(get(%q<item_store>/ITEM`[ucstr(%1)])),ucstr(%1))] [get(%q<item_store>/NAME`[u(FUN`ITEM`SLUGGIFY,%1)])]),
               if(member(v(DATA`CONFIG`BOOKS),get(%q<item_store>/ITEM`%i0`BOOK)),%i0))))]
@@ -390,25 +390,25 @@ objects:
       # Foundry's item.slug, falling back to sluggify(name) as rule elements do.
       FUN`ITEM`SLUG:
         value: |-
-          @@(%0 an item)
-          [firstof(json_query(%0,extract,$.system.slug),u(FUN`ITEM`SLUGGIFY,json_query(%0,extract,$.name)))]
+          @@(%0 an item)[
+          firstof(json_query(%0,extract,$.system.slug),u(FUN`ITEM`SLUGGIFY,json_query(%0,extract,$.name)))]
         flags: [funsyntax]
       FUN`ITEM`SLUGGIFY:
         value: |-
-          @@(%0 a name: lower case, apostrophes dropped, every other run of non-letters a hyphen)
-          [trim(regeditall(lcstr(regeditall(%0,\['’\],)),\[^a-z0-9\]+,-),-,b)]
+          @@(%0 a name: lower case, apostrophes dropped, every other run of non-letters a hyphen)[
+          trim(regeditall(lcstr(regeditall(%0,\['’\],)),\[^a-z0-9\]+,-),-,b)]
         flags: [funsyntax]
       # The badge: the grant's own, else a valued condition's system.value.value.
       FUN`ITEM`BADGE:
         value: |-
-          @@(%0 an item, %1 the grant's badge)
-          [firstof(%1,if(t(json_query(%0,extract,$.system.value.isValued)),json_query(%0,extract,$.system.value.value)))]
+          @@(%0 an item, %1 the grant's badge)[
+          firstof(%1,if(t(json_query(%0,extract,$.system.value.isValued)),json_query(%0,extract,$.system.value.value)))]
         flags: [funsyntax]
       # What @item reads in a formula: the item's own fields, level and badge as Foundry's getters give them.
       FUN`ITEM`DATA:
         value: |-
-          @@(%0 an item, %1 its badge)
-          [json(object,
+          @@(%0 an item, %1 its badge)[
+          json(object,
             id,json(string,json_query(%0,extract,$._id)),
             name,json(string,json_query(%0,extract,$.name)),
             type,json(string,json_query(%0,extract,$.type)),
@@ -421,9 +421,9 @@ objects:
       # The roll options an item gives its actor, as each Foundry item type sets them.
       FUN`ITEM`OPTIONS:
         value: |-
-          @@(%0 an item, %1 its badge)
-          [setq(item_slug,u(FUN`ITEM`SLUG,%0))]
-          [switch(json_query(%0,extract,$.type),
+          @@(%0 an item, %1 its badge)[
+          setq(item_slug,u(FUN`ITEM`SLUG,%0))][
+          switch(json_query(%0,extract,$.type),
             condition, self:condition:%q<item_slug>[if(strlen(%1),%bself:condition:%q<item_slug>:%1)],
             effect, u(FUN`ITEM`EFFECT`OPTIONS,regeditall(%q<item_slug>,^%(?:\[a-z\]+-%)?%(?:effect|stance%)-,),%1),
             feat, if(match(classfeature ancestryfeature calling curse deityboon pfsboon,json_query(%0,extract,$.system.category)),feature,feat):%q<item_slug>,
@@ -435,18 +435,17 @@ objects:
         flags: [funsyntax]
       FUN`ITEM`EFFECT`OPTIONS:
         value: |-
-          @@(%0 the effect's roll option slug, %1 its badge)
-          self:effect:%0[if(strlen(%1),%bself:effect:%0:%1)]
+          @@(%0 the effect's roll option slug, %1 its badge)self:effect:%0[if(strlen(%1),%bself:effect:%0:%1)]
         flags: [funsyntax]
       FUN`ACTOR: The actor, built from the sheet. %0 the entries.
       # What @actor reads in a formula, shaped like Foundry's character: level, abilities.<a>.mod,
       # skills.<s>.rank and system.skills.<s>.rank, conditions.<slug>.value and .badge.value.
       FUN`ACTOR`DATA:
         value: |-
-          @@(%0 the entries)
-          [setq(actor_entries,%0)]
-          [setq(actor_ranks,fold(me/FUN`ACTOR`RANK,v(DATA`STATISTICS),json(object)))]
-          [json(object,
+          @@(%0 the entries)[
+          setq(actor_entries,%0)][
+          setq(actor_ranks,fold(me/FUN`ACTOR`RANK,v(DATA`STATISTICS),json(object)))][
+          json(object,
             level,u(FUN`SHEET`LEVEL,%0),
             abilities,fold(me/FUN`ACTOR`ABILITY,str dex con int wis cha,json(object)),
             skills,%q<actor_ranks>,
@@ -464,10 +463,10 @@ objects:
         flags: [funsyntax]
       FUN`ACTOR`CONDITION:
         value: |-
-          @@(%0 the conditions so far, %1 a grant n~pack~id~badge)
-          [setq(actor_item,u(FUN`ITEM`GET,elements(%1,2,~),elements(%1,3,~)))]
-          [setq(actor_badge,u(FUN`ITEM`BADGE,%q<actor_item>,elements(%1,4,~)))]
-          [if(strmatch(json_query(%q<actor_item>,extract,$.type),condition),
+          @@(%0 the conditions so far, %1 a grant n~pack~id~badge)[
+          setq(actor_item,u(FUN`ITEM`GET,elements(%1,2,~),elements(%1,3,~)))][
+          setq(actor_badge,u(FUN`ITEM`BADGE,%q<actor_item>,elements(%1,4,~)))][
+          if(strmatch(json_query(%q<actor_item>,extract,$.type),condition),
             json_mod(%0,patch,json(object,u(FUN`ITEM`SLUG,%q<actor_item>),
               if(strlen(%q<actor_badge>),json(object,value,%q<actor_badge>,badge,json(object,value,%q<actor_badge>)),json(object)))),
             %0)]
@@ -476,9 +475,9 @@ objects:
       # Foundry's domains for the statistic's check: the selectors whose modifiers apply to it.
       FUN`STAT`DOMAINS:
         value: |-
-          @@(%0 a statistic)
-          [setq(stat_attribute,u(FUN`STAT`ATTRIBUTE,%0))]
-          [switch(u(FUN`STAT`KIND,%0),
+          @@(%0 a statistic)[
+          setq(stat_attribute,u(FUN`STAT`ATTRIBUTE,%0))][
+          switch(u(FUN`STAT`KIND,%0),
             skill, %0 %q<stat_attribute>-based skill-check %q<stat_attribute>-skill-check all check %0-check,
             save, %0 %q<stat_attribute>-based saving-throw all check %0-check,
             perception, perception all %q<stat_attribute>-based check perception-check)]
@@ -499,21 +498,21 @@ objects:
       # else the item's (%2). Nothing when it has no selector left.
       FUN`RULE`FLATMODIFIER:
         value: |-
-          @@(%0 the rule, %1 the roll data, %2 the item's slug)
-          [setq(rule_selectors,u(FUN`RULE`SELECTORS,%0,%1))]
-          [if(words(%q<rule_selectors>),
+          @@(%0 the rule, %1 the roll data, %2 the item's slug)[
+          setq(rule_selectors,u(FUN`RULE`SELECTORS,%0,%1))][
+          if(words(%q<rule_selectors>),
             json(object,
               selectors,json(string,%q<rule_selectors>),
               modifier,u(FUN`RULE`FLATMODIFIER`OBJECT,%0,%1,%2,u(FUN`MODIFIER`TYPE,firstof(json_query(%0,extract,$.type),untyped)))))]
         flags: [funsyntax]
       FUN`RULE`FLATMODIFIER`OBJECT:
         value: |-
-          @@(%0 the rule, %1 the roll data, %2 the item's slug, %3 the modifier type)
-          [setq(rule_ability,json_query(%0,extract,$.ability))]
-          [setq(rule_value,u(FUN`FORMULA`VALUE,if(strmatch(%3,ability),json(string,@actor.abilities.%q<rule_ability>.mod),firstof(json_query(%0,get,value),null)),%1,0))]
-          [setq(rule_value,if(isnum(%q<rule_value>),%q<rule_value>,0))]
-          [setq(rule_value,u(FUN`RULE`CLAMP,%q<rule_value>,json_query(%0,extract,$.min),json_query(%0,extract,$.max)))]
-          [json(object,
+          @@(%0 the rule, %1 the roll data, %2 the item's slug, %3 the modifier type)[
+          setq(rule_ability,json_query(%0,extract,$.ability))][
+          setq(rule_value,u(FUN`FORMULA`VALUE,if(strmatch(%3,ability),json(string,@actor.abilities.%q<rule_ability>.mod),firstof(json_query(%0,get,value),null)),%1,0))][
+          setq(rule_value,if(isnum(%q<rule_value>),%q<rule_value>,0))][
+          setq(rule_value,u(FUN`RULE`CLAMP,%q<rule_value>,json_query(%0,extract,$.min),json_query(%0,extract,$.max)))][
+          json(object,
             slug,json(string,firstof(if(strmatch(%3,ability),%q<rule_ability>),json_query(%0,extract,$.slug),%2)),
             type,json(string,%3),
             modifier,%q<rule_value>,
@@ -521,14 +520,14 @@ objects:
         flags: [funsyntax]
       FUN`RULE`CLAMP:
         value: |-
-          @@(%0 a number, %1 the least it may be, %2 the most, either empty for no bound)
-          [if(isnum(%2),min(%2,if(isnum(%1),max(%1,%0),%0)),if(isnum(%1),max(%1,%0),%0))]
+          @@(%0 a number, %1 the least it may be, %2 the most, either empty for no bound)[
+          if(isnum(%2),min(%2,if(isnum(%1),max(%1,%0),%0)),if(isnum(%1),max(%1,%0),%0))]
         flags: [funsyntax]
       FUN`RULE`SELECTORS:
         value: |-
-          @@(%0 the rule, %1 the roll data: its selectors, a string or an array, with injected properties resolved; null ones left out)
-          [setq(rule_selector,json_query(%0,get,selector))]
-          [setdiff(u(FUN`FORMULA`INJECT,switch(left(%q<rule_selector>,1),\[,json_map(me/FUN`RULE`SELECTOR,%q<rule_selector>,%b),json_query(%0,extract,$.selector)),%1),null)]
+          @@(%0 the rule, %1 the roll data: its selectors, a string or an array, with injected properties resolved; null ones left out)[
+          setq(rule_selector,json_query(%0,get,selector))][
+          setdiff(u(FUN`FORMULA`INJECT,switch(left(%q<rule_selector>,1),\[,json_map(me/FUN`RULE`SELECTOR,%q<rule_selector>,%b),json_query(%0,extract,$.selector)),%1),null)]
         flags: [funsyntax]
       FUN`RULE`SELECTOR:
         value: |-
@@ -539,38 +538,38 @@ objects:
       # modifier object.
       FUN`SYNTHETICS`MODIFIERS:
         value: |-
-          @@(%0 the actor data, %1 the grants)
-          [setq(synthetic_actor,%0)]
-          [fold(me/FUN`SYNTHETICS`GRANT,%1,json(array))]
+          @@(%0 the actor data, %1 the grants)[
+          setq(synthetic_actor,%0)][
+          fold(me/FUN`SYNTHETICS`GRANT,%1,json(array))]
         flags: [funsyntax]
       # fold callback: %0 the synthetics so far, %1 a grant n~pack~id~badge.
       FUN`SYNTHETICS`GRANT:
         value: |-
-          @@(%0 the synthetics so far, %1 a grant)
-          [setq(synthetic_item,u(FUN`ITEM`GET,elements(%1,2,~),elements(%1,3,~)))]
-          [setq(synthetic_rules,json_query(%q<synthetic_item>,extract,$.system.rules))]
-          [if(strmatch(%q<synthetic_rules>,*"key":"FlatModifier"*),u(FUN`SYNTHETICS`ITEM,%0,elements(%1,4,~)),%0)]
+          @@(%0 the synthetics so far, %1 a grant)[
+          setq(synthetic_item,u(FUN`ITEM`GET,elements(%1,2,~),elements(%1,3,~)))][
+          setq(synthetic_rules,json_query(%q<synthetic_item>,extract,$.system.rules))][
+          if(strmatch(%q<synthetic_rules>,*"key":"FlatModifier"*),u(FUN`SYNTHETICS`ITEM,%0,elements(%1,4,~)),%0)]
         flags: [funsyntax]
       FUN`SYNTHETICS`ITEM:
         value: |-
-          @@(%0 the synthetics so far, %1 the grant's badge; synthetic_item the item and synthetic_rules its rules)
-          [setq(synthetic_slug,u(FUN`ITEM`SLUG,%q<synthetic_item>))]
-          [setq(synthetic_data,json(object,actor,%q<synthetic_actor>,item,u(FUN`ITEM`DATA,%q<synthetic_item>,u(FUN`ITEM`BADGE,%q<synthetic_item>,%1))))]
-          [fold(me/FUN`SYNTHETICS`RULE,lnum(0,dec(json_query(%q<synthetic_rules>,size))),%0)]
+          @@(%0 the synthetics so far, %1 the grant's badge; synthetic_item the item and synthetic_rules its rules)[
+          setq(synthetic_slug,u(FUN`ITEM`SLUG,%q<synthetic_item>))][
+          setq(synthetic_data,json(object,actor,%q<synthetic_actor>,item,u(FUN`ITEM`DATA,%q<synthetic_item>,u(FUN`ITEM`BADGE,%q<synthetic_item>,%1))))][
+          fold(me/FUN`SYNTHETICS`RULE,lnum(0,dec(json_query(%q<synthetic_rules>,size))),%0)]
         flags: [funsyntax]
       FUN`SYNTHETICS`RULE:
         value: |-
-          @@(%0 the synthetics so far, %1 the rule's index in the item's rules)
-          [setq(synthetic_rule,json_query(%q<synthetic_rules>,extract,$\[%1\]))]
-          [setq(synthetic_new,switch(json_query(%q<synthetic_rule>,extract,$.key),
-            FlatModifier, u(FUN`RULE`FLATMODIFIER,%q<synthetic_rule>,json_mod(%q<synthetic_data>,set,$.rule,%q<synthetic_rule>),%q<synthetic_slug>)))]
-          [if(strlen(%q<synthetic_new>),json_mod(%0,set,$\[[json_query(%0,size)]\],%q<synthetic_new>),%0)]
+          @@(%0 the synthetics so far, %1 the rule's index in the item's rules)[
+          setq(synthetic_rule,json_query(%q<synthetic_rules>,extract,$\[%1\]))][
+          setq(synthetic_new,switch(json_query(%q<synthetic_rule>,extract,$.key),
+            FlatModifier, u(FUN`RULE`FLATMODIFIER,%q<synthetic_rule>,json_mod(%q<synthetic_data>,set,$.rule,%q<synthetic_rule>),%q<synthetic_slug>)))][
+          if(strlen(%q<synthetic_new>),json_mod(%0,set,$\[[json_query(%0,size)]\],%q<synthetic_new>),%0)]
         flags: [funsyntax]
       # selector~<index> for each selector of each synthetic, so that a check finds its modifiers by its domains.
       FUN`SYNTHETICS`INDEX:
         value: |-
-          @@(%0 the synthetics)
-          [iter(lnum(0,dec(json_query(%0,size))),iter(json_query(%0,extract,$\[%i0\].selectors),%i0~%i1))]
+          @@(%0 the synthetics)[
+          iter(lnum(0,dec(json_query(%0,size))),iter(json_query(%0,extract,$\[%i0\].selectors),%i0~%i1))]
         flags: [funsyntax]
       FUN`CHECK: Checks. %0 the actor data, %1 the synthetics, %2 a statistic, %3 the synthetics' index when the caller has it already.
       # Every modifier on the check as a JSON array of Foundry modifier objects, for FUN`MODIFIER` to
@@ -578,39 +577,38 @@ objects:
       # and every synthetic modifier whose selectors meet the check's domains.
       FUN`CHECK`MODIFIERS:
         value: |-
-          @@(%0 the actor data, %1 the synthetics, %2 a statistic, %3 the index, optional)
-          [setq(check_index_used,if(strlen(%3),%3,u(FUN`SYNTHETICS`INDEX,%1)))]
-          [setqm(
+          @@(%0 the actor data, %1 the synthetics, %2 a statistic, %3 the index, optional)[
+          setq(check_index_used,if(strlen(%3),%3,u(FUN`SYNTHETICS`INDEX,%1)))][
+          setqm(
             check_level, json_query(%0,extract,$.level),
             check_attribute, u(FUN`STAT`ATTRIBUTE,%2),
-            check_rank, json_query(%0,extract,$.skills.%2.rank))]
-          \[[json(object,slug,json(string,%q<check_attribute>),type,"ability",modifier,json_query(%0,extract,$.abilities.%q<check_attribute>.mod))],
-          [json(object,slug,"proficiency",type,"proficiency",modifier,if(%q<check_rank>,add(mul(2,%q<check_rank>),%q<check_level>),0))]
-          [iter(setunion(iter(u(FUN`STAT`DOMAINS,%2),iter(graball(%q<check_index_used>,%i0~*),after(%i0,~))),),\,[json_query(%1,extract,$\[%i0\].modifier)],%b,)]\]
+            check_rank, json_query(%0,extract,$.skills.%2.rank))]\[[json(object,slug,json(string,%q<check_attribute>),type,"ability",modifier,json_query(%0,extract,$.abilities.%q<check_attribute>.mod))],
+          [json(object,slug,"proficiency",type,"proficiency",modifier,if(%q<check_rank>,add(mul(2,%q<check_rank>),%q<check_level>),0))][
+          iter(setunion(iter(u(FUN`STAT`DOMAINS,%2),iter(graball(%q<check_index_used>,%i0~*),after(%i0,~))),),\,[json_query(%1,extract,$\[%i0\].modifier)],%b,)]\]
         flags: [funsyntax]
       # Everything a check needs from the ledger at once: sets check_entries, check_actor, check_grants, check_synthetics, check_index and check_options.
       FUN`CHECK`PREPARE:
         value: |-
-          @@(%0 the ledger)
-          [setq(check_entries,u(FUN`SHEET`ENTRIES,%0))]
-          [setqm(
+          @@(%0 the ledger)[
+          setq(check_entries,u(FUN`SHEET`ENTRIES,%0))][
+          setqm(
             check_actor, u(FUN`ACTOR`DATA,%q<check_entries>),
             check_grants, u(FUN`SHEET`GRANTS,%q<check_entries>),
-            check_options, u(FUN`CHECK`OPTIONS,%q<check_entries>))]
-          [setq(check_synthetics,u(FUN`SYNTHETICS`MODIFIERS,%q<check_actor>,%q<check_grants>))]
-          [setq(check_index,u(FUN`SYNTHETICS`INDEX,%q<check_synthetics>))]
+            check_options, u(FUN`CHECK`OPTIONS,%q<check_entries>))][
+          setq(check_synthetics,u(FUN`SYNTHETICS`MODIFIERS,%q<check_actor>,%q<check_grants>))][
+          setq(check_index,u(FUN`SYNTHETICS`INDEX,%q<check_synthetics>))]
         flags: [funsyntax]
       # The roll options a check is made with: the actor's level and what each granted item sets.
       FUN`CHECK`OPTIONS:
         value: |-
-          @@(%0 the entries)
-          [squish(self:level:[u(FUN`SHEET`LEVEL,%0)] [iter(u(FUN`SHEET`GRANTS,%0),u(FUN`CHECK`ITEM`OPTIONS,%i0))])]
+          @@(%0 the entries)[
+          squish(self:level:[u(FUN`SHEET`LEVEL,%0)] [iter(u(FUN`SHEET`GRANTS,%0),u(FUN`CHECK`ITEM`OPTIONS,%i0))])]
         flags: [funsyntax]
       FUN`CHECK`ITEM`OPTIONS:
         value: |-
-          @@(%0 a grant n~pack~id~badge)
-          [setq(check_item,u(FUN`ITEM`GET,elements(%0,2,~),elements(%0,3,~)))]
-          [u(FUN`ITEM`OPTIONS,%q<check_item>,u(FUN`ITEM`BADGE,%q<check_item>,elements(%0,4,~)))]
+          @@(%0 a grant n~pack~id~badge)[
+          setq(check_item,u(FUN`ITEM`GET,elements(%0,2,~),elements(%0,3,~)))][
+          u(FUN`ITEM`OPTIONS,%q<check_item>,u(FUN`ITEM`BADGE,%q<check_item>,elements(%0,4,~)))]
         flags: [funsyntax]
 
   # Reads the PF2e feed into the data objects. WIZARD for @http and for writing the data objects.
@@ -694,20 +692,20 @@ objects:
         flags: [funsyntax]
       FUN`FEED`BOOK:
         value: |-
-          @@(%1 one book of the index)
-          [json_map(me/FUN`FEED`FILE,json_query(%1,get,files),%b,json_query(%1,extract,$.slug))]
+          @@(%1 one book of the index)[
+          json_map(me/FUN`FEED`FILE,json_query(%1,get,files),%b,json_query(%1,extract,$.slug))]
         flags: [funsyntax]
       FUN`FEED`FILE:
         value: |-
-          @@(%1 one file of a book, %3 the book)
-          [setq(feed_path,json_query(%1,extract,$.path),feed_hash,json_query(%1,extract,$.hash))]
-          [if(not(strmatch(get(me/FEED`FILE`[u(FUN`FEED`KEY,%q<feed_path>)]),%q<feed_hash>)),
+          @@(%1 one file of a book, %3 the book)[
+          setq(feed_path,json_query(%1,extract,$.path),feed_hash,json_query(%1,extract,$.hash))][
+          if(not(strmatch(get(me/FEED`FILE`[u(FUN`FEED`KEY,%q<feed_path>)]),%q<feed_hash>)),
             %q<feed_path>|[json_query(%1,extract,$.pack)]|%3|%q<feed_hash>)]
         flags: [funsyntax]
       FUN`FEED`KEY:
         value: |-
-          @@(%0 a file's path, items/pc1/feats-3.txt, as the key PC1-FEATS-3)
-          [ucstr(edit(before(after(%0,items/),.txt),/,-))]
+          @@(%0 a file's path, items/pc1/feats-3.txt, as the key PC1-FEATS-3)[
+          ucstr(edit(before(after(%0,items/),.txt),/,-))]
         flags: [funsyntax]
 
   # The commands. WIZARD so that it reads and writes the ledger on any character. Each ledger entry is
@@ -739,9 +737,9 @@ objects:
       # <player>/ in front of the arguments names whose sheet; without it the sheet is your own.
       FUN`COMMAND`TARGET:
         value: |-
-          @@(cmd_args the arguments: sets cmd_target and cmd_rest)
-          [setq(cmd_target,if(cand(strmatch(%q<cmd_args>,*/*),hastype(pmatch(before(%q<cmd_args>,/)),player)),before(%q<cmd_args>,/)))]
-          [setq(cmd_rest,if(strlen(%q<cmd_target>),after(%q<cmd_args>,/),%q<cmd_args>))]
+          @@(cmd_args the arguments: sets cmd_target and cmd_rest)[
+          setq(cmd_target,if(cand(strmatch(%q<cmd_args>,*/*),hastype(pmatch(before(%q<cmd_args>,/)),player)),before(%q<cmd_args>,/)))][
+          setq(cmd_rest,if(strlen(%q<cmd_target>),after(%q<cmd_args>,/),%q<cmd_args>))]
         flags: [funsyntax]
       INC`TARGET`VIEW:
         value: |-
@@ -787,35 +785,34 @@ objects:
         flags: [cmdsyntax]
       FUN`CHECK`PREPARE:
         value: |-
-          @@(sets the core's check_ registers, then roll_modifiers, roll_chosen, roll_total and roll_record)
-          [u({{core}}/FUN`CHECK`PREPARE,%q<sheet_ledger>)]
-          [setq(roll_modifiers,u({{core}}/FUN`CHECK`MODIFIERS,%q<check_actor>,%q<check_synthetics>,%q<roll_stat>,%q<check_index>))]
-          [setq(roll_chosen,u({{core}}/FUN`MODIFIER`CHOSEN,%q<roll_modifiers>,%q<check_options>))]
-          [setq(roll_total,ladd(0 [iter(%q<roll_chosen>,elements(%i0,2,~))]))]
-          [setq(roll_record,roll(1d20[u(%!/FUN`SHOW`SIGNED,%q<roll_total>)],,record))]
+          @@(sets the core's check_ registers, then roll_modifiers, roll_chosen, roll_total and roll_record)[
+          u({{core}}/FUN`CHECK`PREPARE,%q<sheet_ledger>)][
+          setq(roll_modifiers,u({{core}}/FUN`CHECK`MODIFIERS,%q<check_actor>,%q<check_synthetics>,%q<roll_stat>,%q<check_index>))][
+          setq(roll_chosen,u({{core}}/FUN`MODIFIER`CHOSEN,%q<roll_modifiers>,%q<check_options>))][
+          setq(roll_total,ladd(0 [iter(%q<roll_chosen>,elements(%i0,2,~))]))][
+          setq(roll_record,roll(1d20[u(%!/FUN`SHOW`SIGNED,%q<roll_total>)],,record))]
         flags: [funsyntax]
       FUN`LEDGER: The ledger. %0 a character.
       FUN`LEDGER`OF:
         value: |-
-          @@(%0 a character: their ledger as a JSON array, oldest entry first; entries without the wizard flag left out)
-          \[[iter(sort(iter(lattr(%0/PF2E`LEDGER`*),if(hasflag(%0/%i0,wizard),last(%i0,`))),n),get(%0/PF2E`LEDGER`%i0),%b,\,)]\]
+          @@(%0 a character: their ledger as a JSON array, oldest entry first; entries without the wizard flag left out)\[[iter(sort(iter(lattr(%0/PF2E`LEDGER`*),if(hasflag(%0/%i0,wizard),last(%i0,`))),n),get(%0/PF2E`LEDGER`%i0),%b,\,)]\]
         flags: [funsyntax]
       FUN`COMMAND: Reading what was typed.
       FUN`COMMAND`ABILITY:
         value: |-
-          @@(%0 typed text: the attribute it names, by its first three letters)
-          [grab(str dex con int wis cha,left(lcstr(trim(%0)),3))]
+          @@(%0 typed text: the attribute it names, by its first three letters)[
+          grab(str dex con int wis cha,left(lcstr(trim(%0)),3))]
         flags: [funsyntax]
       FUN`COMMAND`STAT:
         value: |-
-          @@(%0 typed text: the statistic it is the start of, the first in the list when several are)
-          [if(strlen(trim(%0)),grab(get({{core}}/DATA`STATISTICS),lcstr(trim(%0))*))]
+          @@(%0 typed text: the statistic it is the start of, the first in the list when several are)[
+          if(strlen(trim(%0)),grab(get({{core}}/DATA`STATISTICS),lcstr(trim(%0))*))]
         flags: [funsyntax]
       FUN`COMMAND`RANK:
         value: |-
-          @@(%0 typed text: a rank 0 to 4 from its number or the start of its name)
-          [setq(cmd_rank_text,lcstr(trim(%0)))]
-          [switch(1,
+          @@(%0 typed text: a rank 0 to 4 from its number or the start of its name)[
+          setq(cmd_rank_text,lcstr(trim(%0)))][
+          switch(1,
             not(strlen(%q<cmd_rank_text>)),,
             cand(isint(%q<cmd_rank_text>),gte(%q<cmd_rank_text>,0),lte(%q<cmd_rank_text>,4)),%q<cmd_rank_text>,
             dec(match(untrained trained expert master legendary,%q<cmd_rank_text>*)))]
@@ -823,38 +820,38 @@ objects:
       FUN`SHOW: What the commands draw. sheet_target and sheet_ledger the sheet.
       FUN`SHOW`SHEET:
         value: |-
-          @@(the sheet: level and attributes, every statistic with its rank and modifier, what is granted, and the rules not applied)
-          [u({{core}}/FUN`CHECK`PREPARE,%q<sheet_ledger>)]
-          [box(
+          @@(the sheet: level and attributes, every statistic with its rank and modifier, what is granted, and the rules not applied)[
+          u({{core}}/FUN`CHECK`PREPARE,%q<sheet_ledger>)][
+          box(
             [fields(,
               Level,json_query(%q<check_actor>,extract,$.level),
-              Attributes,iter(str dex con int wis cha,[capstr(%i0)] [u(%!/FUN`SHOW`SIGNED,json_query(%q<check_actor>,extract,$.abilities.%i0.mod))],%b,%b%b))]%r
-            [rule()]%r
-            [ldatatable(,Statistic|Rank|>Modifier,iter(get({{core}}/DATA`STATISTICS),u(%!/FUN`SHOW`STATISTIC,%i0),%b,%r),%r)]%r
-            [rule()]%r
-            [fields(,Granted,firstof(itemize(iter(%q<check_grants>,u(%!/FUN`SHOW`ITEM,elements(%i0,2,~),elements(%i0,3,~),elements(%i0,4,~)),%b,|),|),tone(muted,Nothing yet.)))]
-            [u(%!/FUN`SHOW`UNAPPLIED)],
+              Attributes,iter(str dex con int wis cha,[capstr(%i0)] [u(%!/FUN`SHOW`SIGNED,json_query(%q<check_actor>,extract,$.abilities.%i0.mod))],%b,%b%b))]%r[
+            rule()]%r[
+            ldatatable(,Statistic|Rank|>Modifier,iter(get({{core}}/DATA`STATISTICS),u(%!/FUN`SHOW`STATISTIC,%i0),%b,%r),%r)]%r[
+            rule()]%r[
+            fields(,Granted,firstof(itemize(iter(%q<check_grants>,u(%!/FUN`SHOW`ITEM,elements(%i0,2,~),elements(%i0,3,~),elements(%i0,4,~)),%b,|),|),tone(muted,Nothing yet.)))][
+            u(%!/FUN`SHOW`UNAPPLIED)],
             name(%q<sheet_target>))]
         flags: [funsyntax]
       FUN`SHOW`STATISTIC:
         value: |-
-          @@(%0 a statistic: one row of the sheet's table)
-          [capstr(%0)]|[u(%!/FUN`SHOW`RANK,json_query(%q<check_actor>,extract,$.skills.%0.rank))]|[u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`MODIFIER`TOTAL,u({{core}}/FUN`CHECK`MODIFIERS,%q<check_actor>,%q<check_synthetics>,%0,%q<check_index>),%q<check_options>))]
+          @@(%0 a statistic: one row of the sheet's table)[
+          capstr(%0)]|[u(%!/FUN`SHOW`RANK,json_query(%q<check_actor>,extract,$.skills.%0.rank))]|[u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`MODIFIER`TOTAL,u({{core}}/FUN`CHECK`MODIFIERS,%q<check_actor>,%q<check_synthetics>,%0,%q<check_index>),%q<check_options>))]
         flags: [funsyntax]
       # The rule elements of granted items that the core does not apply yet, by kind, so that a sheet
       # never looks complete when it is not.
       FUN`SHOW`UNAPPLIED:
         value: |-
-          @@(check_grants the grants: a line naming each item with rules not applied, or nothing)
-          [setq(sheet_unapplied,iter(%q<check_grants>,u(%!/FUN`SHOW`UNAPPLIED`ITEM,%i0),%b,|))]
-          [if(strlen(squish(%q<sheet_unapplied>,|)),%r[rule()]%r[tone(muted,Not applied yet: [itemize(squish(%q<sheet_unapplied>,|),|)].)])]
+          @@(check_grants the grants: a line naming each item with rules not applied, or nothing)[
+          setq(sheet_unapplied,iter(%q<check_grants>,u(%!/FUN`SHOW`UNAPPLIED`ITEM,%i0),%b,|))][
+          if(strlen(squish(%q<sheet_unapplied>,|)),%r[rule()]%r[tone(muted,Not applied yet: [itemize(squish(%q<sheet_unapplied>,|),|)].)])]
         flags: [funsyntax]
       FUN`SHOW`UNAPPLIED`ITEM:
         value: |-
-          @@(%0 a grant n~pack~id~badge: the item's name and its rule kinds other than FlatModifier, or nothing)
-          [setq(show_item,u({{core}}/FUN`ITEM`GET,elements(%0,2,~),elements(%0,3,~)))]
-          [setq(show_kinds,setdiff(json_map(%!/FUN`SHOW`RULE`KEY,firstof(json_query(%q<show_item>,extract,$.system.rules),json(array)),%b),FlatModifier))]
-          [if(words(%q<show_kinds>),[json_query(%q<show_item>,extract,$.name)] %([itemize(%q<show_kinds>)]%))]
+          @@(%0 a grant n~pack~id~badge: the item's name and its rule kinds other than FlatModifier, or nothing)[
+          setq(show_item,u({{core}}/FUN`ITEM`GET,elements(%0,2,~),elements(%0,3,~)))][
+          setq(show_kinds,setdiff(json_map(%!/FUN`SHOW`RULE`KEY,firstof(json_query(%q<show_item>,extract,$.system.rules),json(array)),%b),FlatModifier))][
+          if(words(%q<show_kinds>),[json_query(%q<show_item>,extract,$.name)] %([itemize(%q<show_kinds>)]%))]
         flags: [funsyntax]
       FUN`SHOW`RULE`KEY:
         value: |-
@@ -862,8 +859,8 @@ objects:
         flags: [funsyntax]
       FUN`SHOW`ITEM:
         value: |-
-          @@(%0 a pack, %1 an id, %2 a badge: the item's name, with its badge)
-          [json_query(u({{core}}/FUN`ITEM`GET,%0,%1),extract,$.name)][if(strlen(%2),%b%2)]
+          @@(%0 a pack, %1 an id, %2 a badge: the item's name, with its badge)[
+          json_query(u({{core}}/FUN`ITEM`GET,%0,%1),extract,$.name)][if(strlen(%2),%b%2)]
         flags: [funsyntax]
       FUN`SHOW`RANK:
         value: |-
@@ -875,23 +872,22 @@ objects:
         flags: [funsyntax]
       FUN`SHOW`CHECK:
         value: |-
-          @@(the check: who rolled what, the modifiers that counted, and against a DC the degree)
-          [setq(roll_face,json_query(%q<roll_record>,extract,$.dice\[0\].results\[0\].result))]
-          [setq(roll_result,json_query(%q<roll_record>,extract,$.total))]
-          [name(%q<sheet_target>)] rolls [capstr(%q<roll_stat>)]: [json_query(%q<roll_record>,extract,$.text)]
-          [if(strlen(%q<cmd_dc>),%bvs DC %q<cmd_dc>: [tone(strong,extract(Critical failure|Failure|Success|Critical success,inc(u({{core}}/FUN`DEGREE`OF`CHECK,%q<roll_result>,%q<cmd_dc>,%q<roll_face>)),1,|))])]
-          %b(roll [json_query(%q<roll_record>,extract,$.id)])
-          [if(words(%q<roll_chosen>),%r[tone(muted,iter(%q<roll_chosen>,[elements(%i0,3,~)] [u(%!/FUN`SHOW`SIGNED,elements(%i0,2,~))],%b,%,%b))])]
+          @@(the check: who rolled what, the modifiers that counted, and against a DC the degree)[
+          setq(roll_face,json_query(%q<roll_record>,extract,$.dice\[0\].results\[0\].result))][
+          setq(roll_result,json_query(%q<roll_record>,extract,$.total))][
+          name(%q<sheet_target>)] rolls [capstr(%q<roll_stat>)]: [json_query(%q<roll_record>,extract,$.text)][
+          if(strlen(%q<cmd_dc>),%bvs DC %q<cmd_dc>: [tone(strong,extract(Critical failure|Failure|Success|Critical success,inc(u({{core}}/FUN`DEGREE`OF`CHECK,%q<roll_result>,%q<cmd_dc>,%q<roll_face>)),1,|))])]%b(roll [json_query(%q<roll_record>,extract,$.id)])[
+          if(words(%q<roll_chosen>),%r[tone(muted,iter(%q<roll_chosen>,[elements(%i0,3,~)] [u(%!/FUN`SHOW`SIGNED,elements(%i0,2,~))],%b,%,%b))])]
         flags: [funsyntax]
       FUN`SHOW`LEDGER:
         value: |-
-          @@(the ledger: every entry, oldest first, with who made it)
-          [box(if(json_query(%q<sheet_ledger>,size),ldatatable(,>#|Entry|By,json_map(%!/FUN`SHOW`ENTRY,%q<sheet_ledger>,%r),%r),tone(muted,No entries yet.)),[name(%q<sheet_target>)]'s ledger)]
+          @@(the ledger: every entry, oldest first, with who made it)[
+          box(if(json_query(%q<sheet_ledger>,size),ldatatable(,>#|Entry|By,json_map(%!/FUN`SHOW`ENTRY,%q<sheet_ledger>,%r),%r),tone(muted,No entries yet.)),[name(%q<sheet_target>)]'s ledger)]
         flags: [funsyntax]
       FUN`SHOW`ENTRY:
         value: |-
-          @@(%1 one entry: a row of the ledger's table)
-          [json_query(%1,extract,$.n)]|[switch(json_query(%1,extract,$.kind),
+          @@(%1 one entry: a row of the ledger's table)[
+          json_query(%1,extract,$.n)]|[switch(json_query(%1,extract,$.kind),
             level, Level [json_query(%1,extract,$.level)],
             ability, [capstr(json_query(%1,extract,$.ability))] [u(%!/FUN`SHOW`SIGNED,json_query(%1,extract,$.mod))],
             rank, [capstr(json_query(%1,extract,$.stat))] [u(%!/FUN`SHOW`RANK,json_query(%1,extract,$.rank))],
