@@ -58,7 +58,7 @@ packages:
     name: Fate Sheet
     package: sheet-fate
     version: 1.1.0
-    description: Fate character sheet (skills or approaches, aspects, stunts, stress, consequences, fate points) with +check on four Fate dice; Fate SRD text under CC BY 3.0
+    description: Fate character sheet (skills or approaches, aspects, stunts, stress, consequences, fate points) with +check on four Fate dice, a grant ledger, guided +chargen and encounters with their own sheet copies; Fate SRD text under CC BY 3.0
   - path: sheet-fate-help/
     package: sheet-fate-help
     version: 1.0.0
@@ -69,8 +69,12 @@ packages:
     description: Puts the Fate sheet settings and its skill, approach, stress and consequence tables into +config
   - path: sheet-fate-chargen/
     package: sheet-fate-chargen
-    version: 1.0.0
+    version: 1.1.0
     description: Joins the Fate sheet to +app character applications
+  - path: sheet-fate-wiki/
+    package: sheet-fate-wiki
+    version: 1.0.0
+    description: Fate rules reference as wiki pages; Fate SRD text under CC BY 3.0
   - path: atomic-robo/
     name: Atomic Robo
     package: atomic-robo
@@ -84,6 +88,10 @@ packages:
     package: atomic-robo-config
     version: 1.0.0
     description: Puts the Atomic Robo settings and its modes and scales tables into +config
+  - path: atomic-robo-wiki/
+    package: atomic-robo-wiki
+    version: 1.0.0
+    description: Unofficial Atomic Robo rules reference as wiki pages; Atomic Robo RPG SRD and Fate System Toolkit text under CC BY 3.0
   - path: duties-d20/
     package: duties-d20
     version: 1.0.1

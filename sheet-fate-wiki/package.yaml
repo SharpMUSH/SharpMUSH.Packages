@@ -1,0 +1,73 @@
+format: "1.16"
+package: sheet-fate-wiki
+title: "Fate rules"
+version: 1.0.0
+wiki_landing_page: category:fate_start_here
+wiki_collection_name: Fate
+authors: [SharpMUSH]
+description: "Rules reference for Fate as wiki pages: the ladder and the dice, aspects and fate points, skills and approaches, stunts, the four actions, stress and consequences, making a character with +chargen, and encounters. Based on the Fate Core, Fate Accelerated and Fate Condensed SRDs under CC BY 3.0; not affiliated with or endorsed by Evil Hat Productions."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [fate, rules, wiki, character-creation]
+category: Characters
+requires_server: ">=0.1"
+
+# A content pack: wiki pages only. It reads nothing from the sheet and the sheet reads nothing from it, so it
+# installs with or without sheet-fate; the pages describe the commands sheet-fate adds.
+wiki:
+  - page: category:fate_start_here
+    title: Start here — Fate
+    pin: true
+    file: wiki/category/fate_start_here.md
+
+  - page: help:fate_license_notice
+    title: Fate License Notice
+    requires:
+      edit: [wiki.admin]
+      delete: [wiki.admin]
+    file: wiki/help/fate_license_notice.md
+
+  - page: main:learn_fate
+    title: Learn Fate
+    categories: [fate_start_here]
+    file: wiki/main/learn_fate.md
+
+  - page: main:fate_ladder_and_dice
+    title: The Ladder and the Dice
+    categories: [fate_start_here]
+    file: wiki/main/fate_ladder_and_dice.md
+
+  - page: main:fate_aspects_and_fate_points
+    title: Aspects and Fate Points
+    categories: [fate_start_here]
+    file: wiki/main/fate_aspects_and_fate_points.md
+
+  - page: main:fate_skills_and_approaches
+    title: Skills and Approaches
+    categories: [fate_start_here]
+    file: wiki/main/fate_skills_and_approaches.md
+
+  - page: main:fate_stunts
+    title: Stunts
+    categories: [fate_start_here]
+    file: wiki/main/fate_stunts.md
+
+  - page: main:fate_four_actions
+    title: The Four Actions
+    categories: [fate_start_here]
+    file: wiki/main/fate_four_actions.md
+
+  - page: main:fate_stress_and_consequences
+    title: Stress and Consequences
+    categories: [fate_start_here]
+    file: wiki/main/fate_stress_and_consequences.md
+
+  - page: main:fate_character_creation
+    title: Making a Fate Character
+    categories: [fate_start_here]
+    file: wiki/main/fate_character_creation.md
+
+  - page: main:fate_encounters
+    title: Encounters
+    categories: [fate_start_here]
+    file: wiki/main/fate_encounters.md
