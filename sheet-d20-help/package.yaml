@@ -1,0 +1,43 @@
+format: "1.16"
+package: sheet-d20-help
+title: "D20 sheet: +help topics"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Puts the D20 sheet topics into +help: registers the sheet-d20 package's help with the +help librarian, and points its messages at +help."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [sheet, d20, help, bridge]
+category: Characters
+requires_server: ">=0.1"
+
+# A bridge: it joins two packages that do not know about each other. sheet-d20 keeps its topics on its own
+# help object, and plus-help reads any object registered with its librarian. This package is that
+# registration, and the lines that point its messages at +help; uninstalling it takes the topics out of
+# +help, and neither package changes.
+depends:
+  - package: sheet-d20
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH.Packages
+      path: sheet-d20/
+      branch: main
+  - package: plus-help
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+
+objects:
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`SHEET-D20: |-
+        {{sheet-d20/sheet_help}}
+
+  # Lines the sheet's messages end with when +help is here, through its FUN`HINT: HINT`<message>.
+  - ref: message_hints
+    target: "{{sheet-d20/sheet}}"
+    attributes:
+      HINT`SWITCHES: |-
+        +help %0 lists them.
