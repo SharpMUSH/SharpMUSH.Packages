@@ -68,7 +68,7 @@ objects:
         value: |-
           setqm(provider_dc,u({{sheet-d20/sheet}}/API`TARGET,%<difficulty>),
           provider_helpers,u(%!/FUN`MODS`HELPERS,%<mods>),
-          provider_rolled,uargs({{sheet-d20/sheet}}/API`CHECK,roller,%<roller>,trait,%<trait>,modifier,0,target,%q<provider_dc>,dice,if(%q<provider_helpers>,2d20kh,1d20)))[cond(not(isint(%q<provider_dc>)),#-1 NO SUCH DIFFICULTY,strmatch(%q<provider_rolled>,#-*),%q<provider_rolled>,u(%!/FUN`CHECK`RESULT,%q<provider_rolled>,%q<provider_helpers>))]
+          provider_rolled,if(isint(%q<provider_dc>),uargs({{sheet-d20/sheet}}/API`CHECK,roller,%<roller>,trait,%<trait>,modifier,0,target,%q<provider_dc>,dice,if(%q<provider_helpers>,2d20kh,1d20))))[cond(not(isint(%q<provider_dc>)),#-1 NO SUCH DIFFICULTY,strmatch(%q<provider_rolled>,#-*),%q<provider_rolled>,u(%!/FUN`CHECK`RESULT,%q<provider_rolled>,%q<provider_helpers>))]
         flags: [funsyntax]
       # The rewards a duty may give on this sheet, for Duties' editor.
       FN`DUTIES`REWARDS:

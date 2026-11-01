@@ -32,6 +32,12 @@ roles:
     permissions:
       softcode.d20.admin: allow
 
+# Every character's D20 tree is their d20 sheet: only wizards write it, so a player can't make the root
+# before the sheet does, and it is never a command.
+attributes:
+  D20:
+    flags: [wizard, no_command]
+
 objects:
   # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook),
   # writes the sheet attributes on characters, and reads them for other packages.
@@ -392,7 +398,7 @@ objects:
       # ---- +check -----------------------------------------------------------------
       INC`CHECK`USAGE:
         value: |-
-          @pemit %#=notice(SHEET,+check <trait>[=<DC or difficulty>]%, such as +check athletics=15 or +check stealth+2=hard. /private rolls where only you see it%, /advantage and /disadvantage roll two dice.,warn)
+          @pemit %#=notice(SHEET,+check <trait>%[=<DC or difficulty>%]%, such as +check athletics=15 or +check stealth+2=hard. /private rolls where only you see it%, /advantage and /disadvantage roll two dice.,warn)
         flags: [cmdsyntax]
       # +check[/private][/advantage|/disadvantage] <trait>[+<n>|-<n>][=<target>]: rolls for the room.
       INC`CHECK`ROLL:

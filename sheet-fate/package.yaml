@@ -33,6 +33,12 @@ roles:
     permissions:
       softcode.fate.admin: allow
 
+# Every character's FATE tree is their Fate sheet: only wizards write it, so a player can't make the root
+# before the sheet does, and it is never a command.
+attributes:
+  FATE:
+    flags: [wizard, no_command]
+
 objects:
   # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook),
   # writes the sheet attributes on characters, and reads them for other packages.
@@ -502,7 +508,7 @@ objects:
       # +sheet/award <name>[=<n>]: gives fate points, 1 unless a number from -10 to 10 is given.
       INC`SHEET`AWARD:
         value: |-
-          @include %!/INC`NEED`KEEPER; @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(SHEET,+sheet/award <name>[=<points>],warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; think setq(award_count,firstof(%q<cmd_right_side>,1)); @assert cand(isint(%q<award_count>),gte(%q<award_count>,-10),lte(%q<award_count>,10),neq(%q<award_count>,0))=@pemit %#=notice(SHEET,Award from -10 to 10 fate points%, not 0.,warn); think setq(award_total,u(%!/API`AWARD,%q<sheet_who>,%q<award_count>)); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<award_total> fate point[if(neq(%q<award_total>,1),s)] now.,ok); @pemit %q<sheet_who>=notice(SHEET,if(gt(%q<award_count>,0),[name(%#)] gives you %q<award_count> fate point[if(neq(%q<award_count>,1),s)],[name(%#)] takes [abs(%q<award_count>)] fate point[if(neq(%q<award_count>,-1),s)] from you). You have %q<award_total>.)
+          @include %!/INC`NEED`KEEPER; @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(SHEET,+sheet/award <name>%[=<points>%],warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; think setq(award_count,firstof(%q<cmd_right_side>,1)); @assert cand(isint(%q<award_count>),gte(%q<award_count>,-10),lte(%q<award_count>,10),neq(%q<award_count>,0))=@pemit %#=notice(SHEET,Award from -10 to 10 fate points%, not 0.,warn); think setq(award_total,u(%!/API`AWARD,%q<sheet_who>,%q<award_count>)); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<award_total> fate point[if(neq(%q<award_total>,1),s)] now.,ok); @pemit %q<sheet_who>=notice(SHEET,if(gt(%q<award_count>,0),[name(%#)] gives you %q<award_count> fate point[if(neq(%q<award_count>,1),s)],[name(%#)] takes [abs(%q<award_count>)] fate point[if(neq(%q<award_count>,-1),s)] from you). You have %q<award_total>.)
         flags: [cmdsyntax]
       # +sheet/refresh <name> brings their fate points up to their refresh; <name>=<n> sets their own refresh,
       # =default the game's again.
@@ -522,7 +528,7 @@ objects:
       # ---- +check -----------------------------------------------------------------
       INC`CHECK`USAGE:
         value: |-
-          @pemit %#=notice(SHEET,+check <[u(%!/FUN`TRAIT`NOUN)]>[=<opposition>]%, such as +check [lcstr(first(u(%!/FUN`TRAIT`ALL)))]=2%, =fair or =hard. /private rolls where only you see it.,warn)
+          @pemit %#=notice(SHEET,+check <[u(%!/FUN`TRAIT`NOUN)]>%[=<opposition>%]%, such as +check [lcstr(first(u(%!/FUN`TRAIT`ALL)))]=2%, =fair or =hard. /private rolls where only you see it.,warn)
         flags: [cmdsyntax]
       # +check[/private] <skill>[+<n>|-<n>][=<opposition>]: rolls 4dF for the room.
       INC`CHECK`ROLL:
@@ -974,7 +980,7 @@ objects:
 
         - `+sheet <name>` shows a character's sheet.
         - `/set`, `/aspect`, `/stress` and `/consequence` take `<name>/` first: `+sheet/set Alice/fight=5`. A keeper may rate a skill up to +8. `+sheet/recover <name>` clears their stress.
-        - `+sheet/award <name>[=<points>]` gives fate points, 1 unless you say, or takes them with a number below 0.
+        - `+sheet/award <name>\[=<points>\]` gives fate points, 1 unless you say, or takes them with a number below 0.
         - `+sheet/refresh <name>` brings their fate points up to their refresh. `+sheet/refresh <name>=<n>` gives them a refresh of their own, `=default` the game's again.
 
         `@role/assign <player>=fate-sheet-keeper` makes someone a keeper.
