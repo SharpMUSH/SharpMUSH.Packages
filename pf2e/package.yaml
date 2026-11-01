@@ -1953,13 +1953,13 @@ objects:
           switch(1,
             strmatch(%q<list_rows>,#-1), notice(PF2E,+build/list ancestries%, heritages%, backgrounds%, classes%, feats <slot>%, choice <number>%, languages%, skills or gear <text>.,warn),
             not(words(%q<list_rows>,|)), notice(PF2E,Nothing to list[if(strlen(%1),%bfor %1)].,warn),
-            box([columns(trim(%q<list_rows>,|),26,3,|)]%r[tone(muted,[words(%q<list_rows>,|)] in all. +build/info <name> describes one.)],capstr(%0)))]
+            box([table(trim(%q<list_rows>,|),37,75,|)]%r[tone(muted,[words(%q<list_rows>,|)] in all. +build/info <name> describes one.)],capstr(%0)))]
         flags: [funsyntax]
       FUN`BUILD`LIST`PACK:
         value: |-
           @@(%0 a pack, %1 a test of an item's PREP or nothing, %2 text the name holds: each item's name, with its rarity when not common, for each item from a book the game uses, sorted)[
           setq(list_store,u({{core}}/DATA`PACK`%0))][
-          iter(sort(iter(get(%q<list_store>/OPT`TYPE`[ucstr(edit(%0,ies,y,ses,s,es,e))]),
+          iter(sort(iter(get(%q<list_store>/OPT`TYPE`[ucstr(switch(%0,ancestries,ancestry,classes,class,backgrounds,background,heritages,heritage,%0))]),
             if(cand(member(u({{core}}/DATA`CONFIG`BOOKS),get(%q<list_store>/ITEM`%i0`BOOK)),cor(not(strlen(%1)),u(%!/%1,%i0)),cor(not(strlen(%2)),strmatch(json_query(get(%q<list_store>/ITEM`%i0`PREP),extract,$.name),*%2*))),
               [json_query(setr(list_prep,get(%q<list_store>/ITEM`%i0`PREP)),extract,$.name)][if(not(member(json_query(%q<list_prep>,extract,$.opts),item:rarity:common)),%b%([after(grab(json_query(%q<list_prep>,extract,$.opts),item:rarity:*),item:rarity:)]%))]),
             %b,|),a,|,|),%i0,|,|)]
