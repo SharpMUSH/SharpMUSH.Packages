@@ -1525,7 +1525,7 @@ objects:
       FUN`BUILD`STEP:
         value: |-
           @@(%0 a step, a pattern: the numbers of the live entries of it)[
-          iter(%q<check_entries>,if(cand(strmatch(elements(%i0,8,~),%0),not(strmatch(first(%i0,~),revoke))),elements(%i0,4,~)))]
+          squish(iter(%q<check_entries>,if(cand(strmatch(elements(%i0,8,~),%0),not(strmatch(first(%i0,~),revoke))),elements(%i0,4,~))))]
         flags: [funsyntax]
       FUN`BUILD`STEP`NAMED:
         value: |-
@@ -1936,8 +1936,8 @@ objects:
             u(%!/FUN`BUILD`TODO`ONE,boost-background,Background boosts,+build/boost background)]|[
             u(%!/FUN`BUILD`TODO`ONE,boost-class,Key attribute,+build/boost class=[first(u(%!/FUN`BUILD`LEVELS,keyAbility))])]|[
             u(%!/FUN`BUILD`TODO`ONE,boost-1,Four free boosts,+build/boost 1=str dex con wis)]|[
-            if(strlen(%q<build_class_item>),[if(gte(words(u(%!/FUN`BUILD`STEP,skills)),%q<todo_skills_need>),done,open)]~Skills %([words(u(%!/FUN`BUILD`STEP,skills))] of %q<todo_skills_need>%)~+build/skills <skill> <skill> ...)]|[
-            if(gt(%q<todo_lang_need>,0),[if(gte(words(u(%!/FUN`BUILD`STEP,languages)),%q<todo_lang_need>),done,open)]~Languages %([words(u(%!/FUN`BUILD`STEP,languages))] of %q<todo_lang_need>%)~+build/list languages)]|[
+            if(strlen(%q<build_class_item>),[if(gte(words(u(%!/FUN`BUILD`STEP,skills)),%q<todo_skills_need>),done,open)]~Skills %([words(u(%!/FUN`BUILD`STEP,skills))] of %q<todo_skills_need>%)~+build/skills <[if(eq(%q<todo_skills_need>,1),a skill,%q<todo_skills_need> skills)]>)]|[
+            if(gt(%q<todo_lang_need>,0),[if(gte(words(u(%!/FUN`BUILD`STEP,languages)),%q<todo_lang_need>),done,open)]~Languages %([words(u(%!/FUN`BUILD`STEP,languages))] of %q<todo_lang_need>%)~+build/language <[if(eq(%q<todo_lang_need>,1),a language,%q<todo_lang_need> languages)]>)]|[
             iter(u(%!/FUN`BUILD`SLOTS),u(%!/FUN`BUILD`TODO`ONE,feat-%i0,[capstr(first(%i0,-))] feat%, level [last(%i0,-)],+build/list feats %i0),%b,|)]|[
             iter(u(%!/FUN`BUILD`LEVELS,skillIncreaseLevels),if(lte(%i0,%q<check_level>),u(%!/FUN`BUILD`TODO`ONE,increase-%i0,Skill increase%, level %i0,+build/increase %i0=<skill>)),%b,|)]|[
             iter(5 10 15 20,if(lte(%i0,%q<check_level>),u(%!/FUN`BUILD`TODO`ONE,boost-%i0,Four boosts%, level %i0,+build/boost %i0=str dex con wis)),%b,|)]|[
