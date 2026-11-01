@@ -56,7 +56,7 @@ Output of the class step:
 Strength +4, Trained +3
 ```
 
-Your sheet is a ledger. Every choice, award and purchase is an entry, and nothing is overwritten, so staff can always see how a character came to be.
+Your sheet is a ledger. Every choice is an entry, and nothing is overwritten, so staff can always see how a character came to be. Money and experience have ledgers of their own: `+pf2e/ledger` shows the sheet's, and `+pf2e/ledger money` and `+pf2e/ledger xp` show the others with their totals.
 
 ## Encounters
 
@@ -75,7 +75,7 @@ See [[Encounter Mode|main:encounter_mode]] and [[Dying and Recovery|main:dying_a
 
 ## Experience, money and levels
 
-Staff award experience and money with a reason, and each award is an entry in your ledger. You spend them yourself:
+Staff award experience and money with a reason, and each award is an entry in your experience or money ledger. You spend them yourself:
 
 - `+build/level` raises your level for 1,000 XP. `+build` then lists what the new level brings. See [[Leveling Up|main:leveling_up]].
 - `+build/upgrade <item>=<rune>` etches a fundamental rune: `+1`, `+2` or `+3` potency, striking on a weapon, resilient on armor. You pay the new rune's price less the old one's.
