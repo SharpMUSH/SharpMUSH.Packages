@@ -1871,7 +1871,7 @@ objects:
               if(%q<prereq_met>,1,if(%q<prereq_unread>,?,0))],
             regmatch(%0,^%(strength|dexterity|constitution|intelligence|wisdom|charisma%) \\+?%(-?\\d+%)$),
               gte(u({{core}}/FUN`CHECK`ABILITY,left(%0,3)),last(edit(%0,+,))),
-            gt(words(iter(%q<check_names>,if(strmatch(lcstr(%i0),%0),x),|,%b)),0), 1,
+            match(lcstr(%q<check_names>),%0,|), 1,
             words(u({{core}}/FUN`ITEM`FIND,feats,%0)), 0,
             words(u({{core}}/FUN`ITEM`FIND,class-features,%0)), 0,
             ?)]
