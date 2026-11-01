@@ -1575,7 +1575,8 @@ objects:
           setq(sheet_ledger,u(%!/FUN`LEDGER`OF,%q<sheet_target>))][
           u({{core}}/FUN`CHECK`PREPARE,%q<sheet_ledger>,1)][
           setq(build_locked,words(graball(%q<check_entries>,lock~*)))][
-          setqm(build_class_item,u({{core}}/FUN`CHECK`ITEM,%q<check_class>),build_ancestry_item,u({{core}}/FUN`CHECK`ITEM,%q<check_ancestry>),build_background_item,u({{core}}/FUN`CHECK`ITEM,%q<check_background>),build_heritage_item,u({{core}}/FUN`CHECK`ITEM,%q<check_heritage>))]
+          setqm(build_class_item,u({{core}}/FUN`CHECK`ITEM,%q<check_class>),build_ancestry_item,u({{core}}/FUN`CHECK`ITEM,%q<check_ancestry>),build_background_item,u({{core}}/FUN`CHECK`ITEM,%q<check_background>),build_heritage_item,u({{core}}/FUN`CHECK`ITEM,%q<check_heritage>))][
+          setqm(build_class_slug,u({{core}}/FUN`ITEM`SLUG,%q<build_class_item>),build_feat_store,u({{core}}/DATA`PACK`FEATS),build_books,u({{core}}/DATA`CONFIG`BOOKS))]
         flags: [funsyntax]
       FUN`BUILD`WHO:
         value: |-
@@ -1828,7 +1829,7 @@ objects:
           setqm(fits_category,json_query(%1,extract,$.category),fits_opts,json_query(%1,extract,$.opts))][
           switch(%0,
             ancestry, cand(strmatch(%q<fits_category>,ancestry),words(setinter(iter(%q<fits_opts>,if(strmatch(%i0,item:trait:*),after(%i0,item:trait:))),u(%!/FUN`BUILD`ANCESTRY`TRAITS)))),
-            class, cand(strmatch(%q<fits_category>,class),cor(member(%q<fits_opts>,item:trait:[u({{core}}/FUN`ITEM`SLUG,%q<build_class_item>)]),member(%q<fits_opts>,item:trait:archetype)),cor(not(member(%q<fits_opts>,item:trait:dedication)),cand(u(%!/FUN`BUILD`DEDICATION`OPEN),comp(json_query(%1,extract,$.slug),[u({{core}}/FUN`ITEM`SLUG,%q<build_class_item>)]-dedication)))),
+            class, cand(strmatch(%q<fits_category>,class),cor(member(%q<fits_opts>,item:trait:%q<build_class_slug>),member(%q<fits_opts>,item:trait:archetype)),cor(not(member(%q<fits_opts>,item:trait:dedication)),cand(u(%!/FUN`BUILD`DEDICATION`OPEN),comp(json_query(%1,extract,$.slug),%q<build_class_slug>-dedication)))),
             skill, strmatch(%q<fits_category>,skill),
             general, match(general skill,%q<fits_category>),
             0)]
@@ -1853,7 +1854,7 @@ objects:
       FUN`BUILD`PREREQ`UNMET:
         value: |-
           @@(%0 a feat's id)[
-          json_map(%!/FUN`BUILD`PREREQ`ONE,firstof(json_query(u({{core}}/FUN`ITEM`GET,feats,%0),extract,$.system.prerequisites.value),json(array)),|,1)]
+          json_map(%!/FUN`BUILD`PREREQ`ONE,firstof(json_query(get(%q<build_feat_store>/ITEM`%0),extract,$.system.prerequisites.value),json(array)),|,1)]
         flags: [funsyntax]
       FUN`BUILD`PREREQ`NOTES:
         value: |-
@@ -2105,7 +2106,7 @@ objects:
               skill, get(%q<list_store>/OPT`CATEGORY`SKILL),
               general, setunion(get(%q<list_store>/OPT`CATEGORY`GENERAL),get(%q<list_store>/OPT`CATEGORY`SKILL))))][
             iter(sort(iter(setunion(%q<list_ids>,),
-              if(cand(member(u({{core}}/DATA`CONFIG`BOOKS),get(%q<list_store>/ITEM`%i0`BOOK)),lte(json_query(setr(list_prep,get(%q<list_store>/ITEM`%i0`PREP)),extract,$.level),%q<list_level>),u(%!/FUN`BUILD`FEAT`FITS,%q<list_kind>,%q<list_prep>),cor(not(strlen(%1)),strmatch(json_query(%q<list_prep>,extract,$.name),*%1*)),not(words(graball(%q<check_grants>,*~feats~%i0~*))),not(words(u(%!/FUN`BUILD`PREREQ`UNMET,%i0),|))),
+              if(cand(member(%q<build_books>,get(%q<list_store>/ITEM`%i0`BOOK)),lte(json_query(setr(list_prep,get(%q<list_store>/ITEM`%i0`PREP)),extract,$.level),%q<list_level>),u(%!/FUN`BUILD`FEAT`FITS,%q<list_kind>,%q<list_prep>),cor(not(strlen(%1)),strmatch(json_query(%q<list_prep>,extract,$.name),*%1*)),not(words(graball(%q<check_grants>,*~feats~%i0~*))),not(words(u(%!/FUN`BUILD`PREREQ`UNMET,%i0),|))),
                 [rjust(json_query(%q<list_prep>,extract,$.level),2,0)] [json_query(%q<list_prep>,extract,$.name)]),
               %b,|),a,|,|),%i0,|,|)],
             #-1)]
