@@ -2412,10 +2412,10 @@ objects:
         value: |-
           @@(%0 typed text: the combatant's index, or nothing)[
           setq(find_text,trim(%0))][
-          firstof(
-            iter(u(FUN`ENC`INDEXES),if(strmatch(u(FUN`ENC`C,%i0,k),%q<find_text>),%i0)),
-            if(hastype(setr(find_player,pmatch(%q<find_text>)),player),iter(u(FUN`ENC`INDEXES),if(strmatch(u(FUN`ENC`C,%i0,who),objid(%q<find_player>)),%i0))),
-            if(eq(words(setr(find_named,iter(u(FUN`ENC`INDEXES),if(strmatch(u(FUN`ENC`C,%i0,name),%q<find_text>*),%i0)))),1),%q<find_named>))]
+          setq(find_at,squish(iter(u(FUN`ENC`INDEXES),if(strmatch(u(FUN`ENC`C,%i0,k),%q<find_text>),%i0))))][
+          if(not(strlen(%q<find_at>)),setq(find_at,if(hastype(setr(find_player,pmatch(%q<find_text>)),player),squish(iter(u(FUN`ENC`INDEXES),if(strmatch(u(FUN`ENC`C,%i0,who),objid(%q<find_player>)),%i0))))))][
+          if(not(strlen(%q<find_at>)),setq(find_at,if(eq(words(setr(find_named,squish(iter(u(FUN`ENC`INDEXES),if(strmatch(u(FUN`ENC`C,%i0,name),%q<find_text>*),%i0))))),1),%q<find_named>)))][
+          first(%q<find_at>)]
         flags: [funsyntax]
       FUN`ENC`MINE:
         value: |-
