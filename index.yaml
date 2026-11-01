@@ -82,24 +82,29 @@ packages:
   - path: sheet-pbta/
     name: PbtA Sheet
     package: sheet-pbta
-    version: 1.0.1
-    description: Powered by the Apocalypse character sheet (stats, moves, playbooks, forward, ongoing, hold, XP) with +check on 2d6; Dungeon World moves under CC BY 3.0
+    version: 2.0.0
+    description: Powered by the Apocalypse character sheet built from a ledger (playbooks, stats, moves, guided character creation, advances, forward, ongoing, hold, XP), +check on 2d6 and encounters on sheet copies; Dungeon World moves under CC BY 3.0
   - path: sheet-pbta-help/
     package: sheet-pbta-help
-    version: 1.0.0
+    version: 1.0.1
     description: Puts the PbtA sheet topics into +help
   - path: sheet-pbta-config/
     package: sheet-pbta-config
-    version: 1.0.0
+    version: 1.0.1
     description: Puts the PbtA sheet settings and its stats, moves and playbooks tables into +config
   - path: sheet-pbta-chargen/
     package: sheet-pbta-chargen
-    version: 1.0.0
+    version: 1.1.0
     description: Joins the PbtA sheet to +app character applications
   - path: duties-pbta/
     package: duties-pbta
-    version: 1.0.0
+    version: 1.0.1
     description: Duties roll provider "pbta" on the PbtA sheet
+  - path: pbta-wiki/
+    name: PbtA rules
+    package: pbta-wiki
+    version: 1.0.0
+    description: Wiki pages for the PbtA sheet (how to play, making a character, playbooks, moves, advancement, encounters); Dungeon World moves under CC BY 3.0
   - path: pf2e/
     name: Pathfinder 2e rules
     package: pf2e

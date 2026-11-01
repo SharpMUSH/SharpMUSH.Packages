@@ -1,0 +1,78 @@
+format: "1.16"
+package: pbta-wiki
+title: "PbtA rules"
+version: 1.0.0
+wiki_landing_page: category:pbta_start_here
+wiki_collection_name: PbtA
+authors: [SharpMUSH]
+description: "Wiki pages for playing with the PbtA sheet: how moves and rolls work, making a character, the playbooks, the basic and special moves (Dungeon World text, CC BY 3.0), advancement and encounters."
+license: CC-BY-3.0
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [pbta, wiki, rules, moves]
+category: Characters
+requires_server: ">=0.1"
+locale: en
+
+# A content package: wiki pages only. The move pages quote the moves as sheet-pbta's store holds them, so the two
+# say the same thing; a game that edits its moves in +config changes the sheet, not these pages.
+wiki:
+- page: category:pbta_start_here
+  title: 'Start here: PbtA'
+  categories: []
+  file: wiki/category/pbta_start_here.md
+  pin: true
+- page: main:pbta_how_to_play
+  title: How to play (PbtA)
+  categories:
+  - pbta_start_here
+  - pbta
+  file: wiki/main/pbta_how_to_play.md
+- page: main:pbta_making_a_character
+  title: Making a character (PbtA)
+  categories:
+  - pbta_start_here
+  - pbta
+  file: wiki/main/pbta_making_a_character.md
+- page: main:pbta_playbooks
+  title: Playbooks (PbtA)
+  categories:
+  - pbta_start_here
+  - pbta
+  file: wiki/main/pbta_playbooks.md
+- page: main:pbta_basic_moves
+  title: Basic moves (PbtA)
+  categories:
+  - pbta_start_here
+  - pbta
+  file: wiki/main/pbta_basic_moves.md
+- page: main:pbta_special_moves
+  title: Special moves (PbtA)
+  categories:
+  - pbta_start_here
+  - pbta
+  file: wiki/main/pbta_special_moves.md
+- page: main:pbta_advancement
+  title: Advancement (PbtA)
+  categories:
+  - pbta_start_here
+  - pbta
+  file: wiki/main/pbta_advancement.md
+- page: main:pbta_encounters
+  title: Encounters (PbtA)
+  categories:
+  - pbta_start_here
+  - pbta
+  file: wiki/main/pbta_encounters.md
+- page: help:pbta_license_notice
+  title: Dungeon World Notice
+  categories: []
+  file: wiki/help/pbta_license_notice.md
+  requires:
+    edit:
+    - wiki.admin
+    delete:
+    - wiki.admin
+- page: category:pbta
+  title: PbtA
+  categories: []
+  file: wiki/category/pbta.md

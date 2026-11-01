@@ -1,9 +1,9 @@
 format: "1.16"
 package: sheet-pbta
 title: "PbtA sheet"
-version: 1.0.1
+version: 2.0.0
 authors: [SharpMUSH]
-description: "A Powered by the Apocalypse character sheet: stats, moves and playbooks the game edits, forward, ongoing, hold and XP. +sheet shows and fills it in, and +check rolls 2d6 plus a stat for a move, a full hit on 10+, a partial hit on 7-9. Ships the Dungeon World basic and special moves (CC BY 3.0) as its example set."
+description: "A Powered by the Apocalypse character sheet built from a ledger: playbooks, stats and moves the game edits, guided character creation, advances, forward, ongoing, hold and XP. +sheet shows and builds it, +check rolls 2d6 plus a stat for a move, and +encounter plays a scene from copies of the sheets. Ships the Dungeon World basic and special moves (CC BY 3.0) as its example set."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, pbta, dice, moves, playbooks]
@@ -42,21 +42,25 @@ objects:
   # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook),
   # writes the sheet attributes on characters, and reads them for other packages.
   #
-  # A character's sheet is their own attributes under PBTA`: PBTA`STAT`<KEY> a stat, PBTA`PLAYBOOK their
-  # playbook's key, PBTA`MOVES the moves they took beyond their playbook's own (a space list of keys),
-  # PBTA`FORWARD and PBTA`ONGOING the modifiers, PBTA`HOLD`<MOVE> hold, PBTA`XP experience. The PBTA root
-  # is wizard-flagged, so only this object writes them.
+  # A character's sheet is built from their ledger, PBTA`LEDGER`<n>: one JSON entry for each step (a playbook,
+  # a stat, an advance, a move, a revoke, a clear), each with the wizard attribute flag, so only this object or a
+  # wizard writes one and an entry without the flag is never read. Before approval a player's change rewrites
+  # their own chargen entry for it; every other change is a new entry, so the ledger is the sheet's history.
+  # In play: PBTA`FORWARD, PBTA`ONGOING, PBTA`HOLD (MOVE=n pairs), PBTA`XP, PBTA`ENCOUNTERS (the encounters they
+  # are in, in the order they joined) and PBTA`USING (the one /use picked). The PBTA root is wizard-flagged, so only this object writes any of them.
   #
-  # +sheet and +check are added with /noparse/rsnoparse and hooked to CMD`<word>, so what a player types
-  # reaches the code exactly as typed and nothing a player wrote is ever evaluated. Move text on the store
+  # +sheet, +check and +encounter are added with /noparse/rsnoparse and hooked to CMD`<word>, so what a player
+  # types reaches the code exactly as typed and nothing a player wrote is ever evaluated. Move text on the store
   # is read with get(), never evaluated either.
   #
-  # Trees: CMD` the hooked commands, INC`COMMAND` the parse and dispatch, INC`SHEET` and INC`CHECK` one
-  # routine per switch, INC`NEED` the guards they share, INC`DO` the writes. FUN`STAT` stats, FUN`MOVE`
-  # moves, FUN`PLAYBOOK` playbooks, FUN`TRAIT` a key that is either, FUN`PERM` who may do what,
-  # FUN`SCREEN` and FUN`DISPLAY` the screens. API` the functions other packages call (VISUAL), the same
-  # names in every sheet package. Bridges add HINT`<message> lines, GATE`EDIT (a reason a player may not
-  # change their own sheet now) and ALLOW`VIEW`<name> (who else may read a sheet).
+  # Trees: CMD` the hooked commands, INC`COMMAND` the parse and dispatch, INC`SHEET`, INC`CHECK` and
+  # INC`ENCOUNTER` one routine per switch, INC`NEED` the guards they share, INC`DO` the writes. FUN`LEDGER`
+  # and FUN`BUILD` read the ledger, FUN`VIEW` and FUN`V` the view a roll or screen reads (the sheet, or an
+  # encounter's copy), FUN`ENC` encounters, FUN`CHARGEN` character creation, FUN`STAT`, FUN`MOVE` and
+  # FUN`PLAYBOOK` the lists, FUN`PERM` who may do what, FUN`SCREEN` and FUN`DISPLAY` the screens. API` the
+  # functions other packages call (VISUAL), the same names in every sheet package. Bridges add HINT`<message>
+  # lines, GATE`EDIT (a reason a player may not change their own sheet now) and ALLOW`VIEW`<name> (who else may
+  # read a sheet).
   - ref: sheet
     type: thing
     name: PbtA Sheet
@@ -69,22 +73,56 @@ objects:
         Settings for the PbtA sheet. One leaf per setting.
       DATA`CONFIG`LABEL: |-
         PbtA sheet
-      DATA`CONFIG`CAP: |-
-        2
-      DATA`CONFIG`CAP`TYPE: |-
+      DATA`CONFIG`ARRAY: |-
+        2 1 1 0 0 -1
+      DATA`CONFIG`ARRAY`TYPE: |-
+        list
+      DATA`CONFIG`ARRAY`DEFAULT: |-
+        2 1 1 0 0 -1
+      DATA`CONFIG`ARRAY`MIN: |-
+        1
+      DATA`CONFIG`ARRAY`MAX: |-
+        12
+      DATA`CONFIG`ARRAY`CHECK: |-
+        CHECK`ARRAY
+      DATA`CONFIG`ARRAY`LABEL: |-
+        Starting stats
+      DATA`CONFIG`ARRAY`DESCRIPTION: |-
+        The numbers a new character shares out among their stats, one each.
+      DATA`CONFIG`ARRAY`EXAMPLE: |-
+        2 1 1 0 -1
+      DATA`CONFIG`MAX: |-
+        3
+      DATA`CONFIG`MAX`TYPE: |-
         integer
-      DATA`CONFIG`CAP`DEFAULT: |-
-        2
-      DATA`CONFIG`CAP`MIN: |-
-        0
-      DATA`CONFIG`CAP`MAX: |-
+      DATA`CONFIG`MAX`DEFAULT: |-
         3
-      DATA`CONFIG`CAP`LABEL: |-
+      DATA`CONFIG`MAX`MIN: |-
+        1
+      DATA`CONFIG`MAX`MAX: |-
+        5
+      DATA`CONFIG`MAX`LABEL: |-
         Highest stat
-      DATA`CONFIG`CAP`DESCRIPTION: |-
-        The highest stat a player gives themselves. Sheet keepers may go to +3.
-      DATA`CONFIG`CAP`EXAMPLE: |-
-        3
+      DATA`CONFIG`MAX`DESCRIPTION: |-
+        The highest a stat goes, with advances or when staff set it.
+      DATA`CONFIG`MAX`EXAMPLE: |-
+        4
+      DATA`CONFIG`ADVANCE: |-
+        5
+      DATA`CONFIG`ADVANCE`TYPE: |-
+        integer
+      DATA`CONFIG`ADVANCE`DEFAULT: |-
+        5
+      DATA`CONFIG`ADVANCE`MIN: |-
+        1
+      DATA`CONFIG`ADVANCE`MAX: |-
+        99
+      DATA`CONFIG`ADVANCE`LABEL: |-
+        XP for an advance
+      DATA`CONFIG`ADVANCE`DESCRIPTION: |-
+        The XP an approved player spends to take an advance: +1 to a stat or a move from their playbook.
+      DATA`CONFIG`ADVANCE`EXAMPLE: |-
+        8
       DATA`CONFIG`CRITICAL: |-
         0
       DATA`CONFIG`CRITICAL`TYPE: |-
@@ -276,7 +314,7 @@ objects:
       DATA`CONFIG`PLAYBOOKS`ENTRY: |-
         label
       DATA`CONFIG`PLAYBOOKS`FIELDS: |-
-        label stats moves order
+        label stats moves pick order
       DATA`CONFIG`PLAYBOOKS`KEYPATTERN: |-
         ^[A-Za-z0-9-]{1,30}$
       DATA`CONFIG`PLAYBOOKS`FIELD`LABEL`TYPE: |-
@@ -298,7 +336,7 @@ objects:
       DATA`CONFIG`PLAYBOOKS`FIELD`STATS`LABEL: |-
         Suggested stats
       DATA`CONFIG`PLAYBOOKS`FIELD`STATS`DESCRIPTION: |-
-        <stat>=<n> pairs, given to a character who picks the playbook before setting any stat.
+        <stat>=<n> pairs, given to a new character who picks the playbook before setting any stat.
       DATA`CONFIG`PLAYBOOKS`FIELD`STATS`EXAMPLE: |-
         str=2 con=1 wis=1 dex=0 int=0 cha=-1
       DATA`CONFIG`PLAYBOOKS`FIELD`MOVES`TYPE: |-
@@ -309,6 +347,18 @@ objects:
         Starting moves
       DATA`CONFIG`PLAYBOOKS`FIELD`MOVES`DESCRIPTION: |-
         The keys of the moves every character of the playbook has.
+      DATA`CONFIG`PLAYBOOKS`FIELD`PICK`TYPE: |-
+        integer
+      DATA`CONFIG`PLAYBOOKS`FIELD`PICK`DEFAULT: |-
+        0
+      DATA`CONFIG`PLAYBOOKS`FIELD`PICK`MIN: |-
+        0
+      DATA`CONFIG`PLAYBOOKS`FIELD`PICK`MAX: |-
+        9
+      DATA`CONFIG`PLAYBOOKS`FIELD`PICK`LABEL: |-
+        Moves to pick
+      DATA`CONFIG`PLAYBOOKS`FIELD`PICK`DESCRIPTION: |-
+        How many of the playbook's other moves a new character picks, beyond its starting moves.
       DATA`CONFIG`PLAYBOOKS`FIELD`ORDER`TYPE: |-
         integer
       DATA`CONFIG`PLAYBOOKS`FIELD`ORDER`DEFAULT: |-
@@ -323,6 +373,8 @@ objects:
         Where it comes in its list: lower first, then by name.
       CHECK`MODIFIERS: |-
         if(cand(every(%!/FUN`IS`MODIFIER,%0),eq(words(%0),4),not(comp(%0,revwords(sort(%0,n))))),,Give four modifiers from -3 to 3%, easy to extreme%, none higher than the one before.)
+      CHECK`ARRAY: |-
+        if(every(%!/FUN`IS`MODIFIER,%0),,Give numbers from -3 to 3%, one for each stat.)
       CHECK`MOVESTAT: |-
         if(every(%!/FUN`IS`STAT,%0),,Give stat keys from the stats table%, or nothing.)
       CHECK`PLAYBOOKSTATS: |-
@@ -350,6 +402,16 @@ objects:
         SHEET`TAKE
       DATA`ROUTE`SHEET`DROP: |-
         SHEET`DROP
+      DATA`ROUTE`SHEET`CHARGEN: |-
+        SHEET`CHARGEN
+      DATA`ROUTE`SHEET`ADVANCE: |-
+        SHEET`ADVANCE
+      DATA`ROUTE`SHEET`LEDGER: |-
+        SHEET`LEDGER
+      DATA`ROUTE`SHEET`REVOKE: |-
+        SHEET`REVOKE
+      DATA`ROUTE`SHEET`CLEAR: |-
+        SHEET`CLEAR
       DATA`ROUTE`SHEET`MOVE: |-
         SHEET`MOVE
       DATA`ROUTE`SHEET`FORWARD: |-
@@ -368,8 +430,31 @@ objects:
         CHECK`ROLL
       DATA`ROUTE`CHECK`PRIVATE: |-
         CHECK`ROLL
+      DATA`ROUTE`ENCOUNTER`BARE: |-
+        ENCOUNTER`SHOW
+      DATA`ROUTE`ENCOUNTER`ARG: |-
+        ENCOUNTER`SHOW
+      DATA`ROUTE`ENCOUNTER`START: |-
+        ENCOUNTER`START
+      DATA`ROUTE`ENCOUNTER`JOIN: |-
+        ENCOUNTER`JOIN
+      DATA`ROUTE`ENCOUNTER`USE: |-
+        ENCOUNTER`USE
+      DATA`ROUTE`ENCOUNTER`ADD: |-
+        ENCOUNTER`ADD
+      DATA`ROUTE`ENCOUNTER`REMOVE: |-
+        ENCOUNTER`REMOVE
+      DATA`ROUTE`ENCOUNTER`LEAVE: |-
+        ENCOUNTER`LEAVE
+      DATA`ROUTE`ENCOUNTER`KEEP: |-
+        ENCOUNTER`KEEP
+      DATA`ROUTE`ENCOUNTER`END: |-
+        ENCOUNTER`END
       DATA`DIFFICULTIES: |-
         trivial easy standard hard extreme
+      # The most entries a character's ledger holds; +sheet/clear starts it again.
+      DATA`LEDGER`MAX: |-
+        200
 
       # ---- commands ---------------------------------------------------------------
       # %1 the switches and %2 what follows, exactly as typed.
@@ -380,6 +465,10 @@ objects:
       CMD`CHECK:
         value: |-
           $(?is)^\+check(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,check,table,CHECK,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`ENCOUNTER:
+        value: |-
+          $(?is)^\+encounter(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,encounter,table,ENCOUNTER,switches,%1,argument,%2
         flags: [regexp, cmdsyntax]
       # A line a bridge adds to one of this object's messages: HINT`<message>, set here by a bridge such as
       # sheet-pbta-help. %1 on are passed to it. Nothing when no bridge set one, so the message stands without it.
@@ -414,24 +503,30 @@ objects:
         value: |-
           @assert strlen(setr(sheet_who,u(%!/FUN`PLAYER`MATCH,%<name>)))=@pemit %#=notice(SHEET,There is no player called '%<name>'.,warn)
         flags: [cmdsyntax]
-      # The left of =: <name>/<what> for a sheet keeper, else <what> on your own sheet. sheet_who and sheet_what.
+      # The left of =, or the whole argument when there is no =: <name>/<what> for a sheet keeper, else <what>
+      # on your own sheet. sheet_who and sheet_what. Only a keeper names someone else.
       INC`NEED`WHO:
         value: |-
-          @if strmatch(%q<cmd_left_side>,*/*)={@include/args %!/INC`NEED`TARGET=name,before(%q<cmd_left_side>,/); think setq(sheet_what,trim(after(%q<cmd_left_side>,/)))},{think setqm(sheet_who,%q<viewer_objid>,sheet_what,%q<cmd_left_side>)}; @assert strlen(%q<sheet_who>); @include %!/INC`NEED`OWNSHEET
+          think setq(who_typed,if(%q<cmd_has_equals>,%q<cmd_left_side>,%q<cmd_argument>)); think setq(who_named,if(strmatch(%q<who_typed>,*/*),trim(before(%q<who_typed>,/)))); @include/args %!/INC`NEED`TARGET=name,firstof(%q<who_named>,%#); think setq(sheet_what,trim(if(strlen(%q<who_named>),after(%q<who_typed>,/),%q<who_typed>))); @include %!/INC`NEED`OWNSHEET
         flags: [cmdsyntax]
       # <name>=<value> for a sheet keeper, else <value> on your own sheet: sheet_who and sheet_value.
       INC`NEED`WHOVALUE:
         value: |-
-          @if %q<cmd_has_equals>={@include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; think setq(sheet_value,%q<cmd_right_side>)},{think setqm(sheet_who,%q<viewer_objid>,sheet_value,%q<cmd_argument>)}; @assert strlen(%q<sheet_who>); @include %!/INC`NEED`OWNSHEET
+          @include/args %!/INC`NEED`TARGET=name,if(%q<cmd_has_equals>,%q<cmd_left_side>,%#); think setq(sheet_value,if(%q<cmd_has_equals>,%q<cmd_right_side>,%q<cmd_argument>)); @include %!/INC`NEED`OWNSHEET
         flags: [cmdsyntax]
       INC`NEED`OWNSHEET:
         value: |-
           @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error)
         flags: [cmdsyntax]
-      # Changes only a keeper makes once a character is approved: stats, playbook, moves.
-      INC`NEED`EDITABLE:
+      # Building the sheet: a keeper at any time (phase staff), a player on their own sheet until they are
+      # approved (phase chargen). sheet_phase, and sheet_rows, the ledger's entries in force.
+      INC`NEED`BUILD:
         value: |-
-          @assert cor(%q<viewer_keeper>,not(isapproved(%#)))=@pemit %#=notice(SHEET,Your character is approved%, so staff change your sheet now.,error); @assert cor(%q<viewer_keeper>,not(strlen(setr(set_gate,u(%!/FUN`GATE`EDIT,%#)))))=@pemit %#=notice(SHEET,%q<set_gate>,warn)
+          @assert cor(%q<viewer_keeper>,not(isapproved(%#)))=@pemit %#=notice(SHEET,Your character is approved%, so staff change your sheet now. +sheet/advance spends XP on it.,error); @assert cor(%q<viewer_keeper>,not(strlen(setr(set_gate,u(%!/FUN`GATE`EDIT,%#)))))=@pemit %#=notice(SHEET,%q<set_gate>,warn); @include %!/INC`NEED`ROOM; think setqm(sheet_phase,if(%q<viewer_keeper>,staff,chargen),sheet_rows,u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%q<sheet_who>)))
+        flags: [cmdsyntax]
+      INC`NEED`ROOM:
+        value: |-
+          @assert lt(words(lattr(%q<sheet_who>/PBTA`LEDGER`*)),get(%!/DATA`LEDGER`MAX))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s ledger is full. A sheet keeper's +sheet/clear starts it again.,warn)
         flags: [cmdsyntax]
       INC`NEED`KEEPER:
         value: |-
@@ -442,39 +537,82 @@ objects:
         value: |-
           @assert strlen(%<typed>)=@pemit %#=notice(SHEET,Which move? +sheet/traits lists them.,warn); @assert strlen(setr(move_key,u(%!/FUN`LIST`FIND,MOVE,%<typed>)))=@pemit %#=notice(SHEET,There is no move '%<typed>'. +sheet/traits lists them.,warn)
         flags: [cmdsyntax]
+      # %<typed> a stat's name: stat_key.
+      INC`NEED`STAT:
+        value: |-
+          @assert strlen(setr(stat_key,u(%!/FUN`LIST`FIND,STAT,%<typed>)))=@pemit %#=notice(SHEET,There is no stat '%<typed>'. The stats are [itemize(lcstr(u(%!/FUN`LIST`ALL,STAT)))].,warn)
+        flags: [cmdsyntax]
 
       # ---- +sheet -----------------------------------------------------------------
       INC`SHEET`SHOW:
         value: |-
-          @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert strlen(%q<sheet_who>); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`SHEET,%q<sheet_who>,%#)
+          @include/args %!/INC`NEED`TARGET=name,firstof(%q<cmd_argument>,%#); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`SHEET,%q<sheet_who>,%#)
         flags: [cmdsyntax]
-      # +sheet/set [<name>/]<stat>=<n>. Empty clears it back to +0.
+      # +sheet/set [<name>/]<stat>=<n>. A player gives each stat one of the starting numbers; a keeper sets any
+      # value up to the highest. Empty takes the stat back to unassigned.
       INC`SHEET`SET:
         value: |-
-          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/set <stat>=<number>%, such as +sheet/set [lcstr(first(u(%!/FUN`LIST`ALL,STAT)))]=1.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @assert strlen(setr(stat_key,u(%!/FUN`LIST`FIND,STAT,%q<sheet_what>)))=@pemit %#=notice(SHEET,There is no stat '%q<sheet_what>'. The stats are [itemize(lcstr(u(%!/FUN`LIST`ALL,STAT)))].,warn); @break not(strlen(%q<cmd_right_side>))={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,STAT`%q<stat_key>,value,; @pemit %#=notice(SHEET,u(%!/FUN`STAT`LABEL,%q<stat_key>) is cleared on [name(%q<sheet_who>)]'s sheet.,ok)}; think setq(set_value,edit(%q<cmd_right_side>,+,)); @assert cand(isint(%q<set_value>),gte(%q<set_value>,-3),lte(%q<set_value>,if(%q<viewer_keeper>,3,get(%!/DATA`CONFIG`CAP))))=@pemit %#=notice(SHEET,A stat is a whole number from -3 to [u(%!/FUN`DISPLAY`SIGNED,if(%q<viewer_keeper>,3,get(%!/DATA`CONFIG`CAP)))].,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,STAT`%q<stat_key>,value,%q<set_value>; @pemit %#=notice(SHEET,u(%!/FUN`STAT`LABEL,%q<stat_key>) is [u(%!/FUN`DISPLAY`SIGNED,%q<set_value>)] on [name(%q<sheet_who>)]'s sheet.[if(not(comp(%q<sheet_who>,%q<viewer_objid>)),u(%!/FUN`HINT,SET))],ok)
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/set <stat>=<number>%, such as +sheet/set [lcstr(first(u(%!/FUN`LIST`ALL,STAT)))]=1.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`BUILD; @include/args %!/INC`NEED`STAT=typed,%q<sheet_what>; think setqm(set_value,edit(%q<cmd_right_side>,+,),set_left,u(%!/FUN`ARRAY`LEFT,%q<sheet_rows>,%q<stat_key>)); @assert cor(not(strlen(%q<set_value>)),cand(isint(%q<set_value>),gte(%q<set_value>,-3),lte(%q<set_value>,get(%!/DATA`CONFIG`MAX))))=@pemit %#=notice(SHEET,A stat is a whole number from -3 to [u(%!/FUN`DISPLAY`SIGNED,get(%!/DATA`CONFIG`MAX))].,warn); @assert cor(%q<viewer_keeper>,not(strlen(%q<set_value>)),match(%q<set_left>,%q<set_value>))=@pemit %#=notice(SHEET,if(words(%q<set_left>),[u(%!/FUN`STAT`LABEL,%q<stat_key>)] takes one of the starting numbers left: [itemize(iter(%q<set_left>,u(%!/FUN`DISPLAY`SIGNED,%i0),%b,|),|,or)].,Every starting number is given.) Set another stat empty to free its number.,warn); @include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,stat,key,%q<stat_key>,value,%q<set_value>,phase,%q<sheet_phase>; @pemit %#=notice(SHEET,u(%!/FUN`STAT`LABEL,%q<stat_key>) is [if(strlen(%q<set_value>),u(%!/FUN`DISPLAY`SIGNED,%q<set_value>),unassigned)] on [name(%q<sheet_who>)]'s sheet.[u(%!/FUN`CHARGEN`AFTER,%q<sheet_who>)],ok)
         flags: [cmdsyntax]
-      # +sheet/playbook lists them; +sheet/playbook <playbook> picks one (<name>=<playbook> for a keeper). A
-      # sheet with no stat set yet takes the playbook's suggested stats.
+      # +sheet/playbook lists them; +sheet/playbook <playbook> picks one (<name>=<playbook> for a keeper). A sheet
+      # with no stat assigned yet takes the playbook's suggested stats. A player's moves from another playbook go.
       INC`SHEET`PLAYBOOK:
         value: |-
-          @break not(strlen(%q<cmd_argument>))=@pemit %#=u(%!/FUN`SCREEN`PLAYBOOKS); @include %!/INC`NEED`WHOVALUE; @include %!/INC`NEED`EDITABLE; @assert strlen(setr(playbook_key,u(%!/FUN`LIST`FIND,PLAYBOOK,%q<sheet_value>)))=@pemit %#=notice(SHEET,There is no playbook '%q<sheet_value>'. +sheet/playbook lists them.,warn); think setq(playbook_stats,if(words(lattr(%q<sheet_who>/PBTA`STAT`*)),,get({{store}}/PLAYBOOK`%q<playbook_key>`STATS))); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,PLAYBOOK,value,%q<playbook_key>; @dolist/inline %q<playbook_stats>={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,STAT`[ucstr(before(##,=))],value,after(##,=)}; @pemit %#=notice(SHEET,[name(%q<sheet_who>)] is [art(u(%!/FUN`PLAYBOOK`LABEL,%q<playbook_key>))] [u(%!/FUN`PLAYBOOK`LABEL,%q<playbook_key>)][if(words(%q<playbook_stats>),%, with its suggested stats)].,ok)
+          @assert strlen(%q<cmd_argument>)=@pemit %#=u(%!/FUN`SCREEN`PLAYBOOKS); @include %!/INC`NEED`WHOVALUE; @include %!/INC`NEED`BUILD; @assert strlen(setr(playbook_key,u(%!/FUN`LIST`FIND,PLAYBOOK,%q<sheet_value>)))=@pemit %#=notice(SHEET,There is no playbook '%q<sheet_value>'. +sheet/playbook lists them.,warn); think setqm(playbook_stats,if(words(graball(%q<sheet_rows>,*~stat~*)),,get({{store}}/PLAYBOOK`%q<playbook_key>`STATS)),playbook_foreign,if(strmatch(%q<sheet_phase>,chargen),iter(graball(%q<sheet_rows>,*~move~*~chargen~*),if(comp(ucstr(get({{store}}/MOVE`[elements(%i0,3,~)]`PLAYBOOK)),%q<playbook_key>),first(%i0,~))))); @include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,playbook,key,%q<playbook_key>,value,,phase,%q<sheet_phase>; @dolist/inline %q<playbook_foreign>={@include/args %!/INC`DO`UNENTRY=who,%q<sheet_who>,n,##}; @dolist/inline %q<playbook_stats>={@include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,stat,key,ucstr(before(##,=)),value,after(##,=),phase,%q<sheet_phase>}; @pemit %#=notice(SHEET,[name(%q<sheet_who>)] is [art(u(%!/FUN`PLAYBOOK`LABEL,%q<playbook_key>))] [u(%!/FUN`PLAYBOOK`LABEL,%q<playbook_key>)][if(words(%q<playbook_stats>),%, with its suggested stats)].[u(%!/FUN`CHARGEN`AFTER,%q<sheet_who>)],ok)
         flags: [cmdsyntax]
-      # +sheet/take [<name>/]<move>: a move from your playbook beyond its starting ones. Keepers give any move.
+      # +sheet/take [<name>/]<move>: one of the moves your playbook lets a new character pick. Keepers give any move.
       INC`SHEET`TAKE:
         value: |-
-          @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @include/args %!/INC`NEED`MOVE=typed,%q<sheet_what>; @assert strlen(get({{store}}/MOVE`%q<move_key>`PLAYBOOK))=@pemit %#=notice(SHEET,u(%!/FUN`MOVE`LABEL,%q<move_key>) is a basic move: everyone has it.,warn); @assert not(u(%!/FUN`MOVE`HAS,%q<sheet_who>,%q<move_key>))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has [u(%!/FUN`MOVE`LABEL,%q<move_key>)] already.,warn); @assert cor(%q<viewer_keeper>,not(comp(ucstr(get({{store}}/MOVE`%q<move_key>`PLAYBOOK)),get(%q<sheet_who>/PBTA`PLAYBOOK))))=@pemit %#=notice(SHEET,u(%!/FUN`MOVE`LABEL,%q<move_key>) belongs to another playbook.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,MOVES,value,setunion(get(%q<sheet_who>/PBTA`MOVES),%q<move_key>); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has [u(%!/FUN`MOVE`LABEL,%q<move_key>)] now.,ok)
+          @include %!/INC`NEED`WHO; @include %!/INC`NEED`BUILD; @include/args %!/INC`NEED`MOVE=typed,%q<sheet_what>; think setq(take_view,u(%!/FUN`VIEW`LIVE,%q<sheet_who>)); @assert strlen(get({{store}}/MOVE`%q<move_key>`PLAYBOOK))=@pemit %#=notice(SHEET,u(%!/FUN`MOVE`LABEL,%q<move_key>) is a basic move: everyone has it.,warn); @assert not(u(%!/FUN`V`HAS,%q<take_view>,%q<move_key>))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has [u(%!/FUN`MOVE`LABEL,%q<move_key>)] already.,warn); @assert cor(%q<viewer_keeper>,not(comp(ucstr(get({{store}}/MOVE`%q<move_key>`PLAYBOOK)),u(%!/FUN`V,%q<take_view>,playbook))))=@pemit %#=notice(SHEET,u(%!/FUN`MOVE`LABEL,%q<move_key>) belongs to another playbook.,warn); @assert cor(%q<viewer_keeper>,lt(words(u(%!/FUN`CHARGEN`PICKED,%q<take_view>)),u(%!/FUN`CHARGEN`PICKS,%q<take_view>)))=@pemit %#=notice(SHEET,A new [u(%!/FUN`PLAYBOOK`LABEL,u(%!/FUN`V,%q<take_view>,playbook))] picks [u(%!/FUN`CHARGEN`PICKS,%q<take_view>)] move[if(neq(u(%!/FUN`CHARGEN`PICKS,%q<take_view>),1),s)]. +sheet/drop gives one back first.,warn); @include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,move,key,%q<move_key>,value,,phase,%q<sheet_phase>; @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has [u(%!/FUN`MOVE`LABEL,%q<move_key>)] now.[u(%!/FUN`CHARGEN`AFTER,%q<sheet_who>)],ok)
         flags: [cmdsyntax]
-      # +sheet/drop [<name>/]<move>: gives back a move taken with /take.
+      # +sheet/drop [<name>/]<move>: gives back a move picked in character creation. A keeper's drop revokes
+      # the entry that gave it.
       INC`SHEET`DROP:
         value: |-
-          @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @include/args %!/INC`NEED`MOVE=typed,%q<sheet_what>; @assert member(get(%q<sheet_who>/PBTA`MOVES),%q<move_key>)=@pemit %#=notice(SHEET,if(u(%!/FUN`MOVE`HAS,%q<sheet_who>,%q<move_key>),[u(%!/FUN`MOVE`LABEL,%q<move_key>)] comes with [name(%q<sheet_who>)]'s playbook.,[name(%q<sheet_who>)] does not have [u(%!/FUN`MOVE`LABEL,%q<move_key>)].),warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,MOVES,value,setdiff(get(%q<sheet_who>/PBTA`MOVES),%q<move_key>); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] no longer has [u(%!/FUN`MOVE`LABEL,%q<move_key>)].,ok)
+          @include %!/INC`NEED`WHO; @include %!/INC`NEED`BUILD; @include/args %!/INC`NEED`MOVE=typed,%q<sheet_what>; think setq(drop_n,first(iter(revwords(graball(%q<sheet_rows>,*~move~%q<move_key>~*[if(strmatch(%q<sheet_phase>,chargen),~chargen~*)])),first(%i0,~)))); @assert strlen(%q<drop_n>)=@pemit %#=notice(SHEET,cond(u(%!/FUN`V`HAS,u(%!/FUN`VIEW`LIVE,%q<sheet_who>),%q<move_key>),[u(%!/FUN`MOVE`LABEL,%q<move_key>)] comes with [name(%q<sheet_who>)]'s playbook[if(strmatch(%q<sheet_phase>,chargen),%, or staff gave it)].,1,[name(%q<sheet_who>)] does not have [u(%!/FUN`MOVE`LABEL,%q<move_key>)].),warn); @include/args %!/INC`DO`[if(strmatch(%q<sheet_phase>,chargen),UNENTRY,REVOKE)]=who,%q<sheet_who>,n,%q<drop_n>; @pemit %#=notice(SHEET,[name(%q<sheet_who>)] no longer has [u(%!/FUN`MOVE`LABEL,%q<move_key>)].[u(%!/FUN`CHARGEN`AFTER,%q<sheet_who>)],ok)
+        flags: [cmdsyntax]
+      # +sheet/chargen [<name>]: the steps of making a character and how far they are.
+      INC`SHEET`CHARGEN:
+        value: |-
+          @include/args %!/INC`NEED`TARGET=name,firstof(%q<cmd_argument>,%#); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`CHARGEN,%q<sheet_who>,%#)
+        flags: [cmdsyntax]
+      # +sheet/advance [<name>/]<stat or move>: +1 to a stat, or a move from your playbook. An approved player
+      # spends the advance's XP; a keeper gives it free and may give a move from any playbook.
+      INC`SHEET`ADVANCE:
+        value: |-
+          @include %!/INC`NEED`WHO; @assert strlen(%q<sheet_what>)=@pemit %#=notice(SHEET,+sheet/advance <stat or move>%, such as +sheet/advance str or +sheet/advance [lcstr(first(u(%!/FUN`LIST`ALL,STAT)))].,warn); @assert cor(%q<viewer_keeper>,isapproved(%#))=@pemit %#=notice(SHEET,Advances come after approval. +sheet/chargen shows what to set now.,warn); @include %!/INC`NEED`ROOM; think setqm(advance_view,u(%!/FUN`VIEW`LIVE,%q<sheet_who>),advance_cost,if(%q<viewer_keeper>,0,get(%!/DATA`CONFIG`ADVANCE)),advance_phase,if(%q<viewer_keeper>,staff,play),advance_trait,u(%!/API`FIND,%q<sheet_what>)); @assert strlen(%q<advance_trait>)=@pemit %#=notice(SHEET,There is no move or stat '%q<sheet_what>'. +sheet/traits lists them.,warn); @assert gte(default(%q<sheet_who>/PBTA`XP,0),%q<advance_cost>)=@pemit %#=notice(SHEET,An advance costs %q<advance_cost> XP%, and you have [default(%q<sheet_who>/PBTA`XP,0)].,warn); @include/args %!/INC`SHEET`ADVANCE`[if(strlen(u(%!/FUN`TRAIT`MOVE,%q<advance_trait>)),MOVE,STAT)]=trait,%q<advance_trait>; @if %q<advance_cost>={&PBTA`XP %q<sheet_who>=sub(get(%q<sheet_who>/PBTA`XP),%q<advance_cost>)}; @pemit %#=notice(SHEET,[name(%q<sheet_who>)] advances: %q<advance_text>[if(%q<advance_cost>,%b%(%q<advance_cost> XP spent%))].,ok)
+        flags: [cmdsyntax]
+      INC`SHEET`ADVANCE`STAT:
+        value: |-
+          think setqm(stat_key,ucstr(%<trait>),advance_now,u(%!/FUN`V`STAT,%q<advance_view>,ucstr(%<trait>))); @assert lt(%q<advance_now>,get(%!/DATA`CONFIG`MAX))=@pemit %#=notice(SHEET,u(%!/FUN`STAT`LABEL,%q<stat_key>) is [u(%!/FUN`DISPLAY`SIGNED,%q<advance_now>)]%, the highest a stat goes.,warn); @include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,boost,key,%q<stat_key>,value,1,phase,%q<advance_phase>; think setq(advance_text,[u(%!/FUN`STAT`LABEL,%q<stat_key>)] is [u(%!/FUN`DISPLAY`SIGNED,inc(%q<advance_now>))] now)
+        flags: [cmdsyntax]
+      INC`SHEET`ADVANCE`MOVE:
+        value: |-
+          think setq(move_key,u(%!/FUN`TRAIT`MOVE,%<trait>)); @assert not(u(%!/FUN`V`HAS,%q<advance_view>,%q<move_key>))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has [u(%!/FUN`MOVE`LABEL,%q<move_key>)] already.,warn); @assert cor(%q<viewer_keeper>,not(comp(ucstr(get({{store}}/MOVE`%q<move_key>`PLAYBOOK)),u(%!/FUN`V,%q<advance_view>,playbook))))=@pemit %#=notice(SHEET,u(%!/FUN`MOVE`LABEL,%q<move_key>) is not a move of your playbook.,warn); @include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,move,key,%q<move_key>,value,,phase,%q<advance_phase>; think setq(advance_text,[u(%!/FUN`MOVE`LABEL,%q<move_key>)])
+        flags: [cmdsyntax]
+      # +sheet/ledger [<name>]: every entry the sheet is built from, oldest first.
+      INC`SHEET`LEDGER:
+        value: |-
+          @include/args %!/INC`NEED`TARGET=name,firstof(%q<cmd_argument>,%#); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`LEDGER,%q<sheet_who>)
+        flags: [cmdsyntax]
+      # +sheet/revoke <name>/<n>: takes back one entry.
+      INC`SHEET`REVOKE:
+        value: |-
+          @include %!/INC`NEED`KEEPER; @include %!/INC`NEED`WHO; @include %!/INC`NEED`ROOM; think setq(revoke_row,grab(u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%q<sheet_who>)),%q<sheet_what>~*)); @assert cand(isint(%q<sheet_what>),strlen(%q<revoke_row>))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has no entry '%q<sheet_what>' in force. +sheet/ledger [name(%q<sheet_who>)] lists them.,warn); @include/args %!/INC`DO`REVOKE=who,%q<sheet_who>,n,%q<sheet_what>; @pemit %#=notice(SHEET,Revoked [name(%q<sheet_who>)]'s entry %q<sheet_what>: [u(%!/FUN`DISPLAY`ENTRY,%q<revoke_row>)].,ok)
+        flags: [cmdsyntax]
+      # +sheet/clear <name>: revokes the whole build; character creation starts again. XP, forward, ongoing and
+      # hold stay.
+      INC`SHEET`CLEAR:
+        value: |-
+          @include %!/INC`NEED`KEEPER; @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/clear <name> revokes everything on their sheet's ledger.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>; @assert words(u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%q<sheet_who>)))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s sheet has nothing to clear.,warn); @include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,clear,key,,value,,phase,staff; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s build is cleared %(entry %q<entry_n>%). +sheet/chargen [name(%q<sheet_who>)] shows the steps.,ok)
         flags: [cmdsyntax]
       # +sheet/move <move>: the whole move.
       INC`SHEET`MOVE:
         value: |-
           @include/args %!/INC`NEED`MOVE=typed,%q<cmd_argument>; @pemit %#=u(%!/FUN`SCREEN`MOVE,%q<move_key>,%#)
         flags: [cmdsyntax]
-      # +sheet/forward <n> and +sheet/ongoing <n>, or <name>=<n> for a keeper. 0 or nothing clears it.
+      # +sheet/forward <n> and +sheet/ongoing <n>, or <name>=<n> for a keeper. 0 or nothing clears it. In an
+      # encounter they change the encounter's copy.
       INC`SHEET`FORWARD:
         value: |-
           @include/args %!/INC`SHEET`MODIFIER=leaf,FORWARD,noun,forward
@@ -485,17 +623,17 @@ objects:
         flags: [cmdsyntax]
       INC`SHEET`MODIFIER:
         value: |-
-          @include %!/INC`NEED`WHOVALUE; think setq(set_value,firstof(edit(%q<sheet_value>,+,),0)); @assert cand(isint(%q<set_value>),gte(%q<set_value>,-3),lte(%q<set_value>,3))=@pemit %#=notice(SHEET,+sheet/%<noun> <number>: a whole number from -3 to +3%, 0 to clear it.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,%<leaf>,value,if(%q<set_value>,%q<set_value>); @pemit %#=notice(SHEET,if(%q<set_value>,[name(%q<sheet_who>)] has [u(%!/FUN`DISPLAY`SIGNED,%q<set_value>)] %<noun>.,[name(%q<sheet_who>)]'s %<noun> is cleared.),ok)
+          @include %!/INC`NEED`WHOVALUE; think setq(set_value,firstof(edit(%q<sheet_value>,+,),0)); @assert cand(isint(%q<set_value>),gte(%q<set_value>,-3),lte(%q<set_value>,3))=@pemit %#=notice(SHEET,+sheet/%<noun> <number>: a whole number from -3 to +3%, 0 to clear it.,warn); @include/args %!/INC`DO`PLAY=who,%q<sheet_who>,field,%<leaf>,value,if(%q<set_value>,%q<set_value>); @pemit %#=notice(SHEET,if(%q<set_value>,[name(%q<sheet_who>)] has [u(%!/FUN`DISPLAY`SIGNED,%q<set_value>)] %<noun>,[name(%q<sheet_who>)]'s %<noun> is cleared)[u(%!/FUN`DISPLAY`WHERE,%q<sheet_who>)].,ok)
         flags: [cmdsyntax]
       # +sheet/hold [<name>/]<move>=<n>: hold on a move; 0 clears it.
       INC`SHEET`HOLD:
         value: |-
-          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/hold <move>=<hold>%, such as +sheet/hold defend=3. 0 clears it.,warn); @include %!/INC`NEED`WHO; @include/args %!/INC`NEED`MOVE=typed,%q<sheet_what>; think setq(set_value,firstof(%q<cmd_right_side>,0)); @assert cand(isint(%q<set_value>),gte(%q<set_value>,0),lte(%q<set_value>,9))=@pemit %#=notice(SHEET,Hold is a whole number from 0 to 9.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,HOLD`%q<move_key>,value,if(%q<set_value>,%q<set_value>); @pemit %#=notice(SHEET,if(%q<set_value>,[name(%q<sheet_who>)] has %q<set_value> hold on [u(%!/FUN`MOVE`LABEL,%q<move_key>)].,[name(%q<sheet_who>)] has no hold on [u(%!/FUN`MOVE`LABEL,%q<move_key>)].),ok)
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/hold <move>=<hold>%, such as +sheet/hold defend=3. 0 clears it.,warn); @include %!/INC`NEED`WHO; @include/args %!/INC`NEED`MOVE=typed,%q<sheet_what>; think setq(set_value,firstof(%q<cmd_right_side>,0)); @assert cand(isint(%q<set_value>),gte(%q<set_value>,0),lte(%q<set_value>,9))=@pemit %#=notice(SHEET,Hold is a whole number from 0 to 9.,warn); @include/args %!/INC`DO`PLAY=who,%q<sheet_who>,field,HOLD,value,u(%!/FUN`PAIRS`SET,u(%!/FUN`V,u(%!/FUN`VIEW`OF,%q<sheet_who>),hold),%q<move_key>,%q<set_value>); @pemit %#=notice(SHEET,if(%q<set_value>,[name(%q<sheet_who>)] has %q<set_value> hold on [u(%!/FUN`MOVE`LABEL,%q<move_key>)],[name(%q<sheet_who>)] has no hold on [u(%!/FUN`MOVE`LABEL,%q<move_key>)])[u(%!/FUN`DISPLAY`WHERE,%q<sheet_who>)].,ok)
         flags: [cmdsyntax]
       # +sheet/xp <name>=<n> sets XP; <name>=+<n> or -<n> adds or takes.
       INC`SHEET`XP:
         value: |-
-          @include %!/INC`NEED`KEEPER; @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>))=@pemit %#=notice(SHEET,+sheet/xp <name>=<xp> sets it%, =+<n> or =-<n> adds or takes.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; think setq(set_value,if(member(+ -,left(%q<cmd_right_side>,1)),add(default(%q<sheet_who>/PBTA`XP,0),edit(%q<cmd_right_side>,+,)),%q<cmd_right_side>)); @assert cand(isint(%q<set_value>),gte(%q<set_value>,0),lte(%q<set_value>,999))=@pemit %#=notice(SHEET,XP is a whole number from 0 to 999.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,XP,value,%q<set_value>; @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<set_value> XP.,ok)
+          @include %!/INC`NEED`KEEPER; @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>))=@pemit %#=notice(SHEET,+sheet/xp <name>=<xp> sets it%, =+<n> or =-<n> adds or takes.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; think setq(set_value,if(member(+ -,left(%q<cmd_right_side>,1)),add(default(%q<sheet_who>/PBTA`XP,0),edit(%q<cmd_right_side>,+,)),%q<cmd_right_side>)); @assert cand(isint(%q<set_value>),gte(%q<set_value>,0),lte(%q<set_value>,999))=@pemit %#=notice(SHEET,XP is a whole number from 0 to 999.,warn); @include/args %!/INC`DO`ROOT=who,%q<sheet_who>; &PBTA`XP %q<sheet_who>=%q<set_value>; @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<set_value> XP.,ok)
         flags: [cmdsyntax]
       INC`SHEET`TRAITS:
         value: |-
@@ -508,13 +646,13 @@ objects:
           @pemit %#=notice(SHEET,+check <move or stat>%[=<difficulty>%]%, such as +check hack and slash or +check defy danger/dex. /private rolls where only you see it.,warn)
         flags: [cmdsyntax]
       # +check[/private] <move>[/<stat>][+<n>|-<n>][=<difficulty>], or a stat in place of the move: 2d6 for the room.
-      # Forward and ongoing are added, and forward is spent.
+      # Forward and ongoing are added, and forward is spent. In an encounter the copy rolls and pays.
       INC`CHECK`ROLL:
         value: |-
-          @assert strlen(%q<cmd_argument>)=@include %!/INC`CHECK`USAGE; think u(%!/FUN`CHECK`READ,%q<cmd_left_side>); @assert isint(%q<check_modifier>)=@pemit %#=notice(SHEET,'%q<cmd_left_side>' ends in something that is not a number to add.,warn); @assert strlen(setr(trait_key,u(%!/API`FIND,%q<check_typed>)))=@pemit %#=notice(SHEET,There is no move or stat '%q<check_typed>'. +sheet/traits lists them.,warn); @break strmatch(%q<cmd_right_side>,trivial)=@pemit %#=notice(SHEET,A trivial task needs no roll: it simply happens.); think setq(check_target,u(%!/API`TARGET,%q<cmd_right_side>)); @assert cor(not(%q<cmd_has_equals>),isint(%q<check_target>))=@pemit %#=notice(SHEET,'%q<cmd_right_side>' is not a difficulty. Give a number to add or one of [itemize(v(DATA`DIFFICULTIES))].,warn); @include %!/INC`CHECK`STAT; think setqm(check_forward,default(%q<viewer_objid>/PBTA`FORWARD,0),check_ongoing,default(%q<viewer_objid>/PBTA`ONGOING,0)); think setq(check_result,uargs(%!/API`CHECK,roller,%q<viewer_objid>,trait,%q<trait_key>,stat,%q<check_stat>,modifier,add(%q<check_modifier>,%q<check_forward>,%q<check_ongoing>),target,%q<check_target>)); @assert not(strmatch(%q<check_result>,#-*))=@pemit %#=notice(SHEET,after(%q<check_result>,#-1%b),error); @if %q<check_forward>={@include/args %!/INC`DO`SET=who,%q<viewer_objid>,leaf,FORWARD,value,}; think setq(check_line,u(%!/FUN`DISPLAY`CHECK,%q<check_result>)); @break member(%q<cmd_switch_list>,private)=@pemit %#=notice(SHEET,You privately roll %q<check_line>); @remit %l=notice(SHEET,tone(strong,name(%#)) rolls %q<check_line>)
+          @assert strlen(%q<cmd_argument>)=@include %!/INC`CHECK`USAGE; think u(%!/FUN`CHECK`READ,%q<cmd_left_side>); @assert isint(%q<check_modifier>)=@pemit %#=notice(SHEET,'%q<cmd_left_side>' ends in something that is not a number to add.,warn); @assert strlen(setr(trait_key,u(%!/API`FIND,%q<check_typed>)))=@pemit %#=notice(SHEET,There is no move or stat '%q<check_typed>'. +sheet/traits lists them.,warn); @assert not(strmatch(%q<cmd_right_side>,trivial))=@pemit %#=notice(SHEET,A trivial task needs no roll: it simply happens.); think setq(check_target,u(%!/API`TARGET,%q<cmd_right_side>)); @assert cor(not(%q<cmd_has_equals>),isint(%q<check_target>))=@pemit %#=notice(SHEET,'%q<cmd_right_side>' is not a difficulty. Give a number to add or one of [itemize(v(DATA`DIFFICULTIES))].,warn); @include %!/INC`CHECK`STAT; think setq(check_view,u(%!/FUN`VIEW`OF,%q<viewer_objid>)); think setqm(check_forward,u(%!/FUN`V,%q<check_view>,forward),check_ongoing,u(%!/FUN`V,%q<check_view>,ongoing)); think setq(check_result,u(%!/FUN`CHECK`VIEW,%q<check_view>,%q<trait_key>,%q<check_stat>,add(%q<check_modifier>,%q<check_forward>,%q<check_ongoing>),%q<check_target>)); @assert not(strmatch(%q<check_result>,#-*))=@pemit %#=notice(SHEET,after(%q<check_result>,#-1%b),error); @if %q<check_forward>={@include/args %!/INC`DO`PLAY=who,%q<viewer_objid>,field,FORWARD,value,}; think setq(check_line,u(%!/FUN`DISPLAY`CHECK,%q<check_result>)); @assert not(member(%q<cmd_switch_list>,private))=@pemit %#=notice(SHEET,You privately roll %q<check_line>); @remit %l=notice(SHEET,tone(strong,name(%#)) rolls %q<check_line>)
         flags: [cmdsyntax]
       # The stat a move rolls with: check_stat, the one typed after / (which must be one the move allows), else
-      # empty for API`CHECK to choose. A move that offers several asks which.
+      # empty for the check to choose. A move that offers several asks which.
       INC`CHECK`STAT:
         value: |-
           think setqm(check_move,u(%!/FUN`TRAIT`MOVE,%q<trait_key>),check_stat,,check_allowed,u(%!/FUN`MOVE`STATS,u(%!/FUN`TRAIT`MOVE,%q<trait_key>))); @assert cor(strlen(%q<check_move>),not(strlen(%q<check_chosen>)))=@pemit %#=notice(SHEET,A stat rolls alone: +check [lcstr(%q<trait_key>)].,warn); @assert cor(not(strlen(%q<check_chosen>)),strlen(setr(check_stat,u(%!/FUN`LIST`FIND,STAT,%q<check_chosen>))))=@pemit %#=notice(SHEET,There is no stat '%q<check_chosen>'.,warn); @assert cor(not(strlen(%q<check_chosen>)),member(%q<check_allowed>,%q<check_stat>))=@pemit %#=notice(SHEET,u(%!/FUN`MOVE`LABEL,%q<check_move>) [u(%!/FUN`DISPLAY`ROLLSWITH,%q<check_move>)].,warn); @assert cor(not(strlen(%q<check_move>)),strlen(%q<check_chosen>),lte(words(%q<check_allowed>),1))=@pemit %#=notice(SHEET,u(%!/FUN`MOVE`LABEL,%q<check_move>) [u(%!/FUN`DISPLAY`ROLLSWITH,%q<check_move>)]: say which%, such as +check [lcstr(%q<check_move>)]/[lcstr(first(%q<check_allowed>))].,warn)
@@ -531,13 +669,297 @@ objects:
           check_chosen,trim(after(%q<check_rest>,/)))
         flags: [funsyntax]
 
-      # ---- writes -----------------------------------------------------------------
-      # %<who> an objid, %<leaf> what under PBTA` to write, %<value> what to store; empty clears it. The PBTA root
-      # is wizard-flagged and no_command the first time, and its leaves take that from it.
-      INC`DO`SET:
+      # ---- +encounter ---------------------------------------------------------------
+      # A room holds any number of encounters, and a character may be in several. Whoever starts one runs it
+      # (its GM); sheet keepers run any. A member plays from a copy of their sheet taken when they joined. The
+      # copy in use is that of a joined encounter in the room the character is in: the one /use picked, else
+      # the last joined. Anywhere else the sheet itself applies. An encounter lasts until /end, over any number
+      # of days. /keep writes one character's forward, ongoing and hold from their copy back to their sheet.
+      # +encounter [<n>]: one encounter, or the ones here and yours.
+      INC`ENCOUNTER`SHOW:
         value: |-
-          @if not(hasattr(%<who>,PBTA))={&PBTA %<who>=This character's PbtA sheet. +sheet shows it.; @set %<who>/PBTA=wizard; @set %<who>/PBTA=no_command}; @if strlen(%<value>)={&PBTA`%<leaf> %<who>=%<value>},{&PBTA`%<leaf> %<who>}
+          think setqm(enc_here,u(%!/FUN`ENC`HERE,%#),enc_joined,u(%!/FUN`ENC`JOINED,%#)); @assert cor(strlen(%q<cmd_argument>),words(setunion(%q<enc_here>,%q<enc_joined>)))=@pemit %#=notice(ENCOUNTER,There is no encounter here%, and you are in none. +encounter/start begins one.,warn); @assert cor(strlen(%q<cmd_argument>),gt(words(setunion(%q<enc_here>,%q<enc_joined>)),1))=@pemit %#=u(%!/FUN`SCREEN`ENCOUNTER,setunion(%q<enc_here>,%q<enc_joined>),%#); @assert strlen(%q<cmd_argument>)=@pemit %#=u(%!/FUN`SCREEN`ENCOUNTERS,%q<enc_here>,%q<enc_joined>,%#); @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>,from,,verb,; @pemit %#=u(%!/FUN`SCREEN`ENCOUNTER,%q<enc_n>,%#)
         flags: [cmdsyntax]
+      # +encounter/start [<title>]: a new encounter in the room you are in.
+      INC`ENCOUNTER`START:
+        value: |-
+          think setqm(enc_n,inc(lmax(0 [iter(lattr({{encounters}}/ENC`*),last(%i0,`))])),enc_title,firstof(left(%q<cmd_argument>,60),Encounter in [name(loc(%#))])); &ENC`%q<enc_n> {{encounters}}=%q<enc_title>; &ENC`%q<enc_n>`ROOM {{encounters}}=objid(loc(%#)); &ENC`%q<enc_n>`GM {{encounters}}=%q<viewer_objid>; &ENC`%q<enc_n>`STARTED {{encounters}}=secs(); @remit %l=notice(ENCOUNTER,tone(strong,name(%#)) starts encounter %q<enc_n>: %q<enc_title>. +encounter/join %q<enc_n> takes part with a copy of your sheet.)
+        flags: [cmdsyntax]
+      # +encounter/join [<n>]: takes part in an encounter here, with a copy of your sheet as it stands.
+      INC`ENCOUNTER`JOIN:
+        value: |-
+          @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>,from,u(%!/FUN`ENC`HERE,%#),verb,join; @assert member(u(%!/FUN`ENC`HERE,%#),%q<enc_n>)=@pemit %#=notice(ENCOUNTER,Encounter %q<enc_n> is not in this room.,warn); @assert not(u(%!/FUN`ENC`MEMBER,%q<viewer_objid>,%q<enc_n>))=@pemit %#=notice(ENCOUNTER,You are in [u(%!/FUN`ENC`NAME,%q<enc_n>)] already.,warn); @include/args %!/INC`DO`ENCJOIN=who,%q<viewer_objid>,n,%q<enc_n>; @remit %l=notice(ENCOUNTER,tone(strong,name(%#)) joins [u(%!/FUN`ENC`NAME,%q<enc_n>)].)
+        flags: [cmdsyntax]
+      # +encounter/use [<n>]: which of your encounters here your rolls use; nothing goes back to the last joined.
+      INC`ENCOUNTER`USE:
+        value: |-
+          @break not(strlen(%q<cmd_argument>))={@include/args %!/INC`DO`PLAY`SHEET=who,%q<viewer_objid>,field,USING,value,; @pemit %#=notice(ENCOUNTER,Your rolls use [firstof(u(%!/FUN`ENC`NAME,u(%!/FUN`ENC`ACTIVE,%q<viewer_objid>)),your sheet)].,ok)}; @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>,from,,verb,; @assert u(%!/FUN`ENC`MEMBER,%q<viewer_objid>,%q<enc_n>)=@pemit %#=notice(ENCOUNTER,You are not in [u(%!/FUN`ENC`NAME,%q<enc_n>)]. +encounter/join %q<enc_n> takes part.,warn); @include/args %!/INC`DO`PLAY`SHEET=who,%q<viewer_objid>,field,USING,value,%q<enc_n>; @pemit %#=notice(ENCOUNTER,Your rolls use your copy in [u(%!/FUN`ENC`NAME,%q<enc_n>)][if(member(u(%!/FUN`ENC`HERE,%#),%q<enc_n>),,%b when you are in its room)].,ok)
+        flags: [cmdsyntax]
+      # +encounter/add <name>[=<n>]: the GM brings someone in the encounter's room into it.
+      INC`ENCOUNTER`ADD:
+        value: |-
+          @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_right_side>,from,u(%!/FUN`ENC`HERE,%#),verb,add <name>=; @include %!/INC`NEED`GM; @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; @assert not(comp(objid(loc(%q<sheet_who>)),get({{encounters}}/ENC`%q<enc_n>`ROOM)))=@pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)] is not in the encounter's room.,warn); @assert not(u(%!/FUN`ENC`MEMBER,%q<sheet_who>,%q<enc_n>))=@pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)] is in [u(%!/FUN`ENC`NAME,%q<enc_n>)] already.,warn); @include/args %!/INC`DO`ENCJOIN=who,%q<sheet_who>,n,%q<enc_n>; @remit get({{encounters}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,tone(strong,name(%#)) brings [name(%q<sheet_who>)] into [u(%!/FUN`ENC`NAME,%q<enc_n>)].)
+        flags: [cmdsyntax]
+      # +encounter/remove <name>[=<n>]: the GM takes someone out; their copy goes.
+      INC`ENCOUNTER`REMOVE:
+        value: |-
+          @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_right_side>,from,u(%!/FUN`ENC`JOINED,%q<sheet_who>),verb,remove <name>=; @include %!/INC`NEED`GM; @include %!/INC`NEED`MEMBER; @include/args %!/INC`DO`ENCDROP=who,%q<sheet_who>,n,%q<enc_n>; @pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)] is out of [u(%!/FUN`ENC`NAME,%q<enc_n>)].,ok); @pemit %q<sheet_who>=notice(ENCOUNTER,[name(%#)] takes you out of [u(%!/FUN`ENC`NAME,%q<enc_n>)]. Its copy of your sheet is gone.)
+        flags: [cmdsyntax]
+      # +encounter/leave [<n>]: out of an encounter you are in; your copy goes.
+      INC`ENCOUNTER`LEAVE:
+        value: |-
+          @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>,from,firstof(u(%!/FUN`ENC`ACTIVE,%#),u(%!/FUN`ENC`JOINED,%#)),verb,leave; @assert u(%!/FUN`ENC`MEMBER,%q<viewer_objid>,%q<enc_n>)=@pemit %#=notice(ENCOUNTER,You are not in [u(%!/FUN`ENC`NAME,%q<enc_n>)].,warn); @include/args %!/INC`DO`ENCDROP=who,%q<viewer_objid>,n,%q<enc_n>; @pemit %#=notice(ENCOUNTER,You leave [u(%!/FUN`ENC`NAME,%q<enc_n>)]. Its copy of your sheet is gone.,ok)
+        flags: [cmdsyntax]
+      # +encounter/keep <name>[=<n>]: the GM writes a character's forward, ongoing and hold from the copy to their sheet.
+      INC`ENCOUNTER`KEEP:
+        value: |-
+          @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_right_side>,from,u(%!/FUN`ENC`JOINED,%q<sheet_who>),verb,keep <name>=; @include %!/INC`NEED`GM; @include %!/INC`NEED`MEMBER; think setq(keep_copy,get({{encounters}}/ENC`%q<enc_n>`COPY`[after(num(%q<sheet_who>),#)])); @dolist/inline FORWARD ONGOING HOLD={@include/args %!/INC`DO`PLAY`SHEET=who,%q<sheet_who>,field,##,value,if(comp(u(%!/FUN`V,%q<keep_copy>,lcstr(##)),0),u(%!/FUN`V,%q<keep_copy>,lcstr(##)))}; @pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)]'s sheet keeps the forward%, ongoing and hold from [u(%!/FUN`ENC`NAME,%q<enc_n>)].,ok); @pemit %q<sheet_who>=notice(ENCOUNTER,[name(%#)] writes your forward%, ongoing and hold from [u(%!/FUN`ENC`NAME,%q<enc_n>)] to your sheet.)
+        flags: [cmdsyntax]
+      # +encounter/end [<n>]: the GM ends it; every copy goes.
+      INC`ENCOUNTER`END:
+        value: |-
+          @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>,from,u(%!/FUN`ENC`HERE,%#),verb,end; @include %!/INC`NEED`GM; think setqm(end_title,u(%!/FUN`ENC`NAME,%q<enc_n>),end_room,get({{encounters}}/ENC`%q<enc_n>`ROOM)); @dolist/inline u(%!/FUN`ENC`MEMBERS,%q<enc_n>)={@include/args %!/INC`DO`ENCDROP=who,##,n,%q<enc_n>}; @dolist/inline COPY ROOM GM STARTED={&ENC`%q<enc_n>`## {{encounters}}}; &ENC`%q<enc_n> {{encounters}}; @remit %q<end_room>=notice(ENCOUNTER,tone(strong,name(%#)) ends %q<end_title>. Its copies are gone.); @if comp(objid(loc(%#)),%q<end_room>)={@pemit %#=notice(ENCOUNTER,%q<end_title> is ended.,ok)}
+        flags: [cmdsyntax]
+      # Which encounter a command means: enc_n. %<typed> a number, or nothing for the one in %<from>; several there,
+      # and the player is asked which, as +encounter/%<verb> <n>.
+      INC`NEED`ENCOUNTER:
+        value: |-
+          think setq(enc_n,if(strlen(%<typed>),%<typed>,if(eq(words(%<from>),1),%<from>))); @assert cor(strlen(%<typed>),words(%<from>))=@pemit %#=notice(ENCOUNTER,There is no encounter here[if(strlen(%<verb>),%b for that)]. +encounter lists them.,warn); @assert strlen(%q<enc_n>)=@pemit %#=notice(ENCOUNTER,Say which: [itemize(iter(%<from>,+encounter/[edit(%<verb> %i0,=%b,=)] for [get({{encounters}}/ENC`%i0)],%b,|),|,or)].,warn); @assert cand(isint(%q<enc_n>),hasattr({{encounters}},ENC`%q<enc_n>))=@pemit %#=notice(ENCOUNTER,There is no encounter %q<enc_n>.,warn)
+        flags: [cmdsyntax]
+      INC`NEED`GM:
+        value: |-
+          @assert u(%!/FUN`ENC`GM,%#,%q<enc_n>)=@pemit %#=notice(ENCOUNTER,Only [name(get({{encounters}}/ENC`%q<enc_n>`GM))]%, who runs [u(%!/FUN`ENC`NAME,%q<enc_n>)]%, and sheet keepers do that.,error)
+        flags: [cmdsyntax]
+      INC`NEED`MEMBER:
+        value: |-
+          @assert u(%!/FUN`ENC`MEMBER,%q<sheet_who>,%q<enc_n>)=@pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)] is not in [u(%!/FUN`ENC`NAME,%q<enc_n>)].,warn)
+        flags: [cmdsyntax]
+
+      # ---- writes -----------------------------------------------------------------
+      # %<who> an objid. The PBTA root is wizard-flagged and no_command, and its leaves take that from it.
+      INC`DO`ROOT:
+        value: |-
+          @if not(hasattr(%<who>,PBTA))={&PBTA %<who>=This character's PbtA sheet. +sheet shows it.; @set %<who>/PBTA=wizard; @set %<who>/PBTA=no_command}
+        flags: [cmdsyntax]
+      # A ledger entry: %<who>, %<kind>, %<key>, %<value>, %<phase> (chargen, play or staff). A chargen entry
+      # rewrites the chargen entry in force of the same kind and key (any playbook for a playbook); every other
+      # entry is numbered after the last. entry_n is its number. Each has the wizard attribute flag, and an
+      # entry without it is never read.
+      INC`DO`ENTRY:
+        value: |-
+          @include/args %!/INC`DO`ROOT=who,%<who>; think setq(entry_n,if(strmatch(%<phase>,chargen),u(%!/FUN`LEDGER`CHARGENOF,%<who>,%<kind>,if(strmatch(%<kind>,playbook),*,%<key>)))); think setq(entry_n,firstof(%q<entry_n>,inc(lmax(0 [iter(lattr(%<who>/PBTA`LEDGER`*),last(%i0,`))])))); &PBTA`LEDGER`%q<entry_n> %<who>=[json(object,n,%q<entry_n>,kind,json(string,%<kind>),key,json(string,%<key>),value,json(string,%<value>),phase,json(string,%<phase>),by,json(string,objid(%#)),at,secs())]; @set %<who>/PBTA`LEDGER`%q<entry_n>=wizard
+        flags: [cmdsyntax]
+      # Removes a chargen entry outright: %<who>, %<n>.
+      INC`DO`UNENTRY:
+        value: |-
+          &PBTA`LEDGER`%<n> %<who>
+        flags: [cmdsyntax]
+      # A revoke entry taking back entry %<n> on %<who>.
+      INC`DO`REVOKE:
+        value: |-
+          @include/args %!/INC`DO`ENTRY=who,%<who>,kind,revoke,key,,value,%<n>,phase,staff
+        flags: [cmdsyntax]
+      # Forward, ongoing or hold (%<field>) for %<who>: the copy in use when they are in an encounter here, else
+      # their sheet.
+      INC`DO`PLAY:
+        value: |-
+          think setq(play_n,u(%!/FUN`ENC`ACTIVE,%<who>)); @include/args %!/INC`DO`PLAY`[if(strlen(%q<play_n>),COPY,SHEET)]=who,%<who>,field,%<field>,value,%<value>,n,%q<play_n>
+        flags: [cmdsyntax]
+      INC`DO`PLAY`SHEET:
+        value: |-
+          @include/args %!/INC`DO`ROOT=who,%<who>; @if strlen(%<value>)={&PBTA`%<field> %<who>=%<value>},{&PBTA`%<field> %<who>}
+        flags: [cmdsyntax]
+      INC`DO`PLAY`COPY:
+        value: |-
+          think setq(play_attr,ENC`%<n>`COPY`[after(num(%<who>),#)]); &%q<play_attr> {{encounters}}=[json_mod(get({{encounters}}/%q<play_attr>),patch,json(object,lcstr(%<field>),if(strmatch(%<field>,HOLD),json(string,%<value>),firstof(%<value>,0))))]
+        flags: [cmdsyntax]
+      # %<who> joins encounter %<n> with a copy of their sheet; it goes last in their PBTA`ENCOUNTERS.
+      INC`DO`ENCJOIN:
+        value: |-
+          &ENC`%<n>`COPY`[after(num(%<who>),#)] {{encounters}}=[json_mod(u(%!/FUN`VIEW`LIVE,%<who>),patch,json(object,encounter,json(string,%<n>)))]; @include/args %!/INC`DO`PLAY`SHEET=who,%<who>,field,ENCOUNTERS,value,squish([setdiff(get(%<who>/PBTA`ENCOUNTERS),%<n>)] %<n>)
+        flags: [cmdsyntax]
+      # %<who> leaves encounter %<n>; the copy goes.
+      INC`DO`ENCDROP:
+        value: |-
+          &ENC`%<n>`COPY`[after(num(%<who>),#)] {{encounters}}; @include/args %!/INC`DO`PLAY`SHEET=who,%<who>,field,ENCOUNTERS,value,squish(iter(get(%<who>/PBTA`ENCOUNTERS),if(comp(%i0,%<n>),%i0))); @if not(comp(get(%<who>/PBTA`USING),%<n>))={&PBTA`USING %<who>}
+        flags: [cmdsyntax]
+
+      # ---- the ledger -------------------------------------------------------------------
+      # A character's build is the entries under PBTA`LEDGER`<n>, each a JSON object: n, kind, key, value, phase
+      # (chargen, play or staff), by (an objid) and at (secs). Kinds: playbook {key}, stat {key, value: the base,
+      # empty for unassigned}, boost {key, value: added to the base}, move {key}, revoke {value: the entry it takes
+      # back}, clear (every entry before it). Rows are n~kind~key~value~phase~by.
+      FUN`LEDGER`NUMS:
+        value: |-
+          sort(iter(lattr(%0/PBTA`LEDGER`*),if(hasflag(%0/%i0,wizard),last(%i0,`))),n)
+        flags: [funsyntax]
+      FUN`LEDGER`ROWS:
+        value: |-
+          iter(u(%!/FUN`LEDGER`NUMS,%0),u(%!/FUN`LEDGER`ROW,get(%0/PBTA`LEDGER`%i0),%i0))
+        flags: [funsyntax]
+      FUN`LEDGER`ROW:
+        value: |-
+          %1~[json_query(%0,extract,$.kind)]~[json_query(%0,extract,$.key)]~[json_query(%0,extract,$.value)]~[json_query(%0,extract,$.phase)]~[json_query(%0,extract,$.by)]
+        flags: [funsyntax]
+      # %0 rows: the ones in force, after the last clear and not revoked; clears and revokes left out.
+      FUN`LEDGER`LIVE:
+        value: |-
+          setqm(live_clear,last(0 [iter(graball(%0,*~clear~*),first(%i0,~))]),live_revoked,iter(graball(%0,*~revoke~*),elements(%i0,4,~)))[squish(iter(%0,if(cor(lte(first(%i0,~),%q<live_clear>),member(%q<live_revoked>,first(%i0,~)),match(clear revoke,elements(%i0,2,~))),,%i0)))]
+        flags: [funsyntax]
+      # %0 a character, %1 a kind, %2 a key (or *): the number of the chargen entry in force that matches.
+      FUN`LEDGER`CHARGENOF:
+        value: |-
+          first(iter(revwords(graball(u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%0)),*~%1~%2~*~chargen~*)),first(%i0,~)))
+        flags: [funsyntax]
+      # %0 rows in force: the playbook, a stat's base (empty when unassigned), a stat with its boosts, the moves taken.
+      FUN`BUILD`PLAYBOOK:
+        value: |-
+          elements(last(graball(%0,*~playbook~*)),3,~)
+        flags: [funsyntax]
+      FUN`BUILD`BASE:
+        value: |-
+          elements(last(graball(%0,*~stat~%1~*)),4,~)
+        flags: [funsyntax]
+      FUN`BUILD`STAT:
+        value: |-
+          add(firstof(u(%!/FUN`BUILD`BASE,%0,%1),0),ladd(0 [iter(graball(%0,*~boost~%1~*),elements(%i0,4,~))]))
+        flags: [funsyntax]
+      FUN`BUILD`TAKEN:
+        value: |-
+          setunion(iter(graball(%0,*~move~*),elements(%i0,3,~)),)
+        flags: [funsyntax]
+      # %0 rows, %1 a stat to leave out: the starting numbers not yet given to another stat.
+      FUN`ARRAY`LEFT:
+        value: |-
+          fold(%!/FUN`ARRAY`TAKE,squish(iter(setdiff(u(%!/FUN`LIST`ALL,STAT),%1),u(%!/FUN`BUILD`BASE,%0,%i0))),get(%!/DATA`CONFIG`ARRAY))
+        flags: [funsyntax]
+      FUN`ARRAY`TAKE:
+        value: |-
+          if(match(%0,%1),ldelete(%0,match(%0,%1)),%0)
+        flags: [funsyntax]
+
+      # ---- views --------------------------------------------------------------------
+      # A view is what a roll or a screen reads: a JSON object with playbook, stats (STR=1 DEX=0 ...), moves
+      # (every move the character has), forward, ongoing, hold (MOVE=n pairs) and encounter (its number, or
+      # empty for the sheet itself). FUN`VIEW`LIVE builds it from the ledger; an encounter's copy is one.
+      FUN`VIEW`LIVE:
+        value: |-
+          setq(view_rows,u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%0)))[setq(view_playbook,u(%!/FUN`BUILD`PLAYBOOK,%q<view_rows>))][json(object,playbook,json(string,%q<view_playbook>),stats,json(string,iter(u(%!/FUN`LIST`ALL,STAT),%i0=[u(%!/FUN`BUILD`STAT,%q<view_rows>,%i0)])),moves,json(string,filterbool(%!/FUN`VIEW`HASMOVE,u(%!/FUN`LIST`ALL,MOVE),,,%q<view_playbook>,u(%!/FUN`BUILD`TAKEN,%q<view_rows>))),forward,default(%0/PBTA`FORWARD,0),ongoing,default(%0/PBTA`ONGOING,0),hold,json(string,get(%0/PBTA`HOLD)),encounter,json(string,))]
+        flags: [funsyntax]
+      # %0 a move, %1 a playbook, %2 the moves taken: 1 when a basic move, one of the playbook's starting moves, or taken.
+      FUN`VIEW`HASMOVE:
+        value: |-
+          cor(not(strlen(get({{store}}/MOVE`%0`PLAYBOOK))),member(ucstr(get({{store}}/PLAYBOOK`%1`MOVES)),%0),member(%2,%0))
+        flags: [funsyntax]
+      # %0 a character: their encounter's copy when they are in one, else their sheet.
+      FUN`VIEW`OF:
+        value: |-
+          setq(view_copy,u(%!/FUN`ENC`COPY,%0))[if(strlen(%q<view_copy>),%q<view_copy>,u(%!/FUN`VIEW`LIVE,%0))]
+        flags: [funsyntax]
+      FUN`V:
+        value: |-
+          json_query(%0,extract,$.%1)
+        flags: [funsyntax]
+      FUN`V`STAT:
+        value: |-
+          firstof(after(grab(u(%!/FUN`V,%0,stats),%1=*),=),0)
+        flags: [funsyntax]
+      FUN`V`HAS:
+        value: |-
+          t(member(u(%!/FUN`V,%0,moves),%1))
+        flags: [funsyntax]
+      # %0 a view, %1 stat keys: the highest of them, the first of equals.
+      FUN`V`BEST:
+        value: |-
+          setq(best_view,%0)[last(sortkey(%!/FUN`V`BESTKEY,revwords(%1),n))]
+        flags: [funsyntax]
+      FUN`V`BESTKEY:
+        value: |-
+          u(%!/FUN`V`STAT,%q<best_view>,%0)
+        flags: [funsyntax]
+      # %0 KEY=n pairs, %1 a key, %2 its value: the pairs with it set, or gone when 0.
+      FUN`PAIRS`SET:
+        value: |-
+          squish(iter(%0,if(strmatch(%i0,%1=*),,%i0)) [if(%2,%1=%2)])
+        flags: [funsyntax]
+
+      # ---- encounters ---------------------------------------------------------------
+      # On the encounter store: ENC`<n> the title, with ROOM, GM (objids), STARTED (secs) and COPY`<dbref number>
+      # one copy a member. A member's PBTA`ENCOUNTERS lists theirs in the order they joined; PBTA`USING is the one
+      # /use picked.
+      FUN`ENC`NAME:
+        value: |-
+          %0 %([get({{encounters}}/ENC`%0)]%)
+        flags: [funsyntax]
+      # %0 someone: the encounters in their room, oldest first.
+      FUN`ENC`HERE:
+        value: |-
+          setq(here_room,objid(loc(%0)))[squish(iter(sort(iter(lattr({{encounters}}/ENC`*),last(%i0,`)),n),if(not(comp(get({{encounters}}/ENC`%i0`ROOM),%q<here_room>)),%i0)))]
+        flags: [funsyntax]
+      FUN`ENC`MEMBER:
+        value: |-
+          hasattr({{encounters}},ENC`%1`COPY`[after(num(%0),#)])
+        flags: [funsyntax]
+      # %0 a character: the encounters they are in, in the order they joined.
+      FUN`ENC`JOINED:
+        value: |-
+          squish(iter(get(%0/PBTA`ENCOUNTERS),if(u(%!/FUN`ENC`MEMBER,%0,%i0),%i0)))
+        flags: [funsyntax]
+      # %0 a character: the encounter whose copy they play from now: one they joined in the room they are in,
+      # the one /use picked when it is one of those, else the last joined. Nothing when none.
+      FUN`ENC`ACTIVE:
+        value: |-
+          setq(active_here,u(%!/FUN`ENC`HERE,%0))[setq(active_set,squish(iter(u(%!/FUN`ENC`JOINED,%0),if(member(%q<active_here>,%i0),%i0))))][if(member(%q<active_set>,get(%0/PBTA`USING)),get(%0/PBTA`USING),last(%q<active_set>))]
+        flags: [funsyntax]
+      FUN`ENC`COPY:
+        value: |-
+          setq(copy_n,u(%!/FUN`ENC`ACTIVE,%0))[if(strlen(%q<copy_n>),get({{encounters}}/ENC`%q<copy_n>`COPY`[after(num(%0),#)]))]
+        flags: [funsyntax]
+      # %0 an encounter: its members' objids.
+      FUN`ENC`MEMBERS:
+        value: |-
+          iter(lattr({{encounters}}/ENC`%0`COPY`*),objid(#[last(%i0,`)]))
+        flags: [funsyntax]
+      FUN`ENC`GM:
+        value: |-
+          cor(u(%!/FUN`PERM`KEEPER,%0),not(comp(objid(%0),get({{encounters}}/ENC`%1`GM))))
+        flags: [funsyntax]
+
+      # ---- character creation ---------------------------------------------------------
+      # %0 a view: how many moves its playbook picks, and the ones it picked (taken moves of that playbook that
+      # are not its starting moves).
+      FUN`CHARGEN`PICKS:
+        value: |-
+          default({{store}}/PLAYBOOK`[u(%!/FUN`V,%0,playbook)]`PICK,0)
+        flags: [funsyntax]
+      FUN`CHARGEN`PICKED:
+        value: |-
+          setq(picked_playbook,u(%!/FUN`V,%0,playbook))[iter(u(%!/FUN`V,%0,moves),if(cand(not(comp(ucstr(get({{store}}/MOVE`%i0`PLAYBOOK)),%q<picked_playbook>)),not(member(ucstr(get({{store}}/PLAYBOOK`%q<picked_playbook>`MOVES)),%i0))),%i0))]
+        flags: [funsyntax]
+      # %0 a character: the step they are on (playbook, stats, moves), or nothing when done. chargen_rows and
+      # chargen_view are left set.
+      FUN`CHARGEN`STEP:
+        value: |-
+          setqm(chargen_rows,u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%0)),chargen_view,u(%!/FUN`VIEW`LIVE,%0))[cond(not(strlen(u(%!/FUN`V,%q<chargen_view>,playbook))),playbook,cand(words(u(%!/FUN`ARRAY`LEFT,%q<chargen_rows>,)),words(u(%!/FUN`CHARGEN`UNSET,%q<chargen_rows>))),stats,lt(words(u(%!/FUN`CHARGEN`PICKED,%q<chargen_view>)),u(%!/FUN`CHARGEN`PICKS,%q<chargen_view>)),moves)]
+        flags: [funsyntax]
+      FUN`CHARGEN`UNSET:
+        value: |-
+          iter(u(%!/FUN`LIST`ALL,STAT),if(strlen(u(%!/FUN`BUILD`BASE,%0,%i0)),,%i0))
+        flags: [funsyntax]
+      # %0 a character: what to do next, after a step, for a player making their own character. Nothing otherwise.
+      FUN`CHARGEN`AFTER:
+        value: |-
+          if(cand(not(comp(%0,%q<viewer_objid>)),not(isapproved(%#))),%b[u(%!/FUN`CHARGEN`NEXT,%0)])
+        flags: [funsyntax]
+      FUN`CHARGEN`NEXT:
+        value: |-
+          switch(u(%!/FUN`CHARGEN`STEP,%0),playbook,Next: +sheet/playbook lists the playbooks.,stats,Next: +sheet/set <stat>=<number>. [u(%!/FUN`DISPLAY`LEFT,u(%!/FUN`ARRAY`LEFT,%q<chargen_rows>,))],moves,Next: +sheet/take <move>%, one of [itemize(iter(u(%!/FUN`CHARGEN`CHOICES,%q<chargen_view>),u(%!/FUN`MOVE`LABEL,%i0),%b,|),|,or)].,Your sheet is complete.[u(%!/FUN`HINT,CHARGEN)])
+        flags: [funsyntax]
+      # %0 a view: the playbook's moves it could still pick.
+      FUN`CHARGEN`CHOICES:
+        value: |-
+          setq(choices_playbook,u(%!/FUN`V,%0,playbook))[iter(u(%!/FUN`LIST`ALL,MOVE),if(cand(not(comp(ucstr(get({{store}}/MOVE`%i0`PLAYBOOK)),%q<choices_playbook>)),not(u(%!/FUN`V`HAS,%0,%i0))),%i0))]
+        flags: [funsyntax]
 
       # ---- lists on the store -------------------------------------------------------
       # %0 a list on the store (STAT, MOVE, PLAYBOOK): its keys, in order then by key. FUN`LIST`SORTKEY reads
@@ -565,20 +987,6 @@ objects:
         value: |-
           firstof(get({{store}}/STAT`%0),lcstr(%0))
         flags: [funsyntax]
-      # %0 a character, %1 a stat key: its value, 0 when unset.
-      FUN`STAT`VALUE:
-        value: |-
-          default(%0/PBTA`STAT`%1,0)
-        flags: [funsyntax]
-      # %0 a character, %1 stat keys: the highest of them for that character, the first of equals.
-      FUN`STAT`BEST:
-        value: |-
-          setq(best_roller,%0)[last(sortkey(%!/FUN`STAT`SORTKEY,revwords(%1),n))]
-        flags: [funsyntax]
-      FUN`STAT`SORTKEY:
-        value: |-
-          u(%!/FUN`STAT`VALUE,%q<best_roller>,%0)
-        flags: [funsyntax]
       FUN`MOVE`LABEL:
         value: |-
           firstof(get({{store}}/MOVE`%0),lcstr(%0))
@@ -587,21 +995,6 @@ objects:
       FUN`MOVE`STATS:
         value: |-
           filterbool(%!/FUN`IS`STAT,ucstr(get({{store}}/MOVE`%0`STAT)))
-        flags: [funsyntax]
-      # %0 a character, %1 a move key: 1 when they have it. A basic move (no playbook) everyone has; a playbook's
-      # starting moves its characters have; the rest are taken with /take.
-      FUN`MOVE`HAS:
-        value: |-
-          cor(not(strlen(get({{store}}/MOVE`%1`PLAYBOOK))),member(ucstr(get({{store}}/PLAYBOOK`[get(%0/PBTA`PLAYBOOK)]`MOVES)),%1),member(get(%0/PBTA`MOVES),%1))
-        flags: [funsyntax]
-      # %0 a character: every move they have, in order.
-      FUN`MOVE`MINE:
-        value: |-
-          filterbool(%!/FUN`MOVE`HASIT,u(%!/FUN`LIST`ALL,MOVE),,,%0)
-        flags: [funsyntax]
-      FUN`MOVE`HASIT:
-        value: |-
-          u(%!/FUN`MOVE`HAS,%1,%0)
         flags: [funsyntax]
       FUN`PLAYBOOK`LABEL:
         value: |-
@@ -646,6 +1039,16 @@ objects:
         value: |-
           if(gte(%0,0),+%0,%0)
         flags: [funsyntax]
+      # %0 the starting numbers left: "Left to give: +1, 0 and -1." or that none are.
+      FUN`DISPLAY`LEFT:
+        value: |-
+          if(words(%0),Left to give: [itemize(iter(%0,u(%!/FUN`DISPLAY`SIGNED,%i0),%b,|),|)].,Every starting number is given. Set a stat empty to give its number back.)
+        flags: [funsyntax]
+      # %0 a character: " in encounter <n> (<title>)" when a change went to an encounter's copy.
+      FUN`DISPLAY`WHERE:
+        value: |-
+          setq(where_n,u(%!/FUN`ENC`ACTIVE,%0))[if(strlen(%q<where_n>),%bin encounter [u(%!/FUN`ENC`NAME,%q<where_n>)])]
+        flags: [funsyntax]
       # %0 a move key: "rolls with Str", "rolls with Str, Dex or Con", or "adds no stat".
       FUN`DISPLAY`ROLLSWITH:
         value: |-
@@ -668,18 +1071,56 @@ objects:
       # %0 the character, %1 who reads it.
       FUN`SCREEN`SHEET:
         value: |-
-          setqm(screen_stats,u(%!/FUN`LIST`ALL,STAT),
-          screen_moves,u(%!/FUN`MOVE`MINE,%0),
-          screen_hold,iter(lattr(%0/PBTA`HOLD`*),after(%i0,PBTA`HOLD`)))[box(lfields(lit({"cols":2}),Playbook%*<|>XP%*<|>Forward%*<|>Ongoing,firstof(u(%!/FUN`PLAYBOOK`LABEL,get(%0/PBTA`PLAYBOOK)),tone(muted,-))%*<|>[default(%0/PBTA`XP,0)]%*<|>[u(%!/FUN`DISPLAY`SIGNED,default(%0/PBTA`FORWARD,0))]%*<|>[u(%!/FUN`DISPLAY`SIGNED,default(%0/PBTA`ONGOING,0))],%*<|>)%r[rule(Stats)]%r[lfields(lit({"cols":3}),iter(%q<screen_stats>,u(%!/FUN`STAT`LABEL,%i0),%b,%*<|>),iter(%q<screen_stats>,u(%!/FUN`DISPLAY`SIGNED,u(%!/FUN`STAT`VALUE,%0,%i0)),%b,%*<|>),%*<|>)]%r[rule(Moves)]%r[lfields(,iter(%q<screen_moves>,u(%!/FUN`MOVE`LABEL,%i0),%b,%*<|>),iter(%q<screen_moves>,u(%!/FUN`DISPLAY`MOVESTAT,%0,%i0),%b,%*<|>),%*<|>)][if(words(%q<screen_hold>),%r[rule(Hold)]%r[lfields(,iter(%q<screen_hold>,u(%!/FUN`MOVE`LABEL,%i0),%b,%*<|>),iter(%q<screen_hold>,get(%0/PBTA`HOLD`%i0),%b,%*<|>),%*<|>)])]%r[rule()]%r[tone(muted,u(%!/FUN`DISPLAY`FOOTER,%0,%1))],name(%0))]
+          setqm(screen_view,u(%!/FUN`VIEW`LIVE,%0),screen_stats,u(%!/FUN`LIST`ALL,STAT))[setqm(screen_moves,u(%!/FUN`V,%q<screen_view>,moves),screen_hold,u(%!/FUN`V,%q<screen_view>,hold))][box(lfields(lit({"cols":2}),Playbook%*<|>XP%*<|>Forward%*<|>Ongoing,firstof(u(%!/FUN`PLAYBOOK`LABEL,u(%!/FUN`V,%q<screen_view>,playbook)),tone(muted,-))%*<|>[default(%0/PBTA`XP,0)]%*<|>[u(%!/FUN`DISPLAY`SIGNED,u(%!/FUN`V,%q<screen_view>,forward))]%*<|>[u(%!/FUN`DISPLAY`SIGNED,u(%!/FUN`V,%q<screen_view>,ongoing))],%*<|>)%r[rule(Stats)]%r[lfields(lit({"cols":3}),iter(%q<screen_stats>,u(%!/FUN`STAT`LABEL,%i0),%b,%*<|>),iter(%q<screen_stats>,u(%!/FUN`DISPLAY`SIGNED,u(%!/FUN`V`STAT,%q<screen_view>,%i0)),%b,%*<|>),%*<|>)]%r[rule(Moves)]%r[lfields(,iter(%q<screen_moves>,u(%!/FUN`MOVE`LABEL,%i0),%b,%*<|>),iter(%q<screen_moves>,u(%!/FUN`DISPLAY`MOVESTAT,%q<screen_view>,%i0),%b,%*<|>),%*<|>)][if(words(%q<screen_hold>),%r[rule(Hold)]%r[lfields(,iter(%q<screen_hold>,u(%!/FUN`MOVE`LABEL,before(%i0,=)),%b,%*<|>),iter(%q<screen_hold>,after(%i0,=),%b,%*<|>),%*<|>)])]%r[rule()]%r[tone(muted,u(%!/FUN`DISPLAY`FOOTER,%0,%1))],name(%0))]
         flags: [funsyntax]
-      # %0 a character, %1 a move key: what the move adds for them, "+1 (Str)", "best of Str, Dex...", or "no stat".
+      # %0 a view, %1 a move key: what the move adds, "+1 (Str)", "you choose: Str, Dex...", or "no stat".
       FUN`DISPLAY`MOVESTAT:
         value: |-
-          setq(movestat_stats,u(%!/FUN`MOVE`STATS,%1))[switch(words(%q<movestat_stats>),0,no stat,1,[u(%!/FUN`DISPLAY`SIGNED,u(%!/FUN`STAT`VALUE,%0,%q<movestat_stats>))] %([u(%!/FUN`STAT`LABEL,%q<movestat_stats>)]%),you choose: [itemize(iter(%q<movestat_stats>,u(%!/FUN`STAT`LABEL,%i0),%b,|),|,or)])]
+          setq(movestat_stats,u(%!/FUN`MOVE`STATS,%1))[switch(words(%q<movestat_stats>),0,no stat,1,[u(%!/FUN`DISPLAY`SIGNED,u(%!/FUN`V`STAT,%0,%q<movestat_stats>))] %([u(%!/FUN`STAT`LABEL,%q<movestat_stats>)]%),you choose: [itemize(iter(%q<movestat_stats>,u(%!/FUN`STAT`LABEL,%i0),%b,|),|,or)])]
         flags: [funsyntax]
+      # %0 the character, %1 who reads it.
       FUN`DISPLAY`FOOTER:
         value: |-
-          cond(cand(not(comp(objid(%1),%0)),not(isapproved(%1)),not(u(%!/FUN`PERM`KEEPER,%1))),+sheet/playbook picks a playbook and +sheet/set <stat>=<number> sets a stat. +check <move> rolls.[u(%!/FUN`HINT,FOOTER)],not(comp(objid(%1),%0)),+check <move> rolls. +sheet/move <move> shows a move's text.,+check <move> rolls 2d6 plus a stat.)
+          setq(footer_n,u(%!/FUN`ENC`JOINED,%0))[cond(cand(not(comp(objid(%1),%0)),not(isapproved(%1)),not(u(%!/FUN`PERM`KEEPER,%1))),u(%!/FUN`CHARGEN`NEXT,%0) +sheet/chargen shows every step.[u(%!/FUN`HINT,FOOTER)],not(comp(objid(%1),%0)),+check <move> rolls. +sheet/move <move> shows a move's text.,+check <move> rolls 2d6 plus a stat.)][if(words(%q<footer_n>),%b[name(%0)] plays from a copy in encounter[if(gt(words(%q<footer_n>),1),s)] [itemize(%q<footer_n>)]: +encounter shows [if(gt(words(%q<footer_n>),1),them,it)].)]
+        flags: [funsyntax]
+      # %0 the character, %1 who reads it: the steps of making a character.
+      FUN`SCREEN`CHARGEN:
+        value: |-
+          setq(chargen_now,u(%!/FUN`CHARGEN`STEP,%0))[setqm(chargen_playbook,u(%!/FUN`V,%q<chargen_view>,playbook),chargen_left,u(%!/FUN`ARRAY`LEFT,%q<chargen_rows>,),chargen_picked,u(%!/FUN`CHARGEN`PICKED,%q<chargen_view>))][box([u(%!/FUN`DISPLAY`STEP,1,Playbook,strlen(%q<chargen_playbook>),firstof(u(%!/FUN`PLAYBOOK`LABEL,%q<chargen_playbook>),+sheet/playbook lists them and +sheet/playbook <playbook> picks one.))]%r[u(%!/FUN`DISPLAY`STEP,2,Stats,not(cand(words(%q<chargen_left>),words(u(%!/FUN`CHARGEN`UNSET,%q<chargen_rows>)))),[itemize(iter(u(%!/FUN`LIST`ALL,STAT),[u(%!/FUN`STAT`LABEL,%i0)] [if(strlen(u(%!/FUN`BUILD`BASE,%q<chargen_rows>,%i0)),u(%!/FUN`DISPLAY`SIGNED,u(%!/FUN`BUILD`BASE,%q<chargen_rows>,%i0)),-)],%b,|),|)]. [u(%!/FUN`DISPLAY`LEFT,%q<chargen_left>)])]%r[u(%!/FUN`DISPLAY`STEP,3,Moves,cand(strlen(%q<chargen_playbook>),gte(words(%q<chargen_picked>),u(%!/FUN`CHARGEN`PICKS,%q<chargen_view>))),if(strlen(%q<chargen_playbook>),Picked [words(%q<chargen_picked>)] of [u(%!/FUN`CHARGEN`PICKS,%q<chargen_view>)][if(words(%q<chargen_picked>),: [itemize(iter(%q<chargen_picked>,u(%!/FUN`MOVE`LABEL,%i0),%b,|),|)])].[if(words(u(%!/FUN`CHARGEN`CHOICES,%q<chargen_view>)),%bTo pick from: [itemize(iter(u(%!/FUN`CHARGEN`CHOICES,%q<chargen_view>),u(%!/FUN`MOVE`LABEL,%i0),%b,|),|)].)],After the playbook.))]%r[rule()]%r[tone(muted,if(strlen(%q<chargen_now>),u(%!/FUN`CHARGEN`NEXT,%0),Complete.[if(not(isapproved(%0)),u(%!/FUN`HINT,CHARGEN))]))],Making [name(%0)])]
+        flags: [funsyntax]
+      # %0 the number, %1 the step, %2 1 when done, %3 what it says.
+      FUN`DISPLAY`STEP:
+        value: |-
+          %0. [tone(strong,%1)] [if(%2,tone(success,done),tone(warning,to do))]: %3
+        flags: [funsyntax]
+      # %0 the character: their ledger, oldest first. Entries no longer in force are muted.
+      FUN`SCREEN`LEDGER:
+        value: |-
+          setq(ledger_rows,u(%!/FUN`LEDGER`ROWS,%0))[setq(ledger_live,u(%!/FUN`LEDGER`LIVE,%q<ledger_rows>))][box(if(words(%q<ledger_rows>),ldatatable(lit({"nowrap":"1|3|4","grow":"|1"}),#|Entry|Phase|By,iter(%q<ledger_rows>,u(%!/FUN`DISPLAY`LEDGERROW,%i0),%b,%*<^>),%*<^>),There are no entries yet.)%r[rule()]%r[tone(muted,Muted entries are revoked or cleared. +sheet/chargen shows the steps.)],Ledger: [name(%0)])]
+        flags: [funsyntax]
+      FUN`DISPLAY`LEDGERROW:
+        value: |-
+          setq(ledgerrow_on,cor(member(%q<ledger_live>,%0),match(clear revoke,elements(%0,2,~))))[iter(first(%0,~)|[u(%!/FUN`DISPLAY`ENTRY,%0)]|[elements(%0,5,~)]|[name(elements(%0,6,~))],if(%q<ledgerrow_on>,%i0,tone(muted,%i0)),|,|)]
+        flags: [funsyntax]
+      # %0 a row: what the entry does.
+      FUN`DISPLAY`ENTRY:
+        value: |-
+          setqm(entry_kind,elements(%0,2,~),entry_key,elements(%0,3,~),entry_value,elements(%0,4,~))[switch(%q<entry_kind>,playbook,Playbook: [u(%!/FUN`PLAYBOOK`LABEL,%q<entry_key>)],stat,[u(%!/FUN`STAT`LABEL,%q<entry_key>)] [if(strlen(%q<entry_value>),u(%!/FUN`DISPLAY`SIGNED,%q<entry_value>),unassigned)],boost,[u(%!/FUN`STAT`LABEL,%q<entry_key>)] [u(%!/FUN`DISPLAY`SIGNED,%q<entry_value>)] %(advance%),move,Move: [u(%!/FUN`MOVE`LABEL,%q<entry_key>)],revoke,Revokes entry %q<entry_value>,clear,Clears everything before it,%q<entry_kind>)]
+        flags: [funsyntax]
+      # %0 an encounter, %1 who reads it.
+      FUN`SCREEN`ENCOUNTER:
+        value: |-
+          setq(enc_members,u(%!/FUN`ENC`MEMBERS,%0))[box(Run by [name(get({{encounters}}/ENC`%0`GM))] in [name(get({{encounters}}/ENC`%0`ROOM))].%r[rule()]%r[if(words(%q<enc_members>),ldatatable(lit({"nowrap":"1|2|4|5","grow":"||1"}),Name|Playbook|Stats|Fwd|Ong|Hold,iter(%q<enc_members>,u(%!/FUN`DISPLAY`ENCROW,%i0,%0),%b,%*<^>),%*<^>),Nobody has joined yet.)]%r[rule()]%r[tone(muted,if(u(%!/FUN`ENC`GM,%1,%0),/add%, /remove and /keep <name>=%0%, and /end %0 run it. Members roll from their copies here.,if(u(%!/FUN`ENC`MEMBER,%1,%0),You roll from your copy while you are in its room. /leave %0 comes out.,+encounter/join %0 takes part with a copy of your sheet.)))],Encounter [u(%!/FUN`ENC`NAME,%0)])]
+        flags: [funsyntax]
+      # %0 the encounters here, %1 the ones %2 is in.
+      FUN`SCREEN`ENCOUNTERS:
+        value: |-
+          setqm(encs_all,setunion(%0,%1,,n),encs_active,u(%!/FUN`ENC`ACTIVE,%2))[box(ldatatable(lit({"nowrap":"1|3|4|5","grow":"|1"}),#|Title|Where|Members|You,iter(%q<encs_all>,%i0|[get({{encounters}}/ENC`%i0)]|[if(member(%0,%i0),here,name(get({{encounters}}/ENC`%i0`ROOM)))]|[words(lattr({{encounters}}/ENC`%i0`COPY`*))]|[cond(member(%q<encs_active>,%i0),rolling here,member(%1,%i0),joined,-)],%b,%*<^>),%*<^>)%r[rule()]%r[tone(muted,+encounter <n> shows one. /join <n> takes part and /use <n> picks which copy you roll from here.)],Encounters)]
+        flags: [funsyntax]
+      # %0 a member, %1 the encounter: their copy in it, one table row.
+      FUN`DISPLAY`ENCROW:
+        value: |-
+          setq(encrow_copy,get({{encounters}}/ENC`%1`COPY`[after(num(%0),#)]))[name(%0)]|[firstof(u(%!/FUN`PLAYBOOK`LABEL,u(%!/FUN`V,%q<encrow_copy>,playbook)),-)]|[itemize(iter(u(%!/FUN`V,%q<encrow_copy>,stats),[u(%!/FUN`STAT`LABEL,before(%i0,=))] [u(%!/FUN`DISPLAY`SIGNED,after(%i0,=))],%b,~),~)]|[u(%!/FUN`DISPLAY`SIGNED,u(%!/FUN`V,%q<encrow_copy>,forward))]|[u(%!/FUN`DISPLAY`SIGNED,u(%!/FUN`V,%q<encrow_copy>,ongoing))]|[firstof(itemize(iter(u(%!/FUN`V,%q<encrow_copy>,hold),[u(%!/FUN`MOVE`LABEL,before(%i0,=))] [after(%i0,=)],%b,~),~),-)]
         flags: [funsyntax]
       # %0 a move key, %1 who reads it.
       FUN`SCREEN`MOVE:
@@ -696,7 +1137,12 @@ objects:
         flags: [funsyntax]
       FUN`SCREEN`PLAYBOOKS:
         value: |-
-          setq(screen_playbooks,u(%!/FUN`LIST`ALL,PLAYBOOK))[box(if(words(%q<screen_playbooks>),ldatatable(lit({"nowrap":"1","grow":"||1"}),Playbook|Suggested stats|Starting moves,iter(%q<screen_playbooks>,u(%!/FUN`PLAYBOOK`LABEL,%i0)|[u(%!/FUN`DISPLAY`PAIRS,get({{store}}/PLAYBOOK`%i0`STATS))]|[itemize(iter(get({{store}}/PLAYBOOK`%i0`MOVES),u(%!/FUN`MOVE`LABEL,ucstr(%i0)),%b,|),|)],,%*<^>),%*<^>),There are no playbooks.)%r[rule()]%r[tone(muted,+sheet/playbook <playbook> picks one.)],PbtA playbooks)]
+          setq(screen_playbooks,u(%!/FUN`LIST`ALL,PLAYBOOK))[box(if(words(%q<screen_playbooks>),ldatatable(lit({"nowrap":"1","grow":"||1"}),Playbook|Suggested stats|Moves,iter(%q<screen_playbooks>,u(%!/FUN`PLAYBOOK`LABEL,%i0)|[u(%!/FUN`DISPLAY`PAIRS,get({{store}}/PLAYBOOK`%i0`STATS))]|[u(%!/FUN`DISPLAY`PLAYBOOKMOVES,%i0)],,%*<^>),%*<^>),There are no playbooks.)%r[rule()]%r[tone(muted,+sheet/playbook <playbook> picks one.)],PbtA playbooks)]
+        flags: [funsyntax]
+      # %0 a playbook: "Hold the Line; pick 1 of Stand Fast or Shield Wall".
+      FUN`DISPLAY`PLAYBOOKMOVES:
+        value: |-
+          setqm(pbmoves_start,get({{store}}/PLAYBOOK`%0`MOVES),pbmoves_pick,default({{store}}/PLAYBOOK`%0`PICK,0))[itemize(iter(%q<pbmoves_start>,u(%!/FUN`MOVE`LABEL,ucstr(%i0)),%b,|),|)][if(%q<pbmoves_pick>,[if(words(%q<pbmoves_start>),;%b)]pick %q<pbmoves_pick> of [itemize(trim(squish(iter(u(%!/FUN`LIST`ALL,MOVE),if(cand(not(comp(ucstr(get({{store}}/MOVE`%i0`PLAYBOOK)),%0)),not(member(ucstr(%q<pbmoves_start>),%i0))),u(%!/FUN`MOVE`LABEL,%i0)),%b,|),|),|),|,or)])]
         flags: [funsyntax]
       # "str=2 dex=1" as "Str +2, Dex +1".
       FUN`DISPLAY`PAIRS:
@@ -706,7 +1152,8 @@ objects:
 
       # ---- the sheet API ------------------------------------------------------------
       # What other packages call: u({{sheet-pbta/sheet}}/API`<NAME>,...). Every sheet package has these names.
-      # They read and roll; API`SPEND and API`AWARD are the ones that write.
+      # They read the character's sheet itself, never an encounter's copy; API`SPEND and API`AWARD are the ones
+      # that write.
       API:
         value: |-
           The PbtA sheet's functions for other packages. See the package README.
@@ -736,12 +1183,13 @@ objects:
       # 0 when it names none.
       API`RATING:
         value: |-
-          setq(rating_move,u(%!/FUN`TRAIT`MOVE,%1))[u(%!/FUN`STAT`VALUE,%0,if(strlen(%q<rating_move>),u(%!/FUN`STAT`BEST,%0,u(%!/FUN`MOVE`STATS,%q<rating_move>)),ucstr(%1)))]
+          setqm(rating_view,u(%!/FUN`VIEW`LIVE,%0),rating_move,u(%!/FUN`TRAIT`MOVE,%1))[if(cand(strlen(%q<rating_move>),not(words(u(%!/FUN`MOVE`STATS,%q<rating_move>)))),0,u(%!/FUN`V`STAT,%q<rating_view>,if(strlen(%q<rating_move>),u(%!/FUN`V`BEST,%q<rating_view>,u(%!/FUN`MOVE`STATS,%q<rating_move>)),ucstr(%1))))]
         flags: [VISUAL]
-      # %0 a character, %1 a key: 1 when they may roll it (every stat; a move they have).
+      # %0 a character, %1 a key: 1 when they may roll it (every stat; a move they have). Without a key, 1 when
+      # they have a sheet.
       API`HAS:
         value: |-
-          if(strlen(%1),if(strlen(u(%!/FUN`TRAIT`MOVE,%1)),u(%!/FUN`MOVE`HAS,%0,u(%!/FUN`TRAIT`MOVE,%1)),1),hasattr(%0,PBTA))
+          if(strlen(%1),if(strlen(u(%!/FUN`TRAIT`MOVE,%1)),u(%!/FUN`V`HAS,u(%!/FUN`VIEW`LIVE,%0),u(%!/FUN`TRAIT`MOVE,%1)),1),hasattr(%0,PBTA))
         flags: [VISUAL]
       # %0 a difficulty word (easy to extreme) or a number: what it adds, or nothing. Trivial is nothing: it is
       # not rolled.
@@ -777,9 +1225,14 @@ objects:
       # #-1 and why when the trait, stat or roller is wrong, or the roller lacks the move.
       API`CHECK:
         value: |-
-          setqm(check_api_move,u(%!/FUN`TRAIT`MOVE,%<trait>),
-          check_api_stat,cond(strlen(u(%!/FUN`TRAIT`MOVE,%<trait>)),if(strlen(%<stat>),ucstr(%<stat>),u(%!/FUN`STAT`BEST,%<roller>,u(%!/FUN`MOVE`STATS,u(%!/FUN`TRAIT`MOVE,%<trait>)))),1,ucstr(%<trait>)))[cond(not(hastype(%<roller>,player)),#-1 There is no character to roll for.,cand(strlen(%q<check_api_move>),not(hasattr({{store}},MOVE`%q<check_api_move>))),#-1 There is no move '%<trait>'.,cand(not(strlen(%q<check_api_move>)),not(u(%!/FUN`IS`STAT,%q<check_api_stat>))),#-1 There is no stat '%<trait>'.,cand(strlen(%q<check_api_move>),not(u(%!/FUN`MOVE`HAS,%<roller>,%q<check_api_move>))),#-1 You don't have [u(%!/FUN`MOVE`LABEL,%q<check_api_move>)].,cand(strlen(%q<check_api_move>),strlen(%<stat>),not(member(u(%!/FUN`MOVE`STATS,%q<check_api_move>),%q<check_api_stat>))),#-1 [u(%!/FUN`MOVE`LABEL,%q<check_api_move>)] [u(%!/FUN`DISPLAY`ROLLSWITH,%q<check_api_move>)].,u(%!/FUN`CHECK`ROLLED,%q<check_api_move>,%q<check_api_stat>,add(if(strlen(%q<check_api_stat>),u(%!/FUN`STAT`VALUE,%<roller>,%q<check_api_stat>),0),firstof(%<modifier>,0),firstof(%<target>,0)),%<target>))]
+          if(hastype(%<roller>,player),u(%!/FUN`CHECK`VIEW,u(%!/FUN`VIEW`LIVE,%<roller>),%<trait>,%<stat>,%<modifier>,%<target>),#-1 There is no character to roll for.)
         flags: [VISUAL]
+      # %0 a view, %1 a trait key, %2 a stat key or nothing, %3 a number to add, %4 the difficulty's modifier.
+      FUN`CHECK`VIEW:
+        value: |-
+          setqm(check_api_move,u(%!/FUN`TRAIT`MOVE,%1),
+          check_api_stat,cond(strlen(u(%!/FUN`TRAIT`MOVE,%1)),if(strlen(%2),ucstr(%2),u(%!/FUN`V`BEST,%0,u(%!/FUN`MOVE`STATS,u(%!/FUN`TRAIT`MOVE,%1)))),1,ucstr(%1)))[cond(cand(strlen(%q<check_api_move>),not(hasattr({{store}},MOVE`%q<check_api_move>))),#-1 There is no move '%1'.,cand(not(strlen(%q<check_api_move>)),not(u(%!/FUN`IS`STAT,%q<check_api_stat>))),#-1 There is no stat '%1'.,cand(strlen(%q<check_api_move>),not(u(%!/FUN`V`HAS,%0,%q<check_api_move>))),#-1 You don't have [u(%!/FUN`MOVE`LABEL,%q<check_api_move>)].,cand(strlen(%q<check_api_move>),strlen(%2),not(member(u(%!/FUN`MOVE`STATS,%q<check_api_move>),%q<check_api_stat>))),#-1 [u(%!/FUN`MOVE`LABEL,%q<check_api_move>)] [u(%!/FUN`DISPLAY`ROLLSWITH,%q<check_api_move>)].,1,u(%!/FUN`CHECK`ROLLED,%q<check_api_move>,%q<check_api_stat>,add(if(strlen(%q<check_api_stat>),u(%!/FUN`V`STAT,%0,%q<check_api_stat>),0),firstof(%3,0),firstof(%4,0)),%4))]
+        flags: [funsyntax]
       # %0 the move key or nothing, %1 the stat key or nothing, %2 what is added, %3 the difficulty's modifier.
       FUN`CHECK`ROLLED:
         value: |-
@@ -798,7 +1251,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add/noparse/rsnoparse +sheet; @hook/override/inline +sheet=%!,CMD`SHEET; @command/add/noparse/rsnoparse +check; @hook/override/inline +check=%!,CMD`CHECK
+          @command/add/noparse/rsnoparse +sheet; @hook/override/inline +sheet=%!,CMD`SHEET; @command/add/noparse/rsnoparse +check; @hook/override/inline +check=%!,CMD`CHECK; @command/add/noparse/rsnoparse +encounter; @hook/override/inline +encounter=%!,CMD`ENCOUNTER
         flags: [cmdsyntax]
       AINSTALL:
         value: |-
@@ -850,13 +1303,15 @@ objects:
       STAT`CHA`ORDER: |-
         6
       PLAYBOOK: |-
-        The playbooks, one branch each, with STATS (suggested) and MOVES (starting moves) beneath.
+        The playbooks, one branch each, with STATS (suggested), MOVES (starting moves) and PICK (how many of its other moves a new character picks) beneath.
       PLAYBOOK`WARDEN: |-
         Warden
       PLAYBOOK`WARDEN`STATS: |-
         con=2 str=1 wis=1 dex=0 cha=0 int=-1
       PLAYBOOK`WARDEN`MOVES: |-
         hold-the-line
+      PLAYBOOK`WARDEN`PICK: |-
+        1
       PLAYBOOK`WARDEN`ORDER: |-
         1
       PLAYBOOK`WAYFARER: |-
@@ -865,6 +1320,8 @@ objects:
         wis=2 dex=1 int=1 cha=0 con=0 str=-1
       PLAYBOOK`WAYFARER`MOVES: |-
         know-the-way
+      PLAYBOOK`WAYFARER`PICK: |-
+        1
       PLAYBOOK`WAYFARER`ORDER: |-
         2
       MOVE: |-
@@ -911,6 +1368,48 @@ objects:
         On a 7–9, you know the weather, but not when it will turn.
       MOVE`READ-THE-SKY`ORDER: |-
         42
+      MOVE`STAND-FAST: |-
+        Stand Fast
+      MOVE`STAND-FAST`STAT: |-
+        con
+      MOVE`STAND-FAST`PLAYBOOK: |-
+        warden
+      MOVE`STAND-FAST`TEXT: |-
+        When something tries to move you from where you stand, roll+Con. On a 10+, you do not budge, and you take +1 forward against it. On a 7–9, you hold your place, but it costs you; the GM says what.
+      MOVE`STAND-FAST`HIT: |-
+        On a 10+, you do not budge, and you take +1 forward against it.
+      MOVE`STAND-FAST`PARTIAL: |-
+        On a 7–9, you hold your place, but it costs you; the GM says what.
+      MOVE`STAND-FAST`ORDER: |-
+        43
+      MOVE`WATCHFUL-EYE: |-
+        Watchful Eye
+      MOVE`WATCHFUL-EYE`STAT: |-
+        wis
+      MOVE`WATCHFUL-EYE`PLAYBOOK: |-
+        warden
+      MOVE`WATCHFUL-EYE`TEXT: |-
+        When you keep watch over a place you guard, roll+Wis. On a 10+, nothing comes near without your knowing, and you hold 1 to act first when it does. On a 7–9, you see it coming, but only just.
+      MOVE`WATCHFUL-EYE`HIT: |-
+        On a 10+, nothing comes near without your knowing, and you hold 1 to act first when it does.
+      MOVE`WATCHFUL-EYE`PARTIAL: |-
+        On a 7–9, you see it coming, but only just.
+      MOVE`WATCHFUL-EYE`ORDER: |-
+        44
+      MOVE`FORAGE: |-
+        Forage
+      MOVE`FORAGE`STAT: |-
+        wis
+      MOVE`FORAGE`PLAYBOOK: |-
+        wayfarer
+      MOVE`FORAGE`TEXT: |-
+        When you spend a few hours living off the land, roll+Wis. On a 10+, you find food and water for the whole party for a day. On a 7–9, you find enough for yourself and one other.
+      MOVE`FORAGE`HIT: |-
+        On a 10+, you find food and water for the whole party for a day.
+      MOVE`FORAGE`PARTIAL: |-
+        On a 7–9, you find enough for yourself and one other.
+      MOVE`FORAGE`ORDER: |-
+        45
       MOVE`HACK-AND-SLASH: |-
         Hack and Slash
       MOVE`HACK-AND-SLASH`STAT: |-
@@ -1184,6 +1683,19 @@ objects:
         26
       MOVE`OUTSTANDING-WARRANTS`SOURCE: |-
         Dungeon World
+  # The encounters. Inside the PbtA Sheet, so no player can reach it, and no_command. ENC`<n> an encounter's
+  # title, with ROOM and GM (objids), STARTED (secs) and COPY`<dbref number> each member's copy of their sheet,
+  # a JSON view. A copy lasts until its member leaves or the encounter ends, however many days that is, and
+  # nothing but that encounter reads or writes it.
+  - ref: encounters
+    type: thing
+    name: PbtA Encounters
+    location: "{{sheet}}"
+    flags: [no_command]
+    attributes:
+      ENC: |-
+        The encounters running now, one branch each.
+
   # The +help topics, on an object of their own. sheet-pbta-help registers it with +help; without that bridge
   # nothing reads it. HELP`<TOPIC> is a topic, its subtopics the leaves beneath, LOCK`<TOPIC> who may read it.
   - ref: sheet_help
@@ -1192,31 +1704,48 @@ objects:
     location: "{{sheet}}"
     attributes:
       HELP: |-
-        Your character's PbtA sheet, and rolling moves against it: +sheet and +check.
+        Your character's PbtA sheet, rolling moves against it, and encounters: +sheet, +check and +encounter.
       SEE: |-
         Cross-references. One leaf per topic; subtopics come from the tree, not from here.
       SEE`SHEET: |-
-        check
+        check encounter
       SEE`CHECK: |-
-        sheet
+        sheet encounter
+      SEE`ENCOUNTER: |-
+        sheet check
       HELP`SHEET: |-
         `+sheet` shows your character's sheet: playbook, XP, forward and ongoing, stats, the moves you have, and hold.
 
         - `+sheet` shows your own; `+sheet <name>` another character's, when the game lets you read it.
-        - `+sheet/playbook` lists the playbooks; `+sheet/playbook <playbook>` picks one. If you have set no stat yet, you get its suggested stats.
-        - `+sheet/set <stat>=<number>` sets a stat, from -3 up to +2 unless your game changed it. Leave the number out to clear it.
-        - `+sheet/take <move>` takes a move from your playbook; `+sheet/drop <move>` gives it back.
+        - `+sheet/chargen` shows the steps of making your character and what to do next.
         - `+sheet/traits` lists every move and stat; `+sheet/move <move>` shows one move's whole text.
+        - `+sheet/ledger` lists every entry your sheet is built from, oldest first.
 
-        You set stats and pick moves until your character is approved; then staff change them.
+        Your sheet is built from its ledger: each playbook, stat, move and advance is an entry. Until your character is approved you change your own entries freely; after that, `+sheet/advance` spends XP and staff make the other changes.
+
+        For example:
+
+        `+sheet/chargen`
+
+        Output: `1. Playbook done: Warden`
+
+        See `+help sheet chargen` for making a character, `+help sheet play` for forward, ongoing, hold and advances, and `+help check` for rolling.
+      HELP`SHEET`CHARGEN: |-
+        Making a character takes three steps. `+sheet/chargen` shows each and what comes next.
+
+        1. `+sheet/playbook` lists the playbooks; `+sheet/playbook <playbook>` picks one. If no stat is set yet, you get its suggested stats.
+        2. `+sheet/set <stat>=<number>` gives a stat one of the starting numbers, +2, +1, +1, 0, 0 and -1 unless your game changed them. `+sheet/set <stat>=` frees its number again.
+        3. `+sheet/take <move>` picks one of your playbook's other moves, as many as it says; `+sheet/drop <move>` gives one back.
+
+        Changing your playbook gives back the moves you picked from the old one.
 
         For example:
 
         `+sheet/set str=2`
 
-        Output: `\[SHEET\] Done: Str is +2 on Alice's sheet.`
+        Output: `\[SHEET\] Done: Str is +2 on Alice's sheet. Next: +sheet/take <move>, one of Stand Fast or Watchful Eye.`
 
-        See `+help sheet play` for forward, ongoing and hold, and `+help check` for rolling.
+        When every step is done, your sheet is complete. Once you are approved, staff change it.
       HELP`SHEET`PLAY: |-
         In play you keep your own forward, ongoing and hold:
 
@@ -1224,13 +1753,15 @@ objects:
         - `+sheet/ongoing <number>` gives you ongoing: it is added to every roll until you clear it with `+sheet/ongoing 0`.
         - `+sheet/hold <move>=<number>` records hold a move gave you, such as `+sheet/hold defend=3`. Set it lower as you spend it; 0 clears it.
 
+        In an encounter these change your copy there, not your sheet. See `+help encounter`.
+
+        Staff give XP. Once you are approved, `+sheet/advance <stat>` spends 5 XP on +1 to a stat, up to +3, and `+sheet/advance <move>` on a move from your playbook, unless your game changed the numbers.
+
         For example:
 
-        `+sheet/forward 1`
+        `+sheet/advance wis`
 
-        Output: `\[SHEET\] Done: Alice has +1 forward.`
-
-        Staff give XP; your sheet shows it.
+        Output: `\[SHEET\] Done: Alice advances: Wis is +2 now (5 XP spent).`
       HELP`CHECK: |-
         `+check <move>` makes a move: it rolls two six-sided dice and adds the stat the move names, where the room sees it.
 
@@ -1241,13 +1772,44 @@ objects:
         - `+check <move>=<difficulty>` adds the difficulty's modifier: easy +1, standard +0, hard -1, extreme -2 unless your game changed them. A trivial task needs no roll.
         - `/private` rolls where only you see it.
 
-        Your forward and ongoing are added, and the forward is spent. Every roll is kept under a number that `rollinfo()` reads back.
+        Your forward and ongoing are added, and the forward is spent. In an encounter you roll from your copy there. Every roll is kept under a number that `rollinfo()` reads back.
 
         For example:
 
         `+check hack and slash`
 
         Output: `\[SHEET\] Alice rolls Hack and Slash (+Str): 2d6\[4, 5\] + 2 = 11: a full hit (roll 42)`
+      HELP`ENCOUNTER: |-
+        An encounter is a scene played from copies of the sheets, so what happens in it stays there. It lasts until its GM ends it, over as many days as it takes.
+
+        - `+encounter` lists the encounters here and yours; `+encounter <n>` shows one.
+        - `+encounter/start [<title>]` starts one in your room. You run it.
+        - `+encounter/join [<n>]` takes part with a copy of your sheet as it is now.
+        - `+encounter/leave [<n>]` comes out; your copy there is gone.
+        - `+encounter/use <n>` picks which copy you roll from, when you are in more than one here.
+
+        While you are in an encounter's room, `+check`, forward, ongoing and hold use your copy in it. Anywhere else, your sheet.
+
+        For example:
+
+        `+encounter/join 1`
+
+        Output: `\[ENCOUNTER\] Alice joins 1 (Goblin ambush).`
+
+        See `+help encounter gm` for running one.
+      HELP`ENCOUNTER`GM: |-
+        Whoever starts an encounter runs it; sheet keepers run any. Give the number after `=` when the room has more than one.
+
+        - `+encounter/add <name>[=<n>]` brings someone in the room into it, with a copy of their sheet.
+        - `+encounter/remove <name>[=<n>]` takes them out; their copy goes.
+        - `+encounter/keep <name>[=<n>]` writes their forward, ongoing and hold from the copy to their sheet.
+        - `+encounter/end [<n>]` ends it. Every copy goes, and nothing is written back unless you kept it first.
+
+        For example:
+
+        `+encounter/keep Alice=1`
+
+        Output: `\[ENCOUNTER\] Done: Alice's sheet keeps the forward, ongoing and hold from 1 (Goblin ambush).`
       HELP`SHEET`CREDITS: |-
         The stats and the Dungeon World moves on this sheet \(the eight basic moves, and Last Breath, Take Watch, Undertake a Perilous Journey, Carouse, Supply, Recruit and Outstanding Warrants\) are from Dungeon World by Sage LaTorra and Adam Koebel, licensed under the Creative Commons Attribution 3.0 Unported License \(https://creativecommons.org/licenses/by/3.0/\). Each move's text is as the authors wrote it, split into the whole move and the part for each result.
 
@@ -1257,10 +1819,13 @@ objects:
       HELP`SHEET`STAFF: |-
         Sheet keepers \(`softcode.pbta.admin`, or the PbtA Sheet Keeper role\) read every sheet and change any character's at any time:
 
-        - `+sheet <name>` shows a character's sheet.
-        - `/set`, `/take`, `/drop` and `/hold` take `<name>/` first: `+sheet/set Alice/str=3`. A keeper may set a stat up to +3, and give a move from any playbook.
+        - `/set`, `/take`, `/drop` and `/advance` take `<name>/` first: `+sheet/set Alice/str=3`. A keeper may set a stat up to the highest, give a move from any playbook, and give an advance without XP.
         - `/playbook`, `/forward` and `/ongoing` take `<name>=` first: `+sheet/playbook Alice=wayfarer`.
         - `+sheet/xp <name>=<xp>` sets XP; `=+1` or `=-1` adds or takes.
+        - `+sheet/ledger <name>` lists their entries. `+sheet/revoke <name>/<n>` takes one back.
+        - `+sheet/clear <name>` revokes their whole build, so character creation starts again. XP, forward, ongoing and hold stay.
+
+        Every keeper change is a new ledger entry, so nothing is lost: a revoke or clear is an entry too.
 
         `@role/assign <player>=pbta-sheet-keeper` makes someone a keeper.
       LOCK`SHEET`SETTINGS: |-
@@ -1268,12 +1833,14 @@ objects:
       HELP`SHEET`SETTINGS: |-
         `+config pbta` lists the settings and `+config pbta/<setting>=<value>` changes one \(`config.admin`\):
 
-        - `cap`: the highest stat a player gives themselves \(+2\).
+        - `array`: the starting numbers a new character gives their stats \(`2 1 1 0 0 -1`\).
+        - `max`: the highest a stat goes \(+3\).
+        - `advance`: the XP an advance costs \(5\).
         - `critical`: whether 12 or more is a critical hit \(no\).
         - `modifiers`: what easy, standard, hard and extreme add \(`1 0 -1 -2`\).
         - `public`: whether anyone may read anyone's sheet \(no\).
-        - `stats`: the stats. `moves`: each move's name, the stat it rolls with \(several to choose from, or none\), its playbook \(none for a basic move\), its text and what each result says. `playbooks`: each playbook's suggested stats and starting moves.
+        - `stats`, `moves` and `playbooks`: the lists. A move names its stat \(several to choose from, or none\), its playbook \(none for a basic move\), its text and what each result says. A playbook has suggested stats, starting moves, and how many other moves a new character picks.
 
         For example, `+config/add pbta/moves/sneak=Sneak` adds a move; `+config pbta/moves/sneak/stat=dex` makes it roll with Dex.
 
-        Removing a stat or a move leaves what characters had stored, but the sheet stops showing it.
+        Removing a stat or a move leaves the ledger as it is, but the sheet stops showing it.

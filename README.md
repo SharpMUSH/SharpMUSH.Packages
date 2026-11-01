@@ -54,13 +54,14 @@ constraints checked before anything is planned.
 | [`sheet-fate-help/`](sheet-fate-help/) | 1.0.0 | Bridge: the Fate sheet's topics in `+help` |
 | [`sheet-fate-config/`](sheet-fate-config/) | 1.0.0 | Bridge: the Fate sheet's settings and tables in `+config` |
 | [`sheet-fate-chargen/`](sheet-fate-chargen/) | 1.0.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |
-| [`sheet-pbta/`](sheet-pbta/) | 1.0.1 | Powered by the Apocalypse character sheet: stats, moves and playbooks the game edits, forward, ongoing, hold and XP; `+check` on 2d6. Dungeon World moves under CC BY 3.0 (see its NOTICE) |
-| [`sheet-pbta-help/`](sheet-pbta-help/) | 1.0.0 | Bridge: the PbtA sheet's topics in `+help` |
-| [`sheet-pbta-config/`](sheet-pbta-config/) | 1.0.0 | Bridge: the PbtA sheet's settings and tables in `+config` |
-| [`sheet-pbta-chargen/`](sheet-pbta-chargen/) | 1.0.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |
+| [`sheet-pbta/`](sheet-pbta/) | 2.0.0 | Powered by the Apocalypse character sheet built from a ledger: playbooks, stats and moves the game edits, guided character creation, advances, forward, ongoing, hold and XP; `+check` on 2d6; `+encounter` plays scenes from copies of the sheets. Dungeon World moves under CC BY 3.0 (see its NOTICE) |
+| [`sheet-pbta-help/`](sheet-pbta-help/) | 1.0.1 | Bridge: the PbtA sheet's topics in `+help` |
+| [`sheet-pbta-config/`](sheet-pbta-config/) | 1.0.1 | Bridge: the PbtA sheet's settings and tables in `+config` |
+| [`sheet-pbta-chargen/`](sheet-pbta-chargen/) | 1.1.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |
 | [`duties-d20/`](duties-d20/) | 1.0.0 | Duties roll provider `d20` on the D20 sheet |
 | [`duties-fate/`](duties-fate/) | 1.0.0 | Duties roll provider `fate` on the Fate sheet: teamwork, paid invokes, fate points as rewards |
-| [`duties-pbta/`](duties-pbta/) | 1.0.0 | Duties roll provider `pbta` on the PbtA sheet: aid, forward and ongoing, XP as a reward |
+| [`duties-pbta/`](duties-pbta/) | 1.0.1 | Duties roll provider `pbta` on the PbtA sheet: aid, forward and ongoing, XP as a reward |
+| [`pbta-wiki/`](pbta-wiki/) | 1.0.0 | Wiki pages for the PbtA sheet: how to play, making a character, the playbooks, the basic and special moves, advancement and encounters. Dungeon World moves under CC BY 3.0 |
 | [`sheet-fitd/`](sheet-fitd/) | 1.0.1 | Forged in the Dark character sheet: twelve actions under three attributes, stress, trauma, harm, coin and progress clocks; `+check` on a d6 pool against a position. Blades in the Dark SRD under CC BY 3.0 (see its NOTICE) |
 | [`sheet-fitd-help/`](sheet-fitd-help/) | 1.0.0 | Bridge: the FitD sheet's topics in `+help` |
 | [`sheet-fitd-config/`](sheet-fitd-config/) | 1.0.0 | Bridge: the FitD sheet's settings and lists in `+config` |
