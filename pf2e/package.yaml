@@ -218,7 +218,7 @@ objects:
         value: |-
           @@(%0 an operand, %1 the roll options)[
           if(isnum(%0),%0,
-            squish(iter(%1,if(cand(strmatch(%i0,%0:*),
+            squish(iter(graball(%1,%0:*),if(cand(
               not(strmatch(after(%i0,%0:),*:*)),
               isnum(after(%i0,%0:))),
               after(%i0,%0:)))))]
