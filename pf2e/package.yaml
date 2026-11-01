@@ -514,9 +514,18 @@ objects:
           setq(rule_value,u(FUN`RULE`CLAMP,%q<rule_value>,json_query(%0,extract,$.min),json_query(%0,extract,$.max)))][
           json(object,
             slug,json(string,firstof(if(strmatch(%3,ability),%q<rule_ability>),json_query(%0,extract,$.slug),%2)),
+            label,json(string,u(FUN`RULE`LABEL,%0)),
             type,json(string,%3),
             modifier,%q<rule_value>,
             predicate,u(FUN`FORMULA`INJECT,firstof(json_query(%0,get,predicate),json(array)),%1))]
+        flags: [funsyntax]
+      # Foundry's label for a rule's modifier: the rule's own label, else the item's name. A label that is
+      # a Foundry language key is not in the feed's items, so the item's name stands for it.
+      FUN`RULE`LABEL:
+        value: |-
+          @@(%0 the rule; synthetic_item the item it is on)[
+          setq(rule_label,json_query(%0,extract,$.label))][
+          if(cand(strlen(%q<rule_label>),not(strmatch(%q<rule_label>,PF2E.*))),%q<rule_label>,json_query(%q<synthetic_item>,extract,$.name))]
         flags: [funsyntax]
       FUN`RULE`CLAMP:
         value: |-
@@ -582,8 +591,8 @@ objects:
           setqm(
             check_level, json_query(%0,extract,$.level),
             check_attribute, u(FUN`STAT`ATTRIBUTE,%2),
-            check_rank, json_query(%0,extract,$.skills.%2.rank))]\[[json(object,slug,json(string,%q<check_attribute>),type,"ability",modifier,json_query(%0,extract,$.abilities.%q<check_attribute>.mod))],
-          [json(object,slug,"proficiency",type,"proficiency",modifier,if(%q<check_rank>,add(mul(2,%q<check_rank>),%q<check_level>),0))][
+            check_rank, json_query(%0,extract,$.skills.%2.rank))]\[[json(object,slug,json(string,%q<check_attribute>),label,json(string,extract(Strength Dexterity Constitution Intelligence Wisdom Charisma,match(str dex con int wis cha,%q<check_attribute>),1)),type,"ability",modifier,json_query(%0,extract,$.abilities.%q<check_attribute>.mod))],
+          [json(object,slug,"proficiency",label,json(string,extract(Untrained Trained Expert Master Legendary,inc(firstof(%q<check_rank>,0)),1)),type,"proficiency",modifier,if(%q<check_rank>,add(mul(2,%q<check_rank>),%q<check_level>),0))][
           iter(setunion(iter(u(FUN`STAT`DOMAINS,%2),iter(graball(%q<check_index_used>,%i0~*),after(%i0,~))),),\,[json_query(%1,extract,$\[%i0\].modifier)],%b,)]\]
         flags: [funsyntax]
       # Everything a check needs from the ledger at once: sets check_entries, check_actor, check_grants, check_synthetics, check_index and check_options.
@@ -872,6 +881,12 @@ objects:
         value: |-
           extract(Untrained Trained Expert Master Legendary,inc(firstof(%0,0)),1)
         flags: [funsyntax]
+      FUN`SHOW`LABEL:
+        value: |-
+          @@(%0 a modifier's slug: its label from roll_modifiers)[
+          setq(show_at,first(iter(lnum(0,dec(json_query(%q<roll_modifiers>,size))),if(strmatch(json_query(%q<roll_modifiers>,extract,$\[%i0\].slug),%0),%i0))))][
+          firstof(if(strlen(%q<show_at>),json_query(%q<roll_modifiers>,extract,$\[%q<show_at>\].label)),%0)]
+        flags: [funsyntax]
       FUN`SHOW`STAT`MISS:
         value: |-
           @@(%0 what was typed, %1 the statistics it is the start of: why it names none)[
@@ -890,7 +905,7 @@ objects:
           setq(roll_result,json_query(%q<roll_record>,extract,$.total))][
           name(%q<sheet_target>)] rolls [capstr(%q<roll_stat>)]: [json_query(%q<roll_record>,extract,$.text)][
           if(strlen(%q<cmd_dc>),%bvs DC %q<cmd_dc>: [tone(strong,extract(Critical failure|Failure|Success|Critical success,inc(u({{core}}/FUN`DEGREE`OF`CHECK,%q<roll_result>,%q<cmd_dc>,%q<roll_face>)),1,|))])]%b(roll [json_query(%q<roll_record>,extract,$.id)])[
-          if(words(%q<roll_chosen>),%r[tone(muted,iter(%q<roll_chosen>,[elements(%i0,3,~)] [u(%!/FUN`SHOW`SIGNED,elements(%i0,2,~))],%b,%,%b))])]
+          if(words(%q<roll_chosen>),%r[tone(muted,iter(%q<roll_chosen>,[u(%!/FUN`SHOW`LABEL,elements(%i0,3,~))] [u(%!/FUN`SHOW`SIGNED,elements(%i0,2,~))],%b,%,%b))])]
         flags: [funsyntax]
       FUN`SHOW`LEDGER:
         value: |-
