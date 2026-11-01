@@ -2,7 +2,7 @@
 
 A Forged in the Dark character sheet: twelve actions rated 0 to 4 under Insight, Prowess and
 Resolve, built from a ledger, with XP for each attribute, stress, trauma, harm and coin, separate
-audited ledgers for XP and coin, encounters that play from copies of the sheets, and the game's progress clocks.
+audited ledgers for XP and coin, encounters that play from copies of the sheets, with threats to overcome, and the game's progress clocks.
 Players share out their starting dots until they are approved, then spend XP on advances, and keep
 their own stress, trauma, harm and coin in play. `+check` rolls one six-sided die per point of an
 action and reads the highest against a position, which the whole room sees and the game keeps as a
@@ -44,6 +44,13 @@ Every sheet package answers `+sheet` and `+check`. Install one sheet package per
 | `+encounter [<n>]` | all | The encounters here and yours, or one |
 | `+encounter/start [<title>]`, `/join [<n>]`, `/leave [<n>]`, `/use <n>` | all | Start, join, leave, pick which copy you roll from |
 | `+encounter/add <name>[=<n>]`, `/remove`, `/keep`, `/end [<n>]` | its GM, keepers | Run it; `/keep` writes a copy back to the sheet |
+| `+encounter/position <name>=<position> [<effect>]` | its GM, keepers | A member's position and effect (limited, standard or great); their `+check` with no position uses it |
+| `+foe [<threat>]` | all | The threats in the encounter here, or one |
+| `+foe/bestiary [<kind>]` | all | What a GM can add, or one kind |
+| `+foe/add <kind>[=<count>]`, `/remove <threat>` | its GM, keepers | Add threats, numbered (`Watch guard 1`), or take one out |
+| `+foe/tick <threat>[=<effect or n>]` | its GM, keepers | Fill its clock: limited 1, standard 2 (the default), great 3, or n segments; full, it is overcome |
+| `+foe/harm <threat>=<name>[/<level>]` | its GM, keepers | Mark its harm on a member's copy, at its level or the one given |
+| `+foe/run <n>` | its GM, keepers | Pick which encounter your `+foe` commands use, when the room has several |
 | `+clock`, `+clock <name>` | all | The game's clocks |
 | `+clock/new <name>=<segments>` | all | 4, 6, 8 or 12 segments |
 | `+clock/tick <name>[=<n>]`, `+clock/remove <name>` | who started it, keepers | Fill (or empty) segments; take it away |
@@ -114,6 +121,19 @@ applies. An encounter lasts until `/end`, over any number of days; `/end` drops 
 `/keep` first writes one character's stress, trauma, harm and coin back to their sheet. Nothing one
 encounter does touches another, or the sheet.
 
+## Threats
+
+The GM of an encounter adds threats from a `+config` table of kinds (`+config fitd/foes`) with a label,
+`tier`, `clock` (4, 6, 8 or 12 segments), `harm` (the level it deals, 1 to 3), `harmtext` (what that harm
+is called) and `notes`. The package ships ten of its own, with no setting's names. A threat added to an
+encounter is a copy of its kind, numbered in that encounter, with its own clock, empty at first; changing
+the table changes no threat already added. An encounter holds at most 30. In a room with several
+encounters, `+foe/run <n>` picks the one `+foe` and `/position` use.
+
+Effect fills a threat's clock, and a full clock overcomes it. `+foe/harm` writes the threat's harm into the
+first free slot of its level or above on the member's copy, as `+sheet/harm` does. The GM's
+`/position` is kept per member; `+check` with no position given rolls at it, and the line names the effect.
+
 The Duties provider and every `API`` function always use the sheet itself.
 
 ## Where the data lives
@@ -135,10 +155,12 @@ FITD`USING              the encounter /use picked
 
 On **FitD Encounters**: `ENC`<n>` the title, with `ROOM`, `GM`, `STARTED` and `COPY`<dbref number>`,
 each member's copy, with `STRESS`, `TRAUMA`, `COIN`, `HARM`<SLOT>` and `RATINGS` (`SKIRMISH=2 HUNT=1
-...`, or `none`) beneath.
+...`, or `none`) beneath; `POS`<dbref number>`, a member's position and effect (`risky great`); and
+`FOE`<k>`, threat `k`, a JSON object with `key` (its kind), `label`, `tier`, `clock`, `filled`, `harm`,
+`harmtext` and `notes`.
 
 The lists are `+config` tables on **FitD Sheet Store**: `ACTION` (with `ATTRIBUTE` and `ORDER`) and
-`ATTRIBUTE`. Clocks are on the store too: `` CLOCK`<KEY> `` with `SIZE`, `FILLED` and `OWNER`.
+`ATTRIBUTE`, and `FOE`<KIND>` (with `TIER`, `CLOCK`, `HARM`, `HARMTEXT` and `NOTES`). Clocks are on the store too: `` CLOCK`<KEY> `` with `SIZE`, `FILLED` and `OWNER`.
 
 ## The sheet API
 

@@ -24,7 +24,8 @@ and spells. This package takes none of it.
 
 ## The package's own content
 
-The Warden and Wayfarer playbooks, their moves (Hold the Line, Know the Way, Read the Sky), the rules engine,
+The Warden and Wayfarer playbooks, their moves (Hold the Line, Know the Way, Read the Sky), the foes and GM
+moves, the rules engine,
 the help and every message are this package's own, under the MIT licence, as `package.yaml` says. The
 attribution above travels with any copy of the package; keep it, and the in-game `+help sheet credits` topic,
 when you change or share it.

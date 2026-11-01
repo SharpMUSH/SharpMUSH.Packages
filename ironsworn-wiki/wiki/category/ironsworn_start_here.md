@@ -6,7 +6,7 @@ vows your character swears and fulfils.
 3. [[Assets and experience|main:ironsworn_assets_and_experience]]: every asset, and how experience buys more.
 4. [[Meters and momentum|main:ironsworn_meters]]: health, spirit, supply, momentum and companions.
 5. [[Iron vows|main:ironsworn_vows]]: swearing, marking progress and fulfilling a vow.
-6. [[Encounters|main:ironsworn_encounters]]: scenes played from copies of the sheets.
+6. [[Encounters|main:ironsworn_encounters]]: scenes played from copies of the sheets, with foes.
 
 `+help sheet`, `+help check`, `+help vow` and `+help encounter` cover the commands in the game.
 

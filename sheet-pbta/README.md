@@ -2,7 +2,7 @@
 
 A Powered by the Apocalypse character sheet built from a ledger. Players make their character in three
 guided steps (playbook, stats, moves) until they are approved, then spend XP on advances. They keep their
-own forward, ongoing and hold in play, and make moves with `+check`: two six-sided dice plus a stat, which
+own forward, ongoing, hold and harm in play, and make moves with `+check`: two six-sided dice plus a stat, which
 the whole room sees and the game keeps as a recorded roll. Encounters play a scene from copies of the
 sheets, so nothing that happens in one reaches the sheet or another scene unless its GM keeps it.
 
@@ -35,6 +35,7 @@ one sheet package per game.
 | `+sheet/advance <stat or move>` | approved player | Spend `advance` XP (5) on +1 to a stat, up to `max` (+3), or a move from your playbook |
 | `+sheet/forward <n>`, `+sheet/ongoing <n>` | player | Forward is added to the next roll and spent; ongoing to every roll; 0 clears |
 | `+sheet/hold <move>=<n>` | player | Hold a move gave you; 0 clears |
+| `+sheet/harm <n>`, `+sheet/heal <n\|all>` | player | Mark harm, up to `harm` (6), when they are out of action, or take it off |
 | `+sheet/ledger [<name>]` | all | Every entry the sheet is built from |
 | `+sheet/revoke <name>/<n>`, `+sheet/clear <name>` | keeper | Take back one entry, or the whole build so character creation starts again |
 | `+sheet/xp <name>=<n> [<reason>]` | keeper | Set XP, or `=+<n>`/`=-<n>` to add or take |
@@ -46,12 +47,20 @@ one sheet package per game.
 | `+encounter [<n>]` | all | The encounters here and yours, or one |
 | `+encounter/start [<title>]` | all | Start one in your room and run it |
 | `+encounter/join [<n>]`, `/leave [<n>]`, `/use [<n>]` | all | Take part with a copy of your sheet, come out, or pick which copy you roll from here |
-| `+encounter/add`, `/remove`, `/keep <name>[=<n>]`, `/end [<n>]` | its GM, keeper | Bring someone in, take them out, write their copy's forward, ongoing and hold to their sheet, end it |
+| `+encounter/add`, `/remove`, `/keep <name>[=<n>]`, `/end [<n>]` | its GM, keeper | Bring someone in, take them out, write their copy's forward, ongoing, hold and harm to their sheet, end it |
+| `+foe [<foe>]` | all | The foes in the encounter here, or one |
+| `+foe/bestiary [<kind>]` | all | What a GM can add, or one kind with its tags, instinct and moves |
+| `+foe/add <kind>[=<count>]`, `/remove <foe>` | its GM, keeper | Add foes from the bestiary, numbered (`Goblin 1`), or take one out |
+| `+foe/harm <foe>=<n> [ignore\|piercing <p>]`, `/heal <foe>=<n\|all>` | its GM, keeper | Take harm off a foe's hit points, less its armour (none, or `p` less), or give them back |
+| `+foe/deal <foe>[=<name>[/<armour>]]` | its GM, keeper | Roll a foe's damage; with a member, mark it on their copy's harm, less their armour |
+| `+foe/move [<foe>]`, `+foe/moves` | its GM, keeper | A GM move, or one of the foe's, picked at random and shown to the GM alone; every GM move |
+| `+foe/run <n>` | its GM, keeper | Pick which encounter your `+foe` commands use, when the room has several |
 
 `+check <stat>` rolls a stat alone. Keepers (`softcode.pbta.admin`, the **PbtA Sheet Keeper** role)
 put `<name>/` before the move or stat of `/set`, `/take`, `/drop`, `/advance` and `/hold`, and `<name>=`
-before the value of `/playbook`, `/forward` and `/ongoing`, to change anyone's sheet at any time. A keeper
-may set a stat up to `max`, give a move from any playbook, and give an advance without XP.
+before the value of `/playbook`, `/forward`, `/ongoing`, `/harm` and `/heal`, to change anyone's sheet at any time. A keeper
+may set a stat up to `max`, give a move from any playbook, and give an advance without XP. An encounter's GM
+changes the harm of a member playing from that encounter's copy.
 
 ## The numbers
 
@@ -110,6 +119,22 @@ Nothing one encounter does touches another, or the sheet.
 
 The Duties provider and every `API`` function always use the sheet itself.
 
+## Foes and harm
+
+The GM of an encounter adds foes from the bestiary, a `+config` table of kinds (`+config pbta/foes`) with a
+label, `hp`, `armor`, `damage` (dice such as `1d8+1`), `tags`, `instinct` and `moves` (between `|`). The
+package ships eleven of its own, in the usual sizes: 3 hit points for one of a horde, 6 for one of a group,
+12 alone, 4 more when large and 8 more when huge. A foe added to an encounter is a copy of its kind, numbered
+in that encounter, with its own hit points; changing the bestiary changes no foe already added. An encounter
+holds at most 30 foes. In a room with several encounters, `+foe/run <n>` picks the one `+foe` uses.
+
+`+foe/harm` takes the foe's armour off the harm first: none of it with `ignore`, `p` less with `piercing <p>`.
+`+foe/deal` rolls the foe's damage, and given a member, adds it less their armour to their copy's harm, up to
+`harm`. The GM moves are a table of their own (`+config pbta/gmmoves`); `+foe/move` shows the GM one at
+random, or with a foe, one of its moves.
+
+A character's harm is `PBTA`HARM`, from 0 to `harm`; at `harm` they are out of action.
+
 ## Where the data lives
 
 ```
@@ -118,6 +143,7 @@ PBTA`LEDGER`<n>     a ledger entry
 PBTA`FORWARD        forward, spent by the next roll
 PBTA`ONGOING        ongoing
 PBTA`HOLD           hold, MOVE=n pairs
+PBTA`HARM           harm taken
 PBTA`MERGED         cache: the ledger entries in force
 PBTA`XPLEDGER`<n>   an XP ledger entry
 PBTA`XP             cache: experience
@@ -127,12 +153,14 @@ PBTA`USING          the encounter /use picked
 
 On **PbtA Encounters**: `ENC`<n>` the title, with `ROOM`, `GM`, `STARTED` and `COPY`<dbref number>`, each
 member's copy, a JSON object with `playbook`, `stats` (`STR=1 DEX=0 ...`), `moves`, `forward`, `ongoing`,
-`hold` and `encounter`.
+`hold`, `harm` and `encounter`. `FOE`<k>` is foe `k`, a JSON object with `key` (its kind), `label`, `hp`,
+`hpmax`, `armor`, `damage`, `tags`, `instinct` and `moves`.
 
 The lists are `+config` tables on **PbtA Sheet Store**: `STAT` (with `ORDER`), `MOVE` (with `STAT`,
 `PLAYBOOK`, `TEXT`, `HIT`, `PARTIAL`, `MISS`, `SOURCE`, `ORDER`) and `PLAYBOOK` (with `STATS`, the
 suggested `<stat>=<n>` pairs, `MOVES`, the starting moves, `PICK`, how many of its other moves a new
-character picks, and `ORDER`).
+character picks, and `ORDER`), `FOE` (with `HP`, `ARMOR`, `DAMAGE`, `TAGS`, `INSTINCT` and `MOVES`) and
+`GMMOVE`, each a GM move.
 
 ## The sheet API
 

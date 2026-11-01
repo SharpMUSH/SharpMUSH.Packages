@@ -14,4 +14,4 @@ Bold type is dropped, and list items are written as lines beginning with a dash,
 
 ## The rest
 
-The other pages, the Warden and Wayfarer playbooks and their moves are the SharpMUSH project's own. This wiki is not affiliated with or endorsed by the authors or publishers of Dungeon World or Apocalypse World.
+The other pages, the Warden and Wayfarer playbooks and their moves, the foes and the GM moves are the SharpMUSH project's own. This wiki is not affiliated with or endorsed by the authors or publishers of Dungeon World or Apocalypse World.

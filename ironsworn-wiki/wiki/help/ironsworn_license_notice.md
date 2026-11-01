@@ -1,6 +1,6 @@
 The Ironsworn pages of this wiki (the pages in the [[Ironsworn|category:ironsworn]] category) and the sheet they
 describe are based on the Ironsworn system reference document. The rules are restated in the SharpMUSH project's
-own words, and the assets the sheet ships are written in its own words too.
+own words, and the assets and foes the sheet ships are written in its own words too.
 
 ## Attribution
 

@@ -1,6 +1,6 @@
 # Ironsworn SRD Notice
 
-The sheet-ironsworn package's stats, health, spirit, supply, momentum, experience, iron vows with their ranks and progress tracks, and the action and progress roll rules its help describes are based on the Ironsworn system reference document. The wording of the help and of every message is this package's own; the rules are restated, not copied.
+The sheet-ironsworn package's stats, health, spirit, supply, momentum, experience, iron vows with their ranks and progress tracks, and the action and progress roll rules its help describes are based on the Ironsworn system reference document. The wording of the help and of every message is this package's own; the rules are restated, not copied. The foes in the bestiary are this package's own.
 
 ## Attribution
 

@@ -19,6 +19,25 @@ it stay in it, so a score that runs over several days, or two scenes at once, ne
 `+encounter/end` ends it, and every copy goes. Nothing reaches the sheets unless you keep it first:
 `+encounter/keep <name>` writes that character's stress, trauma, harm and coin from the copy to their sheet.
 
+## Position and effect
+
+The GM sets each member's position and effect: `+encounter/position Alice=risky great`. While it is set,
+`+check` with no position rolls at it, and the line says the effect. Effect is limited, standard or great.
+
+## Threats
+
+The GM adds threats from the game's list: `+foe/bestiary` lists the kinds with their tier, clock and harm,
+and `+foe/add guard=2` brings in Watch guard 1 and Watch guard 2. Each has its own clock, and they all go when
+the encounter ends.
+
+- `+foe` lists the threats in the encounter; `+foe <threat>` shows one.
+- Your effect fills a threat's clock: the GM ticks it with `+foe/tick <threat>=<effect>`, limited 1 segment,
+  standard 2, great 3. A full clock overcomes the threat.
+- When a threat hurts someone, the GM marks its harm on their copy with `+foe/harm <threat>=<name>`. A full
+  level pushes the harm up one, as `+sheet/harm` does.
+
+Staff change the list with `+config fitd/foes`.
+
 
 ---
 

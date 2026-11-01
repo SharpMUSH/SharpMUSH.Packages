@@ -1,7 +1,7 @@
 format: "1.16"
 package: sheet-ironsworn
 title: "Ironsworn sheet"
-version: 2.1.0
+version: 2.2.0
 authors: [SharpMUSH]
 description: "An Ironsworn character sheet: five stats and assets built from a ledger, health, spirit, supply and momentum, experience spent on new assets and their abilities, with its own audited ledger, companion health, iron vows with progress tracks, and encounters that play from copies of the sheets. +check makes an action roll, a six-sided die plus a stat against two ten-sided challenge dice, for the room; +vow swears, marks and fulfils vows. Based on the Ironsworn SRD under CC BY 4.0."
 license: MIT
@@ -382,6 +382,26 @@ objects:
         ENCOUNTER`KEEP
       DATA`ROUTE`ENCOUNTER`END: |-
         ENCOUNTER`END
+      DATA`ROUTE`FOE`BARE: |-
+        FOE`LIST
+      DATA`ROUTE`FOE`ARG: |-
+        FOE`SHOW
+      DATA`ROUTE`FOE`BESTIARY: |-
+        FOE`BESTIARY
+      DATA`ROUTE`FOE`RUN: |-
+        FOE`RUN
+      DATA`ROUTE`FOE`ADD: |-
+        FOE`ADD
+      DATA`ROUTE`FOE`REMOVE: |-
+        FOE`REMOVE
+      DATA`ROUTE`FOE`MARK: |-
+        FOE`MARK
+      DATA`ROUTE`FOE`END: |-
+        FOE`END
+      DATA`ROUTE`FOE`HARM: |-
+        FOE`HARM
+      DATA`ROUTE`ENCOUNTER`INITIATIVE: |-
+        ENCOUNTER`INITIATIVE
       DATA`DIFFICULTIES: |-
         trivial easy standard hard extreme
       # The meters: the switch that changes each, its label, and its range and start (unset counts as the start).
@@ -426,6 +446,92 @@ objects:
       DATA`LOG`MAX: |-
         500
 
+      DATA`CONFIG`FOES`TYPE: |-
+        table
+      DATA`CONFIG`FOES`LABEL: |-
+        Foes
+      DATA`CONFIG`FOES`DESCRIPTION: |-
+        The foes a GM adds to an encounter with +foe/add, each fought with a progress track by its rank.
+      DATA`CONFIG`FOES`STORE: |-
+        {{store}}
+      DATA`CONFIG`FOES`PATH: |-
+        FOE
+      DATA`CONFIG`FOES`ENTRY: |-
+        label
+      DATA`CONFIG`FOES`FIELDS: |-
+        label rank nature features drives tactics
+      DATA`CONFIG`FOES`KEYPATTERN: |-
+        ^[A-Za-z0-9-]{1,20}$
+      DATA`CONFIG`FOES`FIELD`LABEL`TYPE: |-
+        text
+      DATA`CONFIG`FOES`FIELD`LABEL`MIN: |-
+        1
+      DATA`CONFIG`FOES`FIELD`LABEL`MAX: |-
+        30
+      DATA`CONFIG`FOES`FIELD`LABEL`LABEL: |-
+        Label
+      DATA`CONFIG`FOES`FIELD`LABEL`DESCRIPTION: |-
+        The name it goes by; each one added gets a number after it.
+      DATA`CONFIG`FOES`FIELD`RANK`TYPE: |-
+        text
+      DATA`CONFIG`FOES`FIELD`RANK`DEFAULT: |-
+        dangerous
+      DATA`CONFIG`FOES`FIELD`RANK`MIN: |-
+        1
+      DATA`CONFIG`FOES`FIELD`RANK`MAX: |-
+        12
+      DATA`CONFIG`FOES`FIELD`RANK`CHECK: |-
+        CHECK`RANK
+      DATA`CONFIG`FOES`FIELD`RANK`LABEL: |-
+        Rank
+      DATA`CONFIG`FOES`FIELD`RANK`DESCRIPTION: |-
+        troublesome, dangerous, formidable, extreme or epic: how fast progress against it is marked, and the harm it deals.
+      DATA`CONFIG`FOES`FIELD`NATURE`TYPE: |-
+        text
+      DATA`CONFIG`FOES`FIELD`NATURE`MIN: |-
+        0
+      DATA`CONFIG`FOES`FIELD`NATURE`MAX: |-
+        40
+      DATA`CONFIG`FOES`FIELD`NATURE`LABEL: |-
+        Nature
+      DATA`CONFIG`FOES`FIELD`NATURE`DESCRIPTION: |-
+        What kind of thing it is: Ironlander, animal, horror, firstborn.
+      DATA`CONFIG`FOES`FIELD`FEATURES`TYPE: |-
+        text
+      DATA`CONFIG`FOES`FIELD`FEATURES`MIN: |-
+        0
+      DATA`CONFIG`FOES`FIELD`FEATURES`MAX: |-
+        200
+      DATA`CONFIG`FOES`FIELD`FEATURES`LABEL: |-
+        Features
+      DATA`CONFIG`FOES`FIELD`FEATURES`DESCRIPTION: |-
+        What it looks like, for the GM.
+      DATA`CONFIG`FOES`FIELD`DRIVES`TYPE: |-
+        text
+      DATA`CONFIG`FOES`FIELD`DRIVES`MIN: |-
+        0
+      DATA`CONFIG`FOES`FIELD`DRIVES`MAX: |-
+        200
+      DATA`CONFIG`FOES`FIELD`DRIVES`LABEL: |-
+        Drives
+      DATA`CONFIG`FOES`FIELD`DRIVES`DESCRIPTION: |-
+        What it wants.
+      DATA`CONFIG`FOES`FIELD`TACTICS`TYPE: |-
+        text
+      DATA`CONFIG`FOES`FIELD`TACTICS`MIN: |-
+        0
+      DATA`CONFIG`FOES`FIELD`TACTICS`MAX: |-
+        200
+      DATA`CONFIG`FOES`FIELD`TACTICS`LABEL: |-
+        Tactics
+      DATA`CONFIG`FOES`FIELD`TACTICS`DESCRIPTION: |-
+        How it fights.
+      # +config's CHECK for a foe's rank (%0).
+      CHECK`RANK: |-
+        if(member(v(DATA`RANKS),lcstr(%0)),,A rank is [itemize(v(DATA`RANKS),,or)].)
+      # The most foes one encounter holds.
+      DATA`FOE`MAX: |-
+        30
       # ---- commands ---------------------------------------------------------------
       # %1 the switches and %2 what follows, exactly as typed.
       CMD`SHEET:
@@ -443,6 +549,10 @@ objects:
       CMD`ENCOUNTER:
         value: |-
           $(?is)^\+encounter(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,encounter,table,ENCOUNTER,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`FOE:
+        value: |-
+          $(?is)^\+foe(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,foe,table,FOE,switches,%1,argument,%2
         flags: [regexp, cmdsyntax]
       # A line a bridge adds to one of this object's messages: HINT`<message>, set here by a bridge such as
       # sheet-ironsworn-help. %1 on are passed to it. Nothing when no bridge set one, so the message stands without it.
@@ -654,7 +764,7 @@ objects:
       # +vow/mark [<name>/]<vow>[=<n>]: marks progress n times (1 when none), by the vow's rank; below 0 takes it off.
       INC`VOW`MARK:
         value: |-
-          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(VOW,+vow/mark <vow> marks progress%, +vow/mark <vow>=<n> marks it n times.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`OWNSHEET; @include/args %!/INC`NEED`VOW=name,%q<sheet_what>; think setq(mark_times,firstof(%q<cmd_right_side>,1)); @assert cand(isint(%q<mark_times>),neq(%q<mark_times>,0))=@pemit %#=notice(VOW,Mark a whole number of times%, not 0.,warn); think setq(mark_ticks,bound(add(u(%!/FUN`VOW`TICKS,%q<sheet_who>,%q<vow_key>),mul(%q<mark_times>,v(DATA`RANK`[ucstr(get(%q<sheet_who>/IRONSWORN`VOW`%q<vow_key>`RANK))]))),0,40)); think u(%!/FUN`SETLEAF,%q<sheet_who>/IRONSWORN`VOW`%q<vow_key>`TICKS,if(%q<mark_ticks>,%q<mark_ticks>)); @pemit %#=notice(VOW,u(%!/FUN`DISPLAY`VOW,%q<sheet_who>,%q<vow_key>),ok)
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(VOW,+vow/mark <vow> marks progress%, +vow/mark <vow>=<n> marks it n times.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`OWNSHEET; @include/args %!/INC`NEED`VOW=name,%q<sheet_what>; think setq(mark_times,if(strlen(%q<cmd_right_side>),%q<cmd_right_side>,1)); @assert cand(isint(%q<mark_times>),neq(%q<mark_times>,0))=@pemit %#=notice(VOW,Mark a whole number of times%, not 0.,warn); think setq(mark_ticks,bound(add(u(%!/FUN`VOW`TICKS,%q<sheet_who>,%q<vow_key>),mul(%q<mark_times>,v(DATA`RANK`[ucstr(get(%q<sheet_who>/IRONSWORN`VOW`%q<vow_key>`RANK))]))),0,40)); think u(%!/FUN`SETLEAF,%q<sheet_who>/IRONSWORN`VOW`%q<vow_key>`TICKS,if(%q<mark_ticks>,%q<mark_ticks>)); @pemit %#=notice(VOW,u(%!/FUN`DISPLAY`VOW,%q<sheet_who>,%q<vow_key>),ok)
         flags: [cmdsyntax]
       # +vow/fulfil [<name>/]<vow>: the progress roll. A hit fulfils it and marks experience by its rank (one less
       # on a weak hit), an experience ledger entry; a miss leaves it sworn.
@@ -735,6 +845,80 @@ objects:
           @assert u(%!/FUN`ENC`MEMBER,%q<sheet_who>,%q<enc_n>)=@pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)] is not in [u(%!/FUN`ENC`NAME,%q<enc_n>)].,warn)
         flags: [cmdsyntax]
 
+      # ---- +foe -------------------------------------------------------------------------
+      # Foes are the GM's side of an encounter: ENC`<n>`FOE`<k> on the encounter store, a JSON object copied from
+      # the bestiary (FOE`<KEY> on the store, +config ironsworn/foes) when the GM adds it, with key (the kind) and
+      # label, the kind's name and its number in the encounter. Nothing a foe takes reaches the bestiary.
+      # +foe [<foe>]: the foes in the encounter here, or one.
+      INC`FOE`LIST:
+        value: |-
+          @include %!/INC`NEED`FOEENC; @pemit %#=u(%!/FUN`SCREEN`FOES,%q<enc_n>,%#)
+        flags: [cmdsyntax]
+      INC`FOE`SHOW:
+        value: |-
+          @include %!/INC`NEED`FOEENC; @include/args %!/INC`NEED`FOE=typed,%q<cmd_argument>; @pemit %#=u(%!/FUN`SCREEN`FOE,%q<enc_n>,%q<foe_k>,%#)
+        flags: [cmdsyntax]
+      # +foe/bestiary [<kind>]: what the GM can add.
+      INC`FOE`BESTIARY:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=u(%!/FUN`SCREEN`BESTIARY); @assert strlen(setr(foe_kind,u(%!/FUN`FOE`KIND,%q<cmd_argument>)))=@pemit %#=notice(FOE,There is no '%q<cmd_argument>' in the bestiary. +foe/bestiary lists it.,warn); @pemit %#=u(%!/FUN`SCREEN`KIND,%q<foe_kind>)
+        flags: [cmdsyntax]
+      # +foe/run <n>: which encounter here the GM's +foe commands use, when the room has several.
+      INC`FOE`RUN:
+        value: |-
+          @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>,from,u(%!/FUN`ENC`HERE,%#),verb,run; @assert member(u(%!/FUN`ENC`HERE,%#),%q<enc_n>)=@pemit %#=notice(FOE,Encounter %q<enc_n> is not in this room.,warn); &RUN`[after(num(%#),#)] {{encounters}}=%q<enc_n>; @pemit %#=notice(FOE,Your +foe commands use [u(%!/FUN`ENC`NAME,%q<enc_n>)] while you are in its room.,ok)
+        flags: [cmdsyntax]
+      # +foe/add <kind>[=<count>]: the GM adds foes from the bestiary.
+      INC`FOE`ADD:
+        value: |-
+          @include %!/INC`NEED`FOEENC; @include %!/INC`NEED`GM; @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(FOE,+foe/add <kind>%[=<count>%]%, such as +foe/add wolf=2. +foe/bestiary lists the kinds.,warn); think setqm(add_kind,u(%!/FUN`FOE`KIND,%q<cmd_left_side>),add_count,if(strlen(%q<cmd_right_side>),%q<cmd_right_side>,1)); @assert strlen(%q<add_kind>)=@pemit %#=notice(FOE,There is no '%q<cmd_left_side>' in the bestiary. +foe/bestiary lists it.,warn); @assert cand(isint(%q<add_count>),gte(%q<add_count>,1),lte(%q<add_count>,20))=@pemit %#=notice(FOE,Add 1 to 20 foes at a time.,warn); @assert lte(add(words(u(%!/FUN`FOE`NUMS,%q<enc_n>)),%q<add_count>),get(%!/DATA`FOE`MAX))=@pemit %#=notice(FOE,An encounter holds at most [get(%!/DATA`FOE`MAX)] foes.,warn); think setq(add_made,iter(lnum(%q<add_count>),u(%!/FUN`FOE`MAKE,%q<enc_n>,%q<add_kind>))); @remit get({{encounters}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,tone(strong,name(%#)) adds [itemize(iter(%q<add_made>,u(%!/FUN`FOE`LABEL,%q<enc_n>,%i0),%b,|),|)] to [u(%!/FUN`ENC`NAME,%q<enc_n>)].)
+        flags: [cmdsyntax]
+      # +foe/remove <foe>: the GM takes one out.
+      INC`FOE`REMOVE:
+        value: |-
+          @include %!/INC`NEED`FOEENC; @include %!/INC`NEED`GM; @include/args %!/INC`NEED`FOE=typed,%q<cmd_argument>; think setq(foe_label,u(%!/FUN`FOE`LABEL,%q<enc_n>,%q<foe_k>)); @wipe {{encounters}}/ENC`%q<enc_n>`FOE`%q<foe_k>; &ENC`%q<enc_n>`FOE`%q<foe_k> {{encounters}}; @remit get({{encounters}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,tone(strong,name(%#)) takes %q<foe_label> out of [u(%!/FUN`ENC`NAME,%q<enc_n>)].)
+        flags: [cmdsyntax]
+      # +foe/mark <foe>[=<n>]: a member, or the GM, marks progress against a foe n times (1 when none), by its rank;
+      # below 0 takes it back.
+      INC`FOE`MARK:
+        value: |-
+          @include %!/INC`NEED`FOEENC; @assert cor(u(%!/FUN`ENC`GM,%#,%q<enc_n>),u(%!/FUN`ENC`MEMBER,%#,%q<enc_n>))=@pemit %#=notice(FOE,Only the members of [u(%!/FUN`ENC`NAME,%q<enc_n>)]%, its GM and sheet keepers mark progress there.,error); @include/args %!/INC`NEED`FOE=typed,%q<cmd_left_side>; @assert not(u(%!/FUN`FOE`GET,%q<enc_n>,%q<foe_k>,beaten))=@pemit %#=notice(FOE,[u(%!/FUN`FOE`LABEL,%q<enc_n>,%q<foe_k>)] is beaten.,warn); think setq(mark_times,if(strlen(%q<cmd_right_side>),%q<cmd_right_side>,1)); @assert cand(isint(%q<mark_times>),neq(%q<mark_times>,0),lte(abs(%q<mark_times>),10))=@pemit %#=notice(FOE,Mark a whole number of times from -10 to 10%, not 0.,warn); think u(%!/FUN`FOE`SET,%q<enc_n>,%q<foe_k>,ticks,bound(add(u(%!/FUN`FOE`GET,%q<enc_n>,%q<foe_k>,ticks),mul(%q<mark_times>,v(DATA`RANK`[ucstr(u(%!/FUN`FOE`GET,%q<enc_n>,%q<foe_k>,rank))]))),0,40)); @remit get({{encounters}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,tone(strong,name(%#)) [if(gt(%q<mark_times>,0),marks progress,takes progress back)] against [u(%!/FUN`FOE`LABEL,%q<enc_n>,%q<foe_k>)]: [u(%!/FUN`FOE`STATE,%q<enc_n>,%q<foe_k>)].)
+        flags: [cmdsyntax]
+      # +foe/end <foe>: a member, or the GM, ends the fight with a progress roll. A strong hit beats the foe; a weak hit
+      # beats it at a cost the GM names; a miss leaves it standing, and the fight turns.
+      INC`FOE`END:
+        value: |-
+          @include %!/INC`NEED`FOEENC; @assert cor(u(%!/FUN`ENC`GM,%#,%q<enc_n>),u(%!/FUN`ENC`MEMBER,%#,%q<enc_n>))=@pemit %#=notice(FOE,Only the members of [u(%!/FUN`ENC`NAME,%q<enc_n>)]%, its GM and sheet keepers end a fight there.,error); @include/args %!/INC`NEED`FOE=typed,%q<cmd_argument>; @assert not(u(%!/FUN`FOE`GET,%q<enc_n>,%q<foe_k>,beaten))=@pemit %#=notice(FOE,[u(%!/FUN`FOE`LABEL,%q<enc_n>,%q<foe_k>)] is beaten.,warn); think setq(end_rolled,u(%!/FUN`ROLL`PROGRESS,floor(fdiv(u(%!/FUN`FOE`GET,%q<enc_n>,%q<foe_k>,ticks),4)))); think setq(end_tier,json_query(%q<end_rolled>,extract,$.tier)); think if(not(strmatch(%q<end_tier>,*fail)),u(%!/FUN`FOE`SET,%q<enc_n>,%q<foe_k>,beaten,1)); @remit get({{encounters}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,tone(strong,name(%#)) ends the fight with [u(%!/FUN`FOE`LABEL,%q<enc_n>,%q<foe_k>)]: [json_query(%q<end_rolled>,extract,$.text)]: [tone(u(%!/FUN`DISPLAY`TIERTONE,%q<end_tier>),u(%!/FUN`DISPLAY`TIER,%q<end_tier>))]. [switch(%q<end_tier>,*success,It is beaten.,partial,It is beaten%, at a cost the GM names.,The fight turns against them.)] [tone(muted,%(roll [json_query(%q<end_rolled>,extract,$.roll)]%))])
+        flags: [cmdsyntax]
+      # +foe/harm <foe>=<name>[/<harm>]: the GM takes the foe's harm, by its rank or as given, off a member's health on
+      # their copy.
+      INC`FOE`HARM:
+        value: |-
+          @include %!/INC`NEED`FOEENC; @include %!/INC`NEED`GM; @include/args %!/INC`NEED`FOE=typed,%q<cmd_left_side>; @assert not(u(%!/FUN`FOE`GET,%q<enc_n>,%q<foe_k>,beaten))=@pemit %#=notice(FOE,[u(%!/FUN`FOE`LABEL,%q<enc_n>,%q<foe_k>)] is beaten.,warn); @assert strlen(%q<cmd_right_side>)=@pemit %#=notice(FOE,+foe/harm <foe>=<name>%[/<harm>%]%, such as +foe/harm wolf 1=Alice.,warn); think setqm(fh_name,trim(before(%q<cmd_right_side>,/)),fh_harm,if(strlen(trim(after(%q<cmd_right_side>,/))),trim(after(%q<cmd_right_side>,/)),u(%!/FUN`FOE`HARMOF,u(%!/FUN`FOE`GET,%q<enc_n>,%q<foe_k>,rank)))); @assert cand(isint(%q<fh_harm>),gte(%q<fh_harm>,1),lte(%q<fh_harm>,5))=@pemit %#=notice(FOE,Harm is a whole number from 1 to 5.,warn); @include/args %!/INC`NEED`MEMBERNAMED=name,%q<fh_name>; think setq(fh_path,u(%!/FUN`ENC`PATH,%q<enc_n>,%q<sheet_who>)); think setq(fh_health,max(0,sub(u(%!/FUN`ENCROW`VALUE,%q<fh_path>METER`HEALTH,last(v(DATA`METER`HEALTH`RANGE))),%q<fh_harm>))); think u(%!/FUN`SETLEAF,%q<fh_path>METER`HEALTH,if(neq(%q<fh_health>,last(v(DATA`METER`HEALTH`RANGE))),%q<fh_health>)); @remit get({{encounters}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,[u(%!/FUN`FOE`LABEL,%q<enc_n>,%q<foe_k>)] deals [name(%q<sheet_who>)] %q<fh_harm> harm: [u(%!/FUN`DISPLAY`METER,%q<sheet_who>,HEALTH,%q<fh_health>)][if(eq(%q<fh_health>,0),%, and [subj(%q<sheet_who>)] must face death or a lasting wound)]. Endure harm with +check.)
+        flags: [cmdsyntax]
+      # +encounter/initiative [<name>][=yes|no]: whether a member has the initiative in the fight, or is in a bad spot.
+      # A member sets their own; the GM sets anyone's.
+      INC`ENCOUNTER`INITIATIVE:
+        value: |-
+          @include %!/INC`NEED`FOEENC; think setq(init_name,firstof(%q<cmd_left_side>,name(%#))); @include/args %!/INC`NEED`MEMBERNAMED=name,%q<init_name>; @assert cor(u(%!/FUN`ENC`GM,%#,%q<enc_n>),not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(ENCOUNTER,Only the GM changes someone else's initiative.,error); think setq(init_on,switch(lcstr(firstof(%q<cmd_right_side>,yes)),yes,1,on,1,no,0,off,0,#-1)); @assert not(strmatch(%q<init_on>,#-1))=@pemit %#=notice(ENCOUNTER,+encounter/initiative %[<name>%]%[=yes|no%].,warn); think attrib_set({{encounters}}/ENC`%q<enc_n>`INIT`[after(num(%q<sheet_who>),#)],if(%q<init_on>,1)); @remit get({{encounters}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,[name(%q<sheet_who>)] [if(%q<init_on>,has the initiative,is in a bad spot)] in [u(%!/FUN`ENC`NAME,%q<enc_n>)].)
+        flags: [cmdsyntax]
+      # Which encounter +foe means: enc_n, the one here; with several, the one +foe/run picked, else the one the
+      # player runs, else the one they play from.
+      INC`NEED`FOEENC:
+        value: |-
+          think setq(enc_n,u(%!/FUN`FOE`ENC,%#)); @assert not(strmatch(%q<enc_n>,#-*))=@pemit %#=notice(FOE,after(%q<enc_n>,#-1%b),warn)
+        flags: [cmdsyntax]
+      # foe_k: the foe %<typed> names in enc_n, by number or by name.
+      INC`NEED`FOE:
+        value: |-
+          @assert strlen(%<typed>)=@pemit %#=notice(FOE,Name a foe. +foe lists them.,warn); think setq(foe_k,u(%!/FUN`FOE`FIND,%q<enc_n>,%<typed>)); @assert words(%q<foe_k>)=@pemit %#=notice(FOE,There is no foe '%<typed>' in [u(%!/FUN`ENC`NAME,%q<enc_n>)]. +foe lists them.,warn); @assert eq(words(%q<foe_k>),1)=@pemit %#=notice(FOE,'%<typed>' could be [itemize(iter(%q<foe_k>,u(%!/FUN`FOE`LABEL,%q<enc_n>,%i0),%b,|),|,or)].,warn)
+        flags: [cmdsyntax]
+      # sheet_who: the member of enc_n %<name> names.
+      INC`NEED`MEMBERNAMED:
+        value: |-
+          @assert strlen(setr(sheet_who,u(%!/FUN`PLAYER`MATCH,%<name>)))=@pemit %#=notice(FOE,There is no player called '%<name>'.,warn); @assert u(%!/FUN`ENC`MEMBER,%q<sheet_who>,%q<enc_n>)=@pemit %#=notice(FOE,[name(%q<sheet_who>)] is not in [u(%!/FUN`ENC`NAME,%q<enc_n>)].,warn)
+        flags: [cmdsyntax]
+
       # ---- writes -----------------------------------------------------------------
       # %<who> an objid. The IRONSWORN root is wizard-flagged and no_command, and its leaves take that from it.
       INC`DO`ROOT:
@@ -763,7 +947,7 @@ objects:
       # %<who> leaves encounter %<n>; the copy goes.
       INC`DO`ENCDROP:
         value: |-
-          think u(%!/FUN`WIPE,{{encounters}},ENC`%<n>`COPY`[after(num(%<who>),#)]); @include/args %!/INC`DO`SET=who,%<who>,leaf,ENCOUNTERS,value,squish(iter(get(%<who>/IRONSWORN`ENCOUNTERS),if(comp(%i0,%<n>),%i0))); @if not(comp(get(%<who>/IRONSWORN`USING),%<n>))={&IRONSWORN`USING %<who>}
+          think u(%!/FUN`WIPE,{{encounters}},ENC`%<n>`COPY`[after(num(%<who>),#)]); &ENC`%<n>`INIT`[after(num(%<who>),#)] {{encounters}}; @include/args %!/INC`DO`SET=who,%<who>,leaf,ENCOUNTERS,value,squish(iter(get(%<who>/IRONSWORN`ENCOUNTERS),if(comp(%i0,%<n>),%i0))); @if not(comp(get(%<who>/IRONSWORN`USING),%<n>))={&IRONSWORN`USING %<who>}
         flags: [cmdsyntax]
       # %0 an object, %1 an attribute: clears it and every attribute beneath it, deepest first.
       FUN`WIPE:
@@ -999,6 +1183,71 @@ objects:
           setqm(xpadd_old,default(%0/IRONSWORN`XP,0),
           xpadd_new,max(0,add(%q<xpadd_old>,%1)))[u(%!/FUN`BOOK`ADD,%0,XP,sub(%q<xpadd_new>,%q<xpadd_old>),%2)]%q<xpadd_new>
         flags: [funsyntax]
+      # ---- foes ---------------------------------------------------------------------------
+      # %0 someone: the encounter here their +foe commands use, or #-1 and why.
+      FUN`FOE`ENC:
+        value: |-
+          setqm(fe_here,u(%!/FUN`ENC`HERE,%0),fe_run,get({{encounters}}/RUN`[after(num(%0),#)]))[setq(fe_gm,squish(iter(%q<fe_here>,if(not(comp(get({{encounters}}/ENC`%i0`GM),objid(%0))),%i0))))][setq(fe_active,u(%!/FUN`ENC`ACTIVE,%0))][cond(not(words(%q<fe_here>)),#-1 There is no encounter here. +encounter/start begins one.,eq(words(%q<fe_here>),1),%q<fe_here>,member(%q<fe_here>,%q<fe_run>),%q<fe_run>,eq(words(%q<fe_gm>),1),%q<fe_gm>,strlen(%q<fe_active>),%q<fe_active>,#-1 There are several encounters here. +foe/run <n> picks the one your +foe commands use.)]
+        flags: [funsyntax]
+      # %0 an encounter: its foes' numbers.
+      FUN`FOE`NUMS:
+        value: |-
+          sort(iter(lattr({{encounters}}/ENC`%0`FOE`*),last(%i0,`)),n)
+        flags: [funsyntax]
+      # %0 an encounter, %1 a foe, %2 a field.
+      FUN`FOE`GET:
+        value: |-
+          json_query(get({{encounters}}/ENC`%0`FOE`%1),extract,$.%2)
+        flags: [funsyntax]
+      # %0 an encounter, %1 a foe, %2 a field, %3 its value as JSON.
+      FUN`FOE`SET:
+        value: |-
+          attrib_set({{encounters}}/ENC`%0`FOE`%1,json_mod(get({{encounters}}/ENC`%0`FOE`%1),patch,json(object,%2,%3)))
+        flags: [funsyntax]
+      FUN`FOE`LABEL:
+        value: |-
+          u(%!/FUN`FOE`GET,%0,%1,label)
+        flags: [funsyntax]
+      # %0 an encounter, %1 what was typed: the foe with that number, else the ones with that name, else the ones
+      # whose name ends in it as words (guard 2 for Watch guard 2), else starts with it, else has it anywhere.
+      FUN`FOE`FIND:
+        value: |-
+          cond(cand(isint(%1),hasattr({{encounters}},ENC`%0`FOE`%1)),%1,words(setr(ff_m,u(%!/FUN`FOE`MATCH,%0,%1,0))),%q<ff_m>,words(setr(ff_m,u(%!/FUN`FOE`MATCH,%0,%1,1))),%q<ff_m>,words(setr(ff_m,u(%!/FUN`FOE`MATCH,%0,%1,2))),%q<ff_m>,u(%!/FUN`FOE`MATCH,%0,%1,3))
+        flags: [funsyntax]
+      FUN`FOE`MATCH:
+        value: |-
+          squish(iter(u(%!/FUN`FOE`NUMS,%0),if(switch(%2,0,not(comp(lcstr(u(%!/FUN`FOE`LABEL,%0,%i0)),lcstr(trim(%1)))),1,strmatch(u(%!/FUN`FOE`LABEL,%0,%i0),* [trim(%1)]),2,strmatch(u(%!/FUN`FOE`LABEL,%0,%i0),trim(%1)*),strmatch(u(%!/FUN`FOE`LABEL,%0,%i0),*[trim(%1)]*)),%i0)))
+        flags: [funsyntax]
+      # %0 what was typed: the bestiary key it names, by key or by name.
+      FUN`FOE`KIND:
+        value: |-
+          setq(fk_key,ucstr(edit(trim(%0),%b,-)))[cond(cand(regmatch(%q<fk_key>,^%[A-Z0-9-%]+$),hasattr({{store}},FOE`%q<fk_key>)),%q<fk_key>,first(iter(lattr({{store}}/FOE`*),if(not(comp(lcstr(get({{store}}/%i0)),lcstr(trim(%0)))),last(%i0,`)))))]
+        flags: [funsyntax]
+      # %0 an encounter, %1 a bestiary key: a new foe copied from it. Returns its number.
+      FUN`FOE`MAKE:
+        value: |-
+          setq(fm_k,inc(lmax(0 [u(%!/FUN`FOE`NUMS,%0)])))[attrib_set({{encounters}}/ENC`%0`FOE`%q<fm_k>,json(object,key,json(string,%1),label,json(string,[get({{store}}/FOE`%1)] %q<fm_k>),rank,json(string,lcstr(u(%!/FUN`FOE`STORE,%1,RANK,dangerous))),ticks,0,beaten,0,nature,json(string,get({{store}}/FOE`%1`NATURE)),features,json(string,get({{store}}/FOE`%1`FEATURES)),drives,json(string,get({{store}}/FOE`%1`DRIVES)),tactics,json(string,get({{store}}/FOE`%1`TACTICS))))]%q<fm_k>
+        flags: [funsyntax]
+      # %0 a kind, %1 a field, %2 its default.
+      FUN`FOE`STORE:
+        value: |-
+          default({{store}}/FOE`%0`%1,%2)
+        flags: [funsyntax]
+      FUN`KIND`SORTKEY:
+        value: |-
+          member(v(DATA`RANKS),lcstr(u(%!/FUN`FOE`STORE,%0,RANK,dangerous)))
+        flags: [funsyntax]
+      # %0 an encounter, %1 a foe: its progress track, and whether it is beaten.
+      FUN`FOE`STATE:
+        value: |-
+          setq(fs_ticks,u(%!/FUN`FOE`GET,%0,%1,ticks))[u(%!/FUN`DISPLAY`PROGRESS,%q<fs_ticks>)] [floor(fdiv(%q<fs_ticks>,4))]/10[if(u(%!/FUN`FOE`GET,%0,%1,beaten),%bbeaten)]
+        flags: [funsyntax]
+      # %0 a rank: the harm a foe of that rank deals, 1 for troublesome up to 5 for epic.
+      FUN`FOE`HARMOF:
+        value: |-
+          member(v(DATA`RANKS),lcstr(%0))
+        flags: [funsyntax]
+
       # ---- the XP and money ledgers --------------------------------------------------------
       # Each book is its own ledger, apart from the sheet's: IRONSWORN`<BOOK>LEDGER`<n>, a JSON object with n, delta,
       # total (the running total after it), item and label (what it counts, when the book counts more than one
@@ -1268,7 +1517,7 @@ objects:
       # %0 an encounter, %1 who reads it.
       FUN`SCREEN`ENCOUNTER:
         value: |-
-          setq(enc_members,u(%!/FUN`ENC`MEMBERS,%0))[box(Run by [name(get({{encounters}}/ENC`%0`GM))] in [name(get({{encounters}}/ENC`%0`ROOM))].%r[rule()]%r[if(words(%q<enc_members>),ldatatable(lit({"nowrap":"1|2|3|4|5","grow":"|||||1"}),Name|>Health|>Spirit|>Supply|>Momentum|Companions,iter(%q<enc_members>,u(%!/FUN`DISPLAY`ENCROW,%i0,%0),%b,%*<^>),%*<^>),Nobody has joined yet.)]%r[rule()]%r[tone(muted,if(u(%!/FUN`ENC`GM,%1,%0),/add%, /remove and /keep <name>=%0%, and /end %0 run it. +sheet/health <name>=-<n> hurts a member here.,if(u(%!/FUN`ENC`MEMBER,%1,%0),You roll from your copy while you are in its room. /leave %0 comes out.,+encounter/join %0 takes part with a copy of your sheet.)))],Encounter [u(%!/FUN`ENC`NAME,%0)])]
+          setq(enc_members,u(%!/FUN`ENC`MEMBERS,%0))[box(Run by [name(get({{encounters}}/ENC`%0`GM))] in [name(get({{encounters}}/ENC`%0`ROOM))].%r[rule()]%r[if(words(%q<enc_members>),ldatatable(lit({"nowrap":"1|2|3|4|5|7","grow":"|||||1"}),Name|>Health|>Spirit|>Supply|>Momentum|Companions|Initiative,iter(%q<enc_members>,u(%!/FUN`DISPLAY`ENCROW,%i0,%0),%b,%*<^>),%*<^>),Nobody has joined yet.)][if(words(u(%!/FUN`FOE`NUMS,%0)),%r[rule(Foes)]%r[itemize(iter(u(%!/FUN`FOE`NUMS,%0),[u(%!/FUN`FOE`LABEL,%0,%i0)] [u(%!/FUN`FOE`STATE,%0,%i0)],%b,|),|)])]%r[rule()]%r[tone(muted,if(u(%!/FUN`ENC`GM,%1,%0),/add%, /remove and /keep <name>=%0%, and /end %0 run it. +foe/add brings in foes.,if(u(%!/FUN`ENC`MEMBER,%1,%0),You roll from your copy while you are in its room. /leave %0 comes out.,+encounter/join %0 takes part with a copy of your sheet.)))],Encounter [u(%!/FUN`ENC`NAME,%0)])]
         flags: [funsyntax]
       # %0 the encounters here, %1 the ones %2 is in.
       FUN`SCREEN`ENCOUNTERS:
@@ -1278,7 +1527,7 @@ objects:
       # %0 a member, %1 the encounter: their copy in it, one table row.
       FUN`DISPLAY`ENCROW:
         value: |-
-          setqm(encrow_path,u(%!/FUN`ENC`PATH,%1,%0),encrow_assets,u(%!/FUN`NONE,get([u(%!/FUN`ENC`PATH,%1,%0)]ASSETS)))[name(%0)]|[iter(v(DATA`METERS),u(%!/FUN`DISPLAY`METERVALUE,%i0,u(%!/FUN`ENCROW`VALUE,%q<encrow_path>METER`%i0,last(v(DATA`METER`%i0`RANGE)))),%b,|)]|[firstof(itemize(squish(iter(%q<encrow_assets>,if(gt(setr(encrow_max,default({{store}}/ASSET`[before(%i0,=)]`HEALTH,0)),0),[u(%!/FUN`LIST`LABEL,ASSET,before(%i0,=))] [u(%!/FUN`ENCROW`VALUE,%q<encrow_path>COMPANION`[before(%i0,=)],%q<encrow_max>)]/%q<encrow_max>),%b,|),|),|),-)]
+          setqm(encrow_path,u(%!/FUN`ENC`PATH,%1,%0),encrow_assets,u(%!/FUN`NONE,get([u(%!/FUN`ENC`PATH,%1,%0)]ASSETS)))[name(%0)]|[iter(v(DATA`METERS),u(%!/FUN`DISPLAY`METERVALUE,%i0,u(%!/FUN`ENCROW`VALUE,%q<encrow_path>METER`%i0,last(v(DATA`METER`%i0`RANGE)))),%b,|)]|[firstof(itemize(squish(iter(%q<encrow_assets>,if(gt(setr(encrow_max,default({{store}}/ASSET`[before(%i0,=)]`HEALTH,0)),0),[u(%!/FUN`LIST`LABEL,ASSET,before(%i0,=))] [u(%!/FUN`ENCROW`VALUE,%q<encrow_path>COMPANION`[before(%i0,=)],%q<encrow_max>)]/%q<encrow_max>),%b,|),|),|),-)]|[if(get({{encounters}}/ENC`%1`INIT`[after(num(%0),#)]),yes,-)]
         flags: [funsyntax]
       # %0 obj/attr, %1 what an unset one counts as.
       FUN`ENCROW`VALUE:
@@ -1298,6 +1547,25 @@ objects:
       FUN`SCREEN`ASSET:
         value: |-
           setqm(asset_held,u(%!/FUN`R`ASSET,u(%!/FUN`ASSETS`LIVE,%1),%0),asset_max,default({{store}}/ASSET`%0`HEALTH,0))[box([capstr(lcstr(get({{store}}/ASSET`%0`TYPE)))][if(%q<asset_max>,%bwith %q<asset_max> health)].%r[rule()]%r[iter(v(DATA`ABILITIES),[inum(0)]. [if(gte(%q<asset_held>,inum(0)),tone(success,%[x%]),%[ %])] [firstof(get({{store}}/ASSET`%0`%i0),tone(muted,-))],%b,%r)]%r[rule()]%r[tone(muted,if(%q<asset_held>,You have it with [%q<asset_held>] of 3 marked. +sheet/upgrade [lcstr(%0)] marks the next.,+sheet/asset [lcstr(%0)] takes it.))],u(%!/FUN`LIST`LABEL,ASSET,%0))]
+        flags: [funsyntax]
+
+      # %0 an encounter, %1 who reads it.
+      FUN`SCREEN`FOES:
+        value: |-
+          setq(sf_nums,u(%!/FUN`FOE`NUMS,%0))[box(if(words(%q<sf_nums>),ldatatable(lit({"nowrap":"1|3|4","grow":"|1"}),#|Foe|Rank|Progress,iter(%q<sf_nums>,%i0|[u(%!/FUN`FOE`LABEL,%0,%i0)]|[u(%!/FUN`FOE`GET,%0,%i0,rank)]|[u(%!/FUN`FOE`STATE,%0,%i0)],%b,%*<^>),%*<^>),No foes yet.)%r[rule()]%r[tone(muted,if(u(%!/FUN`ENC`GM,%1,%0),+foe/add <kind>%[=<count>%] adds more. +foe/harm hurts a member%, +foe/mark and +foe/end fight them.,+foe/mark <foe> marks progress against it%, +foe/end <foe> ends the fight with a progress roll.))],Foes: [u(%!/FUN`ENC`NAME,%0)])]
+        flags: [funsyntax]
+      # %0 an encounter, %1 a foe, %2 who reads it.
+      FUN`SCREEN`FOE:
+        value: |-
+          box(lfields(lit({"cols":2}),Rank%*<|>Progress%*<|>Harm%*<|>Nature,[u(%!/FUN`FOE`GET,%0,%1,rank)]%*<|>[u(%!/FUN`FOE`STATE,%0,%1)]%*<|>[u(%!/FUN`FOE`HARMOF,u(%!/FUN`FOE`GET,%0,%1,rank))]%*<|>[firstof(u(%!/FUN`FOE`GET,%0,%1,nature),-)],%*<|>)[iter(features drives tactics,if(strlen(u(%!/FUN`FOE`GET,%0,%1,%i0)),%r[rule(capstr(%i0))]%r[u(%!/FUN`FOE`GET,%0,%1,%i0)]),%b,)],[u(%!/FUN`FOE`LABEL,%0,%1)] in [u(%!/FUN`ENC`NAME,%0)])
+        flags: [funsyntax]
+      FUN`SCREEN`BESTIARY:
+        value: |-
+          setq(sb_keys,sortkey(%!/FUN`KIND`SORTKEY,iter(lattr({{store}}/FOE`*),last(%i0,`)),n))[box(if(words(%q<sb_keys>),ldatatable(lit({"nowrap":"1|3|4","grow":"|1"}),Key|Name|Rank|Nature,iter(%q<sb_keys>,[lcstr(%i0)]|[get({{store}}/FOE`%i0)]|[lcstr(u(%!/FUN`FOE`STORE,%i0,RANK,dangerous))]|[firstof(get({{store}}/FOE`%i0`NATURE),-)],%b,%*<^>),%*<^>),The bestiary is empty.)%r[rule()]%r[tone(muted,+foe/bestiary <kind> shows one. The GM adds them with +foe/add <kind>%[=<count>%]. Staff change the list with +config ironsworn/foes.)],Bestiary)]
+        flags: [funsyntax]
+      FUN`SCREEN`KIND:
+        value: |-
+          box(lfields(lit({"cols":2}),Rank%*<|>Harm%*<|>Nature,[lcstr(u(%!/FUN`FOE`STORE,%0,RANK,dangerous))]%*<|>[u(%!/FUN`FOE`HARMOF,u(%!/FUN`FOE`STORE,%0,RANK,dangerous))]%*<|>[firstof(get({{store}}/FOE`%0`NATURE),-)],%*<|>)[iter(FEATURES DRIVES TACTICS,if(strlen(get({{store}}/FOE`%0`%i0)),%r[rule(capstr(lcstr(%i0)))]%r[get({{store}}/FOE`%0`%i0)]),%b,)],[get({{store}}/FOE`%0)] %([lcstr(%0)]%))
         flags: [funsyntax]
 
       # ---- the sheet API ------------------------------------------------------------
@@ -1385,7 +1653,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add/noparse/rsnoparse +sheet; @hook/override/inline +sheet=%!,CMD`SHEET; @command/add/noparse/rsnoparse +check; @hook/override/inline +check=%!,CMD`CHECK; @command/add/noparse/rsnoparse +vow; @hook/override/inline +vow=%!,CMD`VOW; @command/add/noparse/rsnoparse +encounter; @hook/override/inline +encounter=%!,CMD`ENCOUNTER
+          @command/add/noparse/rsnoparse +sheet; @hook/override/inline +sheet=%!,CMD`SHEET; @command/add/noparse/rsnoparse +check; @hook/override/inline +check=%!,CMD`CHECK; @command/add/noparse/rsnoparse +vow; @hook/override/inline +vow=%!,CMD`VOW; @command/add/noparse/rsnoparse +encounter; @hook/override/inline +encounter=%!,CMD`ENCOUNTER; @command/add/noparse/rsnoparse +foe; @hook/override/inline +foe=%!,CMD`FOE
         flags: [cmdsyntax]
       AINSTALL:
         value: |-
@@ -1406,6 +1674,127 @@ objects:
     location: "{{sheet}}"
     flags: [no_command]
     attributes:
+      # The foes, +config ironsworn/foes: the package's own, in its own words.
+      FOE`RAT-SWARM: |-
+        Rat swarm
+      FOE`RAT-SWARM`RANK: |-
+        troublesome
+      FOE`RAT-SWARM`NATURE: |-
+        Animal
+      FOE`RAT-SWARM`FEATURES: |-
+        A tide of fur, teeth and red eyes.
+      FOE`RAT-SWARM`DRIVES: |-
+        To feed.
+      FOE`RAT-SWARM`TACTICS: |-
+        Swarm over one foe; flee from fire.
+      FOE`RAIDER: |-
+        Raider
+      FOE`RAIDER`RANK: |-
+        dangerous
+      FOE`RAIDER`NATURE: |-
+        Ironlander
+      FOE`RAIDER`FEATURES: |-
+        Scarred, patched armour, a notched axe.
+      FOE`RAIDER`DRIVES: |-
+        To take what others have built.
+      FOE`RAIDER`TACTICS: |-
+        Strike from ambush; threaten the weak to make the strong yield.
+      FOE`WOLF: |-
+        Wolf
+      FOE`WOLF`RANK: |-
+        dangerous
+      FOE`WOLF`NATURE: |-
+        Animal
+      FOE`WOLF`FEATURES: |-
+        Grey shapes at the edge of the firelight.
+      FOE`WOLF`DRIVES: |-
+        To hunt as a pack.
+      FOE`WOLF`TACTICS: |-
+        Circle; harry; drag down the one who falls behind.
+      FOE`BROKEN: |-
+        Broken
+      FOE`BROKEN`RANK: |-
+        dangerous
+      FOE`BROKEN`NATURE: |-
+        Ironlander
+      FOE`BROKEN`FEATURES: |-
+        Wild eyes; bone charms; filthy hides.
+      FOE`BROKEN`DRIVES: |-
+        To survive, whatever it takes.
+      FOE`BROKEN`TACTICS: |-
+        Ambush; howl to unnerve; fight like a cornered beast.
+      FOE`BEAR: |-
+        Bear
+      FOE`BEAR`RANK: |-
+        formidable
+      FOE`BEAR`NATURE: |-
+        Animal
+      FOE`BEAR`FEATURES: |-
+        Huge, shaggy, rank with the smell of the den.
+      FOE`BEAR`DRIVES: |-
+        To guard its ground and its young.
+      FOE`BEAR`TACTICS: |-
+        Rear up and roar; maul; crush.
+      FOE`HAUNT: |-
+        Haunt
+      FOE`HAUNT`RANK: |-
+        formidable
+      FOE`HAUNT`NATURE: |-
+        Horror
+      FOE`HAUNT`FEATURES: |-
+        A cold that gets into the bones; a voice from nowhere.
+      FOE`HAUNT`DRIVES: |-
+        To make the living share its torment.
+      FOE`HAUNT`TACTICS: |-
+        Terrify; possess; draw a victim off alone.
+      FOE`TROLL: |-
+        Troll
+      FOE`TROLL`RANK: |-
+        formidable
+      FOE`TROLL`NATURE: |-
+        Firstborn
+      FOE`TROLL`FEATURES: |-
+        Long limbs, mottled hide, a lantern of a grin.
+      FOE`TROLL`DRIVES: |-
+        To hoard odd treasures and eat well.
+      FOE`TROLL`TACTICS: |-
+        Hide in plain sight; bargain; grab and drag under.
+      FOE`GIANT: |-
+        Giant
+      FOE`GIANT`RANK: |-
+        extreme
+      FOE`GIANT`NATURE: |-
+        Firstborn
+      FOE`GIANT`FEATURES: |-
+        Twice the height of a tall man, wrapped in furs.
+      FOE`GIANT`DRIVES: |-
+        To be left in peace.
+      FOE`GIANT`TACTICS: |-
+        Hurl stones; sweep foes aside; stamp.
+      FOE`WYVERN: |-
+        Wyvern
+      FOE`WYVERN`RANK: |-
+        extreme
+      FOE`WYVERN`NATURE: |-
+        Beast
+      FOE`WYVERN`FEATURES: |-
+        Leathery wings, a barbed tail, a beak like a cleaver.
+      FOE`WYVERN`DRIVES: |-
+        To hunt from the sky.
+      FOE`WYVERN`TACTICS: |-
+        Dive; seize; carry off.
+      FOE`WYRM: |-
+        Ancient wyrm
+      FOE`WYRM`RANK: |-
+        epic
+      FOE`WYRM`NATURE: |-
+        Beast
+      FOE`WYRM`FEATURES: |-
+        Scales like iron shields; a breath that melts snow for a mile.
+      FOE`WYRM`DRIVES: |-
+        To rule its mountain.
+      FOE`WYRM`TACTICS: |-
+        Burn; crush; outwait.
       STAT: |-
         The stats, one branch each, keyed as a player types it.
       STAT`EDGE: |-
@@ -1611,7 +2000,9 @@ objects:
       SEE`VOW: |-
         sheet check
       SEE`ENCOUNTER: |-
-        sheet check
+        sheet check foe
+      SEE`FOE: |-
+        encounter vow
       HELP`SHEET: |-
         `+sheet` shows your character's sheet: five stats, Edge, Heart, Iron, Shadow and Wits, the meters, experience, assets and vows.
 
@@ -1723,7 +2114,7 @@ objects:
 
         Output: `\[ENCOUNTER\] Alice joins 1 (Ambush at the ford).`
 
-        See `+help encounter gm` for running one.
+        See `+help encounter gm` for running one and `+help foe` for foes.
       HELP`ENCOUNTER`GM: |-
         Whoever starts an encounter runs it; sheet keepers run any. Give the number after `=` when the room has more than one.
 
@@ -1739,6 +2130,39 @@ objects:
         `+encounter/keep Alice=1`
 
         Output: `\[ENCOUNTER\] Done: Alice's sheet keeps the meters and companions from 1 (Ambush at the ford).`
+      HELP`FOE: |-
+        Foes are the GM's side of an encounter, added from the game's bestiary. Each is numbered, so two wolves are Wolf 1 and Wolf 2, and each has a rank and a progress track of ten boxes, as a vow does.
+
+        - `+foe` lists the foes in the encounter here; `+foe <foe>` shows one, with its features, drives and tactics. Name it by its number or its name.
+        - `+foe/bestiary` lists what the GM can add; `+foe/bestiary <kind>` shows one.
+        - `+foe/mark <foe>` marks progress when you strike or gain ground: three boxes for troublesome, two for dangerous, one for formidable, two ticks for extreme and one for epic. `=<n>` marks n times; below 0 takes it off.
+        - `+foe/end <foe>` makes the progress roll to end the fight: a strong hit beats it, a weak hit beats it at a cost the GM names, a miss turns the fight against you.
+        - `+encounter/initiative [=yes|no]` says whether you have the initiative.
+
+        The members of an encounter and its GM mark progress and end fights. Foes go when the encounter ends.
+
+        For example:
+
+        `+foe/mark wolf 2`
+
+        Output: `\[ENCOUNTER\] Alice marks progress against Wolf 2: \[##........\] 2/10.`
+
+        See `+help foe gm` for running them.
+      HELP`FOE`GM: |-
+        The GM of an encounter, or a sheet keeper, runs its foes:
+
+        - `+foe/add <kind>[=<count>]` adds foes from the bestiary: `+foe/add wolf=2`. `+foe/remove <foe>` takes one out.
+        - `+foe/harm <foe>=<name>[/<harm>]` deals harm off that member's copy: by the foe's rank, 1 for troublesome up to 5 for epic, or the harm given. The member endures it with `+check`.
+        - `+encounter/initiative <name>=yes|no` gives a member the initiative or puts them in a bad spot.
+        - `+foe/run <n>` picks which encounter your `+foe` commands use, when the room has several.
+
+        A beaten foe deals no harm and takes no more progress.
+
+        For example:
+
+        `+foe/harm wolf 2=Alice`
+
+        Output: `\[ENCOUNTER\] Wolf 2 deals Alice 2 harm: Alice's health is 3 of 5. Endure harm with +check.`
       HELP`SHEET`CREDITS: |-
         This sheet is based on Ironsworn, created by Shawn Tomkin, and licensed for our use under the Creative Commons Attribution 4.0 International License \(https://creativecommons.org/licenses/by/4.0/\). It is not an official Ironsworn product.
 
@@ -1768,6 +2192,7 @@ objects:
         - `adds`: what trivial, easy, standard, hard and extreme add to the action score \(`2 1 0 -1 -2`\).
         - `public`: whether anyone may read anyone's sheet and vows \(no\).
         - `stats`: the stat list. `+config/add ironsworn/stats/luck=Luck` adds one.
+        - `foes`: the bestiary. `+config/add ironsworn/foes/boar=Boar` adds a foe; set its `rank`, `nature`, `features`, `drives` and `tactics`.
         - `assets`: the asset list, each with `type` \(companion, path, talent or ritual\), `health` for a companion, and `first`, `second` and `third` abilities. `+config/add ironsworn/assets/raven=Raven` adds one.
 
         Removing a stat or an asset leaves what characters had stored, but the sheet stops showing it.

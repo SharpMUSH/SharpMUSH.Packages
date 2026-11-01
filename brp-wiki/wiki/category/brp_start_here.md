@@ -5,7 +5,7 @@ your character tries is in doubt, you roll 1d100 and hope for that number or low
 2. [[Making a character|main:brp_making_a_character]]: characteristics and skill points.
 3. [[Characteristics and skills|main:brp_characteristics_and_skills]]: every characteristic and skill, and its base chance.
 4. [[Hit points, coin and experience|main:brp_play_and_experience]]: what you keep track of in play, and how skills grow.
-5. [[Encounters|main:brp_encounters]]: scenes played from copies of the sheets.
+5. [[Encounters|main:brp_encounters]]: scenes played from copies of the sheets, with creatures.
 
 `+help sheet`, `+help check` and `+help encounter` cover the commands in the game.
 
