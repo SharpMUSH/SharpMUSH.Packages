@@ -1,0 +1,108 @@
+format: "1.16"
+package: duties-ironsworn
+title: "Duties: Ironsworn rolls"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Lets Duties roll on the Ironsworn sheet: a roll provider called ironsworn, so a duty's checks make action rolls with a stat against two challenge dice, with help adding to the action score, and experience or momentum as rewards. Pick it with +config duties/system=ironsworn."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [duties, ironsworn, sheet, dice, bridge]
+category: Characters
+requires_server: ">=0.1"
+
+# A bridge: it joins two packages that do not know about each other. Duties asks the game's one active roll
+# provider for every check, and sheet-ironsworn holds the sheet and rolls against it. This package is a provider
+# that answers Duties' questions with the sheet's API, and the one leaf that registers it.
+depends:
+  - package: duties
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/duties/
+      branch: main
+  - package: sheet-ironsworn
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH.Packages
+      path: sheet-ironsworn/
+      branch: main
+
+objects:
+  # The provider. Duties calls each FN`DUTIES` attribute with u() and named arguments, so it runs as this
+  # object; WIZARD because the sheet's API is on a WIZARD object, which a lesser one may not call. Its only
+  # writes are rewards, through the sheet's API`ADJUST.
+  - ref: provider
+    type: thing
+    name: Duties Ironsworn Provider
+    location: "{{sheet-ironsworn/sheet}}"
+    flags: [WIZARD, no_command]
+    attributes:
+      # The five stats; every character has each, so each can be rolled.
+      FN`DUTIES`TRAITS:
+        value: |-
+          u({{sheet-ironsworn/sheet}}/API`TRAITS)
+        flags: [funsyntax]
+      # A match makes a miss crit-fail and a strong hit crit-success; a weak hit is partial.
+      FN`DUTIES`TIERS:
+        value: |-
+          crit-fail fail partial success crit-success
+        flags: [funsyntax]
+      # %<difficulty>: what it adds to the action score, "Hard (-1)".
+      FN`DUTIES`DC:
+        value: |-
+          setq(provider_adds,u({{sheet-ironsworn/sheet}}/API`TARGET,%<difficulty>))[if(strlen(%q<provider_adds>),[capstr(lcstr(%<difficulty>))] %([if(gte(%q<provider_adds>,0),+)]%q<provider_adds>%),#-1 NO SUCH DIFFICULTY)]
+        flags: [funsyntax]
+      # %<roller>: the stat this character improvises with, their highest (the first of equals).
+      FN`DUTIES`FALLBACK:
+        value: |-
+          setq(provider_roller,%<roller>)[last(sortkey(%!/FUN`STAT`SORTKEY,revwords(u({{sheet-ironsworn/sheet}}/API`ALWAYS)),n))]
+        flags: [funsyntax]
+      # %<roller>, %<trait>, %<difficulty>, %<mods>, %<context>. A helper in %<mods> adds 1 to the action score.
+      # Returns {"tier","text","roll","margin","system"}: margin is the action score less the higher challenge
+      # die; system holds action, challenge, match, stat, adds and helped.
+      FN`DUTIES`CHECK:
+        value: |-
+          setqm(provider_adds,u({{sheet-ironsworn/sheet}}/API`TARGET,%<difficulty>),
+          provider_helped,gt(u(%!/FUN`MODS`HELPERS,%<mods>),0),
+          provider_rolled,if(strlen(%q<provider_adds>),uargs({{sheet-ironsworn/sheet}}/API`CHECK,roller,%<roller>,trait,%<trait>,modifier,%q<provider_helped>,target,%q<provider_adds>)))[cond(not(strlen(%q<provider_adds>)),#-1 NO SUCH DIFFICULTY,strmatch(%q<provider_rolled>,#-*),%q<provider_rolled>,u(%!/FUN`CHECK`RESULT,%q<provider_rolled>))]
+        flags: [funsyntax]
+      # %0 the sheet's check JSON.
+      FUN`CHECK`RESULT:
+        value: |-
+          setqm(result_tier,json_query(%0,extract,$.tier),
+          result_action,json_query(%0,extract,$.action),
+          result_c1,json_query(%0,extract,$.challenge%[0%]),
+          result_c2,json_query(%0,extract,$.challenge%[1%]))[json(object,tier,json(string,%q<result_tier>),text,json(string,[json_query(%0,extract,$.label)]: [json_query(%0,extract,$.text)]: [u(%!/FUN`TIER`WORDS,%q<result_tier>)][if(%q<provider_helped>,%b%(+1 for the help%))]),roll,json(string,json_query(%0,extract,$.roll)),margin,sub(%q<result_action>,max(%q<result_c1>,%q<result_c2>)),system,json(object,action,%q<result_action>,challenge,json_query(%0,extract,$.challenge),match,json_query(%0,extract,$.match),stat,json_query(%0,extract,$.stat),adds,%q<provider_adds>,helped,%q<provider_helped>))]
+        flags: [funsyntax]
+      FUN`TIER`WORDS:
+        value: |-
+          switch(%0,crit-success,a strong hit with a match,success,a strong hit,partial,a weak hit,crit-fail,a miss with a match,a miss)
+        flags: [funsyntax]
+      # The rewards a duty may give on this sheet, for Duties' editor.
+      FN`DUTIES`REWARDS:
+        value: |-
+          lit([{"kind":"experience","label":"Experience","fields":[{"key":"amount","type":"integer"}]},{"kind":"momentum","label":"Momentum","fields":[{"key":"amount","type":"integer"}]}])
+        flags: [funsyntax]
+      # Queued once for each reward and member: %<roller>, %<reward> {"kind","amount"}, %<context>. Marks the
+      # experience or gains the momentum (1 when no amount), and tells the player.
+      ON`DUTIES`GRANT:
+        value: |-
+          @assert hastype(%<roller>,player); think setqm(grant_kind,json_query(%<reward>,extract,$.kind),grant_amount,firstof(json_query(%<reward>,extract,$.amount),1)); @assert cand(isint(%q<grant_amount>),gt(%q<grant_amount>,0)); @switch %q<grant_kind>=experience,{@pemit %<roller>=notice(DUTIES,You mark %q<grant_amount> experience. You have [u({{sheet-ironsworn/sheet}}/API`ADJUST,%<roller>,XP,%q<grant_amount>)].,ok)},momentum,{@pemit %<roller>=notice(DUTIES,You gain %q<grant_amount> momentum. Your momentum is [setq(grant_now,u({{sheet-ironsworn/sheet}}/API`ADJUST,%<roller>,MOMENTUM,%q<grant_amount>))][if(gt(%q<grant_now>,0),+)]%q<grant_now>.,ok)}
+        flags: [cmdsyntax]
+
+      # %0 %<mods>: how many helpers it names.
+      FUN`MODS`HELPERS:
+        value: |-
+          if(cand(strlen(%0),strmatch(json_query(json_query(%0,get,helpers)),array)),json_query(json_query(%0,get,helpers),size),0)
+        flags: [funsyntax]
+      # %0 a stat: its value for provider_roller, for sorting.
+      FUN`STAT`SORTKEY:
+        value: |-
+          u({{sheet-ironsworn/sheet}}/API`RATING,%q<provider_roller>,%0)
+        flags: [funsyntax]
+
+  - ref: provider_registration
+    target: "{{duties/duties}}"
+    attributes:
+      PROVIDER`IRONSWORN: |-
+        {{provider}}
