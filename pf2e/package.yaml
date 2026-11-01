@@ -1814,7 +1814,7 @@ objects:
               [setq(open_rule,json_query(%q<open_item>,extract,$.system.rules\[%i0\]))][
               setq(open_flag,u({{core}}/FUN`RULE`CHOICE`FLAG,%q<open_rule>,%i0))][
               if(cand(not(strlen(json_query(%q<open_choices>,extract,$.%q<open_flag>))),u({{core}}/FUN`PREDICATE`TEST,firstof(json_query(%q<open_rule>,get,predicate),json(array)),%q<check_options>),cor(not(%1),strlen(u(%!/FUN`BUILD`CHOICE`KIND,%q<open_rule>)))),
-                setq(open_found,%q<open_found>|[first(%0,~)]~%q<open_flag>~%i0~[json_query(%q<open_prep>,extract,$.name)]: [u(%!/FUN`BUILD`CAMEL`WORDS,%q<open_flag>)])])))])]
+                setq(open_found,%q<open_found>|[first(%0,~)]~%q<open_flag>~%i0~[json_query(%q<open_prep>,extract,$.name)]: [u(%!/FUN`BUILD`CAMEL`WORDS,%q<open_flag>)]))]))])]
         flags: [funsyntax]
       FUN`BUILD`CAMEL`WORDS:
         value: |-
