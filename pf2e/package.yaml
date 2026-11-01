@@ -1554,12 +1554,12 @@ objects:
       FUN`BUILD`GRANT`BY`N:
         value: |-
           @@(%0 an entry number: its grant, n~pack~id~badge~index, whatever its level)[
-          first(iter(graball(%q<check_entries>,grant~*~*~%0~*),[elements(%i0,4,~)]~[edit(elements(%i0,2,~),|,~)]~[elements(%i0,3,~)]~[elements(%i0,7,~)]))]
+          first(iter(graball(%q<check_entries>,grant~*),if(eq(elements(%i0,4,~),%0),[elements(%i0,4,~)]~[edit(elements(%i0,2,~),|,~)]~[elements(%i0,3,~)]~[elements(%i0,7,~)])))]
         flags: [funsyntax]
       FUN`BUILD`ENTRY`LEVEL:
         value: |-
           @@(%0 an entry number: the level it was granted for)[
-          elements(first(graball(%q<check_entries>,*~*~*~%0~*)),6,~)]
+          first(iter(%q<check_entries>,if(eq(elements(%i0,4,~),%0),elements(%i0,6,~))))]
         flags: [funsyntax]
       FUN`BUILD`LEVELS:
         value: |-
