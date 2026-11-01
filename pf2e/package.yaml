@@ -1585,7 +1585,7 @@ objects:
       FUN`BUILD`STEP:
         value: |-
           @@(%0 a step, a pattern: the numbers of the live entries of it)[
-          squish(iter(%q<check_entries>,if(cand(strmatch(elements(%i0,8,~),%0),not(strmatch(first(%i0,~),revoke))),elements(%i0,4,~))))]
+          squish(iter(graball(%q<check_entries>,*~%0),if(cand(strmatch(elements(%i0,8,~),%0),not(strmatch(first(%i0,~),revoke))),elements(%i0,4,~))))]
         flags: [funsyntax]
       FUN`BUILD`STEP`NAMED:
         value: |-
