@@ -39,8 +39,10 @@ Every sheet package answers `+sheet` and `+check`. Install one per game.
 | `+sheet/callsign`, `/background`, `/motto`, `/keepsake`, `/appearance <text>` | player | The details |
 | `+sheet/downtime [<name>]` | keeper | HP, AP, uses, re-rolls and the Armoury's pick back; the mech repaired, recharged and cool |
 | `+sheet/ledger [<name>]` | all | Every entry that built the sheet |
-| `+sheet/tp <name>=+<n> [<reason>]`, `/max <name>/<hp\|ap\|slots>=<n>` | keeper | Training Points, with the reason in the ledger; a pilot's most |
-| `+sheet/revoke <name>/<n>`, `/clear <name>` | keeper | Takes back one ledger entry, or all of them |
+| `+sheet/training [<name>]` | all | Every Training Point award and spend |
+| `+sheet/tp <name>=+<n> [<reason>]`, `/max <name>/<hp\|ap\|slots>=<n>` | keeper | Training Points, with the reason in their ledger; a pilot's most |
+| `+sheet/revoke <name>/<n>`, `/revoke <name>/T<n>`, `/clear <name>` | keeper | Takes back one build entry, one Training Point entry, or the whole build |
+| `+sheet/rebuild <name>` | keeper | Writes the sheet and its TP again from the two ledgers |
 | `+mech [<name>]` | all | The mech |
 | `+mech/chassis <chassis>`, `/install`, `/remove <part>` | unapproved player, keeper | Builds it; a new pilot uses Tech 1 parts within 20 scrap, chassis included |
 | `+mech/craft <part>[=<scrap tech>]` | approved player | A new chassis, system or module from the crawler, for its Salvage Value in scrap from the hold |
@@ -54,6 +56,7 @@ Every sheet package answers `+sheet` and `+check`. Install one per game.
 | `+crawler`, `/bay [<bay>]` | all | The Union Crawler and its bays |
 | `+crawler/unload`, `/trade <n> <tech>=<tech>` | approved player | Scrap from the mech into the hold; scrap traded at its value |
 | `+crawler/ledger` | all | Every change to the hold, the upgrade pool and the Tech Level |
+| `+crawler/rebuild` | keeper | Writes the hold, the pool and the Tech Level again from that ledger |
 | `+crawler/scrap <tech>=+<n> [<reason>]`, `/name`, `/type`, `/weapon`, `/tech`, `/sp`, `/pool`, `/upkeep`, `/upgrade` | keeper | Runs it |
 | `+encounter [<n>]`, `/start [<title>]`, `/join [<n>]`, `/leave [<n>]`, `/use <n>` | all | Encounters |
 | `+encounter/add`, `/remove`, `/keep <name>[=<n>]`, `/end [<n>]` | GM or keeper | Runs one |
@@ -61,7 +64,11 @@ Every sheet package answers `+sheet` and `+check`. Install one per game.
 Keepers (`softcode.salvage.admin`, the **Salvage Union Sheet Keeper** role) put `<name>/` before
 the argument of a build switch to change anyone's sheet at any time, without spending TP.
 
-## The ledger
+## The ledgers
+
+A pilot has two ledgers, the build and the Training Points; the Union Crawler has a third, for scrap.
+Each is append-only, and what the sheet shows is a cache of it, kept as a running total and written
+again from the ledger by the rebuild commands.
 
 A pilot's build is a ledger: `SALVAGE`LEDGER`<n>`, each a wizard-flagged JSON entry with `kind`,
 `n`, `by` (objid), `at` (secs), `phase` (`chargen`, `play` or `staff`) and `note`.
@@ -70,25 +77,31 @@ A pilot's build is a ledger: `SALVAGE`LEDGER`<n>`, each a wizard-flagged JSON en
 |---|---|---|
 | `set` | `leaf`, `value` | the class, a detail, the chassis, a most; the newest standing one wins |
 | `grant` | `list`, `key` | an ability, equipment, system or module, in the order granted |
-| `tp` | `amount` | Training Points, summed |
 | `revoke` | `entry` | takes one entry back |
 | `clear` | | takes back every entry before it |
 
-The sheet's own leaves (`CLASS`, `ABILITIES`, `GEAR`, `TP`, `PATH`, `DETAIL`*`, `MECH`CHASSIS`,
+The sheet's own leaves (`CLASS`, `ABILITIES`, `GEAR`, `PATH`, `DETAIL`*`, `MECH`CHASSIS`,
 `MECH`SYSTEMS`, `MECH`MODULES`, ...) are written from the ledger after every entry
 (`FUN`LEDGER`REBUILD`). Before approval, choosing a `set` leaf again rewrites the chargen entry,
 and taking back a chargen entry wipes it, so the ledger keeps the choices that were made. After
 approval every change is a new entry.
 
+Training Points are `SALVAGE`XP`<n>`, wizard-flagged JSON with `kind` (`tp`, or `revoke` with
+`entry`), `amount`, `n`, `by`, `at`, `phase`, `note`, and `for`: the build entry a spend paid for or
+a refund pays back. Each entry adds its amount to `SALVAGE`TP` (`FUN`XP`ADD`); `FUN`XP`REBUILD`
+writes the sum of the entries still standing. Taking back a build entry, one at a time or with
+`/clear`, pays back what was spent on it in a `tp` entry of its own; `+sheet/unlearn` pays nothing
+back and costs 1 TP. A `/revoke <name>/T<n>` that would leave the pilot below 0 is refused.
+
 ## Advancement
 
 What a pilot, their mech and the crew gain is audited:
 
-- Training Points come only from staff (`+sheet/tp <name>=+<n> <reason>`) and from Duties, each a `tp` entry with its note; `+sheet/learn` spends them in entries of its own.
+- Training Points come only from staff (`+sheet/tp <name>=+<n> <reason>`) and from Duties, each a `tp` entry with its note in the Training Point ledger; `+sheet/learn` spends them in entries of its own, each pointing at the build entry it paid for.
 - Scrap enters the Union Crawler's hold from staff (`+crawler/scrap`), a pilot's `+crawler/unload`, and Duties. `+mech/craft` spends it on chassis, systems and modules at the crawler's Tech Level or lower, `+crawler/trade` swaps it, and upkeep and upgrades move it into the pool and the Tech Level.
 - Equipment comes from the Armoury, one piece each downtime, or from staff.
 
-The crawler's ledger is `CRAWLER`LEDGER`<n>` on the store: JSON with `kind` (`scrap`, `pool` or `tech`), `n`, `by`, `at`, `for` (the pilot), `note`, and `tech` and `amount`. Amounts are the change made, and no entry is rewritten or removed.
+The crawler's ledger is `CRAWLER`LEDGER`<n>` on the store: JSON with `kind` (`scrap`, `pool` or `tech`), `n`, `by`, `at`, `for` (the pilot), `note`, and `tech` and `amount`. Amounts are the change made, and no entry is rewritten or removed. `CRAWLER`SCRAP`T<n>`, `CRAWLER`POOL` and `CRAWLER`TECH` are its cache: each entry updates them, and `FUN`CRAWLER`REBUILD` adds the entries up again in order, never below 0.
 
 ## Encounters
 
@@ -114,8 +127,10 @@ with `live` 1 always use the sheet.
 
 ```
 SALVAGE                        the root: wizard, no_command
-SALVAGE`LEDGER`<n>             the ledger
-SALVAGE`HP, `AP, `TP           the meters; unset is the most (TP the ledger's sum)
+SALVAGE`LEDGER`<n>             the build ledger
+SALVAGE`XP`<n>                 the Training Point ledger
+SALVAGE`HP, `AP                the meters; unset is the most
+SALVAGE`TP                     the Training Points, a cache of SALVAGE`XP`
 SALVAGE`MAX`<HP|AP|SLOTS>      a most of their own
 SALVAGE`USED`<BACKGROUND|...>  a re-roll spent until downtime
 SALVAGE`SPENT`<kind>`<key>     uses spent until downtime

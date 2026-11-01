@@ -1,7 +1,7 @@
 format: "1.16"
 package: sheet-salvage-union
 title: "Salvage Union sheet (unofficial)"
-version: 1.1.0
+version: 1.2.0
 authors: [SharpMUSH]
 description: "An unofficial Salvage Union pilot and mech sheet: a class, abilities bought down their trees with training points, HP, AP and pilot equipment; a mech built from a chassis, systems and modules, with SP, EP and heat; and the Union Crawler the pilots share. +check rolls the one d20 against the core mechanic table, spends the AP, EP and heat it costs, and lets a mech Push for a re-roll and a heat check. The Core Book's abilities, chassis, systems, modules, equipment and tables come from the Salvage Union (Unofficial) Foundry VTT system, under the Salvage Union Open Game Licence 1.0b."
 license: MIT
@@ -44,7 +44,8 @@ objects:
   #
   # A character's sheet is their own attributes under SALVAGE`: CLASS, PATH (the Advanced or Hybrid tree they
   # advanced into), ABILITIES and GEAR (space lists of keys), HP, AP and TP, MAX`<HP|AP|SLOTS>, DETAIL`<field>,
-  # USED`<field> (a re-roll spent until downtime), LAST (their last check, JSON), and MECH`: CHASSIS, NAME,
+  # USED`<field> (a re-roll spent until downtime), LAST (their last check, JSON), LEDGER`<n> (the build) and
+  # XP`<n> (the Training Points; TP is their running total), and MECH`: CHASSIS, NAME,
   # QUIRK, SYSTEMS and MODULES (lists of keys), SP, EP, HEAT and SCRAP`<tech>. An unset meter is at its start.
   #
   # +sheet, +mech, +check and +crawler are added with /noparse/rsnoparse and hooked to CMD`<word>, so what a
@@ -225,6 +226,10 @@ objects:
         SHEET`DETAIL
       DATA`ROUTE`SHEET`LEDGER: |-
         SHEET`LEDGER
+      DATA`ROUTE`SHEET`TRAINING: |-
+        SHEET`TRAINING
+      DATA`ROUTE`SHEET`REBUILD: |-
+        SHEET`REBUILD
       DATA`ROUTE`SHEET`REVOKE: |-
         SHEET`REVOKE
       DATA`ROUTE`SHEET`CLEAR: |-
@@ -311,6 +316,8 @@ objects:
         CRAWLER`BAY
       DATA`ROUTE`CRAWLER`LEDGER: |-
         CRAWLER`LEDGER
+      DATA`ROUTE`CRAWLER`REBUILD: |-
+        CRAWLER`REBUILD
       DATA`ROUTE`CRAWLER`TRADE: |-
         CRAWLER`TRADE
       DATA`ROUTE`ENCOUNTER`BARE: |-
@@ -501,12 +508,12 @@ objects:
       # training points. Sheet keepers train anyone without spending them.
       INC`SHEET`LEARN:
         value: |-
-          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/learn <ability>%, such as +sheet/learn jury rig%, or a tree's name for its next ability. +sheet/trees shows the ones open to you.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_argument>; @include %!/INC`NEED`GATE; @assert cor(not(%q<chargen>),not(strlen(u(%!/FUN`GATE`EDIT,%#)))); think setq(learn_tree,firstof(grab(get({{data}}/LIST`TREE),left(ucstr(edit(squish(regeditall(trim(%q<sheet_what>),\[^A-Za-z0-9\],%b)),%b,-)),30)),if(not(strlen(u(%!/FUN`FIND,ABILITY,%q<sheet_what>,get({{data}}/LIST`ABILITY)))),u(%!/FUN`FIND,TREE,%q<sheet_what>,get({{data}}/LIST`TREE)))))[if(strlen(%q<learn_tree>),setq(sheet_what,get({{data}}/ABILITY`[firstof(first(iter(get({{data}}/TREE`%q<learn_tree>`ABILITIES),if(member(get(%q<sheet_who>/SALVAGE`ABILITIES),%i0),,%i0))),last(get({{data}}/TREE`%q<learn_tree>`ABILITIES)))])))]; @include/args %!/INC`NEED`FOUND=kind,ABILITY,typed,%q<sheet_what>,among,; @assert strlen(%q<found_key>); think setqm(learn_why,u(%!/FUN`LEARN`WHY,%q<sheet_who>,%q<found_key>),learn_cost,u(%!/FUN`LEARN`COST,%q<found_key>),learn_label,get({{data}}/ABILITY`%q<found_key>)); @assert not(strlen(%q<learn_why>))=@pemit %#=notice(SHEET,%q<learn_why>,warn); @assert cor(not(%q<chargen>),not(words(get(%q<sheet_who>/SALVAGE`ABILITIES))))=@pemit %#=notice(SHEET,A new pilot starts with one ability. Staff train the next ones once you are approved.,warn); think setq(learn_pay,cand(not(%q<viewer_keeper>),not(%q<chargen>))); @assert cor(not(%q<learn_pay>),gte(u(%!/API`METER,%q<sheet_who>,TP),%q<learn_cost>))=@pemit %#=notice(SHEET,%q<learn_label> costs %q<learn_cost> TP. You have [u(%!/API`METER,%q<sheet_who>,TP)].,warn); think if(%q<learn_pay>,u(%!/API`ADJUST,%q<sheet_who>,TP,-%q<learn_cost>,Learns %q<learn_label>)); think u(%!/FUN`LEDGER`GRANT,%q<sheet_who>,ABILITIES,%q<found_key>); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] learns %q<learn_label>[if(%q<learn_pay>,%bfor %q<learn_cost> TP)].[if(cand(%q<chargen>,not(comp(%q<sheet_who>,%q<viewer_objid>))),u(%!/FUN`HINT,SET))],ok)
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/learn <ability>%, such as +sheet/learn jury rig%, or a tree's name for its next ability. +sheet/trees shows the ones open to you.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_argument>; @include %!/INC`NEED`GATE; @assert cor(not(%q<chargen>),not(strlen(u(%!/FUN`GATE`EDIT,%#)))); think setq(learn_tree,firstof(grab(get({{data}}/LIST`TREE),left(ucstr(edit(squish(regeditall(trim(%q<sheet_what>),\[^A-Za-z0-9\],%b)),%b,-)),30)),if(not(strlen(u(%!/FUN`FIND,ABILITY,%q<sheet_what>,get({{data}}/LIST`ABILITY)))),u(%!/FUN`FIND,TREE,%q<sheet_what>,get({{data}}/LIST`TREE)))))[if(strlen(%q<learn_tree>),setq(sheet_what,get({{data}}/ABILITY`[firstof(first(iter(get({{data}}/TREE`%q<learn_tree>`ABILITIES),if(member(get(%q<sheet_who>/SALVAGE`ABILITIES),%i0),,%i0))),last(get({{data}}/TREE`%q<learn_tree>`ABILITIES)))])))]; @include/args %!/INC`NEED`FOUND=kind,ABILITY,typed,%q<sheet_what>,among,; @assert strlen(%q<found_key>); think setqm(learn_why,u(%!/FUN`LEARN`WHY,%q<sheet_who>,%q<found_key>),learn_cost,u(%!/FUN`LEARN`COST,%q<found_key>),learn_label,get({{data}}/ABILITY`%q<found_key>)); @assert not(strlen(%q<learn_why>))=@pemit %#=notice(SHEET,%q<learn_why>,warn); @assert cor(not(%q<chargen>),not(words(get(%q<sheet_who>/SALVAGE`ABILITIES))))=@pemit %#=notice(SHEET,A new pilot starts with one ability. Staff train the next ones once you are approved.,warn); think setq(learn_pay,cand(not(%q<viewer_keeper>),not(%q<chargen>))); @assert cor(not(%q<learn_pay>),gte(u(%!/API`METER,%q<sheet_who>,TP),%q<learn_cost>))=@pemit %#=notice(SHEET,%q<learn_label> costs %q<learn_cost> TP. You have [u(%!/API`METER,%q<sheet_who>,TP)].,warn); think setq(learn_entry,u(%!/FUN`LEDGER`GRANT,%q<sheet_who>,ABILITIES,%q<found_key>)); think if(%q<learn_pay>,u(%!/FUN`XP`ADD,%q<sheet_who>,-%q<learn_cost>,Learns %q<learn_label>,%q<learn_entry>)); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] learns %q<learn_label>[if(%q<learn_pay>,%bfor %q<learn_cost> TP)].[if(cand(%q<chargen>,not(comp(%q<sheet_who>,%q<viewer_objid>))),u(%!/FUN`HINT,SET))],ok)
         flags: [cmdsyntax]
       # +sheet/unlearn [<name>/]<ability>: the last of a tree only. Costs 1 TP once approved.
       INC`SHEET`UNLEARN:
         value: |-
-          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/unlearn <ability> forgets one.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_argument>; @include %!/INC`NEED`GATE; @assert cor(not(%q<chargen>),not(strlen(u(%!/FUN`GATE`EDIT,%#)))); think setq(unlearn_have,get(%q<sheet_who>/SALVAGE`ABILITIES)); @assert words(%q<unlearn_have>)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has learned no abilities.,warn); @include/args %!/INC`NEED`FOUND=kind,ABILITY,typed,%q<sheet_what>,among,%q<unlearn_have>; @assert strlen(%q<found_key>); think setqm(unlearn_tree,get({{data}}/ABILITY`%q<found_key>`TREE),unlearn_after,iter(get({{data}}/TREE`[get({{data}}/ABILITY`%q<found_key>`TREE)]`ABILITIES),if(cand(gt(inum(0),get({{data}}/ABILITY`%q<found_key>`LEVEL)),member(%q<unlearn_have>,%i0),gt(get({{data}}/ABILITY`%q<found_key>`LEVEL),0)),%i0))); @assert not(words(%q<unlearn_after>))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has [itemize(iter(%q<unlearn_after>,get({{data}}/ABILITY`%i0),%b,|),|)] after it. Unlearn the last of a tree first.,warn); think setq(unlearn_pay,cand(not(%q<viewer_keeper>),not(%q<chargen>))); @assert cor(not(%q<unlearn_pay>),gte(u(%!/API`METER,%q<sheet_who>,TP),1))=@pemit %#=notice(SHEET,Forgetting an ability costs 1 TP. You have none.,warn); think if(%q<unlearn_pay>,u(%!/API`ADJUST,%q<sheet_who>,TP,-1,Forgets [get({{data}}/ABILITY`%q<found_key>)])); think u(%!/FUN`LEDGER`REVOKE,%q<sheet_who>,u(%!/FUN`LEDGER`LATEST,%q<sheet_who>,ABILITIES,%q<found_key>)); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] forgets [get({{data}}/ABILITY`%q<found_key>)][if(%q<unlearn_pay>,%bfor 1 TP)].,ok)
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/unlearn <ability> forgets one.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_argument>; @include %!/INC`NEED`GATE; @assert cor(not(%q<chargen>),not(strlen(u(%!/FUN`GATE`EDIT,%#)))); think setq(unlearn_have,get(%q<sheet_who>/SALVAGE`ABILITIES)); @assert words(%q<unlearn_have>)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has learned no abilities.,warn); @include/args %!/INC`NEED`FOUND=kind,ABILITY,typed,%q<sheet_what>,among,%q<unlearn_have>; @assert strlen(%q<found_key>); think setqm(unlearn_tree,get({{data}}/ABILITY`%q<found_key>`TREE),unlearn_after,iter(get({{data}}/TREE`[get({{data}}/ABILITY`%q<found_key>`TREE)]`ABILITIES),if(cand(gt(inum(0),get({{data}}/ABILITY`%q<found_key>`LEVEL)),member(%q<unlearn_have>,%i0),gt(get({{data}}/ABILITY`%q<found_key>`LEVEL),0)),%i0))); @assert not(words(%q<unlearn_after>))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has [itemize(iter(%q<unlearn_after>,get({{data}}/ABILITY`%i0),%b,|),|)] after it. Unlearn the last of a tree first.,warn); think setq(unlearn_pay,cand(not(%q<viewer_keeper>),not(%q<chargen>))); @assert cor(not(%q<unlearn_pay>),gte(u(%!/API`METER,%q<sheet_who>,TP),1))=@pemit %#=notice(SHEET,Forgetting an ability costs 1 TP. You have none.,warn); think setq(unlearn_entry,u(%!/FUN`LEDGER`REVOKE,%q<sheet_who>,u(%!/FUN`LEDGER`LATEST,%q<sheet_who>,ABILITIES,%q<found_key>))); think if(%q<unlearn_pay>,u(%!/FUN`XP`ADD,%q<sheet_who>,-1,Forgets [get({{data}}/ABILITY`%q<found_key>)],%q<unlearn_entry>)); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] forgets [get({{data}}/ABILITY`%q<found_key>)][if(%q<unlearn_pay>,%bfor 1 TP)].,ok)
         flags: [cmdsyntax]
       # +sheet/trees [<class>]: a class's trees, yours when none is named, with what you have learned.
       INC`SHEET`TREES:
@@ -563,16 +570,36 @@ objects:
         value: |-
           @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert strlen(%q<sheet_who>); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`LEDGER,%q<sheet_who>)
         flags: [cmdsyntax]
+      # +sheet/training [<name>]: the Training Point ledger.
+      INC`SHEET`TRAINING:
+        value: |-
+          @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert strlen(%q<sheet_who>); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`XPLEDGER,%q<sheet_who>)
+        flags: [cmdsyntax]
+      # +sheet/rebuild <name>: writes the sheet and its Training Points again from the two ledgers.
+      INC`SHEET`REBUILD:
+        value: |-
+          @assert %q<viewer_keeper>=@pemit %#=notice(SHEET,Staff rebuild a sheet.,error); @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/rebuild <name> writes the sheet again from its ledgers.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>; @assert strlen(%q<sheet_who>); think setqm(rebuild_was,default(%q<sheet_who>/SALVAGE`TP,0),sheet_live,1); think u(%!/FUN`LEDGER`REBUILD,%q<sheet_who>); think u(%!/FUN`XP`REBUILD,%q<sheet_who>); @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s sheet is written again from its ledgers. [name(%q<sheet_who>)] has [u(%!/API`METER,%q<sheet_who>,TP)] TP[if(neq(%q<rebuild_was>,u(%!/API`METER,%q<sheet_who>,TP)),%b%(the total said %q<rebuild_was>%))].,ok)
+        flags: [cmdsyntax]
       # +sheet/clear <name>: a sheet keeper takes back every entry of the ledger and puts the meters back, so the
       # character starts chargen again.
       INC`SHEET`CLEAR:
         value: |-
-          @assert %q<viewer_keeper>=@pemit %#=notice(SHEET,Staff clear a sheet.,error); @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/clear <name> takes back the whole sheet.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>; @assert strlen(%q<sheet_who>); think setq(clear_live,u(%!/FUN`LEDGER`LIVE,%q<sheet_who>)); @assert words(%q<clear_live>)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s sheet is empty already.,warn); think u(%!/FUN`LEDGER`WRITE,%q<sheet_who>,json(object,kind,"clear")); think u(%!/FUN`LEDGER`REBUILD,%q<sheet_who>); think setq(sheet_live,1)[iter(v(DATA`COPY),u(%!/FUN`DO`SET,%q<sheet_who>,%i0,))]; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s sheet is cleared: [words(%q<clear_live>)] entries taken back. +sheet/ledger [name(%q<sheet_who>)] still shows them.,ok)
+          @assert %q<viewer_keeper>=@pemit %#=notice(SHEET,Staff clear a sheet.,error); @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/clear <name> takes back the whole sheet.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>; @assert strlen(%q<sheet_who>); think setq(clear_live,u(%!/FUN`LEDGER`LIVE,%q<sheet_who>)); @assert words(%q<clear_live>)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s sheet is empty already.,warn); think u(%!/FUN`LEDGER`WRITE,%q<sheet_who>,json(object,kind,"clear")); think u(%!/FUN`LEDGER`REBUILD,%q<sheet_who>); think setq(clear_back,u(%!/FUN`XP`REFUND,%q<sheet_who>,%q<clear_live>,Cleared)); think setq(sheet_live,1)[iter(v(DATA`COPY),u(%!/FUN`DO`SET,%q<sheet_who>,%i0,))]; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s sheet is cleared: [words(%q<clear_live>)] entries taken back[if(%q<clear_back>,%band the %q<clear_back> TP they cost paid back)]. Training Points stay: [name(%q<sheet_who>)] has [u(%!/API`METER,%q<sheet_who>,TP)]. +sheet/ledger [name(%q<sheet_who>)] still shows the entries.,ok)
         flags: [cmdsyntax]
       # +sheet/revoke <name>/<n>: a sheet keeper takes back entry n of the ledger.
       INC`SHEET`REVOKE:
         value: |-
-          @assert %q<viewer_keeper>=@pemit %#=notice(SHEET,Staff take back a ledger entry. +sheet/unlearn%, /drop and +mech/remove undo your own.,error); @assert strmatch(%q<cmd_argument>,*/*)=@pemit %#=notice(SHEET,+sheet/revoke <name>/<entry>%, an entry number from +sheet/ledger <name>.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_argument>; think setq(revoke_n,trim(%q<sheet_what>)); @assert cand(isint(%q<revoke_n>),hasattr(%q<sheet_who>,SALVAGE`LEDGER`%q<revoke_n>))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s ledger has no entry %q<revoke_n>.,warn); @assert not(match(revoke clear,u(%!/FUN`LEDGER`FIELD,%q<sheet_who>,%q<revoke_n>,kind)))=@pemit %#=notice(SHEET,Entry %q<revoke_n> takes back others. Take back what it took back with a new entry instead.,warn); @assert not(member(u(%!/FUN`LEDGER`REVOKED,%q<sheet_who>),%q<revoke_n>))=@pemit %#=notice(SHEET,Entry %q<revoke_n> is taken back already.,warn); think setq(revoke_text,u(%!/FUN`LEDGER`TEXT,%q<sheet_who>,%q<revoke_n>)); think u(%!/FUN`LEDGER`REVOKE,%q<sheet_who>,%q<revoke_n>); @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s entry %q<revoke_n> is taken back: %q<revoke_text>,ok)
+          @assert %q<viewer_keeper>=@pemit %#=notice(SHEET,Staff take back a ledger entry. +sheet/unlearn%, /drop and +mech/remove undo your own.,error); @assert strmatch(%q<cmd_argument>,*/*)=@pemit %#=notice(SHEET,+sheet/revoke <name>/<entry>%, an entry number from +sheet/ledger <name>%, or T and one from +sheet/training <name>.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_argument>; think setq(revoke_n,trim(%q<sheet_what>)); @include %!/INC`SHEET`REVOKE[if(strmatch(%q<revoke_n>,T*),XP,BUILD)]
+        flags: [cmdsyntax]
+      # +sheet/revoke <name>/<n>: a build entry. What the pilot spent on it comes back as a TP entry of its own.
+      INC`SHEET`REVOKEBUILD:
+        value: |-
+          @assert cand(isint(%q<revoke_n>),hasattr(%q<sheet_who>,SALVAGE`LEDGER`%q<revoke_n>))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s ledger has no entry %q<revoke_n>.,warn); @assert not(match(revoke clear,u(%!/FUN`LEDGER`FIELD,%q<sheet_who>,%q<revoke_n>,kind)))=@pemit %#=notice(SHEET,Entry %q<revoke_n> takes back others. Take back what it took back with a new entry instead.,warn); @assert not(member(u(%!/FUN`LEDGER`REVOKED,%q<sheet_who>),%q<revoke_n>))=@pemit %#=notice(SHEET,Entry %q<revoke_n> is taken back already.,warn); think setq(revoke_text,u(%!/FUN`LEDGER`TEXT,%q<sheet_who>,%q<revoke_n>)); think u(%!/FUN`LEDGER`REVOKE,%q<sheet_who>,%q<revoke_n>); think setq(revoke_back,u(%!/FUN`XP`REFUND,%q<sheet_who>,%q<revoke_n>,Takes back #%q<revoke_n>)); @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s entry %q<revoke_n> is taken back: %q<revoke_text>.[if(%q<revoke_back>,%b%q<revoke_back> TP paid back.)],ok)
+        flags: [cmdsyntax]
+      # +sheet/revoke <name>/T<n>: a Training Point entry. Refused when the pilot would be left below 0.
+      INC`SHEET`REVOKEXP:
+        value: |-
+          think setq(revoke_t,mid(%q<revoke_n>,1,20)); @assert cand(isint(%q<revoke_t>),hasattr(%q<sheet_who>,SALVAGE`XP`%q<revoke_t>))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s Training Points have no entry T%q<revoke_t>.,warn); @assert not(strmatch(u(%!/FUN`XP`FIELD,%q<sheet_who>,%q<revoke_t>,kind),revoke))=@pemit %#=notice(SHEET,Entry T%q<revoke_t> takes back another. Write a new entry instead.,warn); @assert not(member(u(%!/FUN`XP`REVOKED,%q<sheet_who>),%q<revoke_t>))=@pemit %#=notice(SHEET,Entry T%q<revoke_t> is taken back already.,warn); think setqm(revoke_text,u(%!/FUN`XP`TEXT,%q<sheet_who>,%q<revoke_t>),revoke_left,sub(u(%!/FUN`XP`SUM,%q<sheet_who>),u(%!/FUN`XP`FIELD,%q<sheet_who>,%q<revoke_t>,amount))); @assert gte(%q<revoke_left>,0)=@pemit %#=notice(SHEET,That leaves [name(%q<sheet_who>)] with %q<revoke_left> TP. Take back what the points bought first.,warn); think u(%!/FUN`XP`REVOKE,%q<sheet_who>,%q<revoke_t>); @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s entry T%q<revoke_t> is taken back: %q<revoke_text>. [name(%q<sheet_who>)] has [u(%!/API`METER,%q<sheet_who>,TP)] TP.,ok)
         flags: [cmdsyntax]
       INC`SHEET`DOWNTIME:
         value: |-
@@ -748,6 +775,11 @@ objects:
       INC`CRAWLER`LEDGER:
         value: |-
           @pemit %#=u(%!/FUN`SCREEN`CRAWLERLEDGER)
+        flags: [cmdsyntax]
+      # +crawler/rebuild: writes the hold, the pool and the Tech Level again from the crawler's ledger.
+      INC`CRAWLER`REBUILD:
+        value: |-
+          @include %!/INC`NEED`KEEPER; think setq(crb_was,u(%!/FUN`CRAWLER`STATE)); think u(%!/FUN`CRAWLER`REBUILD); @pemit %#=notice(CRAWLER,The Union Crawler's hold%, upgrade pool and Tech Level are written again from its ledger. [if(comp(%q<crb_was>,u(%!/FUN`CRAWLER`STATE)),It was %q<crb_was>. Now [u(%!/FUN`CRAWLER`STATE)].,Nothing changed.)],ok)
         flags: [cmdsyntax]
       # +crawler/trade <n> <tech>=<tech>: the Trading Bay swaps scrap at its value, a piece worth its Tech Level.
       INC`CRAWLER`TRADE:
@@ -1062,11 +1094,6 @@ objects:
         value: |-
           u(%!/FUN`LEDGER`ADD,%0,json(object,kind,"grant",list,json(string,%1),key,json(string,%2),note,json(string,%3)))
         flags: [funsyntax]
-      # %0 a character, %1 Training Points to give (below 0 spends them), %2 a note.
-      FUN`LEDGER`TP:
-        value: |-
-          u(%!/FUN`LEDGER`ADD,%0,json(object,kind,"tp",amount,%1,note,json(string,%2)))
-        flags: [funsyntax]
       # %0 a character, %1 the entry to take back, %2 a note. Nothing when there is no entry. In chargen a
       # chargen entry is wiped instead, as though it had not been chosen.
       FUN`LEDGER`REVOKE:
@@ -1074,32 +1101,101 @@ objects:
           if(isint(%1),if(cand(strmatch(u(%!/FUN`LEDGER`PHASE,%0),chargen),strmatch(u(%!/FUN`LEDGER`FIELD,%0,%1,phase),chargen)),[null(attrib_set(%0/SALVAGE`LEDGER`%1))][null(u(%!/FUN`LEDGER`REBUILD,%0))],u(%!/FUN`LEDGER`ADD,%0,json(object,kind,"revoke",entry,%1,note,json(string,%2)))))
         flags: [funsyntax]
       # %0 a character: writes what the ledger comes to. Lists in the order they were granted; a set leaf takes
-      # the newest value still standing (a leaf whose every entry is taken back is cleared); TP is the sum; the
-      # path is the tree of the first Advanced or Hybrid ability.
+      # the newest value still standing (a leaf whose every entry is taken back is cleared); the path is the tree
+      # of the first Advanced or Hybrid ability. Training Points are their own ledger (FUN`XP`).
       FUN`LEDGER`REBUILD:
         value: |-
           setqm(rebuild_ns,u(%!/FUN`LEDGER`NS,%0),
           rebuild_live,u(%!/FUN`LEDGER`LIVE,%0),
-          rebuild_leaves,setunion(iter(u(%!/FUN`LEDGER`NS,%0),if(strmatch(u(%!/FUN`LEDGER`FIELD,%0,%i0,kind),set),u(%!/FUN`LEDGER`FIELD,%0,%i0,leaf))),))[null(iter(ABILITIES GEAR MECH`SYSTEMS MECH`MODULES,u(%!/FUN`DO`SET,%0,%i0,squish(iter(%q<rebuild_live>,if(cand(strmatch(u(%!/FUN`LEDGER`FIELD,%0,%i0,kind),grant),strmatch(u(%!/FUN`LEDGER`FIELD,%0,%i0,list),%i1)),u(%!/FUN`LEDGER`FIELD,%0,%i0,key)))))))][null(iter(%q<rebuild_leaves>,u(%!/FUN`DO`SET,%0,%i0,u(%!/FUN`LEDGER`VALUE,%0,%q<rebuild_live>,%i0))))][setq(rebuild_tp,ladd(0 [iter(%q<rebuild_live>,if(strmatch(u(%!/FUN`LEDGER`FIELD,%0,%i0,kind),tp),u(%!/FUN`LEDGER`FIELD,%0,%i0,amount)))]))][null(u(%!/FUN`DO`SET,%0,TP,if(%q<rebuild_tp>,%q<rebuild_tp>)))][null(u(%!/FUN`DO`SET,%0,PATH,first(iter(get(%0/SALVAGE`ABILITIES),if(member(advanced hybrid,get({{data}}/ABILITY`%i0`TIER)),get({{data}}/ABILITY`%i0`TREE))))))]
+          rebuild_leaves,setunion(iter(u(%!/FUN`LEDGER`NS,%0),if(strmatch(u(%!/FUN`LEDGER`FIELD,%0,%i0,kind),set),u(%!/FUN`LEDGER`FIELD,%0,%i0,leaf))),))[null(iter(ABILITIES GEAR MECH`SYSTEMS MECH`MODULES,u(%!/FUN`DO`SET,%0,%i0,squish(iter(%q<rebuild_live>,if(cand(strmatch(u(%!/FUN`LEDGER`FIELD,%0,%i0,kind),grant),strmatch(u(%!/FUN`LEDGER`FIELD,%0,%i0,list),%i1)),u(%!/FUN`LEDGER`FIELD,%0,%i0,key)))))))][null(iter(%q<rebuild_leaves>,u(%!/FUN`DO`SET,%0,%i0,u(%!/FUN`LEDGER`VALUE,%0,%q<rebuild_live>,%i0))))][null(u(%!/FUN`DO`SET,%0,PATH,first(iter(get(%0/SALVAGE`ABILITIES),if(member(advanced hybrid,get({{data}}/ABILITY`%i0`TIER)),get({{data}}/ABILITY`%i0`TREE))))))]
         flags: [funsyntax]
       # %0 a character, %1 the live entries, %2 a leaf: the value of its newest set entry among them.
       FUN`LEDGER`VALUE:
         value: |-
           setq(value_n,last(iter(%1,if(cand(strmatch(u(%!/FUN`LEDGER`FIELD,%0,%i0,kind),set),strmatch(u(%!/FUN`LEDGER`FIELD,%0,%i0,leaf),%2)),%i0))))[if(strlen(%q<value_n>),u(%!/FUN`LEDGER`FIELD,%0,%q<value_n>,value))]
         flags: [funsyntax]
-      # %0 a character, %1 an entry: what it did, "Learns Jury Rig" or "-1 TP: Forgets Jury Rig".
+      # %0 a character, %1 an entry: what it did, "Learns Jury Rig" or "Takes back #3".
       FUN`LEDGER`TEXT:
         value: |-
           setqm(text_kind,u(%!/FUN`LEDGER`FIELD,%0,%1,kind),
           text_note,u(%!/FUN`LEDGER`FIELD,%0,%1,note),
           text_leaf,u(%!/FUN`LEDGER`FIELD,%0,%1,leaf),
           text_value,u(%!/FUN`LEDGER`FIELD,%0,%1,value),
-          text_key,u(%!/FUN`LEDGER`FIELD,%0,%1,key))[switch(%q<text_kind>,set,[u(%!/FUN`LEDGER`LEAFLABEL,%q<text_leaf>)]: [if(strlen(%q<text_value>),switch(%q<text_leaf>,CLASS,get({{data}}/CLASS`%q<text_value>),MECH`CHASSIS,get({{data}}/CHASSIS`%q<text_value>),%q<text_value>),if(strmatch(%q<text_leaf>,MAX`*),the setting,none))],grant,[switch(u(%!/FUN`LEDGER`FIELD,%0,%1,list),ABILITIES,Learns [get({{data}}/ABILITY`%q<text_key>)],GEAR,Takes [get({{data}}/EQUIPMENT`%q<text_key>)],MECH`SYSTEMS,Installs [get({{data}}/SYSTEM`%q<text_key>)],Installs [get({{data}}/MODULE`%q<text_key>)])],tp,[if(gt(u(%!/FUN`LEDGER`FIELD,%0,%1,amount),0),+)][u(%!/FUN`LEDGER`FIELD,%0,%1,amount)] TP,revoke,Takes back #[u(%!/FUN`LEDGER`FIELD,%0,%1,entry)],clear,Clears the sheet,%q<text_kind>)][if(strlen(%q<text_note>),: %q<text_note>)]
+          text_key,u(%!/FUN`LEDGER`FIELD,%0,%1,key))[switch(%q<text_kind>,set,[u(%!/FUN`LEDGER`LEAFLABEL,%q<text_leaf>)]: [if(strlen(%q<text_value>),switch(%q<text_leaf>,CLASS,get({{data}}/CLASS`%q<text_value>),MECH`CHASSIS,get({{data}}/CHASSIS`%q<text_value>),%q<text_value>),if(strmatch(%q<text_leaf>,MAX`*),the setting,none))],grant,[switch(u(%!/FUN`LEDGER`FIELD,%0,%1,list),ABILITIES,Learns [get({{data}}/ABILITY`%q<text_key>)],GEAR,Takes [get({{data}}/EQUIPMENT`%q<text_key>)],MECH`SYSTEMS,Installs [get({{data}}/SYSTEM`%q<text_key>)],Installs [get({{data}}/MODULE`%q<text_key>)])],revoke,Takes back #[u(%!/FUN`LEDGER`FIELD,%0,%1,entry)],clear,Clears the sheet,%q<text_kind>)][if(strlen(%q<text_note>),: %q<text_note>)]
         flags: [funsyntax]
       # %0 a set entry's leaf: its name in the ledger.
       FUN`LEDGER`LEAFLABEL:
         value: |-
           switch(%0,CLASS,Class,MECH`CHASSIS,Mech chassis,MECH`NAME,Mech name,MECH`QUIRK,Mech quirk,MAX`HP,Most HP,MAX`AP,Most AP,MAX`SLOTS,Inventory slots,DETAIL`*,capstr(lcstr(after(%0,`))),%0)
+        flags: [funsyntax]
+
+      # ---- Training Points: their own ledger, SALVAGE`XP`<n>, apart from the build --------------------------
+      # Each entry is wizard-flagged JSON: kind (tp, or revoke with the entry it takes back), amount, note, n, by,
+      # at, phase, and for: the build entry a spend paid for or a refund pays back. SALVAGE`TP is the running
+      # total, a cache: each entry adds its amount to it, and FUN`XP`REBUILD writes the sum again.
+      FUN`XP`NS:
+        value: |-
+          sort(iter(lattr(%0/SALVAGE`XP`*),if(hasflag(%0/%i0,wizard),last(%i0,`))),n)
+        flags: [funsyntax]
+      # %0 a character, %1 an entry number, %2 a field.
+      FUN`XP`FIELD:
+        value: |-
+          json_query(get(%0/SALVAGE`XP`%1),extract,$.%2)
+        flags: [funsyntax]
+      FUN`XP`REVOKED:
+        value: |-
+          squish(iter(u(%!/FUN`XP`NS,%0),if(strmatch(u(%!/FUN`XP`FIELD,%0,%i0,kind),revoke),u(%!/FUN`XP`FIELD,%0,%i0,entry))))
+        flags: [funsyntax]
+      # %0 a character: the entries that count.
+      FUN`XP`LIVE:
+        value: |-
+          setq(xp_revoked,u(%!/FUN`XP`REVOKED,%0))[squish(iter(u(%!/FUN`XP`NS,%0),if(cor(member(%q<xp_revoked>,%i0),strmatch(u(%!/FUN`XP`FIELD,%0,%i0,kind),revoke)),,%i0)))]
+        flags: [funsyntax]
+      # %0 a character: what the ledger comes to.
+      FUN`XP`SUM:
+        value: |-
+          ladd(0 [iter(u(%!/FUN`XP`LIVE,%0),u(%!/FUN`XP`FIELD,%0,%i0,amount))])
+        flags: [funsyntax]
+      # %0 a character, %1 an entry as JSON without n, by, at and phase: writes it as the next entry and returns
+      # its number. It leaves the total to the caller.
+      FUN`XP`WRITE:
+        value: |-
+          setq(xp_n,inc(lmax(0 [u(%!/FUN`XP`NS,%0)])))[null(u(%!/FUN`DO`SET,%0,XP`%q<xp_n>,json_mod(%1,patch,json(object,n,%q<xp_n>,by,json(string,objid(%#)),at,secs(),phase,json(string,u(%!/FUN`LEDGER`PHASE,%0))))))][null(set(%0/SALVAGE`XP`%q<xp_n>,wizard))]%q<xp_n>
+        flags: [funsyntax]
+      # %0 a character, %1 Training Points to give (below 0 spends them), %2 a note, %3 the build entry it is for:
+      # writes the entry, adds it to the total, and returns the entry's number.
+      FUN`XP`ADD:
+        value: |-
+          setq(xp_entry,json(object,kind,"tp",amount,%1,note,json(string,%2)))[if(isint(%3),setq(xp_entry,json_mod(%q<xp_entry>,patch,json(object,for,%3))))][setq(xp_added,u(%!/FUN`XP`WRITE,%0,%q<xp_entry>))][null(u(%!/FUN`XP`CACHE,%0,add(default(%0/SALVAGE`TP,0),%1)))]%q<xp_added>
+        flags: [funsyntax]
+      # %0 a character, %1 the total: writes the cache.
+      FUN`XP`CACHE:
+        value: |-
+          u(%!/FUN`DO`SET,%0,TP,if(%1,%1))
+        flags: [funsyntax]
+      FUN`XP`REBUILD:
+        value: |-
+          u(%!/FUN`XP`CACHE,%0,u(%!/FUN`XP`SUM,%0))
+        flags: [funsyntax]
+      # %0 a character, %1 the entry to take back, %2 a note.
+      FUN`XP`REVOKE:
+        value: |-
+          [null(u(%!/FUN`XP`WRITE,%0,json(object,kind,"revoke",entry,%1,note,json(string,%2))))][null(u(%!/FUN`XP`REBUILD,%0))]
+        flags: [funsyntax]
+      # %0 a character, %1 build entries taken back, %2 a note: pays back what was spent on each and not paid back
+      # yet, one entry per build entry, and returns the TP paid back.
+      FUN`XP`REFUND:
+        value: |-
+          setqm(refund_total,0,
+          refund_live,u(%!/FUN`XP`LIVE,%0))[null(iter(%1,[setq(refund_net,ladd(0 [iter(%q<refund_live>,if(strmatch(u(%!/FUN`XP`FIELD,%0,%i0,for),%i1),u(%!/FUN`XP`FIELD,%0,%i0,amount)))]))][if(lt(%q<refund_net>,0),[null(u(%!/FUN`XP`ADD,%0,abs(%q<refund_net>),%2,%i0))][setq(refund_total,add(%q<refund_total>,abs(%q<refund_net>)))])]))]%q<refund_total>
+        flags: [funsyntax]
+      # %0 a character, %1 an entry: what it did, "-2 TP for #5: Learns Jury Rig".
+      FUN`XP`TEXT:
+        value: |-
+          setqm(xtext_kind,u(%!/FUN`XP`FIELD,%0,%1,kind),
+          xtext_amount,u(%!/FUN`XP`FIELD,%0,%1,amount),
+          xtext_for,u(%!/FUN`XP`FIELD,%0,%1,for),
+          xtext_note,u(%!/FUN`XP`FIELD,%0,%1,note))[switch(%q<xtext_kind>,tp,[if(gt(%q<xtext_amount>,0),+)]%q<xtext_amount> TP[if(strlen(%q<xtext_for>),%bfor #%q<xtext_for>)],revoke,Takes back T[u(%!/FUN`XP`FIELD,%0,%1,entry)],%q<xtext_kind>)][if(strlen(%q<xtext_note>),: %q<xtext_note>)]
         flags: [funsyntax]
       FUN`DO`SET:
         value: |-
@@ -1260,7 +1356,11 @@ objects:
       # %0 a character: their ledger, every entry oldest first; one taken back is muted, with the entry that did.
       FUN`SCREEN`LEDGER:
         value: |-
-          setq(ledger_ns,u(%!/FUN`LEDGER`NS,%0))[setq(ledger_backs,squish(iter(%q<ledger_ns>,switch(u(%!/FUN`LEDGER`FIELD,%0,%i0,kind),revoke,[u(%!/FUN`LEDGER`FIELD,%0,%i0,entry)]:%i0,clear,iter(%q<ledger_ns>,if(cand(lt(%i0,%i1),not(match(revoke clear,u(%!/FUN`LEDGER`FIELD,%0,%i0,kind)))),%i0:%i1))))))][box(if(words(%q<ledger_ns>),ldatatable(lit({"nowrap":"1|3|4","rule":""}),>#|Change|By|When,iter(%q<ledger_ns>,%i0|[if(strlen(setr(ledger_back,after(first(graball(%q<ledger_backs>,%i0:*)),:))),tone(muted,[u(%!/FUN`LEDGER`TEXT,%0,%i0)] %(taken back by #%q<ledger_back>%)),u(%!/FUN`LEDGER`TEXT,%0,%i0))]|[name(u(%!/FUN`LEDGER`FIELD,%0,%i0,by))]|[timefmt($Y-$m-$d,u(%!/FUN`LEDGER`FIELD,%0,%i0,at))],,%*<^>),%*<^>)%r[rule()]%r[tone(muted,The sheet is what these come to. Staff take one back with +sheet/revoke [name(%0)]/<n>.)],tone(muted,No changes yet.)),[name(%0)]'s ledger)]
+          setq(ledger_ns,u(%!/FUN`LEDGER`NS,%0))[setq(ledger_backs,squish(iter(%q<ledger_ns>,switch(u(%!/FUN`LEDGER`FIELD,%0,%i0,kind),revoke,[u(%!/FUN`LEDGER`FIELD,%0,%i0,entry)]:%i0,clear,iter(%q<ledger_ns>,if(cand(lt(%i0,%i1),not(match(revoke clear,u(%!/FUN`LEDGER`FIELD,%0,%i0,kind)))),%i0:%i1))))))][box(if(words(%q<ledger_ns>),ldatatable(lit({"nowrap":"1|3|4","rule":""}),>#|Change|By|When,iter(%q<ledger_ns>,%i0|[if(strlen(setr(ledger_back,after(first(graball(%q<ledger_backs>,%i0:*)),:))),tone(muted,[u(%!/FUN`LEDGER`TEXT,%0,%i0)] %(taken back by #%q<ledger_back>%)),u(%!/FUN`LEDGER`TEXT,%0,%i0))]|[name(u(%!/FUN`LEDGER`FIELD,%0,%i0,by))]|[timefmt($Y-$m-$d,u(%!/FUN`LEDGER`FIELD,%0,%i0,at))],,%*<^>),%*<^>)%r[rule()]%r[tone(muted,The sheet is what these come to. Staff take one back with +sheet/revoke [name(%0)]/<n>. Training Points are on +sheet/training [name(%0)].)],tone(muted,No changes yet.)),[name(%0)]'s ledger)]
+        flags: [funsyntax]
+      FUN`SCREEN`XPLEDGER:
+        value: |-
+          setq(xl_ns,u(%!/FUN`XP`NS,%0))[setq(xl_backs,squish(iter(%q<xl_ns>,if(strmatch(u(%!/FUN`XP`FIELD,%0,%i0,kind),revoke),[u(%!/FUN`XP`FIELD,%0,%i0,entry)]:%i0))))][box(if(words(%q<xl_ns>),[ldatatable(lit({"nowrap":"1|3|4","rule":""}),>#|Change|By|When,iter(%q<xl_ns>,T%i0|[if(strlen(setr(xl_back,after(first(graball(%q<xl_backs>,%i0:*)),:))),tone(muted,[u(%!/FUN`XP`TEXT,%0,%i0)] %(taken back by T%q<xl_back>%)),u(%!/FUN`XP`TEXT,%0,%i0))]|[name(u(%!/FUN`XP`FIELD,%0,%i0,by))]|[timefmt($Y-$m-$d,u(%!/FUN`XP`FIELD,%0,%i0,at))],,%*<^>),%*<^>)]%r[rule()]%r[tone(muted,[name(%0)] has [u(%!/API`METER,%0,TP)] TP. A #<n> is the +sheet/ledger entry a spend paid for. Staff take one back with +sheet/revoke [name(%0)]/T<n>.)],tone(muted,No Training Points yet.)),[name(%0)]'s Training Points)]
         flags: [funsyntax]
       # %0 an encounter: its members and their copies.
       FUN`SCREEN`ENCOUNTER:
@@ -1355,6 +1455,17 @@ objects:
           ctext_amount,u(%!/FUN`CRAWLER`FIELD,%0,amount),
           ctext_note,u(%!/FUN`CRAWLER`FIELD,%0,note))[switch(%q<ctext_kind>,scrap,[if(gt(%q<ctext_amount>,0),+)]%q<ctext_amount> Tech [u(%!/FUN`CRAWLER`FIELD,%0,tech)] scrap,pool,[if(gt(%q<ctext_amount>,0),+)]%q<ctext_amount> upgrade pool,tech,Tech [u(%!/FUN`CRAWLER`FIELD,%0,tech)],%q<ctext_kind>)][if(strlen(%q<ctext_note>),: %q<ctext_note>)]
         flags: [funsyntax]
+      # Writes the hold, the upgrade pool and the Tech Level again from the ledger: each amount adds its entries in
+      # order, never below 0, as FUN`CRAWLER`ADDSCRAP and ADDPOOL do; the Tech Level is the newest tech entry's.
+      FUN`CRAWLER`REBUILD:
+        value: |-
+          setq(crb_ns,u(%!/FUN`CRAWLER`NS))[null(iter(lnum(1,6),[setq(crb_sum,0)][null(iter(%q<crb_ns>,if(cand(strmatch(u(%!/FUN`CRAWLER`FIELD,%i0,kind),scrap),eq(u(%!/FUN`CRAWLER`FIELD,%i0,tech),%i1)),setq(crb_sum,max(0,add(%q<crb_sum>,u(%!/FUN`CRAWLER`FIELD,%i0,amount)))))))][if(gt(%q<crb_sum>,0),attrib_set({{store}}/CRAWLER`SCRAP`T%i0,%q<crb_sum>),attrib_set({{store}}/CRAWLER`SCRAP`T%i0))]))][setq(crb_pool,0)][null(iter(%q<crb_ns>,if(strmatch(u(%!/FUN`CRAWLER`FIELD,%i0,kind),pool),setq(crb_pool,max(0,add(%q<crb_pool>,u(%!/FUN`CRAWLER`FIELD,%i0,amount)))))))][null(if(gt(%q<crb_pool>,0),attrib_set({{store}}/CRAWLER`POOL,%q<crb_pool>),attrib_set({{store}}/CRAWLER`POOL)))][setq(crb_tech,firstof(u(%!/FUN`CRAWLER`FIELD,last(iter(%q<crb_ns>,if(strmatch(u(%!/FUN`CRAWLER`FIELD,%i0,kind),tech),%i0))),tech),1))][null(if(neq(%q<crb_tech>,1),attrib_set({{store}}/CRAWLER`TECH,%q<crb_tech>),attrib_set({{store}}/CRAWLER`TECH)))]
+        flags: [funsyntax]
+      # The hold, the pool and the Tech Level as one line, to see whether a rebuild changed them.
+      FUN`CRAWLER`STATE:
+        value: |-
+          squish([iter(lnum(1,6),if(default({{store}}/CRAWLER`SCRAP`T%i0,0),Tech %i0 scrap [get({{store}}/CRAWLER`SCRAP`T%i0)]%,))] pool [u(%!/FUN`CRAWLER`POOL)]%, Tech Level [u(%!/FUN`CRAWLER`TECH)])
+        flags: [funsyntax]
       # The newest 40 entries, oldest first.
       FUN`SCREEN`CRAWLERLEDGER:
         value: |-
@@ -1415,12 +1526,12 @@ objects:
         value: |-
           setq(meter_api,ucstr(%1))[if(hasattr(%!,DATA`METER`%q<meter_api>),[setq(meter_value,u(%!/FUN`PLAY`GET,%0,v(DATA`METER`%q<meter_api>`LEAF)))][if(strlen(%q<meter_value>),%q<meter_value>,if(strmatch(v(DATA`METER`%q<meter_api>`START),max),u(%!/FUN`METER`MAX,%0,%q<meter_api>),0))],#-1 NO SUCH METER)]
         flags: [VISUAL]
-      # %0 a character, %1 a meter, %2 how much to add (or take, below 0), %3 a note for a TP ledger entry: writes
+      # %0 a character, %1 a meter, %2 how much to add (or take, below 0), %3 a note for a Training Point entry: writes
       # it within 0 and its most and returns the new value.
       API`ADJUST:
         value: |-
           setqm(adjust_key,ucstr(%1),
-          adjust_new,bound(add(u(%!/API`METER,%0,%1),%2),0,u(%!/FUN`METER`MAX,%0,%1)))[if(strmatch(%q<adjust_key>,TP),[null(if(sub(%q<adjust_new>,u(%!/API`METER,%0,TP)),u(%!/FUN`LEDGER`TP,%0,sub(%q<adjust_new>,u(%!/API`METER,%0,TP)),%3)))]%q<adjust_new>,if(hasattr(%!,DATA`METER`%q<adjust_key>),[null(u(%!/FUN`DO`SET,%0,v(DATA`METER`%q<adjust_key>`LEAF),if(neq(%q<adjust_new>,if(strmatch(v(DATA`METER`%q<adjust_key>`START),max),u(%!/FUN`METER`MAX,%0,%q<adjust_key>),0)),%q<adjust_new>)))]%q<adjust_new>,#-1 NO SUCH METER))]
+          adjust_new,bound(add(u(%!/API`METER,%0,%1),%2),0,u(%!/FUN`METER`MAX,%0,%1)))[if(strmatch(%q<adjust_key>,TP),[null(if(sub(%q<adjust_new>,u(%!/API`METER,%0,TP)),u(%!/FUN`XP`ADD,%0,sub(%q<adjust_new>,u(%!/API`METER,%0,TP)),%3)))]%q<adjust_new>,if(hasattr(%!,DATA`METER`%q<adjust_key>),[null(u(%!/FUN`DO`SET,%0,v(DATA`METER`%q<adjust_key>`LEAF),if(neq(%q<adjust_new>,if(strmatch(v(DATA`METER`%q<adjust_key>`START),max),u(%!/FUN`METER`MAX,%0,%q<adjust_key>),0)),%q<adjust_new>)))]%q<adjust_new>,#-1 NO SUCH METER))]
         flags: [VISUAL]
       # %0 a Tech Level, %1 how much scrap to add to the Union Crawler's (or take, below 0), %2 a note for its ledger,
       # %3 the pilot it is for: the new amount, never below 0.
@@ -1597,7 +1708,7 @@ objects:
         - `+sheet/ability <ability>` reads one.
         - `+sheet/learn <ability>` learns one; `+sheet/unlearn <ability>` forgets the last of a tree.
 
-        Once approved, learning costs training points (TP): 1 for a core ability, 2 for an Advanced or Hybrid one, 3 for a Legendary one. Forgetting costs 1. Staff award TP with `+sheet/tp <name>=+<n> <reason>`, and the ledger keeps each award.
+        Once approved, learning costs training points (TP): 1 for a core ability, 2 for an Advanced or Hybrid one, 3 for a Legendary one. Forgetting costs 1. Staff award TP with `+sheet/tp <name>=+<n> <reason>`, and `+sheet/training` lists each award and spend.
 
         With 6 core abilities and all three of one tree, you may advance down the tree it leads to: your class's Advanced tree, or a Hybrid Class, which opens two more core trees. Only one. With all three of that tree, one Legendary ability.
 
@@ -1704,13 +1815,14 @@ objects:
 
         This sheet is not an official Salvage Union product, and is not published or endorsed by Leyline Press. Its abilities, chassis, systems, modules, equipment and tables are the Salvage Union Core Book's text, from the Salvage Union (Unofficial) Foundry VTT system by demondownload and Stexinator.
       HELP`SHEET`LEDGER: |-
-        Your sheet is built from a ledger: each class, ability, piece of equipment, detail, chassis, part and Training Point is an entry, with who made it and when.
+        Your sheet is built from a ledger: each class, ability, piece of equipment, detail, chassis and part is an entry, with who made it and when. Training Points have a ledger of their own.
 
-        - `+sheet/ledger \[<name>\]` lists the entries, oldest first. One taken back is shown dimmed, with the entry that took it back.
+        - `+sheet/ledger \[<name>\]` lists the build entries, oldest first. One taken back is shown dimmed, with the entry that took it back.
+        - `+sheet/training \[<name>\]` lists each Training Point award and spend, numbered T1, T2 and on. A spend shows the build entry it paid for.
         - Before approval, choosing again rewrites your choice, and `+sheet/unlearn`, `/drop` and `+mech/remove` remove the entry.
         - After approval every change is a new entry, so the ledger keeps the whole history.
 
-        Staff take an entry back with `+sheet/revoke <name>/<n>`, or the whole sheet with `+sheet/clear <name>`.
+        Staff take an entry back with `+sheet/revoke <name>/<n>` or `+sheet/revoke <name>/T<n>`, or the whole build with `+sheet/clear <name>`. Taking back an ability you paid for gives its TP back. A clear keeps your Training Points.
 
         For example:
 
@@ -1750,7 +1862,8 @@ objects:
         - `+sheet/take <name>/<equipment>` and `+mech/install <name>/<part>` give what a pilot found, free; the ledger shows who gave it.
         - `+crawler/name`, `/type`, `/weapon <system>`, `/tech <n>`, `/sp` and `/pool` run the Union Crawler, and `+crawler/scrap <tech>=+<n> <reason>` adds scrap to its hold; `+crawler/ledger` keeps every change. `+crawler/upkeep` pays 5 scrap of its Tech Level into the upgrade pool, or rolls on the deterioration table; `+crawler/upgrade` raises its Tech Level when the pool is full.
 
-        - `+sheet/revoke <name>/<n>` takes back entry `<n>` of their ledger; `+sheet/clear <name>` takes back all of it, so they build the sheet again.
+        - `+sheet/revoke <name>/<n>` takes back entry `<n>` of their ledger and pays back the TP it cost; `+sheet/revoke <name>/T<n>` takes back a Training Point entry; `+sheet/clear <name>` takes back the whole build, so they build the sheet again with the TP it cost.
+        - `+sheet/rebuild <name>` writes a sheet and its TP again from the two ledgers, and `+crawler/rebuild` the crawler's hold, pool and Tech Level from its ledger.
         - `+encounter/end`, `/keep`, `/add` and `/remove` work on any encounter.
 
         `@role/assign <player>=salvage-sheet-keeper` makes someone a keeper.
