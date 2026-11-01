@@ -15,6 +15,20 @@ For example:
 
 Output: `[SCIENCE] Bob pilots Little Tin: Vehicles: 4dF[-1, 1, 1, 1] + 5 = 7 (Epic) against Fair (+2): success with style, 5 shifts (roll 25) Giant against person: +2 to the roll. As an attack it hits for 5 shifts.`
 
+## Monsters and enemy robots
+
+The GM's opposition gets a scale too. An NPC made with `+npc` takes a scale, a Weapon and an Armor:
+
+- `+npc/set kaiju/scale=titan`, `+npc/set kaiju/weapon=3` and `+npc/set kaiju/armor=2`.
+- `+encounter/roll kaiju/fight=fair vs person` rolls for it against something of that size, with the steps between them counted as for a machine, and adds its Weapon to the hit.
+- `+encounter/harm kaiju=5` takes its Armor off the hit before it marks stress.
+
+For example:
+
+`+encounter/roll kaiju/fight=fair vs person`
+
+Output: `[SHEET] Kaiju Mk II rolls Fight: 4dF[-1, 0, 0, 0] + 6 = 5 (Superb) against Fair (+2): success with style, 3 shifts (roll 35) Titan against person: +3 to the roll. As an attack it hits for 6 shifts (3 + Weapon:3).`
+
 ---
 
 *Rules based on the Atomic Robo RPG SRD and the Fate System Toolkit under CC BY 3.0. An unofficial fan package. See [[Atomic Robo License Notice|help:atomic_robo_license_notice]].*

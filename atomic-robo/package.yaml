@@ -1,9 +1,9 @@
 format: "1.16"
 package: atomic-robo
 title: "Atomic Robo (unofficial)"
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
-description: "Pulp action science and super robots on the Fate sheet: characters pick three modes (Action, Banter, Intrigue, Science, or weird ones such as Robot and Pilot) that rate their skills, take mega-stunts, invent gadgets with catches and flaws, brainstorm a hypothesis together, and pilot giant machines whose scale counts in a fight. Based on the Atomic Robo RPG SRD and the Fate System Toolkit, both under CC BY 3.0. An unofficial fan package, not affiliated with or endorsed by Evil Hat Productions or the creators of Atomic Robo."
+description: "Pulp action science and super robots on the Fate sheet: characters pick three modes (Action, Banter, Intrigue, Science, or weird ones such as Robot and Pilot) that rate their skills, take mega-stunts, invent gadgets with catches and flaws, brainstorm a hypothesis together, and pilot giant machines whose scale counts in a fight, against enemy robots and monsters with a scale of their own. Based on the Atomic Robo RPG SRD and the Fate System Toolkit, both under CC BY 3.0. An unofficial fan package, not affiliated with or endorsed by Evil Hat Productions or the creators of Atomic Robo."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, fate, invention, robots, mecha]
@@ -11,11 +11,11 @@ category: Characters
 requires_server: ">=0.1"
 
 # It works the Fate sheet's skill ratings out from modes, so it needs the sheet's stunts, per-character stress
-# boxes and its GATE`SET and SECTION` hooks (sheet-fate 1.1). Sheet keepers (softcode.fate.admin) keep this
-# too; there is no permission of its own.
+# boxes, its GATE`SET and SECTION` hooks, and the NPCFIELD` and NPC` hooks that give opposition a scale
+# (sheet-fate 1.3). Sheet keepers (softcode.fate.admin) keep this too; there is no permission of its own.
 depends:
   - package: sheet-fate
-    version: ">=1.1 <2.0"
+    version: ">=1.3 <2.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH.Packages
       path: sheet-fate/
@@ -862,6 +862,12 @@ objects:
         flags: [funsyntax]
 
       # ---- scale --------------------------------------------------------------------
+      # %0 an NPC (object/attribute), %1 a scale as typed or nothing: npc_own (its scale, the smallest when it has
+      # none), npc_foe (the one typed, else its own; nothing when there is no such scale) and npc_steps between them.
+      FUN`NPC`SCALES:
+        value: |-
+          setqm(npc_own,firstof(get(%0`FIELD`SCALE),first(u(%!/FUN`SCALE`ALL))),npc_foe,if(strlen(%1),u(%!/FUN`SCALE`FIND,%1),firstof(get(%0`FIELD`SCALE),first(u(%!/FUN`SCALE`ALL)))))[setq(npc_steps,if(strlen(%q<npc_foe>),sub(u(%!/FUN`SCALE`STEP,%q<npc_own>),u(%!/FUN`SCALE`STEP,%q<npc_foe>)),0))]
+        flags: [funsyntax]
       FUN`SCALE`FIND:
         value: |-
           u(%!/FUN`LIST`FIND,SCALE,%0)
@@ -982,7 +988,7 @@ objects:
         flags: [funsyntax]
       FUN`SECTION`MACHINE:
         value: |-
-          if(hasattr(%0,FATE`MACHINE),lfields(lit({"cols":2}),Machine|Scale|Concept|Flaw|Weapon|Armor|Stress,[get(%0/FATE`MACHINE)]|[u(%!/FUN`SCALE`LABEL,get(%0/FATE`MACHINE`SCALE))]|[firstof(get(%0/FATE`MACHINE`CONCEPT),tone(muted,-))]|[firstof(get(%0/FATE`MACHINE`FLAW),tone(muted,-))]|[default(%0/FATE`MACHINE`WEAPON,0)]|[default(%0/FATE`MACHINE`ARMOR,0)]|[setq(machine_marked,u({{sheet-fate/sheet}}/API`PLAY,%0,MACHINE`STRESS))][iter(lnum(1,get(%!/DATA`CONFIG`MACHINE_BOXES)),if(member(%q<machine_marked>,%i0),%[X%],%[%b%]))],|))
+          if(hasattr(%0,FATE`MACHINE),lfields(lit({"cols":2}),Machine%*<|>Scale%*<|>Concept%*<|>Flaw%*<|>Weapon%*<|>Armor%*<|>Stress,[get(%0/FATE`MACHINE)]%*<|>[u(%!/FUN`SCALE`LABEL,get(%0/FATE`MACHINE`SCALE))]%*<|>[firstof(get(%0/FATE`MACHINE`CONCEPT),tone(muted,-))]%*<|>[firstof(get(%0/FATE`MACHINE`FLAW),tone(muted,-))]%*<|>[default(%0/FATE`MACHINE`WEAPON,0)]%*<|>[default(%0/FATE`MACHINE`ARMOR,0)]%*<|>[setq(machine_marked,u({{sheet-fate/sheet}}/API`PLAY,%0,MACHINE`STRESS))][iter(lnum(1,get(%!/DATA`CONFIG`MACHINE_BOXES)),if(member(%q<machine_marked>,%i0),%[X%],%[%b%]))],%*<|>))
         flags: [funsyntax]
       FUN`SECTION`INVENTIONS:
         value: |-
@@ -1235,6 +1241,21 @@ objects:
         `+machine/check vehicles=fair vs person`
 
         Output: `\[SCIENCE\] Bob pilots Little Tin: Vehicles: 4dF\[-1, 1, 1, 1\] + 5 = 7 (Epic) against Fair (+2): success with style, 5 shifts (roll 25) Giant against person: +2 to the roll. As an attack it hits for 5 shifts.`
+      HELP`MACHINE`OPPOSITION: |-
+        Giant robots and monsters for the GM to fight are NPCs made with `+npc`, with a scale, a Weapon and an Armor of their own:
+
+        - `+npc/set <npc>/scale=<scale>` sets its scale. Without one it is the smallest, a person.
+        - `+npc/set <npc>/weapon=<0 to 4>` adds to the harm its hits do. `+npc/set <npc>/armor=<0 to 4>` takes that many shifts off each hit it takes.
+        - `+encounter/roll <npc>/<skill>=<opposition> vs <scale>` rolls for it against something of that scale, with the steps between them counted as for a machine. Leave out `vs` for a foe of its own size.
+        - `+encounter/harm <npc>=<shifts>` takes its Armor off first.
+
+        A pilot attacks it with `+machine/check <skill>=<opposition> vs <its scale>`.
+
+        For example:
+
+        `+encounter/roll kaiju/fight=fair vs person`
+
+        Output: `\[SHEET\] Kaiju Mk II rolls Fight: 4dF\[-1, 0, 0, 0\] + 6 = 5 (Superb) against Fair (+2): success with style, 3 shifts (roll 35) Titan against person: +3 to the roll. As an attack it hits for 6 shifts (3 + Weapon:3).`
       HELP`INVENT: |-
         `+invent <skill>=<benefits> <what it does>` builds a gadget: a science roll against twice its benefits, where the room sees it. What it does becomes its function aspect.
 
@@ -1315,6 +1336,40 @@ objects:
       # What an encounter copies besides the sheet's own: the machine's stress.
       PLAY`MACHINE: |-
         MACHINE`STRESS
+      # Opposition: an NPC's scale, Weapon and Armor (+npc/set <npc>/scale=giant). The scale between an NPC and what
+      # it fights counts as it does for a machine (+encounter/roll <npc>/<skill> vs <scale>), its Weapon adds to a
+      # hit, and its Armor takes shifts off the harm it takes. An NPC with no scale is the smallest.
+      NPCFIELD`SCALE:
+        value: |-
+          setq(npcfield_scale,u({{science}}/FUN`SCALE`FIND,%0))[if(strlen(%q<npcfield_scale>),%q<npcfield_scale>,#-1 There is no scale '%0'. The scales are [u({{science}}/FUN`DISPLAY`SCALES)].)]
+        flags: [funsyntax]
+      NPCFIELD`SCALE`SHOW:
+        value: |-
+          u({{science}}/FUN`SCALE`LABEL,%0)
+        flags: [funsyntax]
+      NPCFIELD`WEAPON:
+        value: |-
+          if(cand(isint(%0),gte(%0,0),lte(%0,4)),%0,#-1 Weapon is a whole number from 0 to 4.)
+        flags: [funsyntax]
+      NPCFIELD`ARMOR:
+        value: |-
+          if(cand(isint(%0),gte(%0,0),lte(%0,4)),%0,#-1 Armor is a whole number from 0 to 4.)
+        flags: [funsyntax]
+      # %0 the NPC (object/attribute), %1 the scale it fights, as typed: what scale adds to its roll.
+      NPC`ROLL:
+        value: |-
+          u({{science}}/FUN`NPC`SCALES,%0,%1)[cond(not(strlen(%q<npc_foe>)),#-1 There is no scale '%1'. The scales are [u({{science}}/FUN`DISPLAY`SCALES)].,member(roll both,get({{science}}/DATA`CONFIG`SCALE_EFFECT)),%q<npc_steps>,1,0)]
+        flags: [funsyntax]
+      # %0, %1, %2 the check: the scale and the hit, as +machine/check says them.
+      NPC`HIT:
+        value: |-
+          u({{science}}/FUN`NPC`SCALES,%0,%1)[setq(npc_effect,get({{science}}/DATA`CONFIG`SCALE_EFFECT))][u({{science}}/FUN`DISPLAY`SCALE,%q<npc_own>,%q<npc_foe>,if(member(roll both,%q<npc_effect>),%q<npc_steps>,0))][u({{science}}/FUN`DISPLAY`HIT,%2,default(%0`FIELD`WEAPON,0),if(member(harm both,%q<npc_effect>),mul(2,%q<npc_steps>),0))]
+        flags: [funsyntax]
+      # %0, %1 the shifts of a hit: what gets through its Armor, and why.
+      NPC`HARM:
+        value: |-
+          setq(npc_armor,default(%0`FIELD`ARMOR,0))[max(0,sub(%1,%q<npc_armor>))][if(%q<npc_armor>,%bArmor:%q<npc_armor> takes [min(%1,%q<npc_armor>)] off.)]
+        flags: [funsyntax]
       # What +sheet/clear takes away besides the sheet's own build: modes, bought steps and mega-stunts.
       BUILD`ROBO: |-
         MODE FOCUS MODESTRESS MEGA BONUSPOINTS
