@@ -2748,9 +2748,24 @@ objects:
           u(FUN`ENC`SET,%q<act_at>,map,inc(u(FUN`ENC`C,%q<act_at>,map)))][
           setq(enc_say,[u(FUN`ENC`C,%q<act_at>,name)] Strikes [u(FUN`ENC`C,%q<act_target>,name)] with [first(%q<act_strike>,|)]: [json_query(%q<roll_record>,extract,$.text)][if(%q<strike_map>,%b%(MAP -%q<strike_map>%))] vs AC [if(cor(%q<enc_gm>,strmatch(u(FUN`ENC`C,%q<act_target>,kind),pc)),%q<strike_ac>,?)]: [tone(strong,u(FUN`ACT`DEGREE,%q<roll_degree>))].)][
           if(gte(%q<roll_degree>,2),
-            [u(FUN`ACT`DAMAGE,elements(%q<act_strike>,3,|),eq(%q<roll_degree>,3))][
+            [u(FUN`ACT`STRIKE`DAMAGE,elements(%q<act_strike>,3,|),elements(%q<act_strike>,4,|),eq(%q<roll_degree>,3))][
             u(FUN`ACT`HARM,%q<act_target>,%q<dmg_total>,eq(%q<roll_degree>,3))][
-            setq(enc_say,%q<enc_say>%rDamage: %q<dmg_text>[if(eq(%q<roll_degree>,3),%bdoubled)] = %q<dmg_total>. %q<harm_text>.)])]
+            setq(enc_say,%q<enc_say>%rDamage: %q<dmg_text> = %q<dmg_total>. %q<harm_text>.)])]
+        flags: [funsyntax]
+      # A Strike's damage: doubled on a critical hit, where a fatal weapon's dice grow to the fatal
+      # size and add one die of it, and a deadly weapon adds its die (two with greater striking, three
+      # with major), neither doubled. Sets dmg_total and dmg_text.
+      FUN`ACT`STRIKE`DAMAGE:
+        value: |-
+          @@(%0 the damage parts, %1 the weapon's traits, %2 1 on a critical hit)[
+          setqm(strike_fatal,after(grab(%1,fatal-d*),fatal-),strike_deadly,after(grab(%1,deadly-d*),deadly-),strike_first,first(trim(first(%0,%,))))][
+          setq(strike_parts,if(cand(%2,strlen(%q<strike_fatal>)),regedit(%0,d\\d+,%q<strike_fatal>),%0))][
+          u(FUN`ACT`DAMAGE,%q<strike_parts>,%2)][
+          setq(dmg_text,%q<dmg_text>[if(%2,%bdoubled)])][
+          if(cand(%2,strlen(setr(strike_die,firstof(%q<strike_fatal>,%q<strike_deadly>)))),
+            [setqm(strike_main_total,%q<dmg_total>,strike_main_text,%q<dmg_text>)][
+            u(FUN`ACT`DAMAGE,[if(strlen(%q<strike_fatal>),1,max(1,dec(firstof(before(%q<strike_first>,d),1))))]%q<strike_die> [rest(trim(first(%0,%,)))],0)][
+            setqm(dmg_total,add(%q<strike_main_total>,%q<dmg_total>),dmg_text,%q<strike_main_text>%, %q<dmg_text> [if(strlen(%q<strike_fatal>),fatal,deadly)])])]
         flags: [funsyntax]
       # +enc/check <who>=<statistic>[ vs <DC>]: a check for a combatant, with their conditions.
       INC`ENC`CHECK:
