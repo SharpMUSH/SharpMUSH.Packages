@@ -2690,7 +2690,7 @@ objects:
       # +enc/check <who>=<statistic>[ vs <DC>]: a check for a combatant, with their conditions.
       INC`ENC`CHECK:
         value: |-
-          @include %!/INC`ENC`NEED; think setqm(check_who,trim(before(%q<cmd_args>,=)),check_what,trim(after(%q<cmd_args>,=))); think setqm(act_at,firstof(u(%!/FUN`ENC`FIND,%q<check_who>),-1),check_stat,u({{commands}}/FUN`COMMAND`STAT,trim(before(%q<check_what>,%bvs))),check_dc,trim(after(%q<check_what>,%bvs))); @assert gte(%q<act_at>,0)=@pemit %#=notice(PF2E,No one in the encounter is called %q<check_who>.,warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,You make checks only for yourself.,warn); @assert eq(words(%q<check_stat>),1)=@pemit %#=notice(PF2E,+enc/check <who>=<statistic> [vs <DC>]%, such as +enc/check 2=reflex vs 18.,warn); @assert cor(not(strlen(%q<check_dc>)),isint(%q<check_dc>))=@pemit %#=notice(PF2E,A DC is a whole number.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think u(%!/FUN`ACT`ROLL,u({{core}}/FUN`CHECK`TOTAL,u(%!/FUN`ACT`STAT,%q<check_stat>)),%q<check_dc>); @remit %l=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] rolls [u({{commands}}/FUN`SHOW`STAT,%q<check_stat>)]: [json_query(%q<roll_record>,extract,$.text)][if(strlen(%q<check_dc>),%bvs DC %q<check_dc>: [tone(strong,u(%!/FUN`ACT`DEGREE,%q<roll_degree>))])].)
+          @include %!/INC`ENC`NEED; think setqm(check_who,trim(before(%q<cmd_args>,=)),check_what,trim(after(%q<cmd_args>,=))); think setqm(act_at,if(strlen(setr(check_found,u(%!/FUN`ENC`FIND,%q<check_who>))),%q<check_found>,-1),check_stat,u({{commands}}/FUN`COMMAND`STAT,trim(before(%q<check_what>,%bvs))),check_dc,trim(after(%q<check_what>,%bvs))); @assert gte(%q<act_at>,0)=@pemit %#=notice(PF2E,No one in the encounter is called %q<check_who>.,warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,You make checks only for yourself.,warn); @assert eq(words(%q<check_stat>),1)=@pemit %#=notice(PF2E,+enc/check <who>=<statistic> [vs <DC>]%, such as +enc/check 2=reflex vs 18.,warn); @assert cor(not(strlen(%q<check_dc>)),isint(%q<check_dc>))=@pemit %#=notice(PF2E,A DC is a whole number.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think u(%!/FUN`ACT`ROLL,u({{core}}/FUN`CHECK`TOTAL,u(%!/FUN`ACT`STAT,%q<check_stat>)),%q<check_dc>); @remit %l=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] rolls [u({{commands}}/FUN`SHOW`STAT,%q<check_stat>)]: [json_query(%q<roll_record>,extract,$.text)][if(strlen(%q<check_dc>),%bvs DC %q<check_dc>: [tone(strong,u(%!/FUN`ACT`DEGREE,%q<roll_degree>))])].)
         flags: [cmdsyntax]
       INC`ENC`DAMAGE:
         value: |-
@@ -2761,7 +2761,7 @@ objects:
       FUN`TURN`BEFORE:
         value: |-
           @@(sortby: -1 when %0 goes after %1)[
-          setqm(before_a,firstof(u(FUN`ENC`C,%0,init),-99),before_b,firstof(u(FUN`ENC`C,%1,init),-99))][
+          setqm(before_a,if(isnum(setr(init_v,u(FUN`ENC`C,%0,init))),%q<init_v>,-99),before_b,if(isnum(setr(init_v,u(FUN`ENC`C,%1,init))),%q<init_v>,-99))][
           if(neq(%q<before_a>,%q<before_b>),sign(sub(%q<before_a>,%q<before_b>)),sign(sub(strmatch(u(FUN`ENC`C,%0,side),foe),strmatch(u(FUN`ENC`C,%1,side),foe))))]
         flags: [funsyntax]
       # Delaying: the one acting moves to just after the next in line.
@@ -3004,7 +3004,7 @@ objects:
       FUN`SHOW`COMBATANT:
         value: |-
           @@(%0 a combatant's index: one row)[
-          if(eq(%0,%q<show_acting>),>)][u(FUN`ENC`C,%0,k)]|[firstof(u(FUN`ENC`C,%0,init),-)]|[u(FUN`ENC`C,%0,name)][if(u(FUN`ENC`C,%0,down),%b[tone(muted,%(down%))])]|[
+          if(eq(%0,%q<show_acting>),>)][u(FUN`ENC`C,%0,k)]|[if(isnum(setr(init_v,u(FUN`ENC`C,%0,init))),%q<init_v>,-)]|[u(FUN`ENC`C,%0,name)][if(u(FUN`ENC`C,%0,down),%b[tone(muted,%(down%))])]|[
           if(cor(%q<enc_gm>,strmatch(u(FUN`ENC`C,%0,side),pc)),
             [u(FUN`ENC`C,%0,hp)]/[u(FUN`ENC`C,%0,max)][if(u(FUN`ENC`C,%0,temp),%b+[u(FUN`ENC`C,%0,temp)])],
             u(FUN`SHOW`HURT,u(FUN`ENC`C,%0,hp),u(FUN`ENC`C,%0,max)))]|[
