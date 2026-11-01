@@ -49,11 +49,16 @@ objects:
       DATA`CONFIG`BOOKS`DEFAULT: pc1 pc2 gmc mc
       DATA`CONFIG`BOOKS`LABEL: Source books
       DATA`CONFIG`BOOKS`DESCRIPTION: The books whose rules the game uses, by the feed's book slug. An item from a book not listed is left out of lookups, sheets and the builder.
-      DATA`CONFIG`FEED: https://raw.githubusercontent.com/SharpMUSH/SharpMUSH.Packages/main/pf2e-feed
-      DATA`CONFIG`FEED`TYPE: text
-      DATA`CONFIG`FEED`DEFAULT: https://raw.githubusercontent.com/SharpMUSH/SharpMUSH.Packages/main/pf2e-feed
-      DATA`CONFIG`FEED`LABEL: Feed address
-      DATA`CONFIG`FEED`DESCRIPTION: Where the updater reads the PF2e feed, the folder holding index.json.
+      DATA`CONFIG`REPOSITORY: SharpMUSH/SharpMUSH.Packages
+      DATA`CONFIG`REPOSITORY`TYPE: text
+      DATA`CONFIG`REPOSITORY`DEFAULT: SharpMUSH/SharpMUSH.Packages
+      DATA`CONFIG`REPOSITORY`LABEL: Feed repository
+      DATA`CONFIG`REPOSITORY`DESCRIPTION: The GitHub repository, owner/name, whose pf2e-feed folder the updater reads.
+      DATA`CONFIG`BRANCH: main
+      DATA`CONFIG`BRANCH`TYPE: text
+      DATA`CONFIG`BRANCH`DEFAULT: main
+      DATA`CONFIG`BRANCH`LABEL: Feed branch
+      DATA`CONFIG`BRANCH`DESCRIPTION: The branch the updater reads. Each run reads every file from the commit the branch is on when the run starts.
       FUN: Function attributes, one tree per part of the rules. Each is pure; none writes anything.
       FUN`PREDICATE: Predicates. %0 a predicate (a JSON array of statements), %1 the roll options, a space-separated list.
       # Foundry's Predicate.test: an empty predicate passes, a malformed one fails, otherwise every
@@ -276,7 +281,7 @@ objects:
   # Reads the PF2e feed into the data objects. WIZARD for @http and for writing the data objects.
   # It reads the feed's index, then each file in turn; an item whose hash is unchanged is left alone.
   # Trees: INC`UPDATE` the run, ON` the @http replies, INC`IMPORT` one item, FUN`FEED` the parsing.
-  # FEED` holds the run's state: RUN who started it, NEXT the index being read, QUEUE the files still
+  # FEED` holds the run's state: RUN who started it, BASE the feed folder at the commit being read, NEXT the index being read, QUEUE the files still
   # to read (path|pack|book|hash), CURRENT the one being read, BODY its text, LINES its line count, AT
   # the next line to read, FAILED the files that
   # could not be read, FILE`<key> the hash of each file last read in full, INDEX the last index read.
@@ -289,7 +294,12 @@ objects:
       INC: Command lists, one tree per step of a run.
       INC`UPDATE`START:
         value: |-
-          &FEED`RUN me=%#; &FEED`FAILED me; @http me/ON`INDEX=[get({{core}}/DATA`CONFIG`FEED)]/index.json
+          &FEED`RUN me=%#; &FEED`FAILED me; @http me/ON`COMMIT=https://api.github.com/repos/[get({{core}}/DATA`CONFIG`REPOSITORY)]/commits/[get({{core}}/DATA`CONFIG`BRANCH)],[json(object,Accept,"application/vnd.github.sha")]
+        flags: [cmdsyntax]
+      # The commit the branch is on, so every file of the run comes from it rather than from a cache.
+      ON`COMMIT:
+        value: |-
+          @assert cand(eq(%<status>,200),eq(strlen(%0),40),regmatch(%0,^\[0-9a-f\]+$))=@pemit [get(me/FEED`RUN)]=PF2E: The feed's branch could not be read: HTTP %<status>.; &FEED`BASE me=https://raw.githubusercontent.com/[get({{core}}/DATA`CONFIG`REPOSITORY)]/%0/pf2e-feed; @http me/ON`INDEX=[get(me/FEED`BASE)]/index.json
         flags: [cmdsyntax]
       ON`INDEX:
         value: |-
@@ -297,7 +307,7 @@ objects:
         flags: [cmdsyntax]
       INC`UPDATE`NEXT:
         value: |-
-          @assert words(get(me/FEED`QUEUE))={@trigger me/INC`UPDATE`DONE}; &FEED`CURRENT me=[first(get(me/FEED`QUEUE))]; &FEED`QUEUE me=[rest(get(me/FEED`QUEUE))]; @http me/ON`FILE=[get({{core}}/DATA`CONFIG`FEED)]/[first(get(me/FEED`CURRENT),|)]
+          @assert words(get(me/FEED`QUEUE))={@trigger me/INC`UPDATE`DONE}; &FEED`CURRENT me=[first(get(me/FEED`QUEUE))]; &FEED`QUEUE me=[rest(get(me/FEED`QUEUE))]; @http me/ON`FILE=[get(me/FEED`BASE)]/[first(get(me/FEED`CURRENT),|)]
         flags: [cmdsyntax]
       ON`FILE:
         value: |-
