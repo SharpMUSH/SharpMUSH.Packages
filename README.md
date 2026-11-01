@@ -86,6 +86,12 @@ constraints checked before anything is planned.
 | [`brp-wiki/`](brp-wiki/) | 1.0.1 | Wiki pages for the BRP sheet: how to play, making a character, characteristics and skills, hit points, coin and experience, and encounters. ORC Licensed Material |
 | [`ironsworn-wiki/`](ironsworn-wiki/) | 1.0.1 | Wiki pages for the Ironsworn sheet: action rolls, making a character, assets and experience, meters and momentum, iron vows, and encounters. Ironsworn SRD under CC BY 4.0 |
 | [`duties-ironsworn/`](duties-ironsworn/) | 1.1.0 | Duties roll provider `ironsworn` on the Ironsworn sheet: help adds 1, experience (logged) and momentum as rewards |
+| [`sheet-fabula/`](sheet-fabula/) | 1.0.0 | JRPG character sheet compatible with Fabula Ultima: four attribute dice, classes and skill levels, HP, MP, IP, Fabula Points, experience and zenit on a ledger, status effects, bonds and encounters; `+check` rolls two attribute dice against a Difficulty Level. Requires the Fabula Ultima Core Rulebook (see its NOTICE) |
+| [`sheet-fabula-help/`](sheet-fabula-help/) | 1.0.0 | Bridge: the JRPG sheet's topics in `+help` |
+| [`sheet-fabula-config/`](sheet-fabula-config/) | 1.0.0 | Bridge: the JRPG sheet's settings and class list in `+config` |
+| [`sheet-fabula-chargen/`](sheet-fabula-chargen/) | 1.0.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |
+| [`fabula-wiki/`](fabula-wiki/) | 1.0.0 | JRPG rules as wiki pages: character creation, checks, Fabula Points and bonds, resources, levels and zenit, status effects, classes and the commands on this game. Requires the Fabula Ultima Core Rulebook (see its NOTICE) |
+| [`duties-fabula/`](duties-fabula/) | 1.0.0 | Duties roll provider `fabula` on the JRPG sheet: help and bonds add to the total, Fabula Points pay for rerolls, experience, zenit and Fabula Points as rewards |
 | [`sheet-salvage-union/`](sheet-salvage-union/) | 1.1.0 | Salvage Union pilots, mechs and the Union Crawler: class ability trees, chassis, systems and modules, scrap by tech level, heat; `+check` rolls the d20 on the Core Mechanic table. Unofficial, under the Salvage Union Open Game Licence 1.0b (see its NOTICE) |
 | [`sheet-salvage-union-help/`](sheet-salvage-union-help/) | 1.0.0 | Bridge: the Salvage Union sheet's topics in `+help` |
 | [`sheet-salvage-union-config/`](sheet-salvage-union-config/) | 1.0.0 | Bridge: the Salvage Union sheet's settings in `+config` |

@@ -1,0 +1,67 @@
+format: "1.16"
+package: fabula-wiki
+title: JRPG rules
+version: 1.0.0
+wiki_landing_page: category:fabula_start_here
+wiki_collection_name: JRPG
+authors: [SharpMUSH]
+description: >-
+  The rules of the JRPG sheet as wiki pages, in our own words: character creation, checks,
+  Fabula Points and bonds, resources, defences and levels, status effects, the Core Rulebook's
+  classes, and the commands that play them on this game. Compatible with Fabula Ultima and
+  requires the Fabula Ultima Core Rulebook; see NOTICE.md.
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages/tree/main/fabula-wiki
+keywords: [fabula, rules, wiki, jrpg]
+category: Characters
+locale: en
+
+# A content pack: wiki pages only, no objects or softcode. Softcode never reads these pages. The sheet that
+# plays these rules is sheet-fabula; this package does not need it, and it does not need this one.
+wiki:
+  - page: category:fabula_start_here
+    title: Start here — JRPG rules
+    pin: true
+    file: wiki/category/fabula_start_here.md
+
+  - page: help:fabula_license_notice
+    title: JRPG Rules License Notice
+    requires:
+      edit: [wiki.admin]
+      delete: [wiki.admin]
+    file: wiki/help/fabula_license_notice.md
+
+  - page: main:fabula_character_creation
+    title: Character Creation
+    categories: [fabula_start_here]
+    file: wiki/main/fabula_character_creation.md
+
+  - page: main:fabula_checks
+    title: Checks
+    categories: [fabula_start_here]
+    file: wiki/main/fabula_checks.md
+
+  - page: main:fabula_points_and_bonds
+    title: Fabula Points and Bonds
+    categories: [fabula_start_here]
+    file: wiki/main/fabula_points_and_bonds.md
+
+  - page: main:fabula_resources_and_levels
+    title: Resources and Levels
+    categories: [fabula_start_here]
+    file: wiki/main/fabula_resources_and_levels.md
+
+  - page: main:fabula_status_effects
+    title: Status Effects
+    categories: [fabula_start_here]
+    file: wiki/main/fabula_status_effects.md
+
+  - page: main:fabula_classes
+    title: Classes
+    categories: [fabula_start_here]
+    file: wiki/main/fabula_classes.md
+
+  - page: main:fabula_on_this_game
+    title: JRPG on this game
+    categories: [fabula_start_here]
+    file: wiki/main/fabula_on_this_game.md
