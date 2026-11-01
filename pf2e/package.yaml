@@ -1371,20 +1371,22 @@ objects:
           @dolist/inplace [if(%q<tree_count>,lnum(1,%q<tree_count>))]={think setq(entry_json,r(tree_json_##)); @include %!/INC`BUILD`PUT}
         flags: [cmdsyntax]
       # The grants a queue of items brings, breadth first: each item, numbered from build_next, then
-      # what it grants in turn. Sets tree_count and tree_json_<k>, each a grant entry.
+      # what it grants in turn, each item once. Sets tree_count and tree_json_<k>, each a grant entry.
       FUN`BUILD`TREE:
         value: |-
           @@(%0 items, each pack~ID~parent~step~level~depth~choices)[
-          setqm(tree_queue,%0,tree_count,0)][
+          setqm(tree_queue,%0,tree_count,0,tree_seen,)][
           null(iter(lnum(80),
             if(words(%q<tree_queue>),
               [setq(tree_item,first(%q<tree_queue>))][
               setq(tree_queue,rest(%q<tree_queue>))][
+              if(member(%q<tree_seen>,setr(tree_key,[elements(%q<tree_item>,1,~)]~[elements(%q<tree_item>,2,~)])),,[
+              setq(tree_seen,%q<tree_seen> %q<tree_key>)][
               setq(tree_count,inc(%q<tree_count>))][
               setq(tree_n,add(%q<build_next>,dec(%q<tree_count>)))][
               setq(tree_choices,firstof(edit(elements(%q<tree_item>,7,~),\\u0020,%b),json(object)))][
               setq(tree_json_%q<tree_count>,json(object,kind,"grant",pack,json(string,elements(%q<tree_item>,1,~)),id,json(string,elements(%q<tree_item>,2,~)),badge,null,step,json(string,elements(%q<tree_item>,4,~)),parent,firstof(elements(%q<tree_item>,3,~),null),level,firstof(elements(%q<tree_item>,5,~),null),choices,%q<tree_choices>))][
-              setq(tree_queue,squish(%q<tree_queue> [u(%!/FUN`BUILD`CHILDREN,elements(%q<tree_item>,1,~),elements(%q<tree_item>,2,~),%q<tree_choices>,%q<tree_n>,elements(%q<tree_item>,4,~),elements(%q<tree_item>,5,~),elements(%q<tree_item>,6,~),)]))])))]
+              setq(tree_queue,squish(%q<tree_queue> [u(%!/FUN`BUILD`CHILDREN,elements(%q<tree_item>,1,~),elements(%q<tree_item>,2,~),%q<tree_choices>,%q<tree_n>,elements(%q<tree_item>,4,~),elements(%q<tree_item>,5,~),elements(%q<tree_item>,6,~),)]))])])))]
         flags: [funsyntax]
       INC`BUILD`SHOW:
         value: |-
