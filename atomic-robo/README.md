@@ -87,9 +87,16 @@ FATE`MACHINE                    the machine's name; SCALE, CONCEPT, FLAW, WEAPON
 FATE`INVENTION`<n>              an invention's function; BENEFITS, SKILL, OUTCOME, ROLL, FLAW, CATCH`<n> beneath
 ```
 
-It writes `` FATE`RATING`<SKILL> `` and `` FATE`BOXES`<TRACK> `` from the modes, so `+sheet`,
-`+check` and Duties read the right numbers. The sheet's `` GATE`SET `` turns `+sheet/set` off, and
-four `` SECTION` `` hooks draw the modes, mega-stunts, machine and inventions on `+sheet`.
+The modes go into the sheet's ledger after every change: a skill's highest mode sets its rating
+(source `ROBO_MODE_<mode>`), each other mode that has it adds one, and bought steps add under
+`ROBO_FOCUS`; the tracks get `ROBO_STRESS` and what each mode adds. Only `ROBO_` grants are replaced, so
+a keeper's `+sheet/grant` stays. `+sheet`, `+check` and Duties read the ratings the sheet builds.
+
+On the **Fate Sheet** it sets `` GATE`SET `` (turns `+sheet/set` off), four `` SECTION` `` hooks (the
+modes, mega-stunts, machine and inventions on `+sheet`), `` PLAY`MACHINE `` (an encounter copies the
+machine's stress, and `+machine/stress` marks the copy), `` BUILD`ROBO `` (`+sheet/clear` takes the
+modes, bought steps and mega-stunts too) and three `+chargen` steps: Modes, Skill points (optional)
+and Mega-stunt (optional, for a weird mode only). The sheet's own Ratings step is skipped.
 
 The modes and scales are `+config` tables on **Atomic Robo Store**: `MODE` (with `SKILLS`,
 `WEIRD`, `ORDER`) and `SCALE` (with `STEP`). It adds Combat, Vehicles and the sciences to the Fate

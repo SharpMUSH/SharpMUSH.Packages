@@ -534,7 +534,7 @@ objects:
       # +machine/stress [<name>/]<box> marks a box; clear empties the track.
       INC`MACHINE`STRESS:
         value: |-
-          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SCIENCE,+machine/stress <box> marks a box%, +machine/stress clear empties them.,warn); @include %!/INC`NEED`WHO; @assert hasattr(%q<sheet_who>,FATE`MACHINE)=@pemit %#=notice(SCIENCE,[name(%q<sheet_who>)] has no machine.,warn); @break strmatch(%q<sheet_what>,clear)={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,MACHINE`STRESS,value,; @pemit %#=notice(SCIENCE,[get(%q<sheet_who>/FATE`MACHINE)]'s stress is clear.,ok)}; @assert cand(isint(%q<sheet_what>),gte(%q<sheet_what>,1),lte(%q<sheet_what>,get(%!/DATA`CONFIG`MACHINE_BOXES)))=@pemit %#=notice(SCIENCE,A machine has stress boxes 1 to [get(%!/DATA`CONFIG`MACHINE_BOXES)].,warn); @assert not(member(setr(machine_marked,get(%q<sheet_who>/FATE`MACHINE`STRESS)),%q<sheet_what>))=@pemit %#=notice(SCIENCE,Box %q<sheet_what> is marked already.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,MACHINE`STRESS,value,sort(%q<machine_marked> %q<sheet_what>,n); @remit %l=notice(SCIENCE,[get(%q<sheet_who>/FATE`MACHINE)] takes stress: box %q<sheet_what> is marked.)
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SCIENCE,+machine/stress <box> marks a box%, +machine/stress clear empties them.,warn); @include %!/INC`NEED`WHO; @assert hasattr(%q<sheet_who>,FATE`MACHINE)=@pemit %#=notice(SCIENCE,[name(%q<sheet_who>)] has no machine.,warn); @break strmatch(%q<sheet_what>,clear)={think u({{sheet-fate/sheet}}/API`PLAYSET,%q<sheet_who>,MACHINE`STRESS,); @pemit %#=notice(SCIENCE,[get(%q<sheet_who>/FATE`MACHINE)]'s stress is clear[u({{sheet-fate/sheet}}/FUN`PLAY`IN,%q<sheet_who>)].,ok)}; @assert cand(isint(%q<sheet_what>),gte(%q<sheet_what>,1),lte(%q<sheet_what>,get(%!/DATA`CONFIG`MACHINE_BOXES)))=@pemit %#=notice(SCIENCE,A machine has stress boxes 1 to [get(%!/DATA`CONFIG`MACHINE_BOXES)].,warn); @assert not(member(setr(machine_marked,u({{sheet-fate/sheet}}/API`PLAY,%q<sheet_who>,MACHINE`STRESS)),%q<sheet_what>))=@pemit %#=notice(SCIENCE,Box %q<sheet_what> is marked already.,warn); think u({{sheet-fate/sheet}}/API`PLAYSET,%q<sheet_who>,MACHINE`STRESS,sort(%q<machine_marked> %q<sheet_what>,n)); @remit %l=notice(SCIENCE,[get(%q<sheet_who>/FATE`MACHINE)] takes stress[u({{sheet-fate/sheet}}/FUN`PLAY`IN,%q<sheet_who>)]: box %q<sheet_what> is marked.)
         flags: [cmdsyntax]
       # +machine/check <skill>[+<n>|-<n>][=<opposition>][ vs <scale>]: the pilot's skill, with the scale between them.
       INC`MACHINE`CHECK:
@@ -711,11 +711,59 @@ objects:
         value: |-
           @dolist/inline revwords(lattr(%<who>/FATE`%<leaf>`**))={&## %<who>}; &FATE`%<leaf> %<who>
         flags: [cmdsyntax]
-      # %<who>: writes every skill's rating and the stress tracks' lengths from their modes.
+      # %<who>: writes their modes into the sheet's ledger again, then the sheet rebuilds its ratings and tracks.
       INC`DO`RATE:
         value: |-
-          @dolist/inline ucstr(u({{sheet-fate/sheet}}/API`ALWAYS))={@include/args %!/INC`DO`SET=who,%<who>,leaf,RATING`##,value,if(setr(rate_value,u(%!/FUN`SKILL`RATING,%<who>,##)),%q<rate_value>)}; @include/args %!/INC`DO`SET=who,%<who>,leaf,BOXES`PHYSICAL,value,u(%!/FUN`STRESS`BOXES,%<who>,PHYSICAL); @include/args %!/INC`DO`SET=who,%<who>,leaf,BOXES`MENTAL,value,u(%!/FUN`STRESS`BOXES,%<who>,MENTAL)
+          think u(%!/FUN`RATE`ALL,%<who>)
         flags: [cmdsyntax]
+      # %0 a character: takes away every ROBO_ grant and grants again from their modes. A skill gets its highest
+      # mode's rating as a base (ROBO_MODE_<mode>), one more from each other mode that has it, and the steps bought
+      # with skill points (ROBO_FOCUS), two steps at most. A track gets the game's stress boxes (ROBO_STRESS) and
+      # what each mode adds to it.
+      FUN`RATE`ALL:
+        value: |-
+          uargs({{sheet-fate/sheet}}/API`REVOKE,who,%0,source,ROBO_*)[null(iter(ucstr(u({{sheet-fate/sheet}}/API`ALWAYS)),u(%!/FUN`RATE`SKILL,%0,%i0)))][null(iter(PHYSICAL MENTAL,u(%!/FUN`RATE`TRACK,%0,%i0)))][u({{sheet-fate/sheet}}/API`REBUILD,%0)]
+        flags: [funsyntax]
+      FUN`RATE`SKILL:
+        value: |-
+          setqm(rate_holders,u(%!/FUN`MODE`HOLDERS,%0,%1),rate_count,words(%q<rate_holders>))[if(%q<rate_count>,u(%!/FUN`RATE`GRANT,%0,ROBO_MODE_[first(%q<rate_holders>)],RATING,%1,base,get(%0/FATE`MODE`[first(%q<rate_holders>)]))[null(iter(extract(%q<rate_holders>,2,2),u(%!/FUN`RATE`GRANT,%0,ROBO_MODE_%i0,RATING,%1,add,1)))][if(gt(setr(rate_focus,sub(u(%!/FUN`SKILL`STEPS,%0,%1,%q<rate_count>),min(2,dec(%q<rate_count>)))),0),u(%!/FUN`RATE`GRANT,%0,ROBO_FOCUS,RATING,%1,add,%q<rate_focus>))])]
+        flags: [funsyntax]
+      FUN`RATE`TRACK:
+        value: |-
+          if(words(setr(track_held,u(%!/FUN`MODE`HELD,%0))),u(%!/FUN`RATE`GRANT,%0,ROBO_STRESS,BOXES,%1,base,get(%!/DATA`CONFIG`STRESS))[null(iter(%q<track_held>,if(gt(setr(track_from,u(%!/FUN`STRESS`FROM,%0,%i0,%1)),0),u(%!/FUN`RATE`GRANT,%0,ROBO_MODE_%i0,BOXES,%1,add,%q<track_from>))))])
+        flags: [funsyntax]
+      # %0 who, %1 source, %2 target, %3 key, %4 base or add, %5 the value.
+      FUN`RATE`GRANT:
+        value: |-
+          null(uargs({{sheet-fate/sheet}}/API`GRANT,who,%0,source,%1,target,%2,key,%3,kind,%4,value,%5))
+        flags: [funsyntax]
+
+      # ---- +chargen steps -------------------------------------------------------------
+      # %0 a character. The sheet's CHARGEN`MODES, FOCUS and MEGA steps call these.
+      FUN`CHARGEN`MODES`DONE:
+        value: |-
+          eq(words(u(%!/FUN`MODE`HELD,%0)),words(get(%!/DATA`CONFIG`RATINGS)))
+        flags: [funsyntax]
+      FUN`CHARGEN`MODES`TEXT:
+        value: |-
+          Your modes are what your character is good at: each rates a handful of skills. Pick [words(get(%!/DATA`CONFIG`RATINGS))] and rate them [u(%!/FUN`DISPLAY`RATINGS)]%, one each. A weird mode%, such as [u(%!/FUN`DISPLAY`WEIRDMODES)]%, makes your character more than human and must fit your high concept. +mode/list shows the modes%, and +mode/set <mode>=<rating> picks one.%r%r[if(words(setr(chargen_held,u(%!/FUN`MODE`HELD,%0))),Your modes: [u(%!/FUN`DISPLAY`MODES,%0,%q<chargen_held>)].,You have no mode yet.)]
+        flags: [funsyntax]
+      FUN`CHARGEN`FOCUS`DONE:
+        value: |-
+          not(gt(u(%!/FUN`POINTS`LEFT,%0),0))
+        flags: [funsyntax]
+      FUN`CHARGEN`FOCUS`TEXT:
+        value: |-
+          Skill points raise single skills above their mode. +mode/focus <skill> makes a trained skill focused for one point%, or a focused skill specialized for two. A skill two of your modes share is focused already. [u(%!/FUN`DISPLAY`POINTSLEFT,%0)]
+        flags: [funsyntax]
+      FUN`CHARGEN`MEGA`DONE:
+        value: |-
+          words(lattr(%0/FATE`MEGA`*))
+        flags: [funsyntax]
+      FUN`CHARGEN`MEGA`TEXT:
+        value: |-
+          Your weird mode lets one of your stunts be a mega-stunt: a stunt with several benefits. Write the stunt first%, then +mode/mega <slot>=<benefits> makes it one%, and +mode/weakness <slot>=<number> counts the weaknesses it takes on. [u(%!/FUN`DISPLAY`RESERVE,%0)]
+        flags: [funsyntax]
 
       # ---- modes and skills ---------------------------------------------------------
       FUN`MODE`LABEL:
@@ -755,12 +803,6 @@ objects:
         value: |-
           get({{store}}/MODE`%0`WEIRD)
         flags: [funsyntax]
-      # %0 a character, %1 a skill: the rating their modes give it. Its highest mode's rating, one step more for
-      # each other mode that has it and each step bought, two steps at most. Mediocre (0) in none.
-      FUN`SKILL`RATING:
-        value: |-
-          setq(rating_holders,u(%!/FUN`MODE`HOLDERS,%0,%1))[if(words(%q<rating_holders>),add(get(%0/FATE`MODE`[first(%q<rating_holders>)]),u(%!/FUN`SKILL`STEPS,%0,%1,words(%q<rating_holders>))),0)]
-        flags: [funsyntax]
       # %0 a character, %1 a skill, %2 how many of their modes have it: 0 trained, 1 focused, 2 specialized.
       FUN`SKILL`STEPS:
         value: |-
@@ -783,12 +825,6 @@ objects:
       FUN`POINTS`LEFT:
         value: |-
           sub(u(%!/FUN`POINTS`TOTAL,%0),ladd(iter(lattr(%0/FATE`FOCUS`*),u(%!/FUN`FOCUS`COST,%0,after(%i0,FATE`FOCUS`)))))
-        flags: [funsyntax]
-      # %0 a character, %1 PHYSICAL or MENTAL: the track's length from their modes, or nothing without modes (the
-      # sheet's own length).
-      FUN`STRESS`BOXES:
-        value: |-
-          if(words(setr(boxes_held,u(%!/FUN`MODE`HELD,%0))),add(get(%!/DATA`CONFIG`STRESS),ladd(iter(%q<boxes_held>,u(%!/FUN`STRESS`FROM,%0,%i0,%1)))))
         flags: [funsyntax]
       # %0 a character, %1 a mode, %2 PHYSICAL or MENTAL: the boxes it adds there. Fair adds one, Good two, on the
       # track its skills fit, or the one the character chose when they fit both.
@@ -877,7 +913,7 @@ objects:
       # focused and specialized ones marked.
       FUN`DISPLAY`HOMESKILLS:
         value: |-
-          firstof(itemize(iter(filterbool(%!/FUN`SKILL`ISHOME,ucstr(get({{store}}/MODE`%1`SKILLS)),,,%0,%1),[u({{sheet-fate/sheet}}/API`LABEL,%i0)][setq(home_steps,u(%!/FUN`SKILL`STEPS,%0,%i0,words(u(%!/FUN`MODE`HOLDERS,%0,%i0))))][if(%q<home_steps>,%b%([u(%!/FUN`SKILL`WORD,%q<home_steps>)]%, [u({{sheet-fate/sheet}}/API`LADDER,u(%!/FUN`SKILL`RATING,%0,%i0))]%))],%b,|),|),each of its skills is written under a higher mode)
+          firstof(itemize(iter(filterbool(%!/FUN`SKILL`ISHOME,ucstr(get({{store}}/MODE`%1`SKILLS)),,,%0,%1),[u({{sheet-fate/sheet}}/API`LABEL,%i0)][setq(home_steps,u(%!/FUN`SKILL`STEPS,%0,%i0,words(u(%!/FUN`MODE`HOLDERS,%0,%i0))))][if(%q<home_steps>,%b%([u(%!/FUN`SKILL`WORD,%q<home_steps>)]%, [u({{sheet-fate/sheet}}/API`LADDER,u({{sheet-fate/sheet}}/API`RATING,%0,%i0))]%))],%b,|),|),each of its skills is written under a higher mode)
         flags: [funsyntax]
       # %0 a skill, %1 a character, %2 a mode: 1 when the skill is written under that mode, its highest.
       FUN`SKILL`ISHOME:
@@ -890,7 +926,7 @@ objects:
         flags: [funsyntax]
       FUN`DISPLAY`BOXES:
         value: |-
-          Stress boxes: [firstof(u(%!/FUN`STRESS`BOXES,%0,PHYSICAL),u({{sheet-fate/sheet}}/FUN`TRACK`BOXES,%0,PHYSICAL))] physical%, [firstof(u(%!/FUN`STRESS`BOXES,%0,MENTAL),u({{sheet-fate/sheet}}/FUN`TRACK`BOXES,%0,MENTAL))] mental.
+          Stress boxes: [u({{sheet-fate/sheet}}/FUN`TRACK`BOXES,%0,PHYSICAL)] physical%, [u({{sheet-fate/sheet}}/FUN`TRACK`BOXES,%0,MENTAL)] mental.
         flags: [funsyntax]
       FUN`DISPLAY`RESERVE:
         value: |-
@@ -934,7 +970,7 @@ objects:
         flags: [funsyntax]
       FUN`SECTION`MACHINE:
         value: |-
-          if(hasattr(%0,FATE`MACHINE),lfields(lit({"cols":2}),Machine|Scale|Concept|Flaw|Weapon|Armor|Stress,[get(%0/FATE`MACHINE)]|[u(%!/FUN`SCALE`LABEL,get(%0/FATE`MACHINE`SCALE))]|[firstof(get(%0/FATE`MACHINE`CONCEPT),tone(muted,-))]|[firstof(get(%0/FATE`MACHINE`FLAW),tone(muted,-))]|[default(%0/FATE`MACHINE`WEAPON,0)]|[default(%0/FATE`MACHINE`ARMOR,0)]|[setq(machine_marked,get(%0/FATE`MACHINE`STRESS))][iter(lnum(1,get(%!/DATA`CONFIG`MACHINE_BOXES)),if(member(%q<machine_marked>,%i0),%[X%],%[%b%]))],|))
+          if(hasattr(%0,FATE`MACHINE),lfields(lit({"cols":2}),Machine|Scale|Concept|Flaw|Weapon|Armor|Stress,[get(%0/FATE`MACHINE)]|[u(%!/FUN`SCALE`LABEL,get(%0/FATE`MACHINE`SCALE))]|[firstof(get(%0/FATE`MACHINE`CONCEPT),tone(muted,-))]|[firstof(get(%0/FATE`MACHINE`FLAW),tone(muted,-))]|[default(%0/FATE`MACHINE`WEAPON,0)]|[default(%0/FATE`MACHINE`ARMOR,0)]|[setq(machine_marked,u({{sheet-fate/sheet}}/API`PLAY,%0,MACHINE`STRESS))][iter(lnum(1,get(%!/DATA`CONFIG`MACHINE_BOXES)),if(member(%q<machine_marked>,%i0),%[X%],%[%b%]))],|))
         flags: [funsyntax]
       FUN`SECTION`INVENTIONS:
         value: |-
@@ -1113,7 +1149,7 @@ objects:
 
         A skill in two of your modes is focused for free, and in all three specialized. Fair and Good modes with Athletics or Physique add physical stress boxes, with Provoke or Will mental ones.
 
-        You choose modes until your character is approved; then staff change them. `+sheet/set` does not rate skills here.
+        You choose modes until your character is approved; then staff change them. `+sheet/set` does not rate skills here. `+chargen` walks you through modes and skill points, and `+sheet/ledger` shows what each mode grants: a staff grant stays when your modes change.
 
         For example:
 
@@ -1147,7 +1183,7 @@ objects:
         - `+machine/set <name>/<field>=<value>`, `+machine/scrap <name>` and the `/catch`, `/flaw` and `/drop` switches of `+invent` work on anyone's.
         - `+brainstorm/next` and `+brainstorm/stop` work on anyone's brainstorm.
 
-        The modes write each skill's rating and the stress boxes onto the Fate sheet, so `+check`, `+sheet` and Duties read the same numbers.
+        The modes go into the Fate sheet's ledger as grants, so `+check`, `+sheet` and Duties read the same numbers, and `+sheet/grant` adds a bonus of your own that stays when the modes change. `+sheet/clear <name>` takes the modes away with the rest of the build.
       LOCK`MODE`SETTINGS: |-
         perm^config.admin
       HELP`MODE`SETTINGS: |-
@@ -1173,7 +1209,7 @@ objects:
 
         - `+machine/set name=<name>` builds one; `/set scale=`, `concept=`, `flaw=`, `weapon=` and `armor=` fill it in: `+machine/set scale=titan`.
         - `+machine/check <skill>=<opposition> vs <scale>` pilots it against something of that scale: `+machine/check combat=good vs person`. Leave out `vs` for a foe of its own size.
-        - `+machine/stress <box>` marks one of its stress boxes; `+machine/stress clear` empties them.
+        - `+machine/stress <box>` marks one of its stress boxes; `+machine/stress clear` empties them. In an encounter this marks the encounter's copy, as `+sheet/stress` does.
         - `+machine/scrap` takes it off your sheet.
 
         Each step of scale between the machine and its foe gives the larger one +1 on the roll, or 2 shifts of harm, or both, as the game sets. A hit adds the machine's Weapon rating; its Armor takes shifts off a hit it takes.
@@ -1260,6 +1296,56 @@ objects:
     attributes:
       GATE`SET: |-
         Your skills come from your modes on this game: +mode/set and +mode/focus change them.
+      # What an encounter copies besides the sheet's own: the machine's stress.
+      PLAY`MACHINE: |-
+        MACHINE`STRESS
+      # What +sheet/clear takes away besides the sheet's own build: modes, bought steps and mega-stunts.
+      BUILD`ROBO: |-
+        MODE FOCUS MODESTRESS MEGA
+      CHARGEN`MODES: |-
+        Modes
+      CHARGEN`MODES`ORDER: |-
+        15
+      CHARGEN`MODES`DONE:
+        value: |-
+          u({{science}}/FUN`CHARGEN`MODES`DONE,%0)
+        flags: [funsyntax]
+      CHARGEN`MODES`TEXT:
+        value: |-
+          u({{science}}/FUN`CHARGEN`MODES`TEXT,%0)
+        flags: [funsyntax]
+      CHARGEN`FOCUS: |-
+        Skill points
+      CHARGEN`FOCUS`ORDER: |-
+        16
+      CHARGEN`FOCUS`OPTIONAL: |-
+        1
+      CHARGEN`FOCUS`DONE:
+        value: |-
+          u({{science}}/FUN`CHARGEN`FOCUS`DONE,%0)
+        flags: [funsyntax]
+      CHARGEN`FOCUS`TEXT:
+        value: |-
+          u({{science}}/FUN`CHARGEN`FOCUS`TEXT,%0)
+        flags: [funsyntax]
+      CHARGEN`MEGA: |-
+        Mega-stunt
+      CHARGEN`MEGA`ORDER: |-
+        35
+      CHARGEN`MEGA`OPTIONAL: |-
+        1
+      CHARGEN`MEGA`SKIP:
+        value: |-
+          not(u({{science}}/FUN`MODE`WEIRD,%0))
+        flags: [funsyntax]
+      CHARGEN`MEGA`DONE:
+        value: |-
+          u({{science}}/FUN`CHARGEN`MEGA`DONE,%0)
+        flags: [funsyntax]
+      CHARGEN`MEGA`TEXT:
+        value: |-
+          u({{science}}/FUN`CHARGEN`MEGA`TEXT,%0)
+        flags: [funsyntax]
       SECTION`MODES:
         value: |-
           u({{science}}/FUN`SECTION`MODES,%0,%1)
