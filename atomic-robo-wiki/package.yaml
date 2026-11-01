@@ -1,0 +1,70 @@
+format: "1.16"
+package: atomic-robo-wiki
+title: "Atomic Robo rules (unofficial)"
+version: 1.0.0
+wiki_landing_page: category:atomic_robo_start_here
+wiki_collection_name: Atomic Robo (unofficial)
+authors: [SharpMUSH]
+description: "Rules reference for the Atomic Robo pack as wiki pages: modes, making a character with +chargen, mega-stunts, invention, brainstorms, scale and machines, and advancement. Based on the Atomic Robo RPG SRD and the Fate System Toolkit under CC BY 3.0. An unofficial fan package, not affiliated with or endorsed by Evil Hat Productions or the creators of Atomic Robo."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [fate, rules, wiki, invention, robots]
+category: Characters
+requires_server: ">=0.1"
+
+# A content pack: wiki pages only. Its pages link to the Fate rules pages, so it brings those too.
+depends:
+  - package: sheet-fate-wiki
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH.Packages
+      path: sheet-fate-wiki/
+      branch: main
+
+wiki:
+  - page: category:atomic_robo_start_here
+    title: Start here — Atomic Robo
+    pin: true
+    file: wiki/category/atomic_robo_start_here.md
+
+  - page: help:atomic_robo_license_notice
+    title: Atomic Robo License Notice
+    requires:
+      edit: [wiki.admin]
+      delete: [wiki.admin]
+    file: wiki/help/atomic_robo_license_notice.md
+
+  - page: main:atomic_robo_modes
+    title: Modes
+    categories: [atomic_robo_start_here]
+    file: wiki/main/atomic_robo_modes.md
+
+  - page: main:atomic_robo_character_creation
+    title: Making an Atomic Robo Character
+    categories: [atomic_robo_start_here]
+    file: wiki/main/atomic_robo_character_creation.md
+
+  - page: main:atomic_robo_mega_stunts
+    title: Mega-stunts
+    categories: [atomic_robo_start_here]
+    file: wiki/main/atomic_robo_mega_stunts.md
+
+  - page: main:atomic_robo_invention
+    title: Invention
+    categories: [atomic_robo_start_here]
+    file: wiki/main/atomic_robo_invention.md
+
+  - page: main:atomic_robo_brainstorms
+    title: Brainstorms
+    categories: [atomic_robo_start_here]
+    file: wiki/main/atomic_robo_brainstorms.md
+
+  - page: main:atomic_robo_scale_and_machines
+    title: Scale and Machines
+    categories: [atomic_robo_start_here]
+    file: wiki/main/atomic_robo_scale_and_machines.md
+
+  - page: main:atomic_robo_advancement
+    title: Atomic Robo Advancement
+    categories: [atomic_robo_start_here]
+    file: wiki/main/atomic_robo_advancement.md
