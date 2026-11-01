@@ -594,12 +594,14 @@ objects:
       # through the NAME`<slug> index the updater keeps on each data object.
       FUN`ITEM`FIND:
         value: |-
-          @@(%0 a pack, %1 an id or a name: the item's id, empty when no item from a book the game uses matches)[
+          @@(%0 a pack, %1 an id, a name or the start of only one name: the item's id, empty when no item from a book the game uses matches)[
           setq(item_store,u(DATA`PACK`%0))][
           if(strlen(%q<item_store>),
-            first(iter(
-              squish([if(strlen(get(%q<item_store>/ITEM`[ucstr(%1)])),ucstr(%1))] [get(%q<item_store>/NAME`[u(FUN`ITEM`SLUGGIFY,%1)])]),
-              if(member(v(DATA`CONFIG`BOOKS),get(%q<item_store>/ITEM`%i0`BOOK)),%i0))))]
+            firstof(
+              first(iter(
+                squish([if(strlen(get(%q<item_store>/ITEM`[ucstr(%1)])),ucstr(%1))] [get(%q<item_store>/NAME`[u(FUN`ITEM`SLUGGIFY,%1)])]),
+                if(member(v(DATA`CONFIG`BOOKS),get(%q<item_store>/ITEM`%i0`BOOK)),%i0))),
+              if(eq(words(setr(item_starts,u(FUN`ITEM`STARTS,%0,%1))),1),%q<item_starts>)))]
         flags: [funsyntax]
       FUN`ITEM`STARTS:
         value: |-
