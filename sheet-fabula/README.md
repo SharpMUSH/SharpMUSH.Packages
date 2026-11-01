@@ -5,7 +5,8 @@ Willpower), each a die from d6 to d12; classes and the skill levels spent in the
 origin; HP, MP, IP, Fabula Points, experience and zenit; status effects; and bonds. The build, experience
 and zenit are a ledger of entries, each with where it came from. `+check` rolls the dice of two attributes against a Difficulty
 Level for the room, keeps the roll, and lets the roller spend Fabula Points to reroll or to add a bond.
-`+encounter` keeps an encounter's own copy of each member's HP, MP, IP and status effects.
+`+encounter` keeps an encounter's own copy of each member's HP, MP, IP and status effects, and runs a
+conflict in turns against foes from a bestiary of the package's own creatures.
 
 Requires the Fabula Ultima Core Rulebook. See [NOTICE.md](NOTICE.md) for the licence notice; the
 in-game `+help sheet credits` topic carries it too. The help and messages are this package's own
@@ -60,6 +61,22 @@ Every sheet package answers `+sheet` and `+check`. Install one sheet package per
 | `+encounter/add <name>[=<n>]` | keeper | Bring a character in |
 | `+encounter/remove`, `/keep <name>[=<n>]` | GM | Take a member out, or write their copy onto their sheet |
 | `+encounter/end [<n>]` | GM | Ends it; every copy goes |
+| `+foe [<foe>]` | all | The bestiary, or one foe with its numbers worked out; for a GM, a foe in their encounter as it stands |
+| `+encounter/foe [<count>] <foe>` | GM | Bring 1 to 10 copies of a bestiary foe in, lettered A, B, C |
+| `+encounter/initiative` | member | Before the conflict: Dexterity + Insight plus Initiative against the foes' best Initiative picks the side that acts first |
+| `+encounter/begin [characters\|foes]` | GM | Round 1, with that side first |
+| `+attack <target>=<attr>+<attr>[+<n>]`, `/magic` | member | A check against the target's Defense or Magic Defense; it is the last check, so the invokes work on it |
+| `+attack/damage <n> [<type>]` | member | The last hit's high roll plus `<n>`, after the target's affinities |
+| `+encounter/turn [<who>]`, `/guard [<who>]` | member, GM for others | End a turn, or guard |
+| `+encounter/undo <who>`, `/round` | GM | Give a turn back; start the next round |
+| `+encounter/damage <who>=<n> [<type>]` | GM | Damage by hand, after affinities |
+| `+encounter/surrender` | member | At 0 HP, leave the conflict for Fabula Points (`+config fabula/surrender`) |
+| `+encounter/entrance <foe>` | GM | A villain's entrance: a Fabula Point for each character still in |
+| `+encounter/reward <xp\|zenit> <n> <reason>` | keeper | An award for each member, on the experience or zenit ledger |
+| `+foe/attack <foe>=<target>[/<attack>]` | GM | One of the foe's attacks, rolled, with its damage on a hit |
+| `+foe/hp`, `/mp <foe>=<+n\|-n\|n>`, `/status <foe>=<effect>\|clear`, `/remove <foe>` | GM | Change a foe's copy, or take it out |
+| `+foe/ultima <foe>=escape\|recover\|invoke` | GM | Spend a villain's Ultima Point |
+| `+sheet/affinity [<name>/]<type>=<vu\|rs\|im\|ab> [<source>]` | all, keeper for others | A build entry for a vulnerability, resistance, immunity or absorption |
 
 Keepers (`softcode.fabula.admin`, the **JRPG Sheet Keeper** role) put `<name>/` before the
 `/set`, `/class`, `/skill`, `/levelup`, `/raise`, `/bonus`, `/buy`, `/revoke` and `/bond` arguments, and use
@@ -94,6 +111,21 @@ that encounter is the one the member uses.
   the room where it runs, the commands use that copy: the one `+encounter/use` picked, else the last
   joined. Anywhere else, and for the API that Duties calls, the sheet is used. Ending an encounter
   drops every copy, so the sheet has only what the GM kept with `/keep`.
+- A conflict alternates the sides one creature at a time; when one side has no turns left the other
+  takes the rest, and the round ends when everyone has acted. A soldier has one turn a round, an elite
+  two, a champion its number. A character's action on their side's turn takes that turn; one out of turn
+  takes none.
+- A foe's HP is 5 times its Might die plus twice its level, plus its `hp` bonus, times 1 for a soldier,
+  2 for an elite and the number for a champion. MP is 5 times Willpower plus the level, plus `mp`,
+  doubled for a champion. Initiative is half of Dexterity plus Insight, plus `init`, plus the soldier
+  count of an elite or champion. Defense is Dexterity plus `def`, Magic Defense Insight plus `mdef`, with
+  status effects shrinking the dice. Its attacks add a tenth of its level to the check and 5 damage for
+  every 20 levels. A role (brute, hunter, mage, saboteur, sentinel, support) sets the four dice for the
+  level, changing at 20, 40 and 60.
+- A minor villain starts with 5 Ultima Points, a major one 10 and a supreme one 15. The encounter counts
+  those spent, for the session's experience.
+- Vulnerable doubles damage, resistant halves it, rounded down, immune stops it and absorbent heals it.
+  Resistance and vulnerability cancel. Guarding is resistance to every type until the next turn.
 - A bond holds one to three emotions, one from each pair at most (admiration or inferiority,
   loyalty or mistrust, affection or hatred). Its strength is how many.
 
@@ -117,6 +149,8 @@ FABULA`BONUS`<KEY>            HP MP IP from skills; DEF MDEF INIT MARTIAL from e
 FABULA`STATUS                 the status effects on the character
 FABULA`BOND`<KEY>             a bond's name, with EMOTIONS beneath
 FABULA`LAST                   the last check, for the invokes
+FABULA`ATTACK                 the last attack: JSON with at, enc and target
+FABULA`AFFINITY`<TYPE>        vu rs im ab, rebuilt from the build ledger's affinity entries
 FABULA`SUPPORTS               the supporters of their next group check
 FABULA`ENCOUNTERS             the encounters they are in, last joined last
 FABULA`USING                  the one +encounter/use picked
@@ -127,7 +161,18 @@ with each new experience or zenit entry and is added up again from its ledger wh
 
 **JRPG Encounters** holds the encounters: `` ENC`<n> `` a title, with `ROOM`, `GM`, `AT`, `MEMBERS`
 and each member's `` COPY`<number> `` (their HP, MP, IP and status effects) beneath, and
-`` ROOM`<number> `` the encounters in a room.
+`` ROOM`<number> `` the encounters in a room. A conflict adds `ROUND`, `FIRST` and `SIDE` (heroes or
+foes), `TAKEN` (one id per turn taken this round), `GUARD`, `OUT` (who surrendered), `UPSPENT`, and
+`` FOE`<k> ``: a foe's label, with `KEY`, `LEVEL`, `RANK`, `SOLDIERS`, `VILLAIN`, the dice, `HPMAX`,
+`MPMAX`, `HP`, `MP`, `DEFB`, `MDEFB`, `INIT`, `UP`, `AFF`, `IMMUNE`, `ATTACKS`, `STATUS` and `STATE`
+(escaped) beneath. A character's id is their objid, a foe's `F<k>`.
+
+The bestiary is a `+config` table on **JRPG Sheet Store**, `` FOE`<KEY> `` with `LEVEL`, `RANK`,
+`CHAMPION`, `VILLAIN`, `SPECIES`, `ROLE`, `DEX` `INS` `MIG` `WLP`, the `HP` `MP` `DEF` `MDEF` `INIT`
+bonuses, `AFFINITIES` (`<type>:<vu|rs|im|ab>`), `IMMUNE` (status effects), `ATTACKS` and `NOTES`.
+An attack is `<name>: <attr>+<attr> <accuracy> <damage> <type>`, with `magic` at the end for one
+against Magic Defense, and attacks are separated by `;`. The seventeen foes it ships, from level 5 to
+55, are this package's own.
 
 The class list is a `+config` table on **JRPG Sheet Store**: `CLASS` (with `BENEFIT` hp, mp, ip
 or none, `MARTIAL`, `RITUALS` and `ORDER`). It holds the Core Rulebook's fifteen classes; a game
