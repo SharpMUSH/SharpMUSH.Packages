@@ -1862,15 +1862,24 @@ objects:
           @@(%0 a prerequisite in lower case: 1 met, 0 not, ? when it cannot be read)[
           switch(1,
             regmatch(%0,^%(trained|expert|master|legendary%) in %(.+?%)$),
-              [setqm(prereq_rank,match(trained expert master legendary,first(%0)),prereq_stat,after(%0,%bin%b))][
-              setq(prereq_stats,if(strmatch(%q<prereq_stat>,*lore),u({{core}}/FUN`STAT`LORE,%q<prereq_stat>),firstof(grab(%q<check_stats>,u({{core}}/FUN`ITEM`SLUGGIFY,%q<prereq_stat>)),if(strmatch(%q<prereq_stat>,at least one skill),iter(u({{core}}/DATA`STATISTICS),if(strmatch(u({{core}}/FUN`STAT`KIND,%i0),skill),%i0))))))][
-              if(words(%q<prereq_stats>),gte(lmax(iter(%q<prereq_stats>,u({{core}}/FUN`CHECK`RANK,%i0))),%q<prereq_rank>),?)],
+              [setqm(prereq_rank,match(trained expert master legendary,first(%0)),prereq_alts,edit(after(%0,%bin%b),\,%bor%b,|,%bor%b,|,\,%b,|),prereq_met,0,prereq_unread,0)][
+              null(iter(%q<prereq_alts>,
+                if(words(setr(prereq_stats,u(%!/FUN`BUILD`PREREQ`STATS,trim(%i0)))),
+                  if(gte(lmax(iter(%q<prereq_stats>,u({{core}}/FUN`CHECK`RANK,%i0))),%q<prereq_rank>),setq(prereq_met,1)),
+                  setq(prereq_unread,1)),
+                |))][
+              if(%q<prereq_met>,1,if(%q<prereq_unread>,?,0))],
             regmatch(%0,^%(strength|dexterity|constitution|intelligence|wisdom|charisma%) \\+?%(-?\\d+%)$),
               gte(u({{core}}/FUN`CHECK`ABILITY,left(%0,3)),last(edit(%0,+,))),
             gt(words(iter(%q<check_names>,if(strmatch(lcstr(%i0),%0),x),|,%b)),0), 1,
             words(u({{core}}/FUN`ITEM`FIND,feats,%0)), 0,
             words(u({{core}}/FUN`ITEM`FIND,class-features,%0)), 0,
             ?)]
+        flags: [funsyntax]
+      FUN`BUILD`PREREQ`STATS:
+        value: |-
+          @@(%0 one statistic named in a prerequisite, such as athletics, warfare lore or at least one skill: the statistics it means, or nothing when it cannot be read)[
+          if(strmatch(%0,*lore),u({{core}}/FUN`STAT`LORE,%0),firstof(grab(%q<check_stats>,u({{core}}/FUN`ITEM`SLUGGIFY,%0)),if(strmatch(%0,at least one skill),iter(u({{core}}/DATA`STATISTICS),if(strmatch(u({{core}}/FUN`STAT`KIND,%i0),skill),%i0)))))]
         flags: [funsyntax]
       # The ChoiceSets of granted items with nothing chosen yet, each owner~flag~index~prompt (owner the
       # grant's entry number, index the ChoiceSet's in its rules), separated by |. With %0 1, only those
