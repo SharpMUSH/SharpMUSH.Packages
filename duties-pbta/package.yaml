@@ -1,0 +1,132 @@
+format: "1.16"
+package: duties-pbta
+title: "Duties: PbtA sheet rolls"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Lets Duties roll on the PbtA sheet: a roll provider called pbta, so a duty's checks make a move or roll a stat, 2d6 plus the stat, with aid from helpers, forward and ongoing, and XP as a reward. Pick it with +config duties/system=pbta."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [duties, pbta, sheet, dice, bridge]
+category: Characters
+requires_server: ">=0.1"
+
+# A bridge: it joins two packages that do not know about each other. Duties asks the game's one active roll
+# provider for every check, and sheet-pbta holds the sheet and rolls against it. This package is a provider
+# that answers Duties' questions with the sheet's API, and the one leaf that registers it.
+depends:
+  - package: duties
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/duties/
+      branch: main
+  - package: sheet-pbta
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH.Packages
+      path: sheet-pbta/
+      branch: main
+
+objects:
+  # The provider. Duties calls each FN`DUTIES` attribute with u() and named arguments, so it runs as this
+  # object; WIZARD because the sheet's API is on a WIZARD object, which a lesser one may not call. Its writes
+  # go through the sheet's API: API`SPEND when a roll uses the roller's forward, API`AWARD for an XP reward.
+  - ref: provider
+    type: thing
+    name: Duties PbtA Provider
+    location: "{{sheet-pbta/sheet}}"
+    flags: [WIZARD, no_command]
+    attributes:
+      # Every stat and every move. Stats and basic moves are always: every character can roll them.
+      FN`DUTIES`TRAITS:
+        value: |-
+          u({{sheet-pbta/sheet}}/API`TRAITS)
+        flags: [funsyntax]
+      # A full hit is success and 7-9 partial; 12+ is crit-success only when the sheet's critical setting is on.
+      FN`DUTIES`TIERS:
+        value: |-
+          fail partial success[if(strmatch(u({{sheet-pbta/sheet}}/API`TIER,12),crit-success),%bcrit-success)]
+        flags: [funsyntax]
+      # %<difficulty> a difficulty word or a number: "+1", "-2", or "No roll" for trivial.
+      FN`DUTIES`DC:
+        value: |-
+          cond(strmatch(%<difficulty>,trivial),No roll,isint(setr(provider_modifier,u({{sheet-pbta/sheet}}/API`TARGET,%<difficulty>))),if(gte(%q<provider_modifier>,0),+%q<provider_modifier>,%q<provider_modifier>),1,#-1 NO SUCH DIFFICULTY)
+        flags: [funsyntax]
+      # %<roller>: the stat this character improvises with, their highest (the first of equals).
+      FN`DUTIES`FALLBACK:
+        value: |-
+          setq(provider_roller,%<roller>)[last(sortkey(%!/FUN`STAT`SORTKEY,revwords(u(%!/FUN`STAT`KEYS)),n))]
+        flags: [funsyntax]
+      # %<roller>, %<trait>: a playbook move the roller does not have is refused; every stat and basic move is fine.
+      FN`DUTIES`CAN:
+        value: |-
+          if(cand(strmatch(%<trait>,move-*),not(u({{sheet-pbta/sheet}}/API`HAS,%<roller>,%<trait>))),You don't have [u({{sheet-pbta/sheet}}/API`LABEL,%<trait>)].)
+        flags: [funsyntax]
+      # %<roller>, %<trait>, %<difficulty>, %<mods>, %<context>. A trivial task is a success with no roll. Otherwise
+      # 2d6 plus the stat, the difficulty's modifier, the roller's forward (spent) and ongoing, and +1 for each
+      # helper in %<mods>, as aid. Returns {"tier","text","roll","margin","system"}, margin empty (PbtA has none),
+      # system holding move, stat, total, aid, forward and ongoing.
+      FN`DUTIES`CHECK:
+        value: |-
+          cond(strmatch(%<difficulty>,trivial),u(%!/FUN`CHECK`TRIVIAL,%<trait>),not(isint(u({{sheet-pbta/sheet}}/API`TARGET,%<difficulty>))),#-1 NO SUCH DIFFICULTY,not(strlen(u({{sheet-pbta/sheet}}/API`LABEL,%<trait>))),#-1 There is no move or stat '%<trait>'.,1,u(%!/FUN`CHECK`ROLL,%<roller>,%<trait>,%<difficulty>,%<mods>))
+        flags: [funsyntax]
+      FUN`CHECK`TRIVIAL:
+        value: |-
+          json(object,tier,json(string,success),text,json(string,[u({{sheet-pbta/sheet}}/API`LABEL,%0)]: trivial%, no roll),roll,json(string,),margin,json(string,),system,json(object,rolled,json(boolean,0)))
+        flags: [funsyntax]
+      # %0 the roller, %1 the trait, %2 the difficulty, %3 the mods. Rolls first, and spends the forward only when
+      # the roll went through.
+      FUN`CHECK`ROLL:
+        value: |-
+          setqm(provider_aid,words(u(%!/FUN`MODS`HELPERS,%3)),
+          provider_forward,default(%0/PBTA`FORWARD,0),
+          provider_ongoing,default(%0/PBTA`ONGOING,0),
+          provider_rolled,uargs({{sheet-pbta/sheet}}/API`CHECK,roller,%0,trait,%1,modifier,add(%q<provider_aid>,u({{sheet-pbta/sheet}}/API`MODIFIERS,%0)),target,u({{sheet-pbta/sheet}}/API`TARGET,%2)))[if(strmatch(%q<provider_rolled>,#-*),%q<provider_rolled>,null(u({{sheet-pbta/sheet}}/API`SPEND,%0))[u(%!/FUN`CHECK`RESULT,%q<provider_rolled>)])]
+        flags: [funsyntax]
+      # %0 the sheet's check JSON.
+      FUN`CHECK`RESULT:
+        value: |-
+          json(object,tier,json(string,json_query(%0,extract,$.tier)),text,json(string,[json_query(%0,extract,$.label)]: [json_query(%0,extract,$.text)][u(%!/FUN`CHECK`EXTRAS)]),roll,json_query(%0,extract,$.roll),margin,json(string,),system,json(object,rolled,json(boolean,1),move,json(string,json_query(%0,extract,$.move)),stat,json(string,json_query(%0,extract,$.stat)),total,json_query(%0,extract,$.total),aid,%q<provider_aid>,forward,%q<provider_forward>,ongoing,%q<provider_ongoing>,outcome,json(string,json_query(%0,extract,$.outcome))))
+        flags: [funsyntax]
+      FUN`CHECK`EXTRAS:
+        value: |-
+          setq(extras_list,trim(squish(if(%q<provider_aid>,+%q<provider_aid> from aid)|[if(%q<provider_forward>,[u(%!/FUN`SIGNED,%q<provider_forward>)] forward)]|[if(%q<provider_ongoing>,[u(%!/FUN`SIGNED,%q<provider_ongoing>)] ongoing)],|),|))[if(strlen(%q<extras_list>),%b%([itemize(%q<extras_list>,|)]%))]
+        flags: [funsyntax]
+      # The reward kinds this provider hands out: XP.
+      FN`DUTIES`REWARDS:
+        value: |-
+          lit([{"kind":"xp","label":"XP","fields":[{"key":"amount","type":"integer"}]}])
+        flags: [funsyntax]
+      # Triggered for each reward and member: %<roller>, %<reward> ({"kind":"xp","amount":<n>}, 1 when no
+      # amount), %<context>. Gives the XP through the sheet and tells the player. Any other kind is not this
+      # provider's, and does nothing.
+      ON`DUTIES`GRANT:
+        value: |-
+          think setqm(grant_kind,json_query(%<reward>,extract,$.kind),grant_amount,firstof(json_query(%<reward>,extract,$.amount),1)); @assert cand(strmatch(%q<grant_kind>,xp),isint(%q<grant_amount>),gt(%q<grant_amount>,0)); @pemit %<roller>=notice(SHEET,You gain %q<grant_amount> XP. You have [u({{sheet-pbta/sheet}}/API`AWARD,%<roller>,%q<grant_amount>)].,ok)
+        flags: [cmdsyntax]
+
+      # %0 %<mods>: the helpers' objids, a space list.
+      FUN`MODS`HELPERS:
+        value: |-
+          if(cand(strlen(%0),strmatch(json_query(json_query(%0,get,helpers)),array)),iter(lnum(0,dec(json_query(json_query(%0,get,helpers),size))),json_query(%0,extract,$.helpers%[%i0%])))
+        flags: [funsyntax]
+      # The stat keys, lower case, from the sheet's traits.
+      FUN`STAT`KEYS:
+        value: |-
+          iter(u({{sheet-pbta/sheet}}/API`ALWAYS),if(strmatch(%i0,move-*),,%i0))
+        flags: [funsyntax]
+      # %0 a stat key: its value for provider_roller, for sorting.
+      FUN`STAT`SORTKEY:
+        value: |-
+          u({{sheet-pbta/sheet}}/API`RATING,%q<provider_roller>,%0)
+        flags: [funsyntax]
+      FUN`SIGNED:
+        value: |-
+          if(gte(%0,0),+%0,%0)
+        flags: [funsyntax]
+
+  - ref: provider_registration
+    target: "{{duties/duties}}"
+    attributes:
+      PROVIDER`PBTA: |-
+        {{provider}}

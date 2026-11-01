@@ -79,3 +79,24 @@ packages:
     package: duties-fate
     version: 1.0.0
     description: Duties roll provider "fate" on the Fate sheet
+  - path: sheet-pbta/
+    name: PbtA Sheet
+    package: sheet-pbta
+    version: 1.0.0
+    description: Powered by the Apocalypse character sheet (stats, moves, playbooks, forward, ongoing, hold, XP) with +check on 2d6; Dungeon World moves under CC BY 3.0
+  - path: sheet-pbta-help/
+    package: sheet-pbta-help
+    version: 1.0.0
+    description: Puts the PbtA sheet topics into +help
+  - path: sheet-pbta-config/
+    package: sheet-pbta-config
+    version: 1.0.0
+    description: Puts the PbtA sheet settings and its stats, moves and playbooks tables into +config
+  - path: sheet-pbta-chargen/
+    package: sheet-pbta-chargen
+    version: 1.0.0
+    description: Joins the PbtA sheet to +app character applications
+  - path: duties-pbta/
+    package: duties-pbta
+    version: 1.0.0
+    description: Duties roll provider "pbta" on the PbtA sheet
