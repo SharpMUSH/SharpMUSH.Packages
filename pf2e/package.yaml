@@ -2414,7 +2414,7 @@ objects:
           setq(find_text,trim(%0))][
           setq(find_at,squish(iter(u(FUN`ENC`INDEXES),if(strmatch(u(FUN`ENC`C,%i0,k),%q<find_text>),%i0))))][
           if(not(strlen(%q<find_at>)),setq(find_at,if(hastype(setr(find_player,pmatch(%q<find_text>)),player),squish(iter(u(FUN`ENC`INDEXES),if(strmatch(u(FUN`ENC`C,%i0,who),objid(%q<find_player>)),%i0))))))][
-          if(not(strlen(%q<find_at>)),setq(find_at,if(eq(words(setr(find_named,squish(iter(u(FUN`ENC`INDEXES),if(strmatch(u(FUN`ENC`C,%i0,name),%q<find_text>*),%i0))))),1),%q<find_named>)))][
+          if(not(strlen(%q<find_at>)),setq(find_at,if(eq(words(setunion(iter(setr(find_named,squish(iter(u(FUN`ENC`INDEXES),if(strmatch(u(FUN`ENC`C,%i0,name),%q<find_text>*),%i0)))),[u(FUN`ENC`C,%i0,who)][u(FUN`ENC`C,%i0,id)]),)),1),first(%q<find_named>))))][
           first(%q<find_at>)]
         flags: [funsyntax]
       FUN`ENC`MINE:
@@ -2850,7 +2850,7 @@ objects:
         flags: [cmdsyntax]
       INC`EXPLORE`SET:
         value: |-
-          think setq(explore_slug,first(squish(iter(get(%!/DATA`EXPLORE),if(strmatch(lcstr(elements(%i0,2,~)),lcstr(%q<cmd_args>)*),first(%i0,~)),|,%b)))); @assert strlen(%q<explore_slug>)=@pemit %#=notice(PF2E,The activities are [itemize(iter(get(%!/DATA`EXPLORE),elements(%i0,2,~),|,|),|)].,warn); &PF2E`EXPLORE %#=%q<explore_slug>; @remit %l=notice(PF2E,%N is now [u(%!/FUN`EXPLORE`NAME,%q<explore_slug>)]: [elements(grab(get(%!/DATA`EXPLORE),%q<explore_slug>~*),3,~)].,ok)
+          think setq(explore_slug,first(squish(iter(get(%!/DATA`EXPLORE),if(strmatch(lcstr(elements(%i0,2,~)),lcstr(%q<cmd_args>)*),first(%i0,~)),|,%b)))); @assert strlen(%q<explore_slug>)=@pemit %#=notice(PF2E,The activities are [itemize(iter(get(%!/DATA`EXPLORE),elements(%i0,2,~),|,|),|)].,warn); &PF2E`EXPLORE %#=%q<explore_slug>; @remit %l=notice(PF2E,%N is now exploring with [elements(grab(get(%!/DATA`EXPLORE),%q<explore_slug>~*,|),2,~)]: [elements(grab(get(%!/DATA`EXPLORE),%q<explore_slug>~*,|),3,~)].,ok)
         flags: [cmdsyntax]
       INC`EXPLORE`STOP:
         value: |-
