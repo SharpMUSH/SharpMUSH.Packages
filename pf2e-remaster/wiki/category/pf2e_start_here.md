@@ -7,6 +7,8 @@ Choose a complete starting character after the creation checklist:
 
 Then read [[Dying and Recovery|main:dying_and_recovery]] and use [[Leveling Up|main:leveling_up]] for the first advancement examples. Each practice lesson states its starting conditions; do not carry a reset exercise's resources into a different lesson.
 
+To make your character and play on this game, read [[Playing PF2e Here|main:playing_pf2e_here]]: the commands for the builder, the sheet, encounters and levels.
+
 For a rules lookup during play, browse [[Actions|category:actions]], [[Conditions|category:conditions]], [[Spells|category:spells]] or [[Equipment|category:equipment]].
 
 ::: wiki-next-step
