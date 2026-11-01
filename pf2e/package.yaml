@@ -1950,6 +1950,7 @@ objects:
             skill*, iter(u({{core}}/DATA`STATISTICS),if(strmatch(u({{core}}/FUN`STAT`KIND,%i0),skill),u(%!/FUN`SHOW`STAT,%i0)),%b,|),
             gear, u(%!/FUN`BUILD`LIST`GEAR,%1),
             #-1))][
+          setq(list_rows,trim(squish(%q<list_rows>,|),|))][
           switch(1,
             strmatch(%q<list_rows>,#-1), notice(PF2E,+build/list ancestries%, heritages%, backgrounds%, classes%, feats <slot>%, choice <number>%, languages%, skills or gear <text>.,warn),
             not(words(%q<list_rows>,|)), notice(PF2E,Nothing to list[if(strlen(%1),%bfor %1)].,warn),
