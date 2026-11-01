@@ -1,7 +1,7 @@
 format: "1.16"
 package: sheet-d20-help
 title: "D20 sheet: +help topics"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Puts the D20 sheet topics into +help: registers the sheet-d20 package's help with the +help librarian, and points its messages at +help."
 license: MIT
@@ -16,7 +16,7 @@ requires_server: ">=0.1"
 # +help, and neither package changes.
 depends:
   - package: sheet-d20
-    version: ">=1.0 <2.0"
+    version: ">=2.0 <3.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH.Packages
       path: sheet-d20/

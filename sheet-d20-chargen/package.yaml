@@ -1,7 +1,7 @@
 format: "1.16"
 package: sheet-d20-chargen
 title: "D20 sheet: character applications"
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
 description: "Joins the d20 sheet to character applications: a player changes their sheet only while their +app application is theirs to change, reviewers read the sheets of the characters they review, and the sheet's messages point at +app."
 license: MIT
@@ -15,7 +15,7 @@ requires_server: ">=0.1"
 # Chargen Store. Uninstalling it brings the plain rule back; neither package changes.
 depends:
   - package: sheet-d20
-    version: ">=1.0 <2.0"
+    version: ">=2.0 <3.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH.Packages
       path: sheet-d20/
@@ -43,7 +43,7 @@ objects:
         value: |-
           cand(permission(%0,softcode.chargen.review),hasattr({{chargen/store}},APP`[u({{chargen/chargen}}/FUN`APP`KEY,%1)]))
         flags: [funsyntax]
-      HINT`SET: |-
-        +app/submit sends your application to staff when your sheet is done.
       HINT`FOOTER: |-
+        +app/submit sends it to staff with your application.
+      HINT`CHARGEN: |-
         +app/submit sends it to staff with your application.
