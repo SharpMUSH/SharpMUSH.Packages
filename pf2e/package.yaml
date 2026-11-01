@@ -1426,7 +1426,7 @@ objects:
       # +build/boost <set>=<attributes>: ancestry, background, class, or a level (1, 5, 10, 15, 20).
       INC`BUILD`BOOST:
         value: |-
-          think setqm(build_set,lcstr(trim(before(%q<cmd_rest>,=))),build_typed,iter(lcstr(trim(after(%q<cmd_rest>,=))),firstof(u(%!/FUN`COMMAND`ABILITY,%i0),if(strmatch(%i0,free),free,?%i0))),build_step,boost-[lcstr(trim(before(%q<cmd_rest>,=)))]); @assert match(ancestry background class 1 5 10 15 20,%q<build_set>)=@pemit %#=notice(PF2E,Boost sets are ancestry%, background%, class%, and levels 1%, 5%, 10%, 15 and 20: +build/boost 1=str dex con wis.,warn); @assert not(strmatch(%q<build_typed>,*?*))=@pemit %#=notice(PF2E,The attributes are str%, dex%, con%, int%, wis and cha.,warn); @include %!/INC`BUILD`GUARD; think setq(build_plan,u(%!/FUN`BUILD`BOOST`PLAN,%q<build_set>,%q<build_typed>)); @assert not(strmatch(%q<build_plan>,#-*))=@pemit %#=notice(PF2E,after(%q<build_plan>,#-%b),warn); @include %!/INC`BUILD`BEGIN; @include/nobreak %!/INC`BUILD`CLEAR; @dolist/inplace %q<build_plan>={think setq(entry_json,json(object,kind,json(string,before(##,~)),ability,json(string,elements(##,2,~)),step,json(string,%q<build_step>),parent,firstof(elements(##,3,~),null))); @include %!/INC`BUILD`PUT}; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)][capstr(%q<build_set>)] boosts: [itemize(iter(%q<build_plan>,[if(strmatch(first(%i0,~),flaw),flaw%b)][capstr(elements(%i0,2,~))],%b,|),|)].,ok); think u(%!/FUN`BUILD`LOAD); @pemit %#=u(%!/FUN`BUILD`NEXT)
+          think setqm(build_set,lcstr(trim(before(%q<cmd_rest>,=))),build_typed,iter(lcstr(trim(after(%q<cmd_rest>,=))),firstof(u(%!/FUN`COMMAND`ABILITY,%i0),if(strmatch(%i0,free),free,?%i0))),build_step,boost-[lcstr(trim(before(%q<cmd_rest>,=)))]); @assert match(ancestry background class 1 5 10 15 20,%q<build_set>)=@pemit %#=notice(PF2E,Boost sets are ancestry%, background%, class%, and levels 1%, 5%, 10%, 15 and 20: +build/boost 1=str dex con wis.,warn); @assert not(strmatch(%q<build_typed>,*?*))=@pemit %#=notice(PF2E,The attributes are str%, dex%, con%, int%, wis and cha.,warn); @include %!/INC`BUILD`GUARD; think setq(build_plan,u(%!/FUN`BUILD`BOOST`PLAN,%q<build_set>,%q<build_typed>)); @assert not(strmatch(%q<build_plan>,#-*))=@pemit %#=notice(PF2E,rest(%q<build_plan>),warn); @include %!/INC`BUILD`BEGIN; @include/nobreak %!/INC`BUILD`CLEAR; @dolist/inplace %q<build_plan>={think setq(entry_json,json(object,kind,json(string,before(##,~)),ability,json(string,elements(##,2,~)),step,json(string,%q<build_step>),parent,firstof(elements(##,3,~),null))); @include %!/INC`BUILD`PUT}; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)][capstr(%q<build_set>)] boosts: [itemize(iter(%q<build_plan>,[if(strmatch(first(%i0,~),flaw),flaw%b)][capstr(elements(%i0,2,~))],%b,|),|)].,ok); think u(%!/FUN`BUILD`LOAD); @pemit %#=u(%!/FUN`BUILD`NEXT)
         flags: [cmdsyntax]
       # +build/skills <skill> ...: the skills the class lets you choose, each trained; a Lore is <topic> lore.
       INC`BUILD`SKILLS:
@@ -1814,7 +1814,7 @@ objects:
               [setq(open_rule,json_query(%q<open_item>,extract,$.system.rules\[%i0\]))][
               setq(open_flag,u({{core}}/FUN`RULE`CHOICE`FLAG,%q<open_rule>,%i0))][
               if(cand(not(strlen(json_query(%q<open_choices>,extract,$.%q<open_flag>))),u({{core}}/FUN`PREDICATE`TEST,firstof(json_query(%q<open_rule>,get,predicate),json(array)),%q<check_options>),cor(not(%1),not(strmatch(u(%!/FUN`BUILD`CHOICE`KIND,%q<open_rule>),none)))),
-                setq(open_found,%q<open_found>|[first(%0,~)]~%q<open_flag>~%i0~[json_query(%q<open_prep>,extract,$.name)]: [u(%!/FUN`BUILD`CAMEL`WORDS,%q<open_flag>)]))]))])]
+                setq(open_found,%q<open_found>|[first(%0,~)]~%q<open_flag>~%i0~[setr(open_name,json_query(%q<open_prep>,extract,$.name))][if(strmatch(%q<open_name>,setr(open_words,u(%!/FUN`BUILD`CAMEL`WORDS,%q<open_flag>))),,: %q<open_words>)]))]))])]
         flags: [funsyntax]
       FUN`BUILD`CAMEL`WORDS:
         value: |-
@@ -1937,7 +1937,7 @@ objects:
           box(
             [fields(,
               Level,%q<check_level>,
-              Picked,squish([iter(ancestry heritage background class,if(strlen(r(build_%i0_item)),json_query(r(build_%i0_item),extract,$.name)),%b,%b)]),
+              Picked,[edit(trim(squish(iter(ancestry heritage background class,if(strlen(r(build_%i0_item)),json_query(r(build_%i0_item),extract,$.name)),%b,|),|),b,|),|,%,%b)],
               Money,u(%!/FUN`SHOW`MONEY,u({{core}}/FUN`SHEET`MONEY,%q<check_entries>)),
               State,if(%q<build_locked>,Finished,In progress))]%r[
             rule()]%r[
@@ -2219,7 +2219,7 @@ objects:
             level, Level [json_query(%1,extract,$.level)],
             ability, [capstr(json_query(%1,extract,$.ability))] [u(%!/FUN`SHOW`SIGNED,json_query(%1,extract,$.mod))],
             rank, [capstr(json_query(%1,extract,$.stat))] [u(%!/FUN`SHOW`RANK,json_query(%1,extract,$.rank))],
-            grant, Grant [u(%!/FUN`SHOW`ITEM,json_query(%1,extract,$.pack),json_query(%1,extract,$.id),json_query(%1,extract,$.badge))],
+            grant, Grant [u(%!/FUN`SHOW`ITEM,json_query(%1,extract,$.pack),json_query(%1,extract,$.id),json_query(%1,extract,$.badge))][switch(json_query(%1,extract,$.pack),actions,%b%(action%),feats,%b%(feat%),spells,%b%(spell%),equipment,%b%(item%),)][if(t(json_query(%1,extract,$.level)),%b%(level [json_query(%1,extract,$.level)]%))],
             revoke, Revoke entry [json_query(%1,extract,$.entry)],
             boost, Boost [capstr(json_query(%1,extract,$.ability))],
             flaw, Flaw [capstr(json_query(%1,extract,$.ability))],
