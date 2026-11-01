@@ -53,7 +53,15 @@ Every sheet package answers `+sheet` and `+check`. Install one sheet package per
 | `+encounter/join [<n>]`, `/leave [<n>]` | all | Takes a copy of your sheet into it, or drops it |
 | `+encounter/use <n>` | all | Which of your encounters here your rolls and changes go to |
 | `+encounter/add\|remove\|keep <name>[=<n>]` | the GM, keepers | Brings someone in, drops their copy, or writes their copy's stress and condition back to their sheet |
-| `+encounter/end [<n>]` | the GM, keepers | Ends it and drops every copy |
+| `+encounter/threat <threat>`, `+encounter/threat <name>=<segments> <risk> <effect>` | the GM, keepers | Brings in a copy of a library threat, or makes one for this encounter |
+| `+encounter/danger <name>=<segments>`, `/tick <name>[=<n>]`, `/dismiss <name>` | the GM, keepers | A danger clock; fill or empty a clock by hand; take one out |
+| `+encounter/consequence <name>=<kind> [<danger>]` | the GM, keepers | The consequence of a member's last roll there: `stress`, `complication`, `effect`, `risk` or `lost` |
+| `+encounter/accept`, `/protect <name>` | members | Take your consequence, or a friend's |
+| `+encounter/return <name>` | the GM, keepers | Brings back a member who was taken out |
+| `+encounter/milestone [<reason>]` | keepers | A milestone for everyone in it, on their milestones ledgers |
+| `+encounter/end [<n>]` | the GM, keepers | Ends it, says which threats were overcome, and drops every copy |
+| `+threat`, `+threat <name>` | all | The game's threats, or one with its description and moves |
+| `+threat/new <name>=<segments> <risk> <effect>`, `/desc <name>=<text>`, `/moves <name>=<move>\|<move>`, `/remove <name>` | keepers | Keeps the list |
 | `+clock`, `+clock <name>` | all | The game's clocks |
 | `+clock/new <name>=<segments>` | all | 4, 6 or 8 segments |
 | `+clock/tick <name>[=<n>]`, `+clock/remove <name>` | who started it, keepers | Fill (or empty) segments; take it away |
@@ -72,6 +80,20 @@ switches use that copy: the encounter they picked with `/use`, else the one they
 Anywhere else, and for milestones, the ledger and Duties, the sheet is used. Each encounter has its
 own copies, so encounters never touch each other. Ending one drops its copies; only what the GM kept
 with `/keep` (stress and condition) is on the sheet. Momentum and the build never carry back.
+
+NPCs never roll. A threat is a clock the members fill to overcome it, with the risk and effect of
+acting against it; a danger clock is filled by complications. `+check <action>=vs <threat>` rolls
+with the threat's risk and effect unless others are named before `vs`, and a partial or full success
+ticks it 1, 2 or 3 for the effect, one more on a critical. The encounter keeps its own copy of each
+threat, so the `+threat` list never changes a running encounter.
+
+After a partial success or a bad outcome the GM picks the consequence, rated by the roll's risk (1
+to 3): `stress` (that much stress; a full clock takes the member out until `/return`), `complication`
+(a danger clock ticks that much), `effect` (the threat loses one segment of the roll's progress),
+`risk` (the threat's risk goes up one) or `lost` (that action won't do it). It waits on the member's
+copy until they `/accept` it, resist it with `+check/determination` (4 or 5 takes one off a stress or
+complication, a 6 avoids it, two 6s also lower the risk of their next roll there), or a friend takes
+it with `/protect`.
 
 ## The numbers
 
@@ -116,8 +138,12 @@ either ledger rewrites it.
 
 The lists are `+config` tables on **Charge Sheet Store**: `ACTION` (with `SUMMARY` and `ORDER`) and
 `DETAIL` (with `ORDER`). Clocks are on the store too: `` CLOCK`<KEY> `` with `SIZE`, `FILLED` and
-`OWNER`. So are encounters: `` ENC`<n> `` the title, with `ROOM`, `GM`, and `` COPY`<key> `` per member
-holding `DOTS`, `TALENTS`, `MOMENTUM`, `STRESS` and `CONDITION`; `` ENCOUNTER`OPEN `` lists them.
+`OWNER`. So are encounters: `` ENC`<n> `` the title, with `ROOM`, `GM`, `` COPY`<key> `` per member
+holding `DOTS`, `TALENTS`, `MOMENTUM`, `STRESS`, `CONDITION`, `LAST` (their last roll there, JSON),
+`PENDING` (a consequence waiting, JSON), `OUT` (taken out) and `EASE` (the next roll's risk is
+lowered), and `` FOE`<key> `` per threat or danger, the name with `KIND`, `SIZE`, `FILLED`, `RISK`,
+`EFFECT`, `DESC` and `MOVES`; `` ENCOUNTER`OPEN `` lists them. The threat list is `` THREAT`<KEY> ``,
+the name with `SIZE`, `RISK`, `EFFECT`, `DESC` and `MOVES`.
 
 ## The sheet API
 

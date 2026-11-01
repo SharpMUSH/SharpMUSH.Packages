@@ -1,9 +1,9 @@
 format: "1.16"
 package: sheet-charge
 title: "Charge sheet"
-version: 1.1.0
+version: 1.2.0
 authors: [SharpMUSH]
-description: "A Charge character sheet: details, twelve actions rated in dots, momentum, a stress clock with a condition, milestones and talents built up on a ledger, encounters that keep their own copy of each sheet, plus progress clocks. +check rolls an action's dice against a risk for the room and gains momentum; push yourself, add tension, assist a friend, and make determination and fortune rolls. Based on the Charge SRD under CC BY 4.0 and Blades in the Dark under CC BY 3.0."
+description: "A Charge character sheet: details, twelve actions rated in dots, momentum, a stress clock with a condition, milestones and talents built up on a ledger, encounters that keep their own copy of each sheet, with threats, danger clocks and consequences, plus progress clocks. +check rolls an action's dice against a risk for the room and gains momentum; push yourself, add tension, assist a friend, and make determination and fortune rolls. Based on the Charge SRD under CC BY 4.0 and Blades in the Dark under CC BY 3.0."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, charge, forged in the dark, dice, momentum]
@@ -50,12 +50,13 @@ objects:
   # advances, talents) and CHARGE`XP`<n> holds the milestones given and taken. CHARGE`TOTALS caches what the two
   # add up to, rewritten after every entry. The CHARGE root is wizard-flagged, so only this object writes them.
   #
-  # +sheet, +check and +clock are added with /noparse/rsnoparse and hooked to CMD`<word>, so what a player types
-  # reaches the code exactly as typed and nothing a player wrote is ever evaluated.
+  # +sheet, +check, +clock, +encounter and +threat are added with /noparse/rsnoparse and hooked to CMD`<word>, so what
+  # a player types reaches the code exactly as typed and nothing a player wrote is ever evaluated.
   #
-  # Trees: CMD` the hooked commands, INC`COMMAND` the parse and dispatch, INC`SHEET`, INC`CHECK` and INC`CLOCK`
-  # one routine per switch, INC`NEED` the guards they share, INC`DO` the writes. FUN`LIST` the actions and
-  # details, FUN`POOL` the dice, FUN`PERM` who may do what, FUN`SCREEN` and FUN`DISPLAY` the screens. API` the
+  # Trees: CMD` the hooked commands, INC`COMMAND` the parse and dispatch, INC`SHEET`, INC`CHECK`, INC`CLOCK`,
+  # INC`ENCOUNTER` and INC`THREAT` one routine per switch, FUN`FOE` an encounter's threats and dangers,
+  # FUN`CONSEQUENCE` the consequences waiting on members, INC`NEED` the guards they share, INC`DO` the writes.
+  # FUN`LIST` the actions and details, FUN`POOL` the dice, FUN`PERM` who may do what, FUN`SCREEN` and FUN`DISPLAY` the screens. API` the
   # functions other packages call (VISUAL), the same names in every sheet package. Bridges add HINT`<message>
   # lines, GATE`EDIT (a reason a player may not change their own sheet now) and ALLOW`VIEW`<name> (who else may
   # read a sheet).
@@ -372,6 +373,36 @@ objects:
         ENCOUNTER`KEEP
       DATA`ROUTE`ENCOUNTER`END: |-
         ENCOUNTER`END
+      DATA`ROUTE`ENCOUNTER`THREAT: |-
+        ENCOUNTER`THREAT
+      DATA`ROUTE`ENCOUNTER`DANGER: |-
+        ENCOUNTER`DANGER
+      DATA`ROUTE`ENCOUNTER`TICK: |-
+        ENCOUNTER`TICK
+      DATA`ROUTE`ENCOUNTER`DISMISS: |-
+        ENCOUNTER`DISMISS
+      DATA`ROUTE`ENCOUNTER`CONSEQUENCE: |-
+        ENCOUNTER`CONSEQUENCE
+      DATA`ROUTE`ENCOUNTER`ACCEPT: |-
+        ENCOUNTER`ACCEPT
+      DATA`ROUTE`ENCOUNTER`PROTECT: |-
+        ENCOUNTER`PROTECT
+      DATA`ROUTE`ENCOUNTER`RETURN: |-
+        ENCOUNTER`RETURN
+      DATA`ROUTE`ENCOUNTER`MILESTONE: |-
+        ENCOUNTER`MILESTONE
+      DATA`ROUTE`THREAT`BARE: |-
+        THREAT`LIST
+      DATA`ROUTE`THREAT`ARG: |-
+        THREAT`SHOW
+      DATA`ROUTE`THREAT`NEW: |-
+        THREAT`NEW
+      DATA`ROUTE`THREAT`DESC: |-
+        THREAT`DESC
+      DATA`ROUTE`THREAT`MOVES: |-
+        THREAT`MOVES
+      DATA`ROUTE`THREAT`REMOVE: |-
+        THREAT`REMOVE
       DATA`DIFFICULTIES: |-
         trivial easy standard hard extreme
       DATA`RISKS: |-
@@ -380,6 +411,8 @@ objects:
         limited standard great
       DATA`CLOCK`SIZES: |-
         4 6 8
+      DATA`CONSEQUENCES: |-
+        stress complication effect risk lost
 
       # ---- commands ---------------------------------------------------------------
       # %1 the switches and %2 what follows, exactly as typed.
@@ -398,6 +431,10 @@ objects:
       CMD`ENCOUNTER:
         value: |-
           $(?is)^\+encounter(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,encounter,table,ENCOUNTER,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`THREAT:
+        value: |-
+          $(?is)^\+threat(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,threat,table,THREAT,switches,%1,argument,%2
         flags: [regexp, cmdsyntax]
       # A line a bridge adds to one of this object's messages: HINT`<message>, set here by a bridge such as
       # sheet-charge-help. %1 on are passed to it. Nothing when no bridge set one, so the message stands without it.
@@ -536,13 +573,13 @@ objects:
       # ---- +check -----------------------------------------------------------------
       INC`CHECK`USAGE:
         value: |-
-          @pemit %#=notice(SHEET,+check <action>%[=<risk> <effect>%]%, such as +check muscle=high great. +<n> or -<n> after the action adds or takes dice. /push spends 2 momentum on a die%, /tension takes a complication for one%, /private rolls where only you see it. /assist%, /determination and /fortune are their own rolls: +help check.,warn)
+          @pemit %#=notice(SHEET,+check <action>%[=<risk> <effect>%]%, such as +check muscle=high great. +<n> or -<n> after the action adds or takes dice. /push spends 2 momentum on a die%, /tension takes a complication for one%, /private rolls where only you see it. /assist%, /determination and /fortune are their own rolls: +help check. In an encounter%, =vs <threat> rolls against a threat there.,warn)
         flags: [cmdsyntax]
       # +check[/push|/tension][/private] <action>[+<n>|-<n>][=<risk and effect>]: an action roll for the room.
       # Help waiting from an assist adds a die. A roll that spent momentum (a push or an assist) gains none.
       INC`CHECK`ROLL:
         value: |-
-          @assert strlen(%q<cmd_argument>)=@include %!/INC`CHECK`USAGE; think u(%!/FUN`CHECK`READ,%q<cmd_left_side>); @assert isint(%q<check_modifier>)=@pemit %#=notice(SHEET,'%q<cmd_left_side>' ends in something that is not a number of dice.,warn); @include/args %!/INC`NEED`ACTION=key,%q<check_typed>; think u(%!/FUN`CHECK`STAKES,%q<cmd_right_side>); @assert not(strlen(%q<check_unknown>))=@pemit %#=notice(SHEET,'%q<check_unknown>' is not a risk or an effect. Give a risk%, low%, moderate or high%, or one of [itemize(v(DATA`DIFFICULTIES),,or)]%, and an effect%, limited%, standard or great.,warn); @break strmatch(%q<check_risk>,none)=@pemit %#=notice(SHEET,That has no risk: [u(%!/FUN`LIST`LABEL,ACTION,%q<trait_key>)] simply succeeds%, no roll needed.); think setqm(check_push,strmatch(%q<cmd_switch>,push),check_tension,strmatch(%q<cmd_switch>,tension),check_helper,get(%q<viewer_objid>/CHARGE`ASSIST)); @assert cor(not(%q<check_push>),gte(u(%!/API`CHARGES,%q<viewer_objid>),2))=@pemit %#=notice(SHEET,Pushing yourself takes 2 momentum%, and you have [u(%!/API`CHARGES,%q<viewer_objid>)].,warn); think if(%q<check_push>,u(%!/API`MOMENTUM,%q<viewer_objid>,-2)); @if strlen(%q<check_helper>)={@include/args %!/INC`DO`SET=who,%q<viewer_objid>,leaf,ASSIST,value,}; think setq(check_result,uargs(%!/API`CHECK,roller,%q<viewer_objid>,trait,%q<trait_key>,modifier,add(%q<check_modifier>,%q<check_dice>,%q<check_push>,%q<check_tension>,t(strlen(%q<check_helper>))),target,%q<check_risk>,effect,%q<check_effect>)); @assert not(strmatch(%q<check_result>,#-*))=@pemit %#=notice(SHEET,%q<check_result>,error); think setq(check_gain,if(cor(%q<check_push>,strlen(%q<check_helper>)),0,u(%!/API`GAIN,json_query(%q<check_result>,extract,$.tier)))); think if(%q<check_gain>,u(%!/API`MOMENTUM,%q<viewer_objid>,%q<check_gain>)); think setq(check_line,u(%!/FUN`DISPLAY`CHECK,%q<check_result>,u(%!/FUN`DISPLAY`BOOSTS,%q<check_helper>,%q<check_push>,%q<check_tension>),u(%!/FUN`DISPLAY`GAIN,%q<viewer_objid>,%q<check_gain>,cor(%q<check_push>,strlen(%q<check_helper>))))); @break %q<cmd_private>=@pemit %#=notice(SHEET,You privately roll %q<check_line>); @remit %l=notice(SHEET,tone(strong,name(%#)) rolls %q<check_line>)
+          @assert strlen(%q<cmd_argument>)=@include %!/INC`CHECK`USAGE; think u(%!/FUN`CHECK`READ,%q<cmd_left_side>); @assert isint(%q<check_modifier>)=@pemit %#=notice(SHEET,'%q<cmd_left_side>' ends in something that is not a number of dice.,warn); @include/args %!/INC`NEED`ACTION=key,%q<check_typed>; think u(%!/FUN`CHECK`AGAINST,%q<cmd_right_side>); @include %!/INC`NEED`AGAINST; think u(%!/FUN`CHECK`STAKES,%q<check_stakes_typed>[if(strlen(%q<check_foe>),%b[get(%q<check_foe_at>`RISK)] [get(%q<check_foe_at>`EFFECT)])]); @assert not(strlen(%q<check_unknown>))=@pemit %#=notice(SHEET,'%q<check_unknown>' is not a risk or an effect. Give a risk%, low%, moderate or high%, or one of [itemize(v(DATA`DIFFICULTIES),,or)]%, and an effect%, limited%, standard or great.,warn); @break strmatch(%q<check_risk>,none)=@pemit %#=notice(SHEET,That has no risk: [u(%!/FUN`LIST`LABEL,ACTION,%q<trait_key>)] simply succeeds%, no roll needed.); think setqm(check_push,strmatch(%q<cmd_switch>,push),check_tension,strmatch(%q<cmd_switch>,tension),check_helper,get(%q<viewer_objid>/CHARGE`ASSIST)); @assert cor(not(%q<check_push>),gte(u(%!/API`CHARGES,%q<viewer_objid>),2))=@pemit %#=notice(SHEET,Pushing yourself takes 2 momentum%, and you have [u(%!/API`CHARGES,%q<viewer_objid>)].,warn); think if(%q<check_push>,u(%!/API`MOMENTUM,%q<viewer_objid>,-2)); @if strlen(%q<check_helper>)={@include/args %!/INC`DO`SET=who,%q<viewer_objid>,leaf,ASSIST,value,}; think if(cand(strlen(%q<check_copy>),get(%q<check_copy>`EASE)),setq(check_risk,u(%!/FUN`RISK`LOWER,%q<check_risk>))[setq(check_eased,1)][attrib_set(%q<check_copy>`EASE)]); think setq(check_result,uargs(%!/API`CHECK,roller,%q<viewer_objid>,trait,%q<trait_key>,modifier,add(%q<check_modifier>,%q<check_dice>,%q<check_push>,%q<check_tension>,t(strlen(%q<check_helper>))),target,%q<check_risk>,effect,%q<check_effect>)); @assert not(strmatch(%q<check_result>,#-*))=@pemit %#=notice(SHEET,%q<check_result>,error); think setq(check_gain,if(cor(%q<check_push>,strlen(%q<check_helper>)),0,u(%!/API`GAIN,json_query(%q<check_result>,extract,$.tier)))); think if(%q<check_gain>,u(%!/API`MOMENTUM,%q<viewer_objid>,%q<check_gain>)); think setq(check_after,u(%!/FUN`CHECK`AFTER,%q<check_result>)); think setq(check_line,[u(%!/FUN`DISPLAY`CHECK,%q<check_result>,u(%!/FUN`DISPLAY`BOOSTS,%q<check_helper>,%q<check_push>,%q<check_tension>),u(%!/FUN`DISPLAY`GAIN,%q<viewer_objid>,%q<check_gain>,cor(%q<check_push>,strlen(%q<check_helper>))))][if(%q<check_eased>,%b[tone(muted,A determination roll lowered the risk.)])]%q<check_after>); @break %q<cmd_private>=@pemit %#=notice(SHEET,You privately roll %q<check_line>); @remit %l=notice(SHEET,tone(strong,name(%#)) rolls %q<check_line>)
         flags: [cmdsyntax]
       # +check/assist <name>: spends 1 momentum so the next action roll of someone here gets a die.
       INC`CHECK`ASSIST:
@@ -552,7 +589,7 @@ objects:
       # +check/determination <momentum>: one die for each momentum spent, to resist a consequence.
       INC`CHECK`DETERMINATION:
         value: |-
-          @assert cand(isint(%q<cmd_argument>),gte(%q<cmd_argument>,0))=@pemit %#=notice(SHEET,+check/determination <momentum> resists a consequence: one die for each momentum you spend%, such as +check/determination 2.,warn); think setq(determination_have,u(%!/API`CHARGES,%q<viewer_objid>)); @assert lte(%q<cmd_argument>,%q<determination_have>)=@pemit %#=notice(SHEET,You have %q<determination_have> momentum.,warn); think setqm(determination_rolled,u(%!/FUN`POOL`ROLL,%q<cmd_argument>),determination_tier,u(%!/API`TIER,json_query(%q<determination_rolled>,extract,$.total),u(%!/FUN`POOL`SIXES,%q<determination_rolled>,%q<cmd_argument>)),determination_left,u(%!/API`MOMENTUM,%q<viewer_objid>,-%q<cmd_argument>)); think setq(determination_line,a determination roll with %q<cmd_argument> momentum: [json_query(%q<determination_rolled>,extract,$.text)]: [tone(u(%!/FUN`DISPLAY`TIERTONE,%q<determination_tier>),u(%!/FUN`DISPLAY`RESISTED,%q<determination_tier>))]. [name(%#)] has %q<determination_left> momentum. [tone(muted,%(roll [json_query(%q<determination_rolled>,extract,$.id)]%))]); @break %q<cmd_private>=@pemit %#=notice(SHEET,You privately make %q<determination_line>); @remit %l=notice(SHEET,tone(strong,name(%#)) makes %q<determination_line>)
+          @assert cand(isint(%q<cmd_argument>),gte(%q<cmd_argument>,0))=@pemit %#=notice(SHEET,+check/determination <momentum> resists a consequence: one die for each momentum you spend%, such as +check/determination 2.,warn); think setq(determination_have,u(%!/API`CHARGES,%q<viewer_objid>)); @assert lte(%q<cmd_argument>,%q<determination_have>)=@pemit %#=notice(SHEET,You have %q<determination_have> momentum.,warn); think setqm(determination_rolled,u(%!/FUN`POOL`ROLL,%q<cmd_argument>),determination_tier,u(%!/API`TIER,json_query(%q<determination_rolled>,extract,$.total),u(%!/FUN`POOL`SIXES,%q<determination_rolled>,%q<cmd_argument>)),determination_left,u(%!/API`MOMENTUM,%q<viewer_objid>,-%q<cmd_argument>)); think setq(determination_line,a determination roll with %q<cmd_argument> momentum: [json_query(%q<determination_rolled>,extract,$.text)]: [tone(u(%!/FUN`DISPLAY`TIERTONE,%q<determination_tier>),u(%!/FUN`DISPLAY`RESISTED,%q<determination_tier>))]. [name(%#)] has %q<determination_left> momentum. [tone(muted,%(roll [json_query(%q<determination_rolled>,extract,$.id)]%))]); think setq(determination_line,%q<determination_line>[u(%!/FUN`CONSEQUENCE`RESIST,%q<determination_tier>)]); @break %q<cmd_private>=@pemit %#=notice(SHEET,You privately make %q<determination_line>); @remit %l=notice(SHEET,tone(strong,name(%#)) makes %q<determination_line>)
         flags: [cmdsyntax]
       # +check/fortune <dice>|<action>: a roll for luck, with no momentum and no consequence.
       INC`CHECK`FORTUNE:
@@ -576,6 +613,32 @@ objects:
           check_risk,firstof(first(squish(iter(%0,u(%!/API`TARGET,%i0)))),moderate),
           check_dice,firstof(first(squish(iter(%0,if(member(v(DATA`DIFFICULTIES),lcstr(%i0)),extract(get(%!/DATA`CONFIG`DICE),member(v(DATA`DIFFICULTIES),lcstr(%i0)),1))))),0),
           check_effect,firstof(first(squish(iter(%0,if(member(v(DATA`EFFECTS),lcstr(%i0)),lcstr(%i0))))),standard))
+        flags: [funsyntax]
+
+      # %0 what follows = as typed: stakes, then vs and a threat. check_stakes_typed and check_vs_typed; check_copy and
+      # check_enc, the roller's encounter copy here and its number; check_foe and check_foe_at, the threat named there.
+      FUN`CHECK`AGAINST:
+        value: |-
+          setqm(check_vs_at,match(%0,vs),
+          check_stakes_typed,if(%q<check_vs_at>,extract(%0,1,dec(%q<check_vs_at>)),%0),
+          check_vs_typed,if(%q<check_vs_at>,extract(%0,inc(%q<check_vs_at>),words(%0))),
+          check_copy,u(%!/FUN`ENCOUNTER`COPY,%#),
+          check_enc,if(strlen(%q<check_copy>),u(%!/FUN`ENCOUNTER`OF,%#)),
+          check_foe,if(cand(strlen(%q<check_vs_typed>),strlen(%q<check_enc>)),u(%!/FUN`FOE`FIND,%q<check_enc>,%q<check_vs_typed>)),
+          check_foe_at,if(strlen(%q<check_foe>),{{store}}/ENC`%q<check_enc>`FOE`%q<check_foe>))
+        flags: [funsyntax]
+      # A roller taken out of their encounter here does not roll; a threat named with vs is one there, still standing.
+      INC`NEED`AGAINST:
+        value: |-
+          @assert cor(not(strlen(%q<check_copy>)),not(get(%q<check_copy>`OUT)))=@pemit %#=notice(SHEET,You are taken out of encounter %q<check_enc>. Its GM brings you back with +encounter/return.,warn); @assert cor(not(strlen(%q<check_vs_typed>)),strlen(%q<check_enc>))=@pemit %#=notice(SHEET,vs <threat> rolls against a threat in your encounter here%, and you are in no encounter here.,warn); @assert cor(not(strlen(%q<check_vs_typed>)),strlen(%q<check_foe>))=@pemit %#=notice(SHEET,There is no threat '%q<check_vs_typed>' in encounter %q<check_enc>. +encounter shows them.,warn); @assert cor(not(strlen(%q<check_foe>)),strmatch(get(%q<check_foe_at>`KIND),threat))=@pemit %#=notice(SHEET,[get(%q<check_foe_at>)] is a danger clock: complications fill it%, not rolls.,warn); @assert cor(not(strlen(%q<check_foe>)),not(u(%!/FUN`FOE`FULL,%q<check_enc>,%q<check_foe>)))=@pemit %#=notice(SHEET,[get(%q<check_foe_at>)] is overcome already.,warn)
+        flags: [cmdsyntax]
+      # %0 API`CHECK's JSON, after an action roll in an encounter: ticks the threat named with vs (1, 2 or 3 for the
+      # effect, one more on a critical; nothing on a bad outcome), keeps the roll as LAST on the roller's copy, and
+      # returns " +2 on Dockside thugs [####..] 4/6 (moderate risk, standard effect)." or nothing.
+      FUN`CHECK`AFTER:
+        value: |-
+          setqm(after_tier,json_query(%0,extract,$.tier),
+          after_ticks,if(cand(strlen(%q<check_foe>),member(crit-success success partial,%q<after_tier>)),add(member(v(DATA`EFFECTS),json_query(%0,extract,$.effect)),strmatch(%q<after_tier>,crit-success)),0))[if(%q<after_ticks>,null(u(%!/FUN`FOE`TICK,%q<check_enc>,%q<check_foe>,%q<after_ticks>)))][if(strlen(%q<check_copy>),null(attrib_set(%q<check_copy>`LAST,json(object,tier,json(string,%q<after_tier>),risk,json(string,json_query(%0,extract,$.target)),effect,json(string,json_query(%0,extract,$.effect)),action,json(string,%q<trait_key>),foe,json(string,%q<check_foe>),ticked,%q<after_ticks>,roll,json_query(%0,extract,$.roll)))))][if(strlen(%q<check_foe>),%b[if(%q<after_ticks>,+%q<after_ticks> on,No progress on)] [u(%!/FUN`FOE`LINE,%q<check_enc>,%q<check_foe>)].)]
         flags: [funsyntax]
 
       # ---- +clock -----------------------------------------------------------------
@@ -797,7 +860,7 @@ objects:
       # +encounter/end [<n>]: the GM or a keeper ends an encounter and drops every copy.
       INC`ENCOUNTER`END:
         value: |-
-          @include/args %!/INC`NEED`ENCOUNTER=number,%q<cmd_argument>; @include %!/INC`NEED`RUNS; think setqm(enc_members,u(%!/FUN`ENCOUNTER`MEMBERS,%q<enc_n>),enc_room,get({{store}}/ENC`%q<enc_n>`ROOM),enc_title,get({{store}}/ENC`%q<enc_n>)); @dolist/inline %q<enc_members>={think u(%!/FUN`ENCOUNTER`FORGET,##,%q<enc_n>)}; @wipe {{store}}/ENC`%q<enc_n>; &ENCOUNTER`OPEN {{store}}=[setdiff(get({{store}}/ENCOUNTER`OPEN),%q<enc_n>)]; @remit %q<enc_room>=notice(ENCOUNTER,tone(strong,name(%#)) ends encounter %q<enc_n>: %q<enc_title>. [tone(muted,Its copies are gone%, and only what the GM kept is on anyone's sheet.)]); @if comp(%l,%q<enc_room>)={@pemit %#=notice(ENCOUNTER,Encounter %q<enc_n> is over: %q<enc_title>.,ok)}; @dolist/inline %q<enc_members>={@if comp(loc(##),%q<enc_room>)={@pemit ##=notice(ENCOUNTER,[name(%#)] ends encounter %q<enc_n>: %q<enc_title>.)}}
+          @include/args %!/INC`NEED`ENCOUNTER=number,%q<cmd_argument>; @include %!/INC`NEED`RUNS; think setqm(enc_members,u(%!/FUN`ENCOUNTER`MEMBERS,%q<enc_n>),enc_room,get({{store}}/ENC`%q<enc_n>`ROOM),enc_title,get({{store}}/ENC`%q<enc_n>),enc_summary,u(%!/FUN`FOE`SUMMARY,%q<enc_n>)); @dolist/inline %q<enc_members>={think u(%!/FUN`ENCOUNTER`FORGET,##,%q<enc_n>)}; @wipe {{store}}/ENC`%q<enc_n>; &ENCOUNTER`OPEN {{store}}=[setdiff(get({{store}}/ENCOUNTER`OPEN),%q<enc_n>)]; @remit %q<enc_room>=notice(ENCOUNTER,tone(strong,name(%#)) ends encounter %q<enc_n>: %q<enc_title>. [if(strlen(%q<enc_summary>),%q<enc_summary>%b)][tone(muted,Its copies are gone%, and only what the GM kept is on anyone's sheet.)]); @if comp(%l,%q<enc_room>)={@pemit %#=notice(ENCOUNTER,Encounter %q<enc_n> is over: %q<enc_title>.,ok)}; @dolist/inline %q<enc_members>={@if comp(loc(##),%q<enc_room>)={@pemit ##=notice(ENCOUNTER,[name(%#)] ends encounter %q<enc_n>: %q<enc_title>.)}}
         flags: [cmdsyntax]
       # %<who> a character, enc_n an encounter: copies their dots, talents, momentum, stress and condition into it and
       # adds it to the encounters on their sheet, last joined last.
@@ -880,6 +943,253 @@ objects:
       FUN`ENCOUNTER`RUNS:
         value: |-
           cor(u(%!/FUN`PERM`KEEPER,%0),not(comp(get({{store}}/ENC`%1`GM),objid(%0))))
+        flags: [funsyntax]
+
+      # ---- threats and dangers ---------------------------------------------------
+      # NPCs never roll in Charge: a threat is a clock the members fill to overcome it, with the risk and effect of
+      # acting against it. A danger is a clock consequences fill. Keepers keep a library of threats on the store,
+      # THREAT`<KEY> the name with SIZE, RISK, EFFECT, DESC and MOVES beneath. An encounter keeps its own copy of each
+      # threat it brings in, and its dangers, as ENC`<n>`FOE`<KEY>: the name, with KIND (threat or danger), SIZE,
+      # FILLED, and for a threat RISK, EFFECT, DESC and MOVES. Nothing done in one encounter touches the library or
+      # another encounter.
+      INC`THREAT`LIST:
+        value: |-
+          @pemit %#=u(%!/FUN`SCREEN`THREATS)
+        flags: [cmdsyntax]
+      INC`THREAT`SHOW:
+        value: |-
+          @include/args %!/INC`NEED`THREAT=name,%q<cmd_argument>; @pemit %#=u(%!/FUN`SCREEN`THREAT,%q<threat_key>)
+        flags: [cmdsyntax]
+      # +threat/new <name>=<segments> [<risk>] [<effect>]: a keeper adds a threat to the library.
+      INC`THREAT`NEW:
+        value: |-
+          @include %!/INC`NEED`KEEPER; @assert cand(strlen(%q<cmd_left_side>),%q<cmd_has_equals>)=@pemit %#=notice(THREAT,+threat/new <name>=<segments> <risk> <effect>%, such as +threat/new Dockside thugs=6 moderate standard.,warn); @include/args %!/INC`NEED`FOENAME=name,%q<cmd_left_side>,head,THREAT; think u(%!/FUN`THREAT`READ,%q<cmd_right_side>); @include/args %!/INC`NEED`STAKES=head,THREAT; think setq(threat_key,u(%!/FUN`CLOCK`KEY,%q<cmd_left_side>)); @assert not(hasattr({{store}},THREAT`%q<threat_key>))=@pemit %#=notice(THREAT,There is a threat called that already. +threat/remove takes it away.,warn); &THREAT`%q<threat_key> {{store}}=%q<cmd_left_side>; &THREAT`%q<threat_key>`SIZE {{store}}=%q<threat_size>; &THREAT`%q<threat_key>`RISK {{store}}=%q<threat_risk>; &THREAT`%q<threat_key>`EFFECT {{store}}=%q<threat_effect>; @pemit %#=notice(THREAT,[get({{store}}/THREAT`%q<threat_key>)] is a threat: %q<threat_size> segments%, %q<threat_risk> risk%, %q<threat_effect> effect. +threat/desc and +threat/moves describe it.,ok)
+        flags: [cmdsyntax]
+      # +threat/desc <name>=<text>: what it is. Empty clears it.
+      INC`THREAT`DESC:
+        value: |-
+          @include %!/INC`NEED`KEEPER; @assert %q<cmd_has_equals>=@pemit %#=notice(THREAT,+threat/desc <name>=<text> describes a threat. Leave the text out to clear it.,warn); @include/args %!/INC`NEED`THREAT=name,%q<cmd_left_side>; @assert lte(strlen(%q<cmd_right_side>),300)=@pemit %#=notice(THREAT,Describe a threat in 300 characters or fewer.,warn); &THREAT`%q<threat_key>`DESC {{store}}=%q<cmd_right_side>; @pemit %#=notice(THREAT,[get({{store}}/THREAT`%q<threat_key>)] [if(strlen(%q<cmd_right_side>),has a description now,has no description now)].,ok)
+        flags: [cmdsyntax]
+      # +threat/moves <name>=<move>|<move>: what it does when a roll against it goes badly. Empty clears them.
+      INC`THREAT`MOVES:
+        value: |-
+          @include %!/INC`NEED`KEEPER; @assert %q<cmd_has_equals>=@pemit %#=notice(THREAT,+threat/moves <name>=<move>|<move> lists what a threat does when a roll goes badly. Leave them out to clear them.,warn); @include/args %!/INC`NEED`THREAT=name,%q<cmd_left_side>; @assert lte(strlen(%q<cmd_right_side>),400)=@pemit %#=notice(THREAT,Keep a threat's moves to 400 characters or fewer.,warn); think setq(threat_moves,trim(squish(iter(%q<cmd_right_side>,trim(%i0),|,|),|),|)); &THREAT`%q<threat_key>`MOVES {{store}}=%q<threat_moves>; @pemit %#=notice(THREAT,[get({{store}}/THREAT`%q<threat_key>)] has [if(strlen(%q<threat_moves>),words(%q<threat_moves>,|),no)] [if(eq(words(%q<threat_moves>,|),1),move,moves)] now.,ok)
+        flags: [cmdsyntax]
+      INC`THREAT`REMOVE:
+        value: |-
+          @include %!/INC`NEED`KEEPER; @include/args %!/INC`NEED`THREAT=name,%q<cmd_argument>; think setq(threat_name,get({{store}}/THREAT`%q<threat_key>)); @wipe {{store}}/THREAT`%q<threat_key>; @pemit %#=notice(THREAT,The threat '%q<threat_name>' is gone. Encounters keep their own copies.,ok)
+        flags: [cmdsyntax]
+      # %<name> typed text: threat_key, the library threat it names.
+      INC`NEED`THREAT:
+        value: |-
+          @assert strlen(setr(threat_key,u(%!/FUN`LIST`FIND,THREAT,%<name>)))=@pemit %#=notice(THREAT,There is no threat '%<name>'. +threat lists them.,warn)
+        flags: [cmdsyntax]
+      # %<name> a new threat's or danger's name: 40 characters, with a letter or number, and no ` or |.
+      INC`NEED`FOENAME:
+        value: |-
+          @assert cand(lte(strlen(%<name>),40),not(strmatch(%<name>,*`*)),not(strmatch(%<name>,*|*)),strlen(u(%!/FUN`CLOCK`KEY,%<name>)))=@pemit %#=notice(%<head>,Name it in 40 characters or fewer%, with a letter or number in it and no ` or |.,warn)
+        flags: [cmdsyntax]
+      # After FUN`THREAT`READ: its segments, risk and effect are sound.
+      INC`NEED`STAKES:
+        value: |-
+          @assert not(strlen(%q<threat_unknown>))=@pemit %#=notice(%<head>,'%q<threat_unknown>' is not segments%, a risk or an effect. Give [itemize(v(DATA`CLOCK`SIZES),,or)] segments%, a risk%, low%, moderate or high%, and an effect%, limited%, standard or great.,warn); @assert member(v(DATA`CLOCK`SIZES),%q<threat_size>)=@pemit %#=notice(%<head>,A threat's clock has [itemize(v(DATA`CLOCK`SIZES),,or)] segments.,warn)
+        flags: [cmdsyntax]
+      # %0 typed stakes, in any order: threat_size (the first number), threat_risk (moderate when none), threat_effect
+      # (standard when none) and threat_unknown, any word that is none of them.
+      FUN`THREAT`READ:
+        value: |-
+          setqm(threat_size,first(squish(iter(%0,if(isint(%i0),%i0)))),
+          threat_risk,firstof(first(squish(iter(%0,if(member(v(DATA`RISKS),lcstr(%i0)),lcstr(%i0))))),moderate),
+          threat_effect,firstof(first(squish(iter(%0,if(member(v(DATA`EFFECTS),lcstr(%i0)),lcstr(%i0))))),standard),
+          threat_unknown,squish(iter(%0,if(cor(isint(%i0),member(v(DATA`RISKS) [v(DATA`EFFECTS)],lcstr(%i0))),,%i0))))
+        flags: [funsyntax]
+      FUN`SCREEN`THREATS:
+        value: |-
+          setq(screen_threats,u(%!/FUN`LIST`ALL,THREAT))[box(if(words(%q<screen_threats>),ldatatable(lit({"nowrap":"2|3|4","rule":""}),Threat|>Segments|Risk|Effect,iter(%q<screen_threats>,get({{store}}/THREAT`%i0)|[get({{store}}/THREAT`%i0`SIZE)]|[get({{store}}/THREAT`%i0`RISK)]|[get({{store}}/THREAT`%i0`EFFECT)],,%*<^>),%*<^>),tone(muted,There are no threats yet.))%r[rule()]%r[tone(muted,+threat <name> shows one. +encounter/threat <name> brings one into your encounter.)],Threats)]
+        flags: [funsyntax]
+      FUN`SCREEN`THREAT:
+        value: |-
+          setq(threat_at,{{store}}/THREAT`%0)[box(lfields(lit({"cols":3}),Segments%*<|>Risk%*<|>Effect,[get(%q<threat_at>`SIZE)]%*<|>[get(%q<threat_at>`RISK)]%*<|>[get(%q<threat_at>`EFFECT)],%*<|>)[if(strlen(get(%q<threat_at>`DESC)),%r[rule()]%r[get(%q<threat_at>`DESC)])][if(strlen(get(%q<threat_at>`MOVES)),%r[rule(Moves)]%r[iter(get(%q<threat_at>`MOVES),- %i0,|,%r)])]%r[rule()]%r[tone(muted,Members overcome it by filling its clock: a success ticks 1%, 2 or 3 for a limited%, standard or great effect%, and a critical one more.)],get(%q<threat_at>))]
+        flags: [funsyntax]
+
+      # +encounter/threat <threat>, or +encounter/threat <name>=<segments> <risk> <effect>: the GM brings a copy of a
+      # library threat into their encounter, or makes one for it alone. A second copy is numbered.
+      INC`ENCOUNTER`THREAT:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(ENCOUNTER,+encounter/threat <threat> brings a threat from +threat into your encounter%, or +encounter/threat <name>=<segments> <risk> <effect> makes one for it alone.,warn); @include/args %!/INC`NEED`ENCOUNTER=number,; @include %!/INC`NEED`RUNS; @if %q<cmd_has_equals>={think u(%!/FUN`THREAT`READ,%q<cmd_right_side>); think setq(threat_name,%q<cmd_left_side>)},{@include/args %!/INC`NEED`THREAT=name,%q<cmd_left_side>; think setqm(threat_name,get({{store}}/THREAT`%q<threat_key>),threat_size,get({{store}}/THREAT`%q<threat_key>`SIZE),threat_risk,get({{store}}/THREAT`%q<threat_key>`RISK),threat_effect,get({{store}}/THREAT`%q<threat_key>`EFFECT),foe_desc,get({{store}}/THREAT`%q<threat_key>`DESC),foe_moves,get({{store}}/THREAT`%q<threat_key>`MOVES))}; @assert strlen(%q<threat_name>); @include/args %!/INC`NEED`FOENAME=name,%q<threat_name>,head,ENCOUNTER; @include/args %!/INC`NEED`STAKES=head,ENCOUNTER; think setqm(foe_kind,threat,foe_size,%q<threat_size>,foe_risk,%q<threat_risk>,foe_effect,%q<threat_effect>); @include %!/INC`FOE`WRITE; @remit get({{store}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,tone(strong,name(%#)) brings a threat into encounter %q<enc_n>: [u(%!/FUN`FOE`LINE,%q<enc_n>,%q<foe_key>)]. [tone(muted,+check <action>=vs %q<foe_name> rolls against it.)])
+        flags: [cmdsyntax]
+      # +encounter/danger <name>=<segments>: a danger clock the encounter's consequences fill.
+      INC`ENCOUNTER`DANGER:
+        value: |-
+          @assert cand(strlen(%q<cmd_left_side>),%q<cmd_has_equals>)=@pemit %#=notice(ENCOUNTER,+encounter/danger <name>=<segments> starts a danger clock in your encounter%, [itemize(v(DATA`CLOCK`SIZES),,or)] segments.,warn); @include/args %!/INC`NEED`ENCOUNTER=number,; @include %!/INC`NEED`RUNS; @include/args %!/INC`NEED`FOENAME=name,%q<cmd_left_side>,head,ENCOUNTER; @assert member(v(DATA`CLOCK`SIZES),%q<cmd_right_side>)=@pemit %#=notice(ENCOUNTER,A danger clock has [itemize(v(DATA`CLOCK`SIZES),,or)] segments.,warn); think setqm(threat_name,%q<cmd_left_side>,foe_kind,danger,foe_size,%q<cmd_right_side>,foe_risk,,foe_effect,,foe_desc,,foe_moves,); @include %!/INC`FOE`WRITE; @remit get({{store}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,tone(strong,name(%#)) starts a danger clock in encounter %q<enc_n>: [u(%!/FUN`FOE`LINE,%q<enc_n>,%q<foe_key>)]. [tone(muted,Complications fill it.)])
+        flags: [cmdsyntax]
+      # Writes the threat or danger in threat_name, foe_kind, foe_size, foe_risk, foe_effect, foe_desc and foe_moves
+      # into encounter enc_n: foe_key and foe_name, numbered when the encounter has one by that name.
+      INC`FOE`WRITE:
+        value: |-
+          think setq(foe_key,u(%!/FUN`FOE`NEWKEY,%q<enc_n>,%q<threat_name>)); @assert strlen(%q<foe_key>)=@pemit %#=notice(ENCOUNTER,Encounter %q<enc_n> has too many by that name.,warn); think setq(foe_name,if(comp(%q<foe_key>,%q<new_base>),%q<threat_name> [last(%q<foe_key>,-)],%q<threat_name>)); @if not(hasattr({{store}},ENC`%q<enc_n>`FOE))={&ENC`%q<enc_n>`FOE {{store}}=The encounter's threats and dangers.}; &ENC`%q<enc_n>`FOE`%q<foe_key> {{store}}=%q<foe_name>; &ENC`%q<enc_n>`FOE`%q<foe_key>`KIND {{store}}=%q<foe_kind>; &ENC`%q<enc_n>`FOE`%q<foe_key>`SIZE {{store}}=%q<foe_size>; &ENC`%q<enc_n>`FOE`%q<foe_key>`FILLED {{store}}=0; &ENC`%q<enc_n>`FOE`%q<foe_key>`RISK {{store}}=%q<foe_risk>; &ENC`%q<enc_n>`FOE`%q<foe_key>`EFFECT {{store}}=%q<foe_effect>; &ENC`%q<enc_n>`FOE`%q<foe_key>`DESC {{store}}=%q<foe_desc>; &ENC`%q<enc_n>`FOE`%q<foe_key>`MOVES {{store}}=%q<foe_moves>
+        flags: [cmdsyntax]
+      # +encounter/tick <threat or danger>[=<n>]: the GM fills segments, or empties some with a number below 0.
+      INC`ENCOUNTER`TICK:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(ENCOUNTER,+encounter/tick <threat or danger>%[=<n>%] fills segments%, or empties some with a number below 0.,warn); @include/args %!/INC`NEED`ENCOUNTER=number,; @include %!/INC`NEED`RUNS; @include/args %!/INC`NEED`FOE=name,%q<cmd_left_side>; think setq(tick_by,firstof(%q<cmd_right_side>,1)); @assert cand(isint(%q<tick_by>),neq(%q<tick_by>,0))=@pemit %#=notice(ENCOUNTER,Tick a whole number of segments%, not 0.,warn); think u(%!/FUN`FOE`TICK,%q<enc_n>,%q<foe_key>,%q<tick_by>); @remit get({{store}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,tone(strong,name(%#)) ticks [u(%!/FUN`FOE`LINE,%q<enc_n>,%q<foe_key>)].)
+        flags: [cmdsyntax]
+      # +encounter/dismiss <threat or danger>: the GM takes one out of the encounter.
+      INC`ENCOUNTER`DISMISS:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(ENCOUNTER,+encounter/dismiss <threat or danger> takes it out of your encounter.,warn); @include/args %!/INC`NEED`ENCOUNTER=number,; @include %!/INC`NEED`RUNS; @include/args %!/INC`NEED`FOE=name,%q<cmd_argument>; think setq(foe_name,get({{store}}/ENC`%q<enc_n>`FOE`%q<foe_key>)); @wipe {{store}}/ENC`%q<enc_n>`FOE`%q<foe_key>; @remit get({{store}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,tone(strong,name(%#)) takes %q<foe_name> out of encounter %q<enc_n>.)
+        flags: [cmdsyntax]
+      # %<name> typed text: foe_key, the threat or danger it names in encounter enc_n.
+      INC`NEED`FOE:
+        value: |-
+          @assert strlen(setr(foe_key,u(%!/FUN`FOE`FIND,%q<enc_n>,%<name>)))=@pemit %#=notice(ENCOUNTER,There is no threat or danger '%<name>' in encounter %q<enc_n>. +encounter shows them.,warn)
+        flags: [cmdsyntax]
+      # %0 an encounter: the keys of its threats and dangers.
+      FUN`FOE`ALL:
+        value: |-
+          squish(iter(lattr({{store}}/ENC`%0`FOE`*),if(eq(words(%i0,`),4),last(%i0,`))))
+        flags: [funsyntax]
+      # %0 an encounter, %1 typed text: the key it names, by key, by name, or by the start of one name, or nothing.
+      FUN`FOE`FIND:
+        value: |-
+          setqm(foe_typed,trim(%1),
+          foe_all,u(%!/FUN`FOE`ALL,%0),
+          foe_exact,iter(%q<foe_all>,if(cor(not(comp(%i0,ucstr(%q<foe_typed>))),not(comp(lcstr(get({{store}}/ENC`%0`FOE`%i0)),lcstr(%q<foe_typed>)))),%i0)),
+          foe_start,iter(%q<foe_all>,if(not(comp(lcstr(left(get({{store}}/ENC`%0`FOE`%i0),strlen(%q<foe_typed>))),lcstr(%q<foe_typed>))),%i0)))[if(strlen(%q<foe_typed>),first(firstof(%q<foe_exact>,if(eq(words(%q<foe_start>),1),%q<foe_start>))))]
+        flags: [funsyntax]
+      # %0 an encounter, %1 a name: a key for it there, KEY, then KEY-2 and on (new_base holds KEY). Nothing past 30.
+      FUN`FOE`NEWKEY:
+        value: |-
+          setq(new_base,u(%!/FUN`CLOCK`KEY,%1))[first(iter(lnum(1,30),if(hasattr({{store}},ENC`%0`FOE`%q<new_base>[if(gt(%i0,1),-%i0)]),,%q<new_base>[if(gt(%i0,1),-%i0)])))]
+        flags: [funsyntax]
+      # %0 an encounter, %1 a key, %2 segments to fill (or empty, below 0): writes it and returns the segments filled.
+      FUN`FOE`TICK:
+        value: |-
+          setq(foe_to,bound(add(get({{store}}/ENC`%0`FOE`%1`FILLED),%2),0,get({{store}}/ENC`%0`FOE`%1`SIZE)))[null(attrib_set({{store}}/ENC`%0`FOE`%1`FILLED,%q<foe_to>))]%q<foe_to>
+        flags: [funsyntax]
+      FUN`FOE`FULL:
+        value: |-
+          gte(get({{store}}/ENC`%0`FOE`%1`FILLED),get({{store}}/ENC`%0`FOE`%1`SIZE))
+        flags: [funsyntax]
+      FUN`FOE`DANGERS:
+        value: |-
+          squish(iter(u(%!/FUN`FOE`ALL,%0),if(strmatch(get({{store}}/ENC`%0`FOE`%i0`KIND),danger),%i0)))
+        flags: [funsyntax]
+      # %0 an encounter, %1 typed text or nothing: the danger clock it names, or the only one there.
+      FUN`FOE`DANGER:
+        value: |-
+          setq(danger_all,u(%!/FUN`FOE`DANGERS,%0))[if(strlen(%1),setq(danger_found,u(%!/FUN`FOE`FIND,%0,%1))[if(member(%q<danger_all>,%q<danger_found>),%q<danger_found>)],if(eq(words(%q<danger_all>),1),%q<danger_all>))]
+        flags: [funsyntax]
+      # %0 an encounter, %1 a key: "Dockside thugs [##....] 2/6 (moderate risk, standard effect)", and "overcome" or
+      # "come to pass" when it is full.
+      FUN`FOE`LINE:
+        value: |-
+          setqm(line_at,{{store}}/ENC`%0`FOE`%1,
+          line_danger,strmatch(get(%q<line_at>`KIND),danger))[get(%q<line_at>)] [u(%!/FUN`DISPLAY`TRACK,get(%q<line_at>`FILLED),get(%q<line_at>`SIZE))] [get(%q<line_at>`FILLED)]/[get(%q<line_at>`SIZE)] %([if(%q<line_danger>,danger clock,[get(%q<line_at>`RISK)] risk%, [get(%q<line_at>`EFFECT)] effect)]%)[if(u(%!/FUN`FOE`FULL,%0,%1),%,%b[tone(strong,if(%q<line_danger>,come to pass,overcome))])]
+        flags: [funsyntax]
+      # %0 an encounter, as it ends: "Overcome: Dockside thugs. Still standing: Ash wolf. Came to pass: Alarm."
+      FUN`FOE`SUMMARY:
+        value: |-
+          setq(sum_all,u(%!/FUN`FOE`ALL,%0))[squish([u(%!/FUN`FOE`SUMMARYPART,%0,threat,1,Overcome)] [u(%!/FUN`FOE`SUMMARYPART,%0,threat,0,Still standing)] [u(%!/FUN`FOE`SUMMARYPART,%0,danger,1,Came to pass)])]
+        flags: [funsyntax]
+      FUN`FOE`SUMMARYPART:
+        value: |-
+          setq(part_keys,squish(iter(%q<sum_all>,if(cand(strmatch(get({{store}}/ENC`%0`FOE`%i0`KIND),%1),eq(u(%!/FUN`FOE`FULL,%0,%i0),%2)),%i0))))[if(words(%q<part_keys>),%3: [itemize(iter(%q<part_keys>,get({{store}}/ENC`%0`FOE`%i0),%b,|),|)].)]
+        flags: [funsyntax]
+
+      # ---- consequences -----------------------------------------------------------
+      # +encounter/consequence <name>=<kind> [<danger>]: the GM picks the consequence of a member's last roll there,
+      # a partial success or a bad outcome. Its rating is the roll's risk. It waits on the member's copy (PENDING)
+      # until they take it (+encounter/accept), resist it (+check/determination), or a friend takes it for them
+      # (+encounter/protect). LAST on the copy is their last roll there.
+      INC`ENCOUNTER`CONSEQUENCE:
+        value: |-
+          @assert cand(strlen(%q<cmd_left_side>),strlen(%q<cmd_right_side>))=@pemit %#=notice(ENCOUNTER,+encounter/consequence <name>=<kind> gives a member the consequence of their last roll: [itemize(v(DATA`CONSEQUENCES),,or)]. A complication names its danger clock after it.,warn); @include/args %!/INC`NEED`ENCOUNTER=number,; @include %!/INC`NEED`RUNS; @include/args %!/INC`NEED`MEMBER=name,%q<cmd_left_side>; think setqm(cons_copy,{{store}}/ENC`%q<enc_n>`COPY`[u(%!/FUN`ENCOUNTER`KEY,%q<sheet_who>)],cons_kind,u(%!/FUN`CONSEQUENCE`KIND,first(%q<cmd_right_side>)),cons_rest,rest(%q<cmd_right_side>)); think setq(cons_last,get(%q<cons_copy>`LAST)); @assert strlen(%q<cons_kind>)=@pemit %#=notice(ENCOUNTER,'[first(%q<cmd_right_side>)]' is not a consequence. Give [itemize(v(DATA`CONSEQUENCES),,or)].,warn); @assert cand(strlen(%q<cons_last>),member(partial fail,json_query(%q<cons_last>,extract,$.tier)))=@pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)]'s last roll in encounter %q<enc_n> was not a partial success or a bad outcome%, so it brings no consequence.,warn); @assert not(hasattr(%q<cons_copy>`PENDING))=@pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)] has a consequence waiting already: [u(%!/FUN`CONSEQUENCE`TEXT,%q<enc_n>,get(%q<cons_copy>`PENDING))].,warn); think setq(cons_danger,if(strmatch(%q<cons_kind>,complication),u(%!/FUN`FOE`DANGER,%q<enc_n>,%q<cons_rest>))); @assert cor(comp(%q<cons_kind>,complication),strlen(%q<cons_danger>))=@pemit %#=notice(ENCOUNTER,A complication ticks a danger clock: +encounter/consequence [name(%q<sheet_who>)]=complication <danger>. +encounter/danger <name>=<segments> starts one.,warn); think attrib_set(%q<cons_copy>`PENDING,json(object,kind,json(string,%q<cons_kind>),rating,u(%!/FUN`RISK`RATING,json_query(%q<cons_last>,extract,$.risk)),foe,json(string,json_query(%q<cons_last>,extract,$.foe)),ticked,json_query(%q<cons_last>,extract,$.ticked),danger,json(string,%q<cons_danger>),action,json(string,json_query(%q<cons_last>,extract,$.action)))); @remit get({{store}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,tone(strong,name(%#)) gives [name(%q<sheet_who>)] a consequence: [u(%!/FUN`CONSEQUENCE`TEXT,%q<enc_n>,get(%q<cons_copy>`PENDING))]. [tone(muted,[name(%q<sheet_who>)] takes it with +encounter/accept%, resists it with +check/determination <momentum>%, or a friend takes it with +encounter/protect [name(%q<sheet_who>)].)])
+        flags: [cmdsyntax]
+      # +encounter/accept: a member takes the consequence waiting for them.
+      INC`ENCOUNTER`ACCEPT:
+        value: |-
+          think setqm(accept_copy,u(%!/FUN`ENCOUNTER`COPY,%#),accept_enc,u(%!/FUN`ENCOUNTER`OF,%#)); @assert cand(strlen(%q<accept_copy>),hasattr(%q<accept_copy>`PENDING))=@pemit %#=notice(ENCOUNTER,You have no consequence waiting in an encounter here.,warn); think setq(accept_text,u(%!/FUN`CONSEQUENCE`APPLY,%q<accept_enc>,%q<viewer_objid>,2)); @remit get({{store}}/ENC`%q<accept_enc>`ROOM)=notice(ENCOUNTER,tone(strong,name(%#)) accepts the consequence. %q<accept_text>)
+        flags: [cmdsyntax]
+      # +encounter/protect <name>: steps in and takes the consequence waiting for another member.
+      INC`ENCOUNTER`PROTECT:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(ENCOUNTER,+encounter/protect <name> takes the consequence waiting for someone in your encounter.,warn); think setqm(protect_copy,u(%!/FUN`ENCOUNTER`COPY,%#),enc_n,u(%!/FUN`ENCOUNTER`OF,%#)); @assert strlen(%q<protect_copy>)=@pemit %#=notice(ENCOUNTER,You are in no encounter here.,warn); @include/args %!/INC`NEED`MEMBER=name,%q<cmd_argument>; @assert comp(%q<sheet_who>,%q<viewer_objid>)=@pemit %#=notice(ENCOUNTER,You protect someone else. +encounter/accept takes your own consequence.,warn); think setq(protect_their,{{store}}/ENC`%q<enc_n>`COPY`[u(%!/FUN`ENCOUNTER`KEY,%q<sheet_who>)]); @assert hasattr(%q<protect_their>`PENDING)=@pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)] has no consequence waiting.,warn); @assert not(hasattr(%q<protect_copy>`PENDING))=@pemit %#=notice(ENCOUNTER,You have a consequence of your own waiting.,warn); @assert not(get(%q<protect_copy>`OUT))=@pemit %#=notice(ENCOUNTER,You are taken out of encounter %q<enc_n>.,warn); think attrib_set(%q<protect_copy>`PENDING,get(%q<protect_their>`PENDING))[attrib_set(%q<protect_their>`PENDING)]; @remit get({{store}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,tone(strong,name(%#)) steps in to protect [name(%q<sheet_who>)] and takes on [poss(%q<sheet_who>)] consequence: [u(%!/FUN`CONSEQUENCE`TEXT,%q<enc_n>,get(%q<protect_copy>`PENDING))]. [tone(muted,[name(%#)] takes it with +encounter/accept or resists it with +check/determination <momentum>.)])
+        flags: [cmdsyntax]
+      # +encounter/return <name>: the GM brings back a member who was taken out.
+      INC`ENCOUNTER`RETURN:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(ENCOUNTER,+encounter/return <name> brings back a member who was taken out.,warn); @include/args %!/INC`NEED`ENCOUNTER=number,; @include %!/INC`NEED`RUNS; @include/args %!/INC`NEED`MEMBER=name,%q<cmd_argument>; think setq(return_copy,{{store}}/ENC`%q<enc_n>`COPY`[u(%!/FUN`ENCOUNTER`KEY,%q<sheet_who>)]); @assert get(%q<return_copy>`OUT)=@pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)] is not taken out.,warn); think attrib_set(%q<return_copy>`OUT); @remit get({{store}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,tone(strong,name(%#)) brings [name(%q<sheet_who>)] back into encounter %q<enc_n>.)
+        flags: [cmdsyntax]
+      # +encounter/milestone [<reason>]: a keeper gives everyone in the encounter a milestone, on their milestones ledger.
+      INC`ENCOUNTER`MILESTONE:
+        value: |-
+          @include %!/INC`NEED`KEEPER; @include/args %!/INC`NEED`ENCOUNTER=number,; @assert lte(strlen(%q<cmd_argument>),80)=@pemit %#=notice(ENCOUNTER,Give a reason in 80 characters or fewer.,warn); think setqm(award_members,u(%!/FUN`ENCOUNTER`MEMBERS,%q<enc_n>),award_reason,firstof(%q<cmd_argument>,Encounter %q<enc_n>: [get({{store}}/ENC`%q<enc_n>)])); @assert words(%q<award_members>)=@pemit %#=notice(ENCOUNTER,Nobody is in encounter %q<enc_n>.,warn); @dolist/inline %q<award_members>={think u(%!/API`MILESTONE,##,1,%q<award_reason>)}; @remit get({{store}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,tone(strong,name(%#)) gives everyone in encounter %q<enc_n> a milestone for %q<award_reason>: [itemize(iter(%q<award_members>,name(%i0),%b,|),|)].)
+        flags: [cmdsyntax]
+      # %0 typed text: the consequence kind it starts, or nothing.
+      FUN`CONSEQUENCE`KIND:
+        value: |-
+          if(strlen(%0),first(iter(v(DATA`CONSEQUENCES),if(not(comp(left(%i0,strlen(%0)),lcstr(%0))),%i0))))
+        flags: [funsyntax]
+      # %0 an encounter, %1 a consequence's JSON: "2 stress", "2 on Alarm", "reduced effect against Dockside thugs".
+      FUN`CONSEQUENCE`TEXT:
+        value: |-
+          setqm(text_kind,json_query(%1,extract,$.kind),
+          text_rating,json_query(%1,extract,$.rating),
+          text_foe,json_query(%1,extract,$.foe),
+          text_against,if(cand(strlen(%q<text_foe>),hasattr({{store}},ENC`%0`FOE`%q<text_foe>)),%bagainst [get({{store}}/ENC`%0`FOE`%q<text_foe>)]))[switch(%q<text_kind>,stress,%q<text_rating> stress,complication,%q<text_rating> on the danger clock [get({{store}}/ENC`%0`FOE`[json_query(%1,extract,$.danger)])],effect,reduced effect%q<text_against>,risk,escalated risk%q<text_against>,lost,a lost opportunity%, [u(%!/FUN`LIST`LABEL,ACTION,json_query(%1,extract,$.action))] won't do it)]
+        flags: [funsyntax]
+      # %0 an encounter, %1 the member, %2 how much of it lands: 2 all, 1 reduced, 0 avoided. Clears it, does it, and
+      # returns what happened.
+      FUN`CONSEQUENCE`APPLY:
+        value: |-
+          setqm(apply_copy,{{store}}/ENC`%0`COPY`[u(%!/FUN`ENCOUNTER`KEY,%1)],
+          apply_json,get(%q<apply_copy>`PENDING),
+          apply_kind,json_query(%q<apply_json>,extract,$.kind),
+          apply_rating,json_query(%q<apply_json>,extract,$.rating),
+          apply_foe,json_query(%q<apply_json>,extract,$.foe),
+          apply_amount,switch(%2,2,%q<apply_rating>,1,max(0,dec(%q<apply_rating>)),0))[null(attrib_set(%q<apply_copy>`PENDING))][switch(%2,0,[name(%1)] avoids the consequence.,u(%!/FUN`CONSEQUENCE`DO`%q<apply_kind>,%0,%1,%2))]
+        flags: [funsyntax]
+      FUN`CONSEQUENCE`DO`STRESS:
+        value: |-
+          if(%q<apply_amount>,u(%!/FUN`COPY`STRESS,%q<apply_copy>,%1,%q<apply_amount>),[name(%1)] takes no stress: the consequence is reduced to nothing.)
+        flags: [funsyntax]
+      FUN`CONSEQUENCE`DO`COMPLICATION:
+        value: |-
+          setq(apply_danger,json_query(%q<apply_json>,extract,$.danger))[cond(not(hasattr({{store}},ENC`%0`FOE`%q<apply_danger>)),The danger clock is gone.,not(%q<apply_amount>),The complication is reduced to nothing.,[null(u(%!/FUN`FOE`TICK,%0,%q<apply_danger>,%q<apply_amount>))]+%q<apply_amount> on [u(%!/FUN`FOE`LINE,%0,%q<apply_danger>)].)]
+        flags: [funsyntax]
+      FUN`CONSEQUENCE`DO`EFFECT:
+        value: |-
+          cond(eq(%2,1),The consequence is reduced: the GM says how.,cand(strlen(%q<apply_foe>),hasattr({{store}},ENC`%0`FOE`%q<apply_foe>),json_query(%q<apply_json>,extract,$.ticked)),[null(u(%!/FUN`FOE`TICK,%0,%q<apply_foe>,-1))]The effect is reduced: [u(%!/FUN`FOE`LINE,%0,%q<apply_foe>)].,The effect is reduced: [name(%1)] gets less done than [subj(%1)] meant to.)
+        flags: [funsyntax]
+      FUN`CONSEQUENCE`DO`RISK:
+        value: |-
+          cond(eq(%2,1),The consequence is reduced: the GM says how.,cand(strlen(%q<apply_foe>),hasattr({{store}},ENC`%0`FOE`%q<apply_foe>)),[null(attrib_set({{store}}/ENC`%0`FOE`%q<apply_foe>`RISK,u(%!/FUN`RISK`RAISE,get({{store}}/ENC`%0`FOE`%q<apply_foe>`RISK))))]The risk rises: [u(%!/FUN`FOE`LINE,%0,%q<apply_foe>)].,The risk of [name(%1)]'s rolls on this rises a level.)
+        flags: [funsyntax]
+      FUN`CONSEQUENCE`DO`LOST:
+        value: |-
+          if(eq(%2,1),The consequence is reduced: the GM says how.,[u(%!/FUN`LIST`LABEL,ACTION,json_query(%q<apply_json>,extract,$.action))] did not work: [name(%1)] needs another action for this.)
+        flags: [funsyntax]
+      # %0 a tier, from a determination roll: resolves the consequence waiting for the roller in their encounter here,
+      # if there is one, and returns what happened. Two 6s also lower the risk of their next roll there (EASE).
+      FUN`CONSEQUENCE`RESIST:
+        value: |-
+          setqm(resist_copy,u(%!/FUN`ENCOUNTER`COPY,%#),
+          resist_enc,if(strlen(%q<resist_copy>),u(%!/FUN`ENCOUNTER`OF,%#)))[if(cand(strlen(%q<resist_copy>),hasattr(%q<resist_copy>`PENDING)),[if(strmatch(%0,crit-success),null(attrib_set(%q<resist_copy>`EASE,1)))]%b[u(%!/FUN`CONSEQUENCE`APPLY,%q<resist_enc>,objid(%#),switch(%0,crit-success,0,success,0,partial,1,2))])]
+        flags: [funsyntax]
+      # %0 a member's copy, %1 the member, %2 stress to take. When the clock fills they are taken out (OUT) and it clears.
+      FUN`COPY`STRESS:
+        value: |-
+          setqm(copy_new,add(default(%0`STRESS,0),%2),
+          copy_out,gte(%q<copy_new>,get(%!/DATA`CONFIG`STRESS)))[null(if(cand(not(%q<copy_out>),%q<copy_new>),attrib_set(%0`STRESS,%q<copy_new>),attrib_set(%0`STRESS)))][if(%q<copy_out>,null(attrib_set(%0`OUT,1)))][name(%1)] takes %2 stress. [u(%!/FUN`DISPLAY`STRESSED,%1,json(object,stress,if(%q<copy_out>,0,%q<copy_new>),out,%q<copy_out>))]
+        flags: [funsyntax]
+      FUN`RISK`RAISE:
+        value: |-
+          extract(v(DATA`RISKS),min(3,inc(member(v(DATA`RISKS),%0))),1)
+        flags: [funsyntax]
+      FUN`RISK`LOWER:
+        value: |-
+          extract(v(DATA`RISKS),max(1,dec(member(v(DATA`RISKS),%0))),1)
         flags: [funsyntax]
 
       # ---- lists ------------------------------------------------------------------
@@ -1004,13 +1314,30 @@ objects:
       # %0 an encounter: its members and their copies.
       FUN`SCREEN`ENCOUNTER:
         value: |-
-          setq(enc_members,u(%!/FUN`ENCOUNTER`MEMBERS,%0))[box(tone(muted,Run by [name(get({{store}}/ENC`%0`GM))] in [name(get({{store}}/ENC`%0`ROOM))].)%r[if(words(%q<enc_members>),ldatatable(lit({"nowrap":"1|2|3","rule":""}),Member|>Momentum|Stress|Condition,iter(%q<enc_members>,u(%!/FUN`SCREEN`MEMBER,%0,%i0),%b,%*<^>),%*<^>),tone(muted,Nobody has joined. +encounter/join joins.))]%r[rule()]%r[tone(muted,The GM writes a member's stress and condition back with +encounter/keep <name>%, and ends it with +encounter/end. Nothing else goes back to a sheet.)],Encounter %0: [get({{store}}/ENC`%0)])]
+          setqm(enc_members,u(%!/FUN`ENCOUNTER`MEMBERS,%0),
+          enc_foes,u(%!/FUN`FOE`ALL,%0))[box(tone(muted,Run by [name(get({{store}}/ENC`%0`GM))] in [name(get({{store}}/ENC`%0`ROOM))].)%r[if(words(%q<enc_members>),ldatatable(lit({"nowrap":"1|2|3","rule":""}),Member|>Momentum|Stress|Condition,iter(%q<enc_members>,u(%!/FUN`SCREEN`MEMBER,%0,%i0),%b,%*<^>),%*<^>),tone(muted,Nobody has joined. +encounter/join joins.))][if(words(%q<enc_foes>),%r[rule(Threats and dangers)]%r[ldatatable(lit({"nowrap":"2|3","rule":""}),Name|Clock|>Filled|Stakes,iter(%q<enc_foes>,u(%!/FUN`SCREEN`FOE,%0,%i0),%b,%*<^>),%*<^>)])][u(%!/FUN`SCREEN`PENDING,%0,%q<enc_members>)][if(u(%!/FUN`ENCOUNTER`RUNS,%1,%0),u(%!/FUN`SCREEN`FOENOTES,%0,%q<enc_foes>))]%r[rule()]%r[tone(muted,+check <action>=vs <threat> rolls against a threat. The GM adds threats with +encounter/threat and gives consequences with +encounter/consequence%, writes stress and condition back with +encounter/keep%, and ends it with +encounter/end. Nothing else goes back to a sheet.)],Encounter %0: [get({{store}}/ENC`%0)])]
+        flags: [funsyntax]
+      # %0 an encounter, %1 a threat or danger: Name|clock|filled|stakes.
+      FUN`SCREEN`FOE:
+        value: |-
+          setqm(row_at,{{store}}/ENC`%0`FOE`%1,
+          row_danger,strmatch(get(%q<row_at>`KIND),danger))[get(%q<row_at>)]|[u(%!/FUN`DISPLAY`TRACK,get(%q<row_at>`FILLED),get(%q<row_at>`SIZE))]|[get(%q<row_at>`FILLED)]/[get(%q<row_at>`SIZE)]|[if(%q<row_danger>,danger clock,[get(%q<row_at>`RISK)] risk%, [get(%q<row_at>`EFFECT)] effect)][if(u(%!/FUN`FOE`FULL,%0,%1),%,%b[tone(strong,if(%q<row_danger>,come to pass,overcome))])]
+        flags: [funsyntax]
+      # %0 an encounter, %1 its members: a line for each consequence waiting.
+      FUN`SCREEN`PENDING:
+        value: |-
+          setq(pending_who,squish(iter(%1,if(hasattr({{store}}/ENC`%0`COPY`[u(%!/FUN`ENCOUNTER`KEY,%i0)]`PENDING),%i0))))[if(words(%q<pending_who>),%r[rule(Waiting)]%r[iter(%q<pending_who>,[name(%i0)] has a consequence waiting: [u(%!/FUN`CONSEQUENCE`TEXT,%0,get({{store}}/ENC`%0`COPY`[u(%!/FUN`ENCOUNTER`KEY,%i0)]`PENDING))].,%b,%r)])]
+        flags: [funsyntax]
+      # %0 an encounter, %1 its threats: what each is and does, for whoever runs it.
+      FUN`SCREEN`FOENOTES:
+        value: |-
+          setq(notes_keys,squish(iter(%1,if(strlen(get({{store}}/ENC`%0`FOE`%i0`DESC)[get({{store}}/ENC`%0`FOE`%i0`MOVES)]),%i0))))[if(words(%q<notes_keys>),%r[rule(For the GM)]%r[iter(%q<notes_keys>,[tone(strong,get({{store}}/ENC`%0`FOE`%i0))]: [get({{store}}/ENC`%0`FOE`%i0`DESC)][if(strlen(get({{store}}/ENC`%0`FOE`%i0`MOVES)),%b[tone(muted,Moves:)] [edit(get({{store}}/ENC`%0`FOE`%i0`MOVES),|,%;%b)].)],%b,%r)])]
         flags: [funsyntax]
       # %0 an encounter, %1 a member: Name|momentum|stress|condition.
       FUN`SCREEN`MEMBER:
         value: |-
           setqm(member_at,{{store}}/ENC`%0`COPY`[u(%!/FUN`ENCOUNTER`KEY,%1)],
-          member_stress,default(%q<member_at>`STRESS,0))[name(%1)]|[default(%q<member_at>`MOMENTUM,0)]|[u(%!/FUN`DISPLAY`TRACK,%q<member_stress>,get(%!/DATA`CONFIG`STRESS))] %q<member_stress>/[get(%!/DATA`CONFIG`STRESS)]|[firstof(get(%q<member_at>`CONDITION),tone(muted,none))]
+          member_stress,default(%q<member_at>`STRESS,0))[name(%1)]|[default(%q<member_at>`MOMENTUM,0)]|[u(%!/FUN`DISPLAY`TRACK,%q<member_stress>,get(%!/DATA`CONFIG`STRESS))] %q<member_stress>/[get(%!/DATA`CONFIG`STRESS)]|[cond(get(%q<member_at>`OUT),[tone(error,taken out)][if(strlen(get(%q<member_at>`CONDITION)),: [get(%q<member_at>`CONDITION)])],strlen(get(%q<member_at>`CONDITION)),get(%q<member_at>`CONDITION),tone(muted,none))]
         flags: [funsyntax]
       # Every open encounter.
       FUN`SCREEN`ENCOUNTERS:
@@ -1186,7 +1513,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add/noparse/rsnoparse +sheet; @hook/override/inline +sheet=%!,CMD`SHEET; @command/add/noparse/rsnoparse +check; @hook/override/inline +check=%!,CMD`CHECK; @command/add/noparse/rsnoparse +clock; @hook/override/inline +clock=%!,CMD`CLOCK; @command/add/noparse/rsnoparse +encounter; @hook/override/inline +encounter=%!,CMD`ENCOUNTER
+          @command/add/noparse/rsnoparse +sheet; @hook/override/inline +sheet=%!,CMD`SHEET; @command/add/noparse/rsnoparse +check; @hook/override/inline +check=%!,CMD`CHECK; @command/add/noparse/rsnoparse +clock; @hook/override/inline +clock=%!,CMD`CLOCK; @command/add/noparse/rsnoparse +encounter; @hook/override/inline +encounter=%!,CMD`ENCOUNTER; @command/add/noparse/rsnoparse +threat; @hook/override/inline +threat=%!,CMD`THREAT
         flags: [cmdsyntax]
       AINSTALL:
         value: |-
@@ -1300,7 +1627,9 @@ objects:
       ENCOUNTER: |-
         OPEN lists the encounters running, NEXT counts them.
       ENC: |-
-        The encounters, one branch each: the title, with ROOM, GM and COPY, each member's copy of their sheet.
+        The encounters, one branch each: the title, with ROOM, GM, COPY, each member's copy of their sheet, and FOE, its threats and dangers.
+      THREAT: |-
+        The threats GMs bring into encounters, one branch each: the name, with SIZE, RISK, EFFECT, DESC and MOVES beneath.
 
   # The +help topics, on an object of their own. sheet-charge-help registers it with +help; without that bridge
   # nothing reads it. HELP`<TOPIC> is a topic, its subtopics the leaves beneath, LOCK`<TOPIC> who may read it.
@@ -1310,7 +1639,7 @@ objects:
     location: "{{sheet}}"
     attributes:
       HELP: |-
-        Your character's Charge sheet, rolling against it, encounters and clocks: +sheet, +check, +encounter and +clock.
+        Your character's Charge sheet, rolling against it, encounters, threats and clocks: +sheet, +check, +encounter, +threat and +clock.
       SEE: |-
         Cross-references. One leaf per topic; subtopics come from the tree, not from here.
       SEE`SHEET: |-
@@ -1320,7 +1649,9 @@ objects:
       SEE`CLOCK: |-
         sheet check
       SEE`ENCOUNTER: |-
-        sheet check
+        sheet check threat
+      SEE`THREAT: |-
+        encounter clock
       HELP`SHEET: |-
         `+sheet` shows your character's sheet: details, momentum, stress, condition, milestones, talents, and twelve actions with 0 to 4 dots each.
 
@@ -1388,6 +1719,9 @@ objects:
         - `+encounter/leave \[<n>\]` drops your copy. Nothing from it goes back to your sheet.
         - `+encounter/use <n>` picks which of your encounters here your rolls and changes go to.
 
+        - `+check <action>=vs <threat>` rolls against a threat in it: `+help encounter threats`.
+        - `+encounter/accept` and `+encounter/protect <name>` answer a consequence: `+help encounter consequences`.
+
         A room may hold several encounters, and you may be in several. Your copy is used while you are in the room where its encounter runs: the one you picked with `/use`, else the one you joined last. Anywhere else, your sheet is used. Milestones, the ledger and Duties always use your sheet.
 
         For example:
@@ -1402,8 +1736,12 @@ objects:
 
         - `+encounter/add <name>\[=<n>\]` brings a character in with a copy of their sheet.
         - `+encounter/remove <name>\[=<n>\]` drops a member's copy.
+        - `+encounter/threat`, `/danger`, `/tick` and `/dismiss` put threats and danger clocks in it: `+help encounter threats`.
+        - `+encounter/consequence <name>=<kind>` gives the consequence of a member's roll: `+help encounter consequences`.
+        - `+encounter/return <name>` brings back a member who was taken out.
         - `+encounter/keep <name>\[=<n>\]` writes a member's stress and condition from the encounter back to their sheet. The copy stays, so play goes on.
-        - `+encounter/end \[<n>\]` ends it and drops every copy.
+        - `+encounter/milestone \[<reason>\]` gives everyone in it a milestone, on their milestones ledger. Only sheet keepers do this.
+        - `+encounter/end \[<n>\]` ends it, says which threats were overcome, and drops every copy.
 
         When an encounter ends, nothing carries back to a sheet unless the GM kept it. Momentum and the build never carry back. Leave out the number to act on the encounter you are in here, the only one here, or the last one you started.
 
@@ -1412,6 +1750,43 @@ objects:
         `+encounter/keep Alice`
 
         Output: `\[ENCOUNTER\] Done: Alice's sheet keeps the stress and condition from encounter 1: 3 of 4 stress, Bruised ribs.`
+      HELP`ENCOUNTER`THREATS: |-
+        NPCs don't roll. A threat is a clock the members fill to overcome it, with the risk and effect of acting against it. A danger clock is filled by complications.
+
+        - `+encounter/threat <threat>` brings in a copy of a threat from `+threat`. A second copy is numbered: `Dockside thugs 2`.
+        - `+encounter/threat <name>=<segments> <risk> <effect>` makes one for this encounter alone: `+encounter/threat Crane=4 low great`.
+        - `+encounter/danger <name>=<segments>` starts a danger clock: `+encounter/danger Alarm=4`.
+        - `+encounter/tick <name>\[=<n>\]` fills segments by hand, or empties some with a number below 0.
+        - `+encounter/dismiss <name>` takes one out.
+        - `+check <action>=vs <threat>` rolls against a threat with its risk and effect, unless you name others before `vs`. A success or a partial success ticks it 1, 2 or 3 for a limited, standard or great effect, and a critical one more. A full clock is overcome.
+
+        Each encounter keeps its own copy, so changing a threat in `+threat` changes no encounter. The GM sees each threat's description and moves in `+encounter`.
+
+        For example:
+
+        `+check shoot=vs dockside thugs 2`
+
+        Output: `\[SHEET\] Bob rolls Shoot (moderate risk, standard effect): 2d6kl1\[5, (6)\] = 5: a partial success, consequence 2. +1 momentum (3). (roll 39) +2 on Dockside thugs 2 \[##....\] 2/6 (moderate risk, standard effect).`
+      HELP`ENCOUNTER`CONSEQUENCES: |-
+        A partial success or a bad outcome brings a consequence. The GM picks one with `+encounter/consequence <name>=<kind>`, and its rating is the roll's risk: 1 low, 2 moderate, 3 high.
+
+        - `stress`: the member takes stress equal to the rating. A full stress clock takes them out of the encounter until the GM uses `+encounter/return`.
+        - `complication <danger>`: the danger clock ticks by the rating. With one danger clock, its name may be left out.
+        - `effect`: reduced effect. The threat rolled against loses one segment of that roll's progress.
+        - `risk`: escalated risk. The threat rolled against goes up one risk.
+        - `lost`: a lost opportunity. That action won't do it; the member tries another.
+
+        The consequence waits until it is answered:
+
+        - `+encounter/accept` takes it.
+        - `+check/determination <momentum>` resists it: 1 to 3 it happens, 4 or 5 it is reduced (one less stress or segment, or as the GM says), a 6 avoids it, and two 6s also lower the risk of your next roll there.
+        - `+encounter/protect <name>` takes a friend's consequence on yourself, to accept or resist.
+
+        For example:
+
+        `+encounter/consequence Alice=stress`
+
+        Output: `\[ENCOUNTER\] Keeper gives Alice a consequence: 2 stress. Alice takes it with +encounter/accept, resists it with +check/determination <momentum>, or a friend takes it with +encounter/protect Alice.`
       HELP`CHECK: |-
         `+check <action>` is an action roll: one six-sided die per dot, reading the highest, where the room sees it. An action with no dots rolls two dice and reads the lower, and can't be a critical.
 
@@ -1443,7 +1818,7 @@ objects:
       HELP`CHECK`OTHER: |-
         Two rolls stand apart from action rolls:
 
-        - `+check/determination <momentum>` resists a consequence you don't like. Spend momentum for one die each. 1 to 3: it still happens; 4 or 5: it is reduced; 6: it is avoided; two 6s: it is avoided and the risk of your next roll is lowered. `/resist` is the same switch.
+        - `+check/determination <momentum>` resists a consequence you don't like. Spend momentum for one die each. 1 to 3: it still happens; 4 or 5: it is reduced; 6: it is avoided; two 6s: it is avoided and the risk of your next roll is lowered. `/resist` is the same switch. In an encounter it answers the consequence waiting for you there.
         - `+check/fortune <dice>` leaves something to luck, one die per level of likelihood, or `+check/fortune <action>` rolls an action's dots. It gains no momentum and brings no consequence.
 
         For example:
@@ -1466,6 +1841,22 @@ objects:
         `+clock/tick alarm=2`
 
         Output: `\[CLOCK\] Alice ticks a clock: Alarm \[##..\] 2/4`
+      HELP`THREAT: |-
+        `+threat` is the game's list of threats for GMs to bring into encounters: a gang, a beast, a storm, a locked vault. Anyone may read it.
+
+        - `+threat` lists them; `+threat <name>` shows one, with its description and moves.
+        - `+threat/new <name>=<segments> <risk> <effect>` adds one: 4, 6 or 8 segments to overcome it, the risk of acting against it, and the effect members get: `+threat/new Dockside thugs=6 moderate standard`.
+        - `+threat/desc <name>=<text>` describes it.
+        - `+threat/moves <name>=<move>|<move>` lists what it does when a roll against it goes badly.
+        - `+threat/remove <name>` takes it off the list. Encounters keep their copies.
+
+        Only sheet keepers change the list. `+help encounter threats` covers using them.
+
+        For example:
+
+        `+threat/new Ash wolf=8 high limited`
+
+        Output: `\[THREAT\] Done: Ash wolf is a threat: 8 segments, high risk, limited effect. +threat/desc and +threat/moves describe it.`
       HELP`SHEET`CREDITS: |-
         This sheet is based on Charge, product of Fari RPGs \(https://farirpgs.com/\), developed and authored by René-Pier Deshaies-Gélinas, and licensed for our use under the Creative Commons Attribution 4.0 License \(https://creativecommons.org/licenses/by/4.0/\).
 
