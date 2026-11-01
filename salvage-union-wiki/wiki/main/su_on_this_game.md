@@ -5,7 +5,7 @@ This game keeps your Salvage Union pilot, mech and Union Crawler for you. `+help
 - `+sheet/chargen` lists the steps of making a pilot and their mech, and which are done.
 - `+sheet/class <class>`, `+sheet/learn <ability>` and `+sheet/take <equipment>` build your pilot; `+sheet/callsign`, `/background`, `/motto`, `/keepsake` and `/appearance` write the details.
 - `+sheet` shows your sheet; `+sheet/hp` and `+sheet/ap` keep count in play, and `+sheet/use <equipment>` spends a use.
-- `+sheet/learn` after approval spends the Training Points staff award; `+sheet/ledger` lists every entry that built your sheet, and staff can take one back.
+- `+sheet/learn` after approval spends the Training Points staff award; `+sheet/training` lists each award and spend, and `+sheet/ledger` every entry that built your sheet. Staff can take an entry back.
 - After a week of downtime, staff run `+sheet/downtime`: HP, AP, re-rolls and uses come back, and you may take one piece of equipment from the Armoury.
 
 ## Your mech
