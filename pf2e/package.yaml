@@ -3,11 +3,25 @@ package: pf2e
 title: Pathfinder 2e rules
 version: 0.1.0
 authors: [SharpMUSH]
-description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them: predicates, modifiers and stacking, degrees of success, and rule element formulas."
+description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +sheet, +check and +pf2e."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [pf2e, pathfinder, rules, dice]
 requires_server: ">=1.0"
+
+# One permission, for staff: see and change any character's sheet. Wizards and royalty hold it. A game
+# that takes it back with @role/clear wizard=softcode.pf2e.staff keeps it that way through updates.
+categories:
+  permissions:
+    - name: Pathfinder 2e
+      description: Pathfinder 2e character sheets.
+permissions:
+  - name: softcode.pf2e.staff
+    category: Pathfinder 2e
+    description: See and change any character's Pathfinder 2e sheet.
+grants:
+  wizard: [softcode.pf2e.staff]
+  royalty: [softcode.pf2e.staff]
 
 objects:
   # The rules core. Every function takes Foundry's own data as Foundry stores it (a predicate is the
@@ -59,6 +73,28 @@ objects:
       DATA`CONFIG`BRANCH`DEFAULT: main
       DATA`CONFIG`BRANCH`LABEL: Feed branch
       DATA`CONFIG`BRANCH`DESCRIPTION: The branch the updater reads. Each run reads every file from the commit the branch is on when the run starts.
+      DATA`STATISTICS: acrobatics arcana athletics crafting deception diplomacy intimidation medicine nature occultism performance religion society stealth survival thievery perception fortitude reflex will
+      DATA`STATISTIC: Each statistic's kind (skill, perception or save) and the attribute it is based on.
+      DATA`STATISTIC`ACROBATICS: skill dex
+      DATA`STATISTIC`ARCANA: skill int
+      DATA`STATISTIC`ATHLETICS: skill str
+      DATA`STATISTIC`CRAFTING: skill int
+      DATA`STATISTIC`DECEPTION: skill cha
+      DATA`STATISTIC`DIPLOMACY: skill cha
+      DATA`STATISTIC`INTIMIDATION: skill cha
+      DATA`STATISTIC`MEDICINE: skill wis
+      DATA`STATISTIC`NATURE: skill wis
+      DATA`STATISTIC`OCCULTISM: skill int
+      DATA`STATISTIC`PERFORMANCE: skill cha
+      DATA`STATISTIC`RELIGION: skill wis
+      DATA`STATISTIC`SOCIETY: skill int
+      DATA`STATISTIC`STEALTH: skill dex
+      DATA`STATISTIC`SURVIVAL: skill wis
+      DATA`STATISTIC`THIEVERY: skill dex
+      DATA`STATISTIC`PERCEPTION: perception wis
+      DATA`STATISTIC`FORTITUDE: save con
+      DATA`STATISTIC`REFLEX: save dex
+      DATA`STATISTIC`WILL: save wis
       FUN: Function attributes, one tree per part of the rules. Each is pure; none writes anything.
       FUN`PREDICATE: Predicates. %0 a predicate (a JSON array of statements), %1 the roll options, a space-separated list.
       # Foundry's Predicate.test: an empty predicate passes, a malformed one fails, otherwise every
@@ -277,6 +313,305 @@ objects:
           @@(%0 a dotted path, %1 the roll data)
           [firstof(json_query(%1,extract,$.%0),undefined)]
         flags: [funsyntax]
+      FUN`SHEET: The sheet's ledger, read once into entries. FUN`SHEET`ENTRIES takes the ledger, a JSON array of entry objects each with n (its number) and kind; every other FUN`SHEET` takes the entries it gives. A later entry wins; a revoke entry takes back the entry it names.
+      # Entry kinds: level {level}, ability {ability, mod}, rank {stat, rank}, grant {pack, id, badge},
+      # revoke {entry}. The ledger only grows: a change is a new entry, so the sheet's history is the ledger.
+      FUN`SHEET`ENTRIES:
+        value: |-
+          @@(%0 the ledger: kind~key~value~n for each entry not revoked, oldest first)
+          [setq(sheet_all,json_map(me/FUN`SHEET`ENTRY,%0,%b))]
+          [setq(sheet_revoked,u(FUN`SHEET`REVOKED,%q<sheet_all>))]
+          [squish(iter(%q<sheet_all>,if(member(%q<sheet_revoked>,elements(%i0,4,~)),,%i0)))]
+        flags: [funsyntax]
+      # json_map's callback, %1 one entry. The key is what a later entry of the kind replaces it by:
+      # the attribute, the statistic, or pack|id for a grant.
+      FUN`SHEET`ENTRY:
+        value: |-
+          @@(%1 one entry)
+          [setq(sheet_kind,json_query(%1,extract,$.kind))]
+          [%q<sheet_kind>]~[switch(%q<sheet_kind>,
+            ability, json_query(%1,extract,$.ability),
+            rank, json_query(%1,extract,$.stat),
+            grant, [json_query(%1,extract,$.pack)]|[ucstr(json_query(%1,extract,$.id))])]~[switch(%q<sheet_kind>,
+            level, json_query(%1,extract,$.level),
+            ability, json_query(%1,extract,$.mod),
+            rank, json_query(%1,extract,$.rank),
+            grant, json_query(%1,extract,$.badge),
+            revoke, json_query(%1,extract,$.entry))]~[json_query(%1,extract,$.n)]
+        flags: [funsyntax]
+      FUN`SHEET`REVOKED:
+        value: |-
+          @@(%0 entries: the numbers of the entries their revokes name)
+          [iter(graball(%0,revoke~*),elements(%i0,3,~))]
+        flags: [funsyntax]
+      FUN`SHEET`VALUE:
+        value: |-
+          @@(%0 entries, %1 a kind, %2 a key: the value of the last entry of that kind and key)
+          [elements(last(graball(%0,%1~%2~*)),3,~)]
+        flags: [funsyntax]
+      FUN`SHEET`LEVEL:
+        value: |-
+          @@(%0 entries: the character's level, 1 when none is set)
+          [firstof(u(FUN`SHEET`VALUE,%0,level,),1)]
+        flags: [funsyntax]
+      FUN`SHEET`ABILITY:
+        value: |-
+          @@(%0 entries, %1 an attribute such as str: its modifier)
+          [firstof(u(FUN`SHEET`VALUE,%0,ability,%1),0)]
+        flags: [funsyntax]
+      FUN`SHEET`RANK:
+        value: |-
+          @@(%0 entries, %1 a statistic such as athletics or will: its proficiency rank, 0 untrained to 4 legendary)
+          [firstof(u(FUN`SHEET`VALUE,%0,rank,%1),0)]
+        flags: [funsyntax]
+      FUN`SHEET`GRANTS:
+        value: |-
+          @@(%0 entries: n~pack~id~badge for each grant, badge empty when it has none)
+          [iter(graball(%0,grant~*),[elements(%i0,4,~)]~[edit(elements(%i0,2,~),|,~)]~[elements(%i0,3,~)])]
+        flags: [funsyntax]
+      FUN`ITEM: Items from the data objects. An item is the feed's ITEM` JSON, which is Foundry's item less its description.
+      FUN`ITEM`GET:
+        value: |-
+          @@(%0 a pack such as feats, %1 a Foundry id: the item, empty when the game lacks it)
+          [setq(item_store,v(DATA`PACK`%0))]
+          [if(strlen(%q<item_store>),get(%q<item_store>/ITEM`%1))]
+        flags: [funsyntax]
+      # An item named by its Foundry id or by its name, from a book the game uses. Names are looked up
+      # through the NAME`<slug> index the updater keeps on each data object.
+      FUN`ITEM`FIND:
+        value: |-
+          @@(%0 a pack, %1 an id or a name: the item's id, empty when no item from a book the game uses matches)
+          [setq(item_store,v(DATA`PACK`%0))]
+          [if(strlen(%q<item_store>),
+            first(iter(
+              squish([if(strlen(get(%q<item_store>/ITEM`[ucstr(%1)])),ucstr(%1))] [get(%q<item_store>/NAME`[u(FUN`ITEM`SLUGGIFY,%1)])]),
+              if(member(v(DATA`CONFIG`BOOKS),get(%q<item_store>/ITEM`%i0`BOOK)),%i0))))]
+        flags: [funsyntax]
+      # Foundry's item.slug, falling back to sluggify(name) as rule elements do.
+      FUN`ITEM`SLUG:
+        value: |-
+          @@(%0 an item)
+          [firstof(json_query(%0,extract,$.system.slug),u(FUN`ITEM`SLUGGIFY,json_query(%0,extract,$.name)))]
+        flags: [funsyntax]
+      FUN`ITEM`SLUGGIFY:
+        value: |-
+          @@(%0 a name: lower case, apostrophes dropped, every other run of non-letters a hyphen)
+          [trim(regeditall(lcstr(regeditall(%0,\['’\],)),\[^a-z0-9\]+,-),-,b)]
+        flags: [funsyntax]
+      # The badge: the grant's own, else a valued condition's system.value.value.
+      FUN`ITEM`BADGE:
+        value: |-
+          @@(%0 an item, %1 the grant's badge)
+          [firstof(%1,if(t(json_query(%0,extract,$.system.value.isValued)),json_query(%0,extract,$.system.value.value)))]
+        flags: [funsyntax]
+      # What @item reads in a formula: the item's own fields, level and badge as Foundry's getters give them.
+      FUN`ITEM`DATA:
+        value: |-
+          @@(%0 an item, %1 its badge)
+          [json(object,
+            id,json(string,json_query(%0,extract,$._id)),
+            name,json(string,json_query(%0,extract,$.name)),
+            type,json(string,json_query(%0,extract,$.type)),
+            slug,json(string,u(FUN`ITEM`SLUG,%0)),
+            level,firstof(json_query(%0,extract,$.system.level.value),null),
+            badge,if(strlen(%1),json(object,value,%1),null),
+            system,firstof(json_query(%0,extract,$.system),json(object)),
+            flags,firstof(json_query(%0,extract,$.flags),json(object)))]
+        flags: [funsyntax]
+      # The roll options an item gives its actor, as each Foundry item type sets them.
+      FUN`ITEM`OPTIONS:
+        value: |-
+          @@(%0 an item, %1 its badge)
+          [setq(item_slug,u(FUN`ITEM`SLUG,%0))]
+          [switch(json_query(%0,extract,$.type),
+            condition, self:condition:%q<item_slug>[if(strlen(%1),%bself:condition:%q<item_slug>:%1)],
+            effect, u(FUN`ITEM`EFFECT`OPTIONS,regeditall(%q<item_slug>,^%(?:\[a-z\]+-%)?%(?:effect|stance%)-,),%1),
+            feat, if(match(classfeature ancestryfeature calling curse deityboon pfsboon,json_query(%0,extract,$.system.category)),feature,feat):%q<item_slug>,
+            ancestry, self:ancestry:%q<item_slug>,
+            heritage, heritage:%q<item_slug> self:heritage:%q<item_slug>,
+            class, class:%q<item_slug>,
+            action, self:ability:%q<item_slug>,
+            )]
+        flags: [funsyntax]
+      FUN`ITEM`EFFECT`OPTIONS:
+        value: |-
+          @@(%0 the effect's roll option slug, %1 its badge)
+          self:effect:%0[if(strlen(%1),%bself:effect:%0:%1)]
+        flags: [funsyntax]
+      FUN`ACTOR: The actor, built from the sheet. %0 the entries.
+      # What @actor reads in a formula, shaped like Foundry's character: level, abilities.<a>.mod,
+      # skills.<s>.rank and system.skills.<s>.rank, conditions.<slug>.value and .badge.value.
+      FUN`ACTOR`DATA:
+        value: |-
+          @@(%0 the entries)
+          [setq(actor_entries,%0)]
+          [setq(actor_ranks,fold(me/FUN`ACTOR`RANK,v(DATA`STATISTICS),json(object)))]
+          [json(object,
+            level,u(FUN`SHEET`LEVEL,%0),
+            abilities,fold(me/FUN`ACTOR`ABILITY,str dex con int wis cha,json(object)),
+            skills,%q<actor_ranks>,
+            system,json(object,skills,%q<actor_ranks>),
+            conditions,fold(me/FUN`ACTOR`CONDITION,u(FUN`SHEET`GRANTS,%0),json(object)))]
+        flags: [funsyntax]
+      # fold callbacks, each a merge patch: %0 the object so far, %1 the next statistic, attribute or grant; actor_entries the entries.
+      FUN`ACTOR`RANK:
+        value: |-
+          json_mod(%0,patch,json(object,%1,json(object,rank,u(FUN`SHEET`RANK,%q<actor_entries>,%1))))
+        flags: [funsyntax]
+      FUN`ACTOR`ABILITY:
+        value: |-
+          json_mod(%0,patch,json(object,%1,json(object,mod,u(FUN`SHEET`ABILITY,%q<actor_entries>,%1))))
+        flags: [funsyntax]
+      FUN`ACTOR`CONDITION:
+        value: |-
+          @@(%0 the conditions so far, %1 a grant n~pack~id~badge)
+          [setq(actor_item,u(FUN`ITEM`GET,elements(%1,2,~),elements(%1,3,~)))]
+          [setq(actor_badge,u(FUN`ITEM`BADGE,%q<actor_item>,elements(%1,4,~)))]
+          [if(strmatch(json_query(%q<actor_item>,extract,$.type),condition),
+            json_mod(%0,patch,json(object,u(FUN`ITEM`SLUG,%q<actor_item>),
+              if(strlen(%q<actor_badge>),json(object,value,%q<actor_badge>,badge,json(object,value,%q<actor_badge>)),json(object)))),
+            %0)]
+        flags: [funsyntax]
+      FUN`STAT: The skills, perception and the saves. %0 a statistic such as athletics.
+      # Foundry's domains for the statistic's check: the selectors whose modifiers apply to it.
+      FUN`STAT`DOMAINS:
+        value: |-
+          @@(%0 a statistic)
+          [setq(stat_attribute,u(FUN`STAT`ATTRIBUTE,%0))]
+          [switch(u(FUN`STAT`KIND,%0),
+            skill, %0 %q<stat_attribute>-based skill-check %q<stat_attribute>-skill-check all check %0-check,
+            save, %0 %q<stat_attribute>-based saving-throw all check %0-check,
+            perception, perception all %q<stat_attribute>-based check perception-check)]
+        flags: [funsyntax]
+      FUN`STAT`KIND:
+        value: |-
+          first(v(DATA`STATISTIC`%0))
+        flags: [funsyntax]
+      FUN`STAT`ATTRIBUTE:
+        value: |-
+          last(v(DATA`STATISTIC`%0))
+        flags: [funsyntax]
+      FUN`RULE: Rule elements. %0 one rule element as the item stores it, %1 the roll data (actor, item, rule).
+      # A FlatModifier as Foundry's FlatModifierRuleElement turns it into a synthetic: the selectors it
+      # applies to, injected properties resolved and null ones left out, and the modifier, with the
+      # predicate's injected properties resolved, an ability-typed one worth that attribute's modifier,
+      # and the value a number (anything else 0) held between min and max. Its slug is the rule's own,
+      # else the item's (%2). Nothing when it has no selector left.
+      FUN`RULE`FLATMODIFIER:
+        value: |-
+          @@(%0 the rule, %1 the roll data, %2 the item's slug)
+          [setq(rule_selectors,u(FUN`RULE`SELECTORS,%0,%1))]
+          [if(words(%q<rule_selectors>),
+            json(object,
+              selectors,json(string,%q<rule_selectors>),
+              modifier,u(FUN`RULE`FLATMODIFIER`OBJECT,%0,%1,%2,u(FUN`MODIFIER`TYPE,firstof(json_query(%0,extract,$.type),untyped)))))]
+        flags: [funsyntax]
+      FUN`RULE`FLATMODIFIER`OBJECT:
+        value: |-
+          @@(%0 the rule, %1 the roll data, %2 the item's slug, %3 the modifier type)
+          [setq(rule_ability,json_query(%0,extract,$.ability))]
+          [setq(rule_value,u(FUN`FORMULA`VALUE,if(strmatch(%3,ability),json(string,@actor.abilities.%q<rule_ability>.mod),firstof(json_query(%0,get,value),null)),%1,0))]
+          [setq(rule_value,if(isnum(%q<rule_value>),%q<rule_value>,0))]
+          [setq(rule_value,u(FUN`RULE`CLAMP,%q<rule_value>,json_query(%0,extract,$.min),json_query(%0,extract,$.max)))]
+          [json(object,
+            slug,json(string,firstof(if(strmatch(%3,ability),%q<rule_ability>),json_query(%0,extract,$.slug),%2)),
+            type,json(string,%3),
+            modifier,%q<rule_value>,
+            predicate,u(FUN`FORMULA`INJECT,firstof(json_query(%0,get,predicate),json(array)),%1))]
+        flags: [funsyntax]
+      FUN`RULE`CLAMP:
+        value: |-
+          @@(%0 a number, %1 the least it may be, %2 the most, either empty for no bound)
+          [if(isnum(%2),min(%2,if(isnum(%1),max(%1,%0),%0)),if(isnum(%1),max(%1,%0),%0))]
+        flags: [funsyntax]
+      FUN`RULE`SELECTORS:
+        value: |-
+          @@(%0 the rule, %1 the roll data: its selectors, a string or an array, with injected properties resolved; null ones left out)
+          [setq(rule_selector,json_query(%0,get,selector))]
+          [setdiff(u(FUN`FORMULA`INJECT,switch(left(%q<rule_selector>,1),\[,json_map(me/FUN`RULE`SELECTOR,%q<rule_selector>,%b),json_query(%0,extract,$.selector)),%1),null)]
+        flags: [funsyntax]
+      FUN`RULE`SELECTOR:
+        value: |-
+          %1
+        flags: [funsyntax]
+      FUN`SYNTHETICS: What the granted items' rule elements add, worked out once for the whole sheet as Foundry's actor synthetics are. %0 the actor data, %1 the grants.
+      # A JSON array of {selectors, modifier}: selectors a space-separated list, modifier a Foundry
+      # modifier object.
+      FUN`SYNTHETICS`MODIFIERS:
+        value: |-
+          @@(%0 the actor data, %1 the grants)
+          [setq(synthetic_actor,%0)]
+          [fold(me/FUN`SYNTHETICS`GRANT,%1,json(array))]
+        flags: [funsyntax]
+      # fold callback: %0 the synthetics so far, %1 a grant n~pack~id~badge.
+      FUN`SYNTHETICS`GRANT:
+        value: |-
+          @@(%0 the synthetics so far, %1 a grant)
+          [setq(synthetic_item,u(FUN`ITEM`GET,elements(%1,2,~),elements(%1,3,~)))]
+          [setq(synthetic_rules,json_query(%q<synthetic_item>,extract,$.system.rules))]
+          [if(strmatch(%q<synthetic_rules>,*"key":"FlatModifier"*),u(FUN`SYNTHETICS`ITEM,%0,elements(%1,4,~)),%0)]
+        flags: [funsyntax]
+      FUN`SYNTHETICS`ITEM:
+        value: |-
+          @@(%0 the synthetics so far, %1 the grant's badge; synthetic_item the item and synthetic_rules its rules)
+          [setq(synthetic_slug,u(FUN`ITEM`SLUG,%q<synthetic_item>))]
+          [setq(synthetic_data,json(object,actor,%q<synthetic_actor>,item,u(FUN`ITEM`DATA,%q<synthetic_item>,u(FUN`ITEM`BADGE,%q<synthetic_item>,%1))))]
+          [fold(me/FUN`SYNTHETICS`RULE,lnum(0,dec(json_query(%q<synthetic_rules>,size))),%0)]
+        flags: [funsyntax]
+      FUN`SYNTHETICS`RULE:
+        value: |-
+          @@(%0 the synthetics so far, %1 the rule's index in the item's rules)
+          [setq(synthetic_rule,json_query(%q<synthetic_rules>,extract,$\[%1\]))]
+          [setq(synthetic_new,switch(json_query(%q<synthetic_rule>,extract,$.key),
+            FlatModifier, u(FUN`RULE`FLATMODIFIER,%q<synthetic_rule>,json_mod(%q<synthetic_data>,set,$.rule,%q<synthetic_rule>),%q<synthetic_slug>)))]
+          [if(strlen(%q<synthetic_new>),json_mod(%0,set,$\[[json_query(%0,size)]\],%q<synthetic_new>),%0)]
+        flags: [funsyntax]
+      # selector~<index> for each selector of each synthetic, so that a check finds its modifiers by its domains.
+      FUN`SYNTHETICS`INDEX:
+        value: |-
+          @@(%0 the synthetics)
+          [iter(lnum(0,dec(json_query(%0,size))),iter(json_query(%0,extract,$\[%i0\].selectors),%i0~%i1))]
+        flags: [funsyntax]
+      FUN`CHECK: Checks. %0 the actor data, %1 the synthetics, %2 a statistic, %3 the synthetics' index when the caller has it already.
+      # Every modifier on the check as a JSON array of Foundry modifier objects, for FUN`MODIFIER` to
+      # stack: the attribute modifier, the proficiency modifier (2 per rank plus the level, 0 untrained),
+      # and every synthetic modifier whose selectors meet the check's domains.
+      FUN`CHECK`MODIFIERS:
+        value: |-
+          @@(%0 the actor data, %1 the synthetics, %2 a statistic, %3 the index, optional)
+          [setq(check_index_used,if(strlen(%3),%3,u(FUN`SYNTHETICS`INDEX,%1)))]
+          [setqm(
+            check_level, json_query(%0,extract,$.level),
+            check_attribute, u(FUN`STAT`ATTRIBUTE,%2),
+            check_rank, json_query(%0,extract,$.skills.%2.rank))]
+          \[[json(object,slug,json(string,%q<check_attribute>),type,"ability",modifier,json_query(%0,extract,$.abilities.%q<check_attribute>.mod))],
+          [json(object,slug,"proficiency",type,"proficiency",modifier,if(%q<check_rank>,add(mul(2,%q<check_rank>),%q<check_level>),0))]
+          [iter(setunion(iter(u(FUN`STAT`DOMAINS,%2),iter(graball(%q<check_index_used>,%i0~*),after(%i0,~))),),\,[json_query(%1,extract,$\[%i0\].modifier)],%b,)]\]
+        flags: [funsyntax]
+      # Everything a check needs from the ledger at once: sets check_entries, check_actor, check_grants, check_synthetics, check_index and check_options.
+      FUN`CHECK`PREPARE:
+        value: |-
+          @@(%0 the ledger)
+          [setq(check_entries,u(FUN`SHEET`ENTRIES,%0))]
+          [setqm(
+            check_actor, u(FUN`ACTOR`DATA,%q<check_entries>),
+            check_grants, u(FUN`SHEET`GRANTS,%q<check_entries>),
+            check_options, u(FUN`CHECK`OPTIONS,%q<check_entries>))]
+          [setq(check_synthetics,u(FUN`SYNTHETICS`MODIFIERS,%q<check_actor>,%q<check_grants>))]
+          [setq(check_index,u(FUN`SYNTHETICS`INDEX,%q<check_synthetics>))]
+        flags: [funsyntax]
+      # The roll options a check is made with: the actor's level and what each granted item sets.
+      FUN`CHECK`OPTIONS:
+        value: |-
+          @@(%0 the entries)
+          [squish(self:level:[u(FUN`SHEET`LEVEL,%0)] [iter(u(FUN`SHEET`GRANTS,%0),u(FUN`CHECK`ITEM`OPTIONS,%i0))])]
+        flags: [funsyntax]
+      FUN`CHECK`ITEM`OPTIONS:
+        value: |-
+          @@(%0 a grant n~pack~id~badge)
+          [setq(check_item,u(FUN`ITEM`GET,elements(%0,2,~),elements(%0,3,~)))]
+          [u(FUN`ITEM`OPTIONS,%q<check_item>,u(FUN`ITEM`BADGE,%q<check_item>,elements(%0,4,~)))]
+        flags: [funsyntax]
 
   # Reads the PF2e feed into the data objects. WIZARD for @http and for writing the data objects.
   # It reads the feed's index, then each file in turn; an item whose hash is unchanged is left alone.
@@ -325,9 +660,14 @@ objects:
         value: |-
           think [setq(line,extract(get(me/FEED`BODY),%0,1,%r))]; @assert strlen(%q<line>); think [setq(id,ucstr(first(%q<line>)),hash,elements(%q<line>,2),leaf,elements(%q<line>,3),value,after(after(after(%q<line>,%b),%b),%b),store,get({{core}}/DATA`PACK`[ucstr(elements(get(me/FEED`CURRENT),2,|))]))]; @break strmatch(get(%q<store>/ITEM`%q<id>`HASH),%q<hash>); @include me/INC`IMPORT`[first(%q<leaf>,`)]
         flags: [cmdsyntax]
+      # NAME`<slug> on the data object lists the ids of the items with that name, for lookups by name.
       INC`IMPORT`ITEM:
         value: |-
-          &ITEM`%q<id> %q<store>=%q<value>; &ITEM`%q<id>`BOOK %q<store>=[elements(get(me/FEED`CURRENT),3,|)]; @wipe %q<store>/ITEM`%q<id>`EMBED`*
+          think setqm(name_old,u({{core}}/FUN`ITEM`SLUGGIFY,json_query(get(%q<store>/ITEM`%q<id>),extract,$.name)),name_new,u({{core}}/FUN`ITEM`SLUGGIFY,json_query(%q<value>,extract,$.name))); @include/nobreak me/INC`IMPORT`UNNAME; &NAME`%q<name_new> %q<store>=[setunion(get(%q<store>/NAME`%q<name_new>),%q<id>)]; &ITEM`%q<id> %q<store>=%q<value>; &ITEM`%q<id>`BOOK %q<store>=[elements(get(me/FEED`CURRENT),3,|)]; @wipe %q<store>/ITEM`%q<id>`EMBED`*
+        flags: [cmdsyntax]
+      INC`IMPORT`UNNAME:
+        value: |-
+          @break not(strlen(%q<name_old>)); &NAME`%q<name_old> %q<store>=[remove(get(%q<store>/NAME`%q<name_old>),%q<id>)]
         flags: [cmdsyntax]
       INC`IMPORT`TEXT:
         value: |-
@@ -370,12 +710,203 @@ objects:
           [ucstr(edit(before(after(%0,items/),.txt),/,-))]
         flags: [funsyntax]
 
+  # The commands. WIZARD so that it reads and writes the ledger on any character. Each ledger entry is
+  # PF2E`LEDGER`<n> on the character, set with the wizard attribute flag so that only this object or a
+  # wizard writes one; an entry without the flag is not read. It sits in the master room.
+  #
+  # Trees: CMD` the $-commands, INC`TARGET` whose sheet a command is for, INC`PF2E` one routine per
+  # switch, INC`CHECK` a check, FUN`SHOW` what the commands draw, FUN` the parsing. Registers, led by
+  # their subject: cmd_ the parsed command, sheet_ the character and their ledger, entry_ a new entry,
+  # roll_ a check being rolled.
+  - ref: commands
+    type: thing
+    name: PF2e Commands
+    location: "{{$master_room}}"
+    flags: [WIZARD]
+    attributes:
+      CMD`SHEET:
+        value: |-
+          $(?is)^\+sheet(?\: +(.*))?$:think setq(cmd_target,trim(%1)); @include %!/INC`TARGET`VIEW; @pemit %#=u(%!/FUN`SHOW`SHEET)
+        flags: [regexp, cmdsyntax]
+      CMD`CHECK:
+        value: |-
+          $(?is)^\+check +([^=]+?)(?\: *= *(.*))?$:think setqm(cmd_target,,cmd_stat,trim(%1),cmd_dc,trim(%2)); @include %!/INC`TARGET`VIEW; @include %!/INC`CHECK`ROLL
+        flags: [regexp, cmdsyntax]
+      CMD`PF2E:
+        value: |-
+          $(?is)^\+pf2e(/\S*)?(?\: +(.*))?$:think setqm(cmd_switch,lcstr(after(%1,/)),cmd_args,trim(%2)); @assert match(level ability rank grant revoke ledger,%q<cmd_switch>)=@pemit %#=notice(PF2E,There is no +pf2e/%q<cmd_switch>. The switches are /level%, /ability%, /rank%, /grant%, /revoke and /ledger.,warn); think u(%!/FUN`COMMAND`TARGET); @include %!/INC`PF2E`%q<cmd_switch>
+        flags: [regexp, cmdsyntax]
+      # <player>/ in front of the arguments names whose sheet; without it the sheet is your own.
+      FUN`COMMAND`TARGET:
+        value: |-
+          @@(cmd_args the arguments: sets cmd_target and cmd_rest)
+          [setq(cmd_target,if(cand(strmatch(%q<cmd_args>,*/*),hastype(pmatch(before(%q<cmd_args>,/)),player)),before(%q<cmd_args>,/)))]
+          [setq(cmd_rest,if(strlen(%q<cmd_target>),after(%q<cmd_args>,/),%q<cmd_args>))]
+        flags: [funsyntax]
+      INC`TARGET`VIEW:
+        value: |-
+          think setq(sheet_target,if(strlen(%q<cmd_target>),pmatch(%q<cmd_target>),%#)); @assert hastype(%q<sheet_target>,player)=@pemit %#=notice(PF2E,There is no player called %q<cmd_target>.,warn); @assert cor(strmatch(%q<sheet_target>,%#),permission(%#,softcode.pf2e.staff))=@pemit %#=notice(PF2E,Only staff see another character's sheet.,error); think setq(sheet_ledger,u(%!/FUN`LEDGER`OF,%q<sheet_target>))
+        flags: [cmdsyntax]
+      INC`TARGET`EDIT:
+        value: |-
+          think setq(sheet_target,if(strlen(%q<cmd_target>),pmatch(%q<cmd_target>),%#)); @assert cor(strmatch(%q<sheet_target>,%#),permission(%#,softcode.pf2e.staff))=@pemit %#=notice(PF2E,Only staff change another character's sheet.,error); think setq(sheet_ledger,u(%!/FUN`LEDGER`OF,%q<sheet_target>))
+        flags: [cmdsyntax]
+      INC`PF2E`LEVEL:
+        value: |-
+          @include %!/INC`TARGET`EDIT; @assert cand(isint(%q<cmd_rest>),gte(%q<cmd_rest>,1),lte(%q<cmd_rest>,20))=@pemit %#=notice(PF2E,A level is a whole number from 1 to 20.,warn); think setqm(entry_json,json(object,kind,"level",level,%q<cmd_rest>),entry_text,Level %q<cmd_rest>); @include %!/INC`ENTRY`WRITE
+        flags: [cmdsyntax]
+      INC`PF2E`ABILITY:
+        value: |-
+          @include %!/INC`TARGET`EDIT; think setqm(entry_ability,u(%!/FUN`COMMAND`ABILITY,before(%q<cmd_rest>,=)),entry_mod,trim(after(%q<cmd_rest>,=))); @assert strlen(%q<entry_ability>)=@pemit %#=notice(PF2E,The attributes are str%, dex%, con%, int%, wis and cha.,warn); @assert cand(isint(%q<entry_mod>),gte(%q<entry_mod>,-5),lte(%q<entry_mod>,10))=@pemit %#=notice(PF2E,An attribute modifier is a whole number from -5 to 10.,warn); think setqm(entry_json,json(object,kind,"ability",ability,json(string,%q<entry_ability>),mod,%q<entry_mod>),entry_text,[capstr(%q<entry_ability>)] [u(%!/FUN`SHOW`SIGNED,%q<entry_mod>)]); @include %!/INC`ENTRY`WRITE
+        flags: [cmdsyntax]
+      INC`PF2E`RANK:
+        value: |-
+          @include %!/INC`TARGET`EDIT; think setqm(entry_stat,u(%!/FUN`COMMAND`STAT,before(%q<cmd_rest>,=)),entry_rank,u(%!/FUN`COMMAND`RANK,after(%q<cmd_rest>,=))); @assert strlen(%q<entry_stat>)=@pemit %#=notice(PF2E,There is no statistic called [trim(before(%q<cmd_rest>,=))]. The statistics are [itemize(get({{core}}/DATA`STATISTICS))].,warn); @assert strlen(%q<entry_rank>)=@pemit %#=notice(PF2E,A rank is untrained%, trained%, expert%, master or legendary%, or 0 to 4.,warn); think setqm(entry_json,json(object,kind,"rank",stat,json(string,%q<entry_stat>),rank,%q<entry_rank>),entry_text,[capstr(%q<entry_stat>)] [u(%!/FUN`SHOW`RANK,%q<entry_rank>)]); @include %!/INC`ENTRY`WRITE
+        flags: [cmdsyntax]
+      INC`PF2E`GRANT:
+        value: |-
+          @include %!/INC`TARGET`EDIT; think setqm(entry_pack,lcstr(trim(before(%q<cmd_rest>,/))),entry_name,trim(before(after(%q<cmd_rest>,/),=)),entry_badge,trim(after(%q<cmd_rest>,=))); @assert strlen(get({{core}}/DATA`PACK`%q<entry_pack>))=@pemit %#=notice(PF2E,Name a pack and an item%, such as conditions/frightened. The packs are [itemize(lcstr(iter(lattr({{core}}/DATA`PACK`*),last(%i0,`))))].,warn); think setq(entry_id,u({{core}}/FUN`ITEM`FIND,%q<entry_pack>,%q<entry_name>)); @assert strlen(%q<entry_id>)=@pemit %#=notice(PF2E,There is no %q<entry_name> in %q<entry_pack> from a book the game uses.,warn); @assert cor(not(strlen(%q<entry_badge>)),cand(isint(%q<entry_badge>),gt(%q<entry_badge>,0)))=@pemit %#=notice(PF2E,A value after = is a whole number above 0%, such as conditions/frightened=2.,warn); think setqm(entry_json,json(object,kind,"grant",pack,json(string,%q<entry_pack>),id,json(string,%q<entry_id>),badge,firstof(%q<entry_badge>,null)),entry_text,[u(%!/FUN`SHOW`ITEM,%q<entry_pack>,%q<entry_id>,%q<entry_badge>)]); @include %!/INC`ENTRY`WRITE
+        flags: [cmdsyntax]
+      INC`PF2E`REVOKE:
+        value: |-
+          @include %!/INC`TARGET`EDIT; think setq(entry_old,get(%q<sheet_target>/PF2E`LEDGER`%q<cmd_rest>)); @assert cand(isint(%q<cmd_rest>),strlen(%q<entry_old>),hasflag(%q<sheet_target>/PF2E`LEDGER`%q<cmd_rest>,wizard))=@pemit %#=notice(PF2E,There is no entry %q<cmd_rest>. +pf2e/ledger lists them.,warn); @assert not(match(revoke,json_query(%q<entry_old>,extract,$.kind)))=@pemit %#=notice(PF2E,Entry %q<cmd_rest> is itself a revoke. Make the entry again instead.,warn); @assert not(member(u({{core}}/FUN`SHEET`REVOKED,u({{core}}/FUN`SHEET`ENTRIES,%q<sheet_ledger>)),%q<cmd_rest>))=@pemit %#=notice(PF2E,Entry %q<cmd_rest> is already revoked.,warn); think setqm(entry_json,json(object,kind,"revoke",entry,%q<cmd_rest>),entry_text,Revoked entry %q<cmd_rest>); @include %!/INC`ENTRY`WRITE
+        flags: [cmdsyntax]
+      INC`PF2E`LEDGER:
+        value: |-
+          think setq(cmd_target,firstof(%q<cmd_target>,%q<cmd_rest>)); @include %!/INC`TARGET`VIEW; @pemit %#=u(%!/FUN`SHOW`LEDGER)
+        flags: [cmdsyntax]
+      # entry_json the entry, entry_text how it reads: numbered after the last entry, stamped with who made it.
+      INC`ENTRY`WRITE:
+        value: |-
+          think setq(entry_n,inc(lmax(0 [iter(lattr(%q<sheet_target>/PF2E`LEDGER`*),last(%i0,`))]))); &PF2E`LEDGER`%q<entry_n> %q<sheet_target>=[json_mod(%q<entry_json>,patch,json(object,n,%q<entry_n>,by,json(string,objid(%#))))]; @set %q<sheet_target>/PF2E`LEDGER`%q<entry_n>=wizard; @pemit %#=notice(PF2E,[if(strmatch(%q<sheet_target>,%#),,[name(%q<sheet_target>)]: )]%q<entry_text> %(entry %q<entry_n>%).,ok)
+        flags: [cmdsyntax]
+      # A check: the statistic's modifiers stacked, a d20 rolled and kept, and against a DC its degree.
+      INC`CHECK`ROLL:
+        value: |-
+          think setq(roll_stat,u(%!/FUN`COMMAND`STAT,%q<cmd_stat>)); @assert strlen(%q<roll_stat>)=@pemit %#=notice(PF2E,There is no statistic called %q<cmd_stat>. The statistics are [itemize(get({{core}}/DATA`STATISTICS))].,warn); @assert cor(not(strlen(%q<cmd_dc>)),isint(%q<cmd_dc>))=@pemit %#=notice(PF2E,A DC is a whole number%, such as +check athletics=20.,warn); think u(%!/FUN`CHECK`PREPARE); @remit %l=notice(PF2E,u(%!/FUN`SHOW`CHECK))
+        flags: [cmdsyntax]
+      FUN`CHECK`PREPARE:
+        value: |-
+          @@(sets the core's check_ registers, then roll_modifiers, roll_chosen, roll_total and roll_record)
+          [u({{core}}/FUN`CHECK`PREPARE,%q<sheet_ledger>)]
+          [setq(roll_modifiers,u({{core}}/FUN`CHECK`MODIFIERS,%q<check_actor>,%q<check_synthetics>,%q<roll_stat>,%q<check_index>))]
+          [setq(roll_chosen,u({{core}}/FUN`MODIFIER`CHOSEN,%q<roll_modifiers>,%q<check_options>))]
+          [setq(roll_total,ladd(0 [iter(%q<roll_chosen>,elements(%i0,2,~))]))]
+          [setq(roll_record,roll(1d20[u(%!/FUN`SHOW`SIGNED,%q<roll_total>)],,record))]
+        flags: [funsyntax]
+      FUN`LEDGER: The ledger. %0 a character.
+      FUN`LEDGER`OF:
+        value: |-
+          @@(%0 a character: their ledger as a JSON array, oldest entry first; entries without the wizard flag left out)
+          \[[iter(sort(iter(lattr(%0/PF2E`LEDGER`*),if(hasflag(%0/%i0,wizard),last(%i0,`))),n),get(%0/PF2E`LEDGER`%i0),%b,\,)]\]
+        flags: [funsyntax]
+      FUN`COMMAND: Reading what was typed.
+      FUN`COMMAND`ABILITY:
+        value: |-
+          @@(%0 typed text: the attribute it names, by its first three letters)
+          [grab(str dex con int wis cha,left(lcstr(trim(%0)),3))]
+        flags: [funsyntax]
+      FUN`COMMAND`STAT:
+        value: |-
+          @@(%0 typed text: the statistic it is the start of, the first in the list when several are)
+          [if(strlen(trim(%0)),grab(get({{core}}/DATA`STATISTICS),lcstr(trim(%0))*))]
+        flags: [funsyntax]
+      FUN`COMMAND`RANK:
+        value: |-
+          @@(%0 typed text: a rank 0 to 4 from its number or the start of its name)
+          [setq(cmd_rank_text,lcstr(trim(%0)))]
+          [switch(1,
+            not(strlen(%q<cmd_rank_text>)),,
+            cand(isint(%q<cmd_rank_text>),gte(%q<cmd_rank_text>,0),lte(%q<cmd_rank_text>,4)),%q<cmd_rank_text>,
+            dec(match(untrained trained expert master legendary,%q<cmd_rank_text>*)))]
+        flags: [funsyntax]
+      FUN`SHOW: What the commands draw. sheet_target and sheet_ledger the sheet.
+      FUN`SHOW`SHEET:
+        value: |-
+          @@(the sheet: level and attributes, every statistic with its rank and modifier, what is granted, and the rules not applied)
+          [u({{core}}/FUN`CHECK`PREPARE,%q<sheet_ledger>)]
+          [box(
+            [fields(,
+              Level,json_query(%q<check_actor>,extract,$.level),
+              Attributes,iter(str dex con int wis cha,[capstr(%i0)] [u(%!/FUN`SHOW`SIGNED,json_query(%q<check_actor>,extract,$.abilities.%i0.mod))],%b,%b%b))]%r
+            [rule()]%r
+            [ldatatable(,Statistic|Rank|>Modifier,iter(get({{core}}/DATA`STATISTICS),u(%!/FUN`SHOW`STATISTIC,%i0),%b,%r),%r)]%r
+            [rule()]%r
+            [fields(,Granted,firstof(itemize(iter(%q<check_grants>,u(%!/FUN`SHOW`ITEM,elements(%i0,2,~),elements(%i0,3,~),elements(%i0,4,~)),%b,|),|),tone(muted,Nothing yet.)))]
+            [u(%!/FUN`SHOW`UNAPPLIED)],
+            name(%q<sheet_target>))]
+        flags: [funsyntax]
+      FUN`SHOW`STATISTIC:
+        value: |-
+          @@(%0 a statistic: one row of the sheet's table)
+          [capstr(%0)]|[u(%!/FUN`SHOW`RANK,json_query(%q<check_actor>,extract,$.skills.%0.rank))]|[u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`MODIFIER`TOTAL,u({{core}}/FUN`CHECK`MODIFIERS,%q<check_actor>,%q<check_synthetics>,%0,%q<check_index>),%q<check_options>))]
+        flags: [funsyntax]
+      # The rule elements of granted items that the core does not apply yet, by kind, so that a sheet
+      # never looks complete when it is not.
+      FUN`SHOW`UNAPPLIED:
+        value: |-
+          @@(check_grants the grants: a line naming each item with rules not applied, or nothing)
+          [setq(sheet_unapplied,iter(%q<check_grants>,u(%!/FUN`SHOW`UNAPPLIED`ITEM,%i0),%b,|))]
+          [if(strlen(squish(%q<sheet_unapplied>,|)),%r[rule()]%r[tone(muted,Not applied yet: [itemize(squish(%q<sheet_unapplied>,|),|)].)])]
+        flags: [funsyntax]
+      FUN`SHOW`UNAPPLIED`ITEM:
+        value: |-
+          @@(%0 a grant n~pack~id~badge: the item's name and its rule kinds other than FlatModifier, or nothing)
+          [setq(show_item,u({{core}}/FUN`ITEM`GET,elements(%0,2,~),elements(%0,3,~)))]
+          [setq(show_kinds,setdiff(json_map(%!/FUN`SHOW`RULE`KEY,firstof(json_query(%q<show_item>,extract,$.system.rules),json(array)),%b),FlatModifier))]
+          [if(words(%q<show_kinds>),[json_query(%q<show_item>,extract,$.name)] %([itemize(%q<show_kinds>)]%))]
+        flags: [funsyntax]
+      FUN`SHOW`RULE`KEY:
+        value: |-
+          json_query(%1,extract,$.key)
+        flags: [funsyntax]
+      FUN`SHOW`ITEM:
+        value: |-
+          @@(%0 a pack, %1 an id, %2 a badge: the item's name, with its badge)
+          [json_query(u({{core}}/FUN`ITEM`GET,%0,%1),extract,$.name)][if(strlen(%2),%b%2)]
+        flags: [funsyntax]
+      FUN`SHOW`RANK:
+        value: |-
+          extract(Untrained Trained Expert Master Legendary,inc(firstof(%0,0)),1)
+        flags: [funsyntax]
+      FUN`SHOW`SIGNED:
+        value: |-
+          if(gte(%0,0),+%0,%0)
+        flags: [funsyntax]
+      FUN`SHOW`CHECK:
+        value: |-
+          @@(the check: who rolled what, the modifiers that counted, and against a DC the degree)
+          [setq(roll_face,json_query(%q<roll_record>,extract,$.dice\[0\].results\[0\].result))]
+          [setq(roll_result,json_query(%q<roll_record>,extract,$.total))]
+          [name(%q<sheet_target>)] rolls [capstr(%q<roll_stat>)]: [json_query(%q<roll_record>,extract,$.text)]
+          [if(strlen(%q<cmd_dc>),%bvs DC %q<cmd_dc>: [tone(strong,extract(Critical failure|Failure|Success|Critical success,inc(u({{core}}/FUN`DEGREE`OF`CHECK,%q<roll_result>,%q<cmd_dc>,%q<roll_face>)),1,|))])]
+          %b(roll [json_query(%q<roll_record>,extract,$.id)])
+          [if(words(%q<roll_chosen>),%r[tone(muted,iter(%q<roll_chosen>,[elements(%i0,3,~)] [u(%!/FUN`SHOW`SIGNED,elements(%i0,2,~))],%b,%,%b))])]
+        flags: [funsyntax]
+      FUN`SHOW`LEDGER:
+        value: |-
+          @@(the ledger: every entry, oldest first, with who made it)
+          [box(if(json_query(%q<sheet_ledger>,size),ldatatable(,>#|Entry|By,json_map(%!/FUN`SHOW`ENTRY,%q<sheet_ledger>,%r),%r),tone(muted,No entries yet.)),[name(%q<sheet_target>)]'s ledger)]
+        flags: [funsyntax]
+      FUN`SHOW`ENTRY:
+        value: |-
+          @@(%1 one entry: a row of the ledger's table)
+          [json_query(%1,extract,$.n)]|[switch(json_query(%1,extract,$.kind),
+            level, Level [json_query(%1,extract,$.level)],
+            ability, [capstr(json_query(%1,extract,$.ability))] [u(%!/FUN`SHOW`SIGNED,json_query(%1,extract,$.mod))],
+            rank, [capstr(json_query(%1,extract,$.stat))] [u(%!/FUN`SHOW`RANK,json_query(%1,extract,$.rank))],
+            grant, Grant [u(%!/FUN`SHOW`ITEM,json_query(%1,extract,$.pack),json_query(%1,extract,$.id),json_query(%1,extract,$.badge))],
+            revoke, Revoke entry [json_query(%1,extract,$.entry)],
+            json_query(%1,extract,$.kind))]|[name(json_query(%1,extract,$.by))]
+        flags: [funsyntax]
+
   - ref: data_actions
     type: thing
     name: "PF2e Data: actions"
     location: "{{core}}"
     attributes:
       ITEM: "Items of the Foundry pack actions. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+      NAME: "NAME`<slug> lists the ids of the items with that name, the name in lower case with every run of other characters a hyphen."
 
   - ref: data_ancestries
     type: thing
@@ -383,6 +914,7 @@ objects:
     location: "{{core}}"
     attributes:
       ITEM: "Items of the Foundry pack ancestries. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+      NAME: "NAME`<slug> lists the ids of the items with that name, the name in lower case with every run of other characters a hyphen."
 
   - ref: data_ancestry_features
     type: thing
@@ -390,6 +922,7 @@ objects:
     location: "{{core}}"
     attributes:
       ITEM: "Items of the Foundry pack ancestry-features. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+      NAME: "NAME`<slug> lists the ids of the items with that name, the name in lower case with every run of other characters a hyphen."
 
   - ref: data_backgrounds
     type: thing
@@ -397,6 +930,7 @@ objects:
     location: "{{core}}"
     attributes:
       ITEM: "Items of the Foundry pack backgrounds. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+      NAME: "NAME`<slug> lists the ids of the items with that name, the name in lower case with every run of other characters a hyphen."
 
   - ref: data_classes
     type: thing
@@ -404,6 +938,7 @@ objects:
     location: "{{core}}"
     attributes:
       ITEM: "Items of the Foundry pack classes. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+      NAME: "NAME`<slug> lists the ids of the items with that name, the name in lower case with every run of other characters a hyphen."
 
   - ref: data_class_features
     type: thing
@@ -411,6 +946,7 @@ objects:
     location: "{{core}}"
     attributes:
       ITEM: "Items of the Foundry pack class-features. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+      NAME: "NAME`<slug> lists the ids of the items with that name, the name in lower case with every run of other characters a hyphen."
 
   - ref: data_conditions
     type: thing
@@ -418,6 +954,7 @@ objects:
     location: "{{core}}"
     attributes:
       ITEM: "Items of the Foundry pack conditions. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+      NAME: "NAME`<slug> lists the ids of the items with that name, the name in lower case with every run of other characters a hyphen."
 
   - ref: data_equipment
     type: thing
@@ -425,6 +962,7 @@ objects:
     location: "{{core}}"
     attributes:
       ITEM: "Items of the Foundry pack equipment. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+      NAME: "NAME`<slug> lists the ids of the items with that name, the name in lower case with every run of other characters a hyphen."
 
   - ref: data_equipment_effects
     type: thing
@@ -432,6 +970,7 @@ objects:
     location: "{{core}}"
     attributes:
       ITEM: "Items of the Foundry pack equipment-effects. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+      NAME: "NAME`<slug> lists the ids of the items with that name, the name in lower case with every run of other characters a hyphen."
 
   - ref: data_familiar_abilities
     type: thing
@@ -439,6 +978,7 @@ objects:
     location: "{{core}}"
     attributes:
       ITEM: "Items of the Foundry pack familiar-abilities. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+      NAME: "NAME`<slug> lists the ids of the items with that name, the name in lower case with every run of other characters a hyphen."
 
   - ref: data_feat_effects
     type: thing
@@ -446,6 +986,7 @@ objects:
     location: "{{core}}"
     attributes:
       ITEM: "Items of the Foundry pack feat-effects. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+      NAME: "NAME`<slug> lists the ids of the items with that name, the name in lower case with every run of other characters a hyphen."
 
   - ref: data_feats
     type: thing
@@ -453,6 +994,7 @@ objects:
     location: "{{core}}"
     attributes:
       ITEM: "Items of the Foundry pack feats. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+      NAME: "NAME`<slug> lists the ids of the items with that name, the name in lower case with every run of other characters a hyphen."
 
   - ref: data_hazards
     type: thing
@@ -460,6 +1002,7 @@ objects:
     location: "{{core}}"
     attributes:
       ITEM: "Items of the Foundry pack hazards. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+      NAME: "NAME`<slug> lists the ids of the items with that name, the name in lower case with every run of other characters a hyphen."
 
   - ref: data_heritages
     type: thing
@@ -467,6 +1010,7 @@ objects:
     location: "{{core}}"
     attributes:
       ITEM: "Items of the Foundry pack heritages. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+      NAME: "NAME`<slug> lists the ids of the items with that name, the name in lower case with every run of other characters a hyphen."
 
   - ref: data_other_effects
     type: thing
@@ -474,6 +1018,7 @@ objects:
     location: "{{core}}"
     attributes:
       ITEM: "Items of the Foundry pack other-effects. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+      NAME: "NAME`<slug> lists the ids of the items with that name, the name in lower case with every run of other characters a hyphen."
 
   - ref: data_spell_effects
     type: thing
@@ -481,6 +1026,7 @@ objects:
     location: "{{core}}"
     attributes:
       ITEM: "Items of the Foundry pack spell-effects. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+      NAME: "NAME`<slug> lists the ids of the items with that name, the name in lower case with every run of other characters a hyphen."
 
   - ref: data_spells
     type: thing
@@ -488,6 +1034,7 @@ objects:
     location: "{{core}}"
     attributes:
       ITEM: "Items of the Foundry pack spells. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+      NAME: "NAME`<slug> lists the ids of the items with that name, the name in lower case with every run of other characters a hyphen."
 
   - ref: data_vehicles
     type: thing
@@ -495,6 +1042,7 @@ objects:
     location: "{{core}}"
     attributes:
       ITEM: "Items of the Foundry pack vehicles. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+      NAME: "NAME`<slug> lists the ids of the items with that name, the name in lower case with every run of other characters a hyphen."
 
   - ref: data_pathfinder_monster_core
     type: thing
@@ -502,3 +1050,4 @@ objects:
     location: "{{core}}"
     attributes:
       ITEM: "Items of the Foundry pack pathfinder-monster-core. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+      NAME: "NAME`<slug> lists the ids of the items with that name, the name in lower case with every run of other characters a hyphen."
