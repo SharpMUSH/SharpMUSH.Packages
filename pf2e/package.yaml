@@ -1,0 +1,494 @@
+format: "1.16"
+package: pf2e
+title: Pathfinder 2e rules
+version: 0.1.0
+authors: [SharpMUSH]
+description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them: predicates, modifiers and stacking, degrees of success, and rule element formulas."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [pf2e, pathfinder, rules, dice]
+requires_server: ">=1.0"
+
+objects:
+  # The rules core. Every function takes Foundry's own data as Foundry stores it (a predicate is the
+  # JSON array from a rule element, a modifier is Foundry's modifier object) and answers as Foundry's
+  # pf2e system would, so a rule element copied from the feed means the same thing here.
+  #
+  # Trees: FUN`PREDICATE` tests a predicate against roll options, FUN`MODIFIER` applies the stacking
+  # rules, FUN`DEGREE` reads a check's degree of success, FUN`FORMULA` resolves a rule element value.
+  - ref: core
+    type: thing
+    name: PF2e Rules
+    location: "{{$master_room}}"
+    attributes:
+      DATA: What the core reads. DATA`PACK`<pack> names the object holding that Foundry pack.
+      DATA`PACK: One data object per Foundry pack, holding its items as the PF2e feed carries them.
+      DATA`PACK`ACTIONS: "{{data_actions}}"
+      DATA`PACK`ANCESTRIES: "{{data_ancestries}}"
+      DATA`PACK`ANCESTRY-FEATURES: "{{data_ancestry_features}}"
+      DATA`PACK`BACKGROUNDS: "{{data_backgrounds}}"
+      DATA`PACK`CLASSES: "{{data_classes}}"
+      DATA`PACK`CLASS-FEATURES: "{{data_class_features}}"
+      DATA`PACK`CONDITIONS: "{{data_conditions}}"
+      DATA`PACK`EQUIPMENT: "{{data_equipment}}"
+      DATA`PACK`EQUIPMENT-EFFECTS: "{{data_equipment_effects}}"
+      DATA`PACK`FAMILIAR-ABILITIES: "{{data_familiar_abilities}}"
+      DATA`PACK`FEAT-EFFECTS: "{{data_feat_effects}}"
+      DATA`PACK`FEATS: "{{data_feats}}"
+      DATA`PACK`HAZARDS: "{{data_hazards}}"
+      DATA`PACK`HERITAGES: "{{data_heritages}}"
+      DATA`PACK`OTHER-EFFECTS: "{{data_other_effects}}"
+      DATA`PACK`SPELL-EFFECTS: "{{data_spell_effects}}"
+      DATA`PACK`SPELLS: "{{data_spells}}"
+      DATA`PACK`VEHICLES: "{{data_vehicles}}"
+      DATA`PACK`PATHFINDER-MONSTER-CORE: "{{data_pathfinder_monster_core}}"
+      DATA`CONFIG: Settings.
+      DATA`CONFIG`LABEL: Pathfinder 2e
+      DATA`CONFIG`BOOKS: pc1 pc2 gmc mc
+      DATA`CONFIG`BOOKS`TYPE: list
+      DATA`CONFIG`BOOKS`DEFAULT: pc1 pc2 gmc mc
+      DATA`CONFIG`BOOKS`LABEL: Source books
+      DATA`CONFIG`BOOKS`DESCRIPTION: The books whose rules the game uses, by the feed's book slug. An item from a book not listed is left out of lookups, sheets and the builder.
+      DATA`CONFIG`FEED: https://raw.githubusercontent.com/SharpMUSH/SharpMUSH.Packages/main/pf2e-feed
+      DATA`CONFIG`FEED`TYPE: text
+      DATA`CONFIG`FEED`DEFAULT: https://raw.githubusercontent.com/SharpMUSH/SharpMUSH.Packages/main/pf2e-feed
+      DATA`CONFIG`FEED`LABEL: Feed address
+      DATA`CONFIG`FEED`DESCRIPTION: Where the updater reads the PF2e feed, the folder holding index.json.
+      FUN: Function attributes, one tree per part of the rules. Each is pure; none writes anything.
+      FUN`PREDICATE: Predicates. %0 a predicate (a JSON array of statements), %1 the roll options, a space-separated list.
+      # Foundry's Predicate.test: an empty predicate passes, a malformed one fails, otherwise every
+      # statement must hold.
+      FUN`PREDICATE`TEST:
+        value: |-
+          @@(Foundry Predicate.test: every statement in the array %0 holds for the roll options %1)
+          [switch(json_query(%0,type),
+            array, not(member(u(FUN`PREDICATE`RESULTS,%0,%1),0)),
+            0)]
+        flags: [funsyntax]
+      # One 1 or 0 per statement of the JSON array %0.
+      FUN`PREDICATE`RESULTS:
+        value: |-
+          json_map(me/FUN`PREDICATE`EACH,%0,%b,%1)
+        flags: [funsyntax]
+      # json_map's callback: %0 the statement's type, %1 the statement, %3 the roll options.
+      FUN`PREDICATE`EACH:
+        value: |-
+          switch(%0,
+            string, neq(member(%3,%1),0),
+            object, u(FUN`PREDICATE`COMPOUND,%1,%3),
+            0)
+        flags: [funsyntax]
+      # A statement that is an object: one operator and its operands, or if/then.
+      FUN`PREDICATE`COMPOUND:
+        value: |-
+          @@(%0 a statement object, %1 the roll options)
+          [setq(predicate_op,lcstr(json_map(me/FUN`PREDICATE`KEY,%0)))]
+          [switch(%q<predicate_op>,
+            and, not(member(u(FUN`PREDICATE`RESULTS,json_query(%0,get,and),%1),0)),
+            or, neq(member(u(FUN`PREDICATE`RESULTS,json_query(%0,get,or),%1),1),0),
+            nand, neq(member(u(FUN`PREDICATE`RESULTS,json_query(%0,get,nand),%1),0),0),
+            nor, not(member(u(FUN`PREDICATE`RESULTS,json_query(%0,get,nor),%1),1)),
+            xor, eq(words(filter(me/FUN`PREDICATE`IS`ONE,u(FUN`PREDICATE`RESULTS,json_query(%0,get,xor),%1))),1),
+            not, not(u(FUN`PREDICATE`RESULTS,\[[json_query(%0,get,not)]\],%1)),
+            if then, u(FUN`PREDICATE`CONDITIONAL,%0,%1),
+            then if, u(FUN`PREDICATE`CONDITIONAL,%0,%1),
+            iff, u(FUN`PREDICATE`IFF,u(FUN`PREDICATE`RESULTS,json_query(%0,get,iff),%1)),
+            eq, u(FUN`PREDICATE`EQUAL,json_query(%0,get,eq),%1),
+            gt, u(FUN`PREDICATE`COMPARE,gt,json_query(%0,get,gt),%1),
+            gte, u(FUN`PREDICATE`COMPARE,gte,json_query(%0,get,gte),%1),
+            lt, u(FUN`PREDICATE`COMPARE,lt,json_query(%0,get,lt),%1),
+            lte, u(FUN`PREDICATE`COMPARE,lte,json_query(%0,get,lte),%1),
+            0)]
+        flags: [funsyntax]
+      FUN`PREDICATE`KEY:
+        value: |-
+          %2
+        flags: [funsyntax]
+      FUN`PREDICATE`IS`ONE:
+        value: |-
+          eq(%0,1)
+        flags: [funsyntax]
+      # if/then holds unless "if" holds and "then" does not.
+      FUN`PREDICATE`CONDITIONAL:
+        value: |-
+          @@(%0 an if/then statement, %1 the roll options)
+          [cor(not(u(FUN`PREDICATE`RESULTS,\[[json_query(%0,get,if)]\],%1)),
+            u(FUN`PREDICATE`RESULTS,\[[json_query(%0,get,then)]\],%1))]
+        flags: [funsyntax]
+      # iff holds when its statements all hold or all fail. %0 their results.
+      FUN`PREDICATE`IFF:
+        value: |-
+          cor(not(member(%0,0)),not(member(%0,1)))
+        flags: [funsyntax]
+      # eq: two strings are compared as text; a string and a number test the option <string>:<number>.
+      FUN`PREDICATE`EQUAL:
+        value: |-
+          @@(%0 the operand array, %1 the roll options)
+          [setq(predicate_left,json_query(%0,extract,$\[0\]),predicate_right,json_query(%0,extract,$\[1\]))]
+          [switch(json_query(json_query(%0,get,1),type),
+            string, not(comp(%q<predicate_left>,%q<predicate_right>)),
+            neq(member(%1,%q<predicate_left>:%q<predicate_right>),0))]
+        flags: [funsyntax]
+      # gt/gte/lt/lte: each side is a number or every value <operand>:<n> among the roll options; the
+      # statement holds when some left value beats every right value, as in Foundry.
+      FUN`PREDICATE`COMPARE:
+        value: |-
+          @@(%0 the operator, %1 the operand array, %2 the roll options)
+          [setq(predicate_lefts,u(FUN`PREDICATE`VALUES,json_query(%1,extract,$\[0\]),%2))]
+          [setq(predicate_rights,u(FUN`PREDICATE`VALUES,json_query(%1,extract,$\[1\]),%2))]
+          [cand(words(%q<predicate_lefts>),words(%q<predicate_rights>),
+            words(iter(%q<predicate_lefts>,if(u(FUN`PREDICATE`BEATS`ALL,%0,%i0,%q<predicate_rights>),%i0))))]
+        flags: [funsyntax]
+      FUN`PREDICATE`BEATS`ALL:
+        value: |-
+          @@(%0 the operator, %1 one left value, %2 every right value)
+          [not(words(iter(%2,if(switch(%0,gt,gt(%1,%i0),gte,gte(%1,%i0),lt,lt(%1,%i0),lte(%1,%i0)),,%i0))))]
+        flags: [funsyntax]
+      FUN`PREDICATE`VALUES:
+        value: |-
+          @@(%0 an operand, %1 the roll options)
+          [if(isnum(%0),%0,
+            squish(iter(%1,if(cand(strmatch(%i0,%0:*),
+              not(strmatch(after(%i0,%0:),*:*)),
+              isnum(after(%i0,%0:))),
+              after(%i0,%0:)))))]
+        flags: [funsyntax]
+      FUN`MODIFIER: Modifiers. %0 a JSON array of Foundry modifier objects (slug, type, modifier, force, ignored, predicate), %1 the roll options.
+      # The modifiers that count, as Foundry's applyStackingRules picks them: a modifier whose predicate
+      # fails or that is ignored is left out; untyped ones all count; of the ability modifiers only the
+      # best (a forced one first); of every other type the highest bonus and the lowest penalty, the
+      # first of equals. Gives type~value~slug for each.
+      FUN`MODIFIER`CHOSEN:
+        value: |-
+          @@(%0 Foundry modifier objects, %1 the roll options)
+          [setq(mod_all,json_map(me/FUN`MODIFIER`FLAT,%0,%b,%1))]
+          [setq(mod_types,setdiff(iter(%q<mod_all>,first(%i0,~)),untyped ability))]
+          [squish(
+            [u(FUN`MODIFIER`OF`TYPE,untyped,%q<mod_all>)]%b
+            [u(FUN`MODIFIER`BEST`ABILITY,u(FUN`MODIFIER`OF`TYPE,ability,%q<mod_all>))]%b
+            [iter(%q<mod_types>,u(FUN`MODIFIER`BEST`OF`TYPE,u(FUN`MODIFIER`OF`TYPE,%i0,%q<mod_all>)))])]
+        flags: [funsyntax]
+      FUN`MODIFIER`TOTAL:
+        value: |-
+          @@(%0 Foundry modifier objects, %1 the roll options)
+          [ladd(0 [iter(u(FUN`MODIFIER`CHOSEN,%0,%1),elements(%i0,2,~))])]
+        flags: [funsyntax]
+      FUN`MODIFIER`ENABLED:
+        value: |-
+          @@(%0 Foundry modifier objects, %1 the roll options: the slugs of the modifiers that count)
+          [iter(u(FUN`MODIFIER`CHOSEN,%0,%1),elements(%i0,3,~))]
+        flags: [funsyntax]
+      # json_map's callback: %1 one modifier object, %3 the roll options. Gives type~value~slug~force, or
+      # nothing when the modifier is ignored or its predicate fails. An unknown type is untyped.
+      FUN`MODIFIER`FLAT:
+        value: |-
+          @@(%1 one modifier object, %3 the roll options)
+          [if(cand(not(json_query(%1,extract,$.ignored)),
+            u(FUN`PREDICATE`TEST,firstof(json_query(%1,get,predicate),\[\]),%3)),
+            [u(FUN`MODIFIER`TYPE,json_query(%1,extract,$.type))]~[add(0,json_query(%1,extract,$.modifier))]~[firstof(json_query(%1,extract,$.slug),modifier)]~[t(json_query(%1,extract,$.force))])]
+        flags: [funsyntax]
+      FUN`MODIFIER`TYPE:
+        value: |-
+          if(match(ability circumstance item potency proficiency status untyped,%0),%0,untyped)
+        flags: [funsyntax]
+      FUN`MODIFIER`OF`TYPE:
+        value: |-
+          @@(%0 a type, %1 type~value~slug~force entries)
+          [iter(%1,if(strmatch(first(%i0,~),%0),%i0))]
+        flags: [funsyntax]
+      FUN`MODIFIER`BEST`ABILITY:
+        value: |-
+          @@(%0 the ability entries: the last forced one, else the first highest)
+          [setq(mod_forced,iter(%0,if(elements(%i0,4,~),%i0)))]
+          [if(words(%q<mod_forced>),last(%q<mod_forced>),u(FUN`MODIFIER`FIRST`AT,%0,lmax(iter(%0,elements(%i0,2,~)))))]
+        flags: [funsyntax]
+      FUN`MODIFIER`BEST`OF`TYPE:
+        value: |-
+          @@(%0 the entries of one type: the first highest bonus and the first lowest penalty)
+          [setq(mod_bonuses,iter(%0,if(gte(elements(%i0,2,~),0),%i0)))]
+          [setq(mod_penalties,iter(%0,if(lt(elements(%i0,2,~),0),%i0)))]
+          [squish(
+            [u(FUN`MODIFIER`FIRST`AT,%q<mod_bonuses>,lmax(iter(%q<mod_bonuses>,elements(%i0,2,~))))]%b
+            [u(FUN`MODIFIER`FIRST`AT,%q<mod_penalties>,lmin(iter(%q<mod_penalties>,elements(%i0,2,~))))])]
+        flags: [funsyntax]
+      FUN`MODIFIER`FIRST`AT:
+        value: |-
+          @@(%0 entries, %1 a value: the first entry with that value; nothing when there are no entries)
+          [if(words(%0),first(iter(%0,if(eq(elements(%i0,2,~),%1),%i0))))]
+        flags: [funsyntax]
+      FUN`DEGREE: Degrees of success, 0 critical failure, 1 failure, 2 success, 3 critical success.
+      # Foundry's DegreeOfSuccess: 10 over the DC is a critical success and 10 under a critical failure;
+      # a natural 20 raises the degree one step and a natural 1 lowers it.
+      FUN`DEGREE`OF`CHECK:
+        value: |-
+          @@(%0 the check's total, %1 the DC, %2 the d20's face)
+          [setq(degree_base,
+            switch(1,
+              gte(sub(%0,%1),10), 3,
+              gte(sub(%1,%0),10), 0,
+              gte(%0,%1), 2,
+              1))]
+          [switch(%2,
+            20, min(3,inc(%q<degree_base>)),
+            1, max(0,dec(%q<degree_base>)),
+            %q<degree_base>)]
+        flags: [funsyntax]
+      FUN`FORMULA: Rule element values. %1 is the roll data, a JSON object with actor, item and rule keys shaped like Foundry's.
+      # Foundry's RuleElement.resolveValue for a number or a string: injected properties first, then a
+      # whole number is that number, text without @ is that text, and a formula is rolled with the roll
+      # data. A formula that names something the data lacks gives the default (%2), as in Foundry.
+      FUN`FORMULA`VALUE:
+        value: |-
+          @@(%0 the value as JSON, %1 the roll data, %2 the default)
+          [switch(json_query(%0,type),
+            number, json_query(%0,extract,$),
+            string, u(FUN`FORMULA`TEXT,trim(u(FUN`FORMULA`INJECT,json_query(%0,extract,$),%1)),%1,%2),
+            boolean, json_query(%0,extract,$),
+            %2)]
+        flags: [funsyntax]
+      FUN`FORMULA`TEXT:
+        value: |-
+          @@(%0 the text with injected properties resolved, %1 the roll data, %2 the default)
+          [switch(1,
+            regmatch(%0,^-?\\d+$), %0,
+            not(strmatch(%0,*@*)), %0,
+            u(FUN`FORMULA`ROLL,roll(%0,%1),%2))]
+        flags: [funsyntax]
+      FUN`FORMULA`ROLL:
+        value: |-
+          @@(%0 what roll gave, %1 the default)
+          [if(strmatch(%0,#-*),%1,%0)]
+        flags: [funsyntax]
+      # {actor|<path>}, {item|<path>} and {rule|<path>} replaced by the value at that path in the roll data.
+      FUN`FORMULA`INJECT:
+        value: |-
+          @@(%0 text, %1 the roll data)
+          [if(regmatch(%0,\\x7B),
+            regeditall(%0,\\x7B%(actor|item|rule%)\\|%(.*?%)\\x7D,u(FUN`FORMULA`PROPERTY,$1.$2,%1)),
+            %0)]
+        flags: [funsyntax]
+      FUN`FORMULA`PROPERTY:
+        value: |-
+          @@(%0 a dotted path, %1 the roll data)
+          [firstof(json_query(%1,extract,$.%0),undefined)]
+        flags: [funsyntax]
+
+  # Reads the PF2e feed into the data objects. WIZARD for @http and for writing the data objects.
+  # It reads the feed's index, then each file in turn; an item whose hash is unchanged is left alone.
+  # Trees: INC`UPDATE` the run, ON` the @http replies, INC`IMPORT` one item, FUN`FEED` the parsing.
+  # FEED` holds the run's state: RUN who started it, NEXT the index being read, QUEUE the files still
+  # to read (path|pack|book|hash), CURRENT the one being read, BODY its text, LINES its line count, AT
+  # the next line to read, FAILED the files that
+  # could not be read, FILE`<key> the hash of each file last read in full, INDEX the last index read.
+  - ref: updater
+    type: thing
+    name: PF2e Updater
+    location: "{{core}}"
+    flags: [WIZARD]
+    attributes:
+      INC: Command lists, one tree per step of a run.
+      INC`UPDATE`START:
+        value: |-
+          &FEED`RUN me=%#; &FEED`FAILED me; @http me/ON`INDEX=[get({{core}}/DATA`CONFIG`FEED)]/index.json
+        flags: [cmdsyntax]
+      ON`INDEX:
+        value: |-
+          @assert eq(%<status>,200)=@pemit [get(me/FEED`RUN)]=PF2E: The feed's index could not be read: HTTP %<status>.; &FEED`NEXT me=%0; &FEED`QUEUE me=[u(FUN`FEED`FILES,%0)]; @pemit [get(me/FEED`RUN)]=PF2E: Reading [words(get(me/FEED`QUEUE))] changed files from Foundry pf2e [left(json_query(%0,extract,$.foundry.commit),8)].; @trigger me/INC`UPDATE`NEXT
+        flags: [cmdsyntax]
+      INC`UPDATE`NEXT:
+        value: |-
+          @assert words(get(me/FEED`QUEUE))={@trigger me/INC`UPDATE`DONE}; &FEED`CURRENT me=[first(get(me/FEED`QUEUE))]; &FEED`QUEUE me=[rest(get(me/FEED`QUEUE))]; @http me/ON`FILE=[get({{core}}/DATA`CONFIG`FEED)]/[first(get(me/FEED`CURRENT),|)]
+        flags: [cmdsyntax]
+      ON`FILE:
+        value: |-
+          @assert eq(%<status>,200)={&FEED`FAILED me=[squish(get(me/FEED`FAILED) [first(get(me/FEED`CURRENT),|)])]; @trigger me/INC`UPDATE`NEXT}; &FEED`BODY me=%0; &FEED`LINES me=[words(%0,%r)]; &FEED`AT me=1; @trigger me/INC`IMPORT`BATCH
+        flags: [cmdsyntax]
+      # The next lines of the file, a batch per queue entry, so a run stays inside each entry's time
+      # limit and never floods the queue.
+      INC`IMPORT`BATCH:
+        value: |-
+          @assert lte(get(me/FEED`AT),get(me/FEED`LINES))={&FEED`FILE`[u(FUN`FEED`KEY,first(get(me/FEED`CURRENT),|))] me=[elements(get(me/FEED`CURRENT),4,|)]; @trigger me/INC`UPDATE`NEXT}; @dolist/inplace [lnum(get(me/FEED`AT),min(add(get(me/FEED`AT),39),get(me/FEED`LINES)))]=@include me/INC`IMPORT`LINE=%i0; &FEED`AT me=[add(get(me/FEED`AT),40)]; @trigger me/INC`IMPORT`BATCH
+        flags: [cmdsyntax]
+      # %0 a line's number in FEED`BODY: <_id> <hash> <leaf> <value>. A line of an item whose stored
+      # HASH matches is skipped.
+      INC`IMPORT`LINE:
+        value: |-
+          think [setq(line,extract(get(me/FEED`BODY),%0,1,%r))]; @assert strlen(%q<line>); think [setq(id,ucstr(first(%q<line>)),hash,elements(%q<line>,2),leaf,elements(%q<line>,3),value,after(after(after(%q<line>,%b),%b),%b),store,get({{core}}/DATA`PACK`[ucstr(elements(get(me/FEED`CURRENT),2,|))]))]; @break strmatch(get(%q<store>/ITEM`%q<id>`HASH),%q<hash>); @include me/INC`IMPORT`[first(%q<leaf>,`)]
+        flags: [cmdsyntax]
+      INC`IMPORT`ITEM:
+        value: |-
+          &ITEM`%q<id> %q<store>=%q<value>; &ITEM`%q<id>`BOOK %q<store>=[elements(get(me/FEED`CURRENT),3,|)]; @wipe %q<store>/ITEM`%q<id>`EMBED`*
+        flags: [cmdsyntax]
+      INC`IMPORT`TEXT:
+        value: |-
+          &ITEM`%q<id>`TEXT %q<store>=[json_query(%q<value>,unescape)]
+        flags: [cmdsyntax]
+      INC`IMPORT`EMBED:
+        value: |-
+          &ITEM`%q<id>`%q<leaf> %q<store>=%q<value>
+        flags: [cmdsyntax]
+      INC`IMPORT`HASH:
+        value: |-
+          &ITEM`%q<id>`HASH %q<store>=%q<hash>
+        flags: [cmdsyntax]
+      INC`UPDATE`DONE:
+        value: |-
+          &FEED`INDEX me=[get(me/FEED`NEXT)]; &FEED`NEXT me; &FEED`CURRENT me; &FEED`BODY me; &FEED`LINES me; &FEED`AT me; @pemit [get(me/FEED`RUN)]=PF2E: The feed is read.[if(words(get(me/FEED`FAILED)),%bThese files could not be read and are tried again next time: [get(me/FEED`FAILED)])]
+        flags: [cmdsyntax]
+      FUN: Function attributes.
+      # Every file of every book in the index whose hash differs from the last one read in full, as
+      # path|pack|book|hash.
+      FUN`FEED`FILES:
+        value: |-
+          json_map(me/FUN`FEED`BOOK,json_query(%0,get,books))
+        flags: [funsyntax]
+      FUN`FEED`BOOK:
+        value: |-
+          @@(%1 one book of the index)
+          [json_map(me/FUN`FEED`FILE,json_query(%1,get,files),%b,json_query(%1,extract,$.slug))]
+        flags: [funsyntax]
+      FUN`FEED`FILE:
+        value: |-
+          @@(%1 one file of a book, %3 the book)
+          [setq(feed_path,json_query(%1,extract,$.path),feed_hash,json_query(%1,extract,$.hash))]
+          [if(not(strmatch(get(me/FEED`FILE`[u(FUN`FEED`KEY,%q<feed_path>)]),%q<feed_hash>)),
+            %q<feed_path>|[json_query(%1,extract,$.pack)]|%3|%q<feed_hash>)]
+        flags: [funsyntax]
+      FUN`FEED`KEY:
+        value: |-
+          @@(%0 a file's path, items/pc1/feats-3.txt, as the key PC1-FEATS-3)
+          [ucstr(edit(before(after(%0,items/),.txt),/,-))]
+        flags: [funsyntax]
+
+  - ref: data_actions
+    type: thing
+    name: "PF2e Data: actions"
+    location: "{{core}}"
+    attributes:
+      ITEM: "Items of the Foundry pack actions. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+
+  - ref: data_ancestries
+    type: thing
+    name: "PF2e Data: ancestries"
+    location: "{{core}}"
+    attributes:
+      ITEM: "Items of the Foundry pack ancestries. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+
+  - ref: data_ancestry_features
+    type: thing
+    name: "PF2e Data: ancestry-features"
+    location: "{{core}}"
+    attributes:
+      ITEM: "Items of the Foundry pack ancestry-features. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+
+  - ref: data_backgrounds
+    type: thing
+    name: "PF2e Data: backgrounds"
+    location: "{{core}}"
+    attributes:
+      ITEM: "Items of the Foundry pack backgrounds. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+
+  - ref: data_classes
+    type: thing
+    name: "PF2e Data: classes"
+    location: "{{core}}"
+    attributes:
+      ITEM: "Items of the Foundry pack classes. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+
+  - ref: data_class_features
+    type: thing
+    name: "PF2e Data: class-features"
+    location: "{{core}}"
+    attributes:
+      ITEM: "Items of the Foundry pack class-features. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+
+  - ref: data_conditions
+    type: thing
+    name: "PF2e Data: conditions"
+    location: "{{core}}"
+    attributes:
+      ITEM: "Items of the Foundry pack conditions. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+
+  - ref: data_equipment
+    type: thing
+    name: "PF2e Data: equipment"
+    location: "{{core}}"
+    attributes:
+      ITEM: "Items of the Foundry pack equipment. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+
+  - ref: data_equipment_effects
+    type: thing
+    name: "PF2e Data: equipment-effects"
+    location: "{{core}}"
+    attributes:
+      ITEM: "Items of the Foundry pack equipment-effects. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+
+  - ref: data_familiar_abilities
+    type: thing
+    name: "PF2e Data: familiar-abilities"
+    location: "{{core}}"
+    attributes:
+      ITEM: "Items of the Foundry pack familiar-abilities. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+
+  - ref: data_feat_effects
+    type: thing
+    name: "PF2e Data: feat-effects"
+    location: "{{core}}"
+    attributes:
+      ITEM: "Items of the Foundry pack feat-effects. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+
+  - ref: data_feats
+    type: thing
+    name: "PF2e Data: feats"
+    location: "{{core}}"
+    attributes:
+      ITEM: "Items of the Foundry pack feats. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+
+  - ref: data_hazards
+    type: thing
+    name: "PF2e Data: hazards"
+    location: "{{core}}"
+    attributes:
+      ITEM: "Items of the Foundry pack hazards. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+
+  - ref: data_heritages
+    type: thing
+    name: "PF2e Data: heritages"
+    location: "{{core}}"
+    attributes:
+      ITEM: "Items of the Foundry pack heritages. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+
+  - ref: data_other_effects
+    type: thing
+    name: "PF2e Data: other-effects"
+    location: "{{core}}"
+    attributes:
+      ITEM: "Items of the Foundry pack other-effects. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+
+  - ref: data_spell_effects
+    type: thing
+    name: "PF2e Data: spell-effects"
+    location: "{{core}}"
+    attributes:
+      ITEM: "Items of the Foundry pack spell-effects. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+
+  - ref: data_spells
+    type: thing
+    name: "PF2e Data: spells"
+    location: "{{core}}"
+    attributes:
+      ITEM: "Items of the Foundry pack spells. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+
+  - ref: data_vehicles
+    type: thing
+    name: "PF2e Data: vehicles"
+    location: "{{core}}"
+    attributes:
+      ITEM: "Items of the Foundry pack vehicles. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
+
+  - ref: data_pathfinder_monster_core
+    type: thing
+    name: "PF2e Data: pathfinder-monster-core"
+    location: "{{core}}"
+    attributes:
+      ITEM: "Items of the Foundry pack pathfinder-monster-core. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
