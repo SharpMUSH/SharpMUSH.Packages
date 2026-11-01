@@ -627,16 +627,16 @@ objects:
       INC: Command lists, one tree per step of a run.
       INC`UPDATE`START:
         value: |-
-          &FEED`RUN me=[firstof(%0,%#)]; &FEED`FAILED me; @http me/ON`COMMIT=https://api.github.com/repos/[get({{core}}/DATA`CONFIG`REPOSITORY)]/commits/[get({{core}}/DATA`CONFIG`BRANCH)],[json(object,Accept,"application/vnd.github.sha")]
+          @assert cor(not(strlen(get(me/FEED`RUN))),gt(sub(secs(),get(me/FEED`TOUCHED)),300))=@pemit [firstof(%0,%#)]=PF2E: The feed is being read already.; &FEED`RUN me=[firstof(%0,%#)]; &FEED`TOUCHED me=[secs()]; &FEED`FAILED me; @http me/ON`COMMIT=https://api.github.com/repos/[get({{core}}/DATA`CONFIG`REPOSITORY)]/commits/[get({{core}}/DATA`CONFIG`BRANCH)],[json(object,Accept,"application/vnd.github.sha")]
         flags: [cmdsyntax]
       # The commit the branch is on, so every file of the run comes from it rather than from a cache.
       ON`COMMIT:
         value: |-
-          @assert cand(eq(%<status>,200),eq(strlen(%0),40),regmatch(%0,^\[0-9a-f\]+$))=@pemit [get(me/FEED`RUN)]=PF2E: The feed's branch could not be read: HTTP %<status>.; &FEED`BASE me=https://raw.githubusercontent.com/[get({{core}}/DATA`CONFIG`REPOSITORY)]/%0/pf2e-feed; @http me/ON`INDEX=[get(me/FEED`BASE)]/index.json
+          @assert cand(eq(%<status>,200),eq(strlen(%0),40),regmatch(%0,^\[0-9a-f\]+$))={@pemit [get(me/FEED`RUN)]=PF2E: The feed's branch could not be read: HTTP %<status>.; &FEED`RUN me}; &FEED`BASE me=https://raw.githubusercontent.com/[get({{core}}/DATA`CONFIG`REPOSITORY)]/%0/pf2e-feed; @http me/ON`INDEX=[get(me/FEED`BASE)]/index.json
         flags: [cmdsyntax]
       ON`INDEX:
         value: |-
-          @assert eq(%<status>,200)=@pemit [get(me/FEED`RUN)]=PF2E: The feed's index could not be read: HTTP %<status>.; &FEED`NEXT me=%0; &FEED`QUEUE me=[u(FUN`FEED`FILES,%0)]; @pemit [get(me/FEED`RUN)]=PF2E: Reading [words(get(me/FEED`QUEUE))] changed files from Foundry pf2e [left(json_query(%0,extract,$.foundry.commit),8)].; @trigger me/INC`UPDATE`NEXT
+          @assert eq(%<status>,200)={@pemit [get(me/FEED`RUN)]=PF2E: The feed's index could not be read: HTTP %<status>.; &FEED`RUN me}; &FEED`NEXT me=%0; &FEED`QUEUE me=[u(FUN`FEED`FILES,%0)]; @pemit [get(me/FEED`RUN)]=PF2E: Reading [words(get(me/FEED`QUEUE))] changed files from Foundry pf2e [left(json_query(%0,extract,$.foundry.commit),8)].; @trigger me/INC`UPDATE`NEXT
         flags: [cmdsyntax]
       INC`UPDATE`NEXT:
         value: |-
@@ -650,7 +650,7 @@ objects:
       # limit and never floods the queue.
       INC`IMPORT`BATCH:
         value: |-
-          @assert lte(get(me/FEED`AT),get(me/FEED`LINES))={&FEED`FILE`[u(FUN`FEED`KEY,first(get(me/FEED`CURRENT),|))] me=[elements(get(me/FEED`CURRENT),4,|)]; @trigger me/INC`UPDATE`NEXT}; @dolist/inplace [lnum(get(me/FEED`AT),min(add(get(me/FEED`AT),39),get(me/FEED`LINES)))]=@include me/INC`IMPORT`LINE=%i0; &FEED`AT me=[add(get(me/FEED`AT),40)]; @trigger me/INC`IMPORT`BATCH
+          &FEED`TOUCHED me=[secs()]; @assert lte(get(me/FEED`AT),get(me/FEED`LINES))={&FEED`FILE`[u(FUN`FEED`KEY,first(get(me/FEED`CURRENT),|))] me=[elements(get(me/FEED`CURRENT),4,|)]; @trigger me/INC`UPDATE`NEXT}; @dolist/inplace [lnum(get(me/FEED`AT),min(add(get(me/FEED`AT),39),get(me/FEED`LINES)))]=@include me/INC`IMPORT`LINE=%i0; &FEED`AT me=[add(get(me/FEED`AT),40)]; @trigger me/INC`IMPORT`BATCH
         flags: [cmdsyntax]
       # %0 a line's number in FEED`BODY: <_id> <hash> <leaf> <value>. A line of an item whose stored
       # HASH matches is skipped.
@@ -681,7 +681,7 @@ objects:
         flags: [cmdsyntax]
       INC`UPDATE`DONE:
         value: |-
-          &FEED`INDEX me=[get(me/FEED`NEXT)]; &FEED`NEXT me; &FEED`CURRENT me; &FEED`BODY me; &FEED`LINES me; &FEED`AT me; @pemit [get(me/FEED`RUN)]=PF2E: The feed is read.[if(words(get(me/FEED`FAILED)),%bThese files could not be read and are tried again next time: [get(me/FEED`FAILED)])]
+          &FEED`INDEX me=[get(me/FEED`NEXT)]; &FEED`NEXT me; &FEED`CURRENT me; &FEED`BODY me; &FEED`LINES me; &FEED`AT me; @pemit [get(me/FEED`RUN)]=PF2E: The feed is read.[if(words(get(me/FEED`FAILED)),%bThese files could not be read and are tried again next time: [get(me/FEED`FAILED)])]; &FEED`RUN me
         flags: [cmdsyntax]
       FUN: Function attributes.
       # Every file of every book in the index whose hash differs from the last one read in full, as
@@ -780,7 +780,7 @@ objects:
       # entry_json the entry, entry_text how it reads: numbered after the last entry, stamped with who made it.
       INC`ENTRY`WRITE:
         value: |-
-          think setq(entry_n,inc(lmax(0 [iter(lattr(%q<sheet_target>/PF2E`LEDGER`*),last(%i0,`))]))); &PF2E`LEDGER`%q<entry_n> %q<sheet_target>=[json_mod(%q<entry_json>,patch,json(object,n,%q<entry_n>,by,json(string,objid(%#))))]; @set %q<sheet_target>/PF2E`LEDGER`%q<entry_n>=wizard; @pemit %#=notice(PF2E,[if(strmatch(%q<sheet_target>,%#),,[name(%q<sheet_target>)]: )]%q<entry_text> %(entry %q<entry_n>%).,ok)
+          think setq(entry_n,inc(lmax(0 [iter(lattr(%q<sheet_target>/PF2E`LEDGER`*),last(%i0,`))]))); &PF2E`LEDGER`%q<entry_n> %q<sheet_target>=[json_mod(%q<entry_json>,patch,json(object,n,%q<entry_n>,by,json(string,objid(%#))))]; @set %q<sheet_target>/PF2E`LEDGER`%q<entry_n>=wizard; @pemit %#=notice(PF2E,[if(strmatch(%q<sheet_target>,%#),,[name(%q<sheet_target>)]:%b)]%q<entry_text> %(entry %q<entry_n>%).,ok)
         flags: [cmdsyntax]
       # A check: the statistic's modifiers stacked, a d20 rolled and kept, and against a DC its degree.
       INC`CHECK`ROLL:
