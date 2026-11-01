@@ -2,7 +2,7 @@
 
 A rules reference for Fate, installed as wiki pages: the ladder and the dice, aspects and fate points,
 skills and approaches, stunts, the four actions, stress and consequences, making a character with
-`+chargen`, and encounters. The pages describe the commands of [`sheet-fate`](../sheet-fate/). Players
+`+chargen`, advancement, and encounters. The pages describe the commands of [`sheet-fate`](../sheet-fate/). Players
 read them in the portal's wiki and with `+wiki`.
 
 The collection is named **Fate** and opens on **Start here — Fate**, pinned to the wiki home. The **Fate

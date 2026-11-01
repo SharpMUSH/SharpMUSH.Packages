@@ -3,7 +3,7 @@ package: sheet-fate
 title: "Fate sheet"
 version: 1.1.0
 authors: [SharpMUSH]
-description: "A Fate character sheet: skills or the six approaches on the ladder, aspects, stunts, stress tracks, consequences and fate points. +sheet shows and fills it in, +chargen walks a player through it, and +check rolls four Fate dice plus a rating against an opposition for the room. The build is a ledger of grants, and +encounter gives each encounter its own copy of fate points, stress and consequences. Fate Core and Fate Accelerated SRD material under CC BY 3.0."
+description: "A Fate character sheet: skills or the six approaches on the ladder, aspects, stunts, stress tracks, consequences and fate points. +sheet shows and fills it in, +chargen walks a player through it, and +check rolls four Fate dice plus a rating against an opposition for the room. The build is a ledger of grants; staff give milestones and breakthroughs that stay on a log, and players spend them with +sheet/advance. +encounter gives each encounter its own copy of fate points, stress and consequences. Fate Core and Fate Accelerated SRD material under CC BY 3.0."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, fate, dice, checks, aspects]
@@ -412,6 +412,18 @@ objects:
         SHEET`REVOKE
       DATA`ROUTE`SHEET`CLEAR: |-
         SHEET`CLEAR
+      DATA`ROUTE`SHEET`MILESTONE: |-
+        SHEET`MILESTONE
+      DATA`ROUTE`SHEET`BREAKTHROUGH: |-
+        SHEET`BREAKTHROUGH
+      DATA`ROUTE`SHEET`POWERUP: |-
+        SHEET`POWERUP
+      DATA`ROUTE`SHEET`VOID: |-
+        SHEET`VOID
+      DATA`ROUTE`SHEET`ADVANCE: |-
+        SHEET`ADVANCE
+      DATA`ROUTE`SHEET`ADVANCES: |-
+        SHEET`ADVANCES
       DATA`ROUTE`CHECK`BARE: |-
         CHECK`USAGE
       DATA`ROUTE`CHECK`ARG: |-
@@ -450,6 +462,91 @@ objects:
         CONSEQUENCE`*
       PLAY`POINTS: |-
         POINTS
+      # Advancement, as Fate Condensed has it. A keeper's award gives what DATA`ADV`KIND`<kind> lists, one letter each:
+      # M a milestone, S a skill step, H a new high concept, R a point of refresh. +sheet/advance spends one on an
+      # ADVANCE`<KEY> option: its name, with TOKEN (what it costs; %0 the character, %1 and %2 what was typed),
+      # USAGE, SKIP (%0: 1 when it does not apply) and RUN (%0, %1, %2: makes the change and says what changed, or
+      # #-1 and why, having changed nothing) beneath. Packages add their own options.
+      DATA`ADV`KIND`MILESTONE: |-
+        M
+      DATA`ADV`KIND`BREAKTHROUGH: |-
+        M S H
+      DATA`ADV`KIND`REFRESH: |-
+        R
+      DATA`ADV`KIND`SKILL: |-
+        S
+      DATA`ADV`TOKEN`M: |-
+        milestone
+      DATA`ADV`TOKEN`S: |-
+        skill step
+      DATA`ADV`TOKEN`H: |-
+        new high concept
+      DATA`ADV`TOKEN`R: |-
+        point of refresh
+      ADVANCE`SWAP: |-
+        Switch the ratings of two skills, or put one at Average (+1) in place of one that is not on your sheet
+      ADVANCE`SWAP`TOKEN: |-
+        M
+      ADVANCE`SWAP`USAGE: |-
+        swap <skill>=<skill>
+      ADVANCE`SWAP`SKIP:
+        value: |-
+          hasattr(%!,GATE`SET)
+        flags: [funsyntax]
+      ADVANCE`SWAP`RUN:
+        value: |-
+          setqm(r_one,u(%!/FUN`TRAIT`FIND,%1),r_two,u(%!/FUN`TRAIT`FIND,%2))[cond(not(strlen(%q<r_one>)),#-1 There is no [u(%!/FUN`TRAIT`NOUN)] '%1'.,not(strlen(%q<r_two>)),#-1 There is no [u(%!/FUN`TRAIT`NOUN)] '%2'.,not(comp(%q<r_one>,%q<r_two>)),#-1 Name two different [u(%!/FUN`TRAIT`NOUN)]s.,not(comp(setr(r_one_was,u(%!/API`RATING,%0,%q<r_one>)),u(%!/API`RATING,%0,%q<r_two>))),#-1 [u(%!/FUN`TRAIT`LABEL,%q<r_one>)] and [u(%!/FUN`TRAIT`LABEL,%q<r_two>)] are both [u(%!/FUN`LADDER`SHOW,%q<r_one_was>)]: switching them changes nothing.,1,[null(iter(lattr(%0/FATE`GRANT`*),[setqm(swap_one,get(%0/%i0`RATING`[ucstr(%q<r_one>)]),swap_two,get(%0/%i0`RATING`[ucstr(%q<r_two>)]))][u(%!/FUN`DO`WRITE,%0,after(%i0,FATE`)`RATING`[ucstr(%q<r_one>)],%q<swap_two>)][u(%!/FUN`DO`WRITE,%0,after(%i0,FATE`)`RATING`[ucstr(%q<r_two>)],%q<swap_one>)]))][u(%!/API`REBUILD,%0)][u(%!/FUN`TRAIT`LABEL,%q<r_one>)] is [u(%!/FUN`LADDER`SHOW,u(%!/API`RATING,%0,%q<r_one>))] and [u(%!/FUN`TRAIT`LABEL,%q<r_two>)] [u(%!/FUN`LADDER`SHOW,u(%!/API`RATING,%0,%q<r_two>))].)]
+        flags: [funsyntax]
+      ADVANCE`ASPECT: |-
+        Rewrite one aspect; the high concept takes a new high concept from a breakthrough
+      ADVANCE`ASPECT`TOKEN:
+        value: |-
+          if(strmatch(u(%!/FUN`ASPECT`SLOT,%1),CONCEPT),H,M)
+        flags: [funsyntax]
+      ADVANCE`ASPECT`USAGE: |-
+        aspect <slot>=<aspect>
+      ADVANCE`ASPECT`RUN:
+        value: |-
+          setq(r_slot,u(%!/FUN`ASPECT`SLOT,%1))[cond(not(strlen(%q<r_slot>)),#-1 There is no aspect '%1'. Use concept%, trouble%, or 1 to [sub(get(%!/DATA`CONFIG`ASPECTS),2)].,not(strlen(%2)),#-1 Write the new aspect after =.,gt(strlen(%2),200),#-1 Keep an aspect to 200 characters.,1,[u(%!/FUN`DO`WRITE,%0,ASPECT`%q<r_slot>,%2)][u(%!/FUN`ASPECT`LABEL,%q<r_slot>)] is now: %2)]
+        flags: [funsyntax]
+      ADVANCE`STUNT: |-
+        Rewrite one stunt, or buy a new one in an empty slot for a point of refresh
+      ADVANCE`STUNT`TOKEN: |-
+        M
+      ADVANCE`STUNT`USAGE: |-
+        stunt <slot>=<stunt>
+      ADVANCE`STUNT`SKIP:
+        value: |-
+          not(gt(get(%!/DATA`CONFIG`STUNTS),0))
+        flags: [funsyntax]
+      ADVANCE`STUNT`RUN:
+        value: |-
+          setq(r_new,not(strlen(get(%0/FATE`STUNT`%1))))[cond(not(cand(isint(%1),gte(%1,1),lte(%1,get(%!/DATA`CONFIG`STUNTS)))),#-1 There is no stunt slot '%1'. Use 1 to [get(%!/DATA`CONFIG`STUNTS)].,not(strlen(%2)),#-1 Write the stunt after =.,gt(strlen(%2),300),#-1 Keep a stunt to 300 characters.,cand(%q<r_new>,lte(u(%!/FUN`POINTS`REFRESH,%0),1)),#-1 A new stunt costs a point of refresh%, and refresh never goes below 1.,1,[if(%q<r_new>,u(%!/FUN`ADV`ADD,%0,REFRESH,ALL,-1))][u(%!/FUN`DO`WRITE,%0,STUNT`%1,%2)]Stunt %1 is now: %2[if(%q<r_new>,%b%(Refresh [u(%!/FUN`POINTS`REFRESH,%0)] now.%))])]
+        flags: [funsyntax]
+      ADVANCE`SKILL: |-
+        Raise one skill a step, even from Mediocre (+0) to Average (+1)
+      ADVANCE`SKILL`TOKEN: |-
+        S
+      ADVANCE`SKILL`USAGE: |-
+        skill <skill>
+      ADVANCE`SKILL`SKIP:
+        value: |-
+          hasattr(%!,GATE`SET)
+        flags: [funsyntax]
+      ADVANCE`SKILL`RUN:
+        value: |-
+          setq(r_key,u(%!/FUN`TRAIT`FIND,%1))[cond(not(strlen(%q<r_key>)),#-1 There is no [u(%!/FUN`TRAIT`NOUN)] '%1'.,gte(u(%!/API`RATING,%0,%q<r_key>),8),#-1 [u(%!/FUN`TRAIT`LABEL,%q<r_key>)] is at the top of the ladder.,1,[u(%!/FUN`ADV`ADD,%0,RATING,%q<r_key>,1)][u(%!/FUN`TRAIT`LABEL,%q<r_key>)] is now [u(%!/FUN`LADDER`SHOW,u(%!/API`RATING,%0,%q<r_key>))].[if(strlen(setr(r_problems,u(%!/FUN`SHEET`PROBLEMS,%0))),%b%q<r_problems>)])]
+        flags: [funsyntax]
+      ADVANCE`REFRESH: |-
+        Gain a point of refresh
+      ADVANCE`REFRESH`TOKEN: |-
+        R
+      ADVANCE`REFRESH`USAGE: |-
+        refresh
+      ADVANCE`REFRESH`RUN:
+        value: |-
+          [u(%!/FUN`ADV`ADD,%0,REFRESH,ALL,1)]Refresh is now [u(%!/FUN`POINTS`REFRESH,%0)].
+        flags: [funsyntax]
       # The steps +chargen walks a player through: CHARGEN`<KEY> holds the step's name, with ORDER (lowest
       # first), DONE (1 when the character %0 has done it), TEXT (what to do next), SKIP (1 when the step does not
       # apply to this game) and OPTIONAL (1 when the character is complete without it) beneath. Packages add
@@ -675,8 +772,98 @@ objects:
       # BUILD`<name> hook names, so character creation starts again. Play (stress, consequences, fate points) stays.
       INC`SHEET`CLEAR:
         value: |-
-          @include %!/INC`NEED`KEEPER; @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/clear <name> takes away their whole build so they make the character again.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>; @assert strlen(%q<sheet_who>); @dolist/inline GRANT ASPECT STUNT [iter(lattr(%!/BUILD`*),get(%!/%i0))]={@include/args %!/INC`DO`WIPE=who,%q<sheet_who>,leaf,##}; think u(%!/API`REBUILD,%q<sheet_who>); @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s build is cleared: +chargen starts it again.,ok); @pemit %q<sheet_who>=notice(SHEET,[name(%#)] cleared your character's build. +chargen walks you through making it again.)
+          @include %!/INC`NEED`KEEPER; @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/clear <name> takes away their whole build so they make the character again.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>; @assert strlen(%q<sheet_who>); @dolist/inline GRANT ASPECT STUNT [iter(lattr(%!/BUILD`*),get(%!/%i0))]={@include/args %!/INC`DO`WIPE=who,%q<sheet_who>,leaf,##}; think u(%!/FUN`ADV`REOPEN,%q<sheet_who>)[u(%!/API`REBUILD,%q<sheet_who>)]; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s build is cleared: +chargen starts it again.,ok); @pemit %q<sheet_who>=notice(SHEET,[name(%#)] cleared your character's build. +chargen walks you through making it again.)
         flags: [cmdsyntax]
+      # ---- advancement ---------------------------------------------------------------
+      # Every award stays on the character as FATE`ADV`<n> (milestone, breakthrough, refresh or skill), with BY (the
+      # keeper's objid), AT (secs()), WHY, GAVE (its letters) and OPEN (those not spent yet) beneath, and USED`<m>
+      # for each one spent: its letter and the advance as typed. A keeper voids an award with VOID (who, when, why);
+      # nothing is ever deleted, so the log is the audit trail.
+      # +sheet/milestone <name>[=<reason>]: one milestone, usually at the end of a session.
+      INC`SHEET`MILESTONE:
+        value: |-
+          @include/args %!/INC`ADV`GIVE=kind,milestone,usage,+sheet/milestone <name>%[=<reason>%]
+        flags: [cmdsyntax]
+      # +sheet/breakthrough <name>[=<reason>]: at the end of an arc: a milestone, a skill step and a new high concept.
+      INC`SHEET`BREAKTHROUGH:
+        value: |-
+          @include/args %!/INC`ADV`GIVE=kind,breakthrough,usage,+sheet/breakthrough <name>%[=<reason>%]
+        flags: [cmdsyntax]
+      # +sheet/powerup <name>/refresh|skill[=<reason>]: a point of refresh, or a second skill step, after a breakthrough.
+      INC`SHEET`POWERUP:
+        value: |-
+          @assert cand(strmatch(%q<cmd_left_side>,*/*),member(refresh skill,setr(adv_power,lcstr(trim(after(%q<cmd_left_side>,/))))))=@pemit %#=notice(SHEET,+sheet/powerup <name>/refresh or <name>/skill%[=<reason>%].,warn); think setq(cmd_left_side,trim(before(%q<cmd_left_side>,/))); @include/args %!/INC`ADV`GIVE=kind,%q<adv_power>,usage,+sheet/powerup <name>/refresh|skill%[=<reason>%]
+        flags: [cmdsyntax]
+      # %<kind>, %<usage>: the award, to the character named left of =, the reason right of it.
+      INC`ADV`GIVE:
+        value: |-
+          @include %!/INC`NEED`KEEPER; @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(SHEET,%<usage>.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; @assert strlen(%q<sheet_who>); @assert lte(strlen(%q<cmd_right_side>),200)=@pemit %#=notice(SHEET,Keep a reason to 200 characters.,warn); think setqm(adv_n,inc(words(lattr(%q<sheet_who>/FATE`ADV`*))),adv_gave,get(%!/DATA`ADV`KIND`[ucstr(%<kind>)]))[u(%!/FUN`DO`WRITE,%q<sheet_who>,ADV`%q<adv_n>,lcstr(%<kind>))][u(%!/FUN`DO`WRITE,%q<sheet_who>,ADV`%q<adv_n>`BY,%q<viewer_objid>)][u(%!/FUN`DO`WRITE,%q<sheet_who>,ADV`%q<adv_n>`AT,secs())][u(%!/FUN`DO`WRITE,%q<sheet_who>,ADV`%q<adv_n>`WHY,%q<cmd_right_side>)][u(%!/FUN`DO`WRITE,%q<sheet_who>,ADV`%q<adv_n>`GAVE,%q<adv_gave>)][u(%!/FUN`DO`WRITE,%q<sheet_who>,ADV`%q<adv_n>`OPEN,%q<adv_gave>)]; @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has award %q<adv_n>%, [u(%!/FUN`ADV`KINDNAME,%<kind>)]: [u(%!/FUN`ADV`TOKENS,%q<adv_gave>)].,ok); @pemit %q<sheet_who>=notice(SHEET,tone(strong,name(%#)) gives you [u(%!/FUN`ADV`KINDNAME,%<kind>)][if(strlen(%q<cmd_right_side>),%b%(%q<cmd_right_side>%))]: [u(%!/FUN`ADV`TOKENS,%q<adv_gave>)]. +sheet/advance shows what to spend it on.)
+        flags: [cmdsyntax]
+      # +sheet/void <name>/<n>=<reason>: a keeper takes back what award <n> has not spent; the award stays on the log.
+      INC`SHEET`VOID:
+        value: |-
+          @include %!/INC`NEED`KEEPER; @assert cand(strmatch(%q<cmd_left_side>,*/*),isint(setr(adv_n,trim(after(%q<cmd_left_side>,/)))),strlen(%q<cmd_right_side>))=@pemit %#=notice(SHEET,+sheet/void <name>/<award>=<reason>%, an award from +sheet/advances <name>.,warn); @include/args %!/INC`NEED`TARGET=name,trim(before(%q<cmd_left_side>,/)); @assert strlen(%q<sheet_who>); @assert hasattr(%q<sheet_who>,FATE`ADV`%q<adv_n>)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has no award %q<adv_n>.,warn); @assert not(hasattr(%q<sheet_who>,FATE`ADV`%q<adv_n>`VOID))=@pemit %#=notice(SHEET,Award %q<adv_n> is void already.,warn); @assert lte(strlen(%q<cmd_right_side>),200)=@pemit %#=notice(SHEET,Keep a reason to 200 characters.,warn); think setq(adv_took,get(%q<sheet_who>/FATE`ADV`%q<adv_n>`OPEN))[u(%!/FUN`DO`WRITE,%q<sheet_who>,ADV`%q<adv_n>`VOID,%q<viewer_objid> [secs()] %q<cmd_right_side>)][u(%!/FUN`DO`WRITE,%q<sheet_who>,ADV`%q<adv_n>`OPEN,)]; @pemit %#=notice(SHEET,Award %q<adv_n> on [name(%q<sheet_who>)]'s sheet is void[if(words(%q<adv_took>),: [u(%!/FUN`ADV`TOKENS,%q<adv_took>)] taken back,%, with nothing left to take back)]. What it bought stays.,ok); @pemit %q<sheet_who>=notice(SHEET,tone(strong,name(%#)) voids your award %q<adv_n>: %q<cmd_right_side>)
+        flags: [cmdsyntax]
+      # +sheet/advance: what you can spend and on what. +sheet/advance [<name>/]<option> <what>[=<value>] spends one.
+      INC`SHEET`ADVANCE:
+        value: |-
+          @break not(strlen(%q<cmd_argument>))={@pemit %#=u(%!/FUN`SCREEN`ADVANCE,%q<viewer_objid>)}; @include %!/INC`NEED`WHO; think setqm(adv_word,first(%q<sheet_what>),adv_rest,rest(%q<sheet_what>),adv_value,if(%q<cmd_has_equals>,%q<cmd_right_side>),adv_key,u(%!/FUN`ADV`FIND,%q<sheet_who>,first(%q<sheet_what>))); @assert strlen(%q<adv_key>)=@pemit %#=notice(SHEET,There is no advance '%q<adv_word>'. +sheet/advance lists them.,warn); think setqm(adv_token,u(%!/ADVANCE`%q<adv_key>`TOKEN,%q<sheet_who>,%q<adv_rest>,%q<adv_value>),adv_n,u(%!/FUN`ADV`WITH,%q<sheet_who>,u(%!/ADVANCE`%q<adv_key>`TOKEN,%q<sheet_who>,%q<adv_rest>,%q<adv_value>))); @assert strlen(%q<adv_n>)=@pemit %#=notice(SHEET,[if(comp(%q<sheet_who>,%q<viewer_objid>),[name(%q<sheet_who>)] has,You have)] no [get(%!/DATA`ADV`TOKEN`%q<adv_token>)] to spend. +sheet/advances shows the awards.,warn); think setq(adv_result,u(%!/ADVANCE`%q<adv_key>`RUN,%q<sheet_who>,%q<adv_rest>,%q<adv_value>)); @assert not(strmatch(%q<adv_result>,#-*))=@pemit %#=notice(SHEET,after(%q<adv_result>,#-1%b),warn); think [u(%!/FUN`DO`WRITE,%q<sheet_who>,ADV`%q<adv_n>`OPEN,ldelete(setr(adv_open,get(%q<sheet_who>/FATE`ADV`%q<adv_n>`OPEN)),member(%q<adv_open>,%q<adv_token>)))][u(%!/FUN`DO`WRITE,%q<sheet_who>,ADV`%q<adv_n>`USED`[inc(last(sort(0 [iter(lattr(%q<sheet_who>/FATE`ADV`%q<adv_n>`USED`*),last(%i0,`))],n)))],%q<adv_token> %q<sheet_what>[if(%q<cmd_has_equals>,=%q<adv_value>)])]; @pemit %#=notice(SHEET,[name(%q<sheet_who>)] spends a [get(%!/DATA`ADV`TOKEN`%q<adv_token>)] from award %q<adv_n>: %q<adv_result>,ok); @if comp(%q<sheet_who>,%q<viewer_objid>)={@pemit %q<sheet_who>=notice(SHEET,tone(strong,name(%#)) spends a [get(%!/DATA`ADV`TOKEN`%q<adv_token>)] from your award %q<adv_n>: %q<adv_result>)}
+        flags: [cmdsyntax]
+      # +sheet/advances [<name>]: every award, who gave it and why, and what it bought.
+      INC`SHEET`ADVANCES:
+        value: |-
+          think setq(sheet_who,if(strlen(%q<cmd_argument>),u(%!/FUN`PLAYER`MATCH,%q<cmd_argument>),%q<viewer_objid>)); @assert strlen(%q<sheet_who>)=@pemit %#=notice(SHEET,There is no player called '%q<cmd_argument>'.,warn); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`ADVANCES,%q<sheet_who>)
+        flags: [cmdsyntax]
+      # %0 a character, %1 a word: the ADVANCE`<KEY> it names that applies to them.
+      FUN`ADV`FIND:
+        value: |-
+          first(iter(lattr(%!/ADVANCE`*),if(cand(not(comp(after(%i0,ADVANCE`),ucstr(%1))),not(u(%!/%i0`SKIP,%0))),after(%i0,ADVANCE`))))
+        flags: [funsyntax]
+      # %0 a character, %1 a letter: their oldest award that still has it.
+      FUN`ADV`WITH:
+        value: |-
+          first(iter(sort(iter(lattr(%0/FATE`ADV`*),after(%i0,FATE`ADV`)),n),if(cand(not(hasattr(%0,FATE`ADV`%i0`VOID)),member(get(%0/FATE`ADV`%i0`OPEN),%1)),%i0)))
+        flags: [funsyntax]
+      # %0 a character, %1 a target, %2 a key, %3 a number: adds it to their ADVANCE grant there, and rebuilds.
+      FUN`ADV`ADD:
+        value: |-
+          setq(adv_add_to,add(firstof(last(get(%0/FATE`GRANT`ADVANCE`%1`[ucstr(%2)])),0),%3))[null(uargs(%!/API`GRANT,who,%0,source,ADVANCE,target,%1,key,%2,kind,add,value,if(%q<adv_add_to>,%q<adv_add_to>)))][u(%!/API`REBUILD,%0)]
+        flags: [funsyntax]
+      # %0 a character: for +sheet/clear, every award's letters back to what it gave, except those spent on an
+      # advance with KEEPS set (one that +sheet/clear does not take away, such as a machine's upgrade).
+      FUN`ADV`REOPEN:
+        value: |-
+          null(iter(lattr(%0/FATE`ADV`*),[setq(reopen_open,get(%0/%i0`GAVE))][null(iter(lattr(%0/%i0`USED`*),if(u(%!/ADVANCE`[u(%!/FUN`ADV`FIND,%0,first(rest(get(%0/%i0))))]`KEEPS),setq(reopen_open,ldelete(%q<reopen_open>,member(%q<reopen_open>,first(get(%0/%i0))))),attrib_set(%0/%i0))))][if(cand(hasattr(%0,%i0`USED),not(words(lattr(%0/%i0`USED`*)))),attrib_set(%0/%i0`USED))][if(hasattr(%0,%i0`VOID),,u(%!/FUN`DO`WRITE,%0,after(%i0,FATE`)`OPEN,%q<reopen_open>))]))
+        flags: [funsyntax]
+      # %0 an ADVANCE`<KEY> attribute, %1 a character: 1 when it applies to them.
+      FUN`ADV`APPLIES:
+        value: |-
+          not(u(%!/%0`SKIP,%1))
+        flags: [funsyntax]
+      FUN`ADV`KINDLABEL:
+        value: |-
+          switch(%0,refresh,power-up: refresh,skill,power-up: skill,%0)
+        flags: [funsyntax]
+      FUN`ADV`KINDNAME:
+        value: |-
+          switch(%0,milestone,a milestone,breakthrough,a breakthrough,refresh,a power-up of refresh,skill,a power-up of a skill step,%0)
+        flags: [funsyntax]
+      # %0 letters: "a milestone, a skill step and a new high concept".
+      FUN`ADV`TOKENS:
+        value: |-
+          itemize(iter(%0,a [get(%!/DATA`ADV`TOKEN`%i0)],%b,|),|)
+        flags: [funsyntax]
+      # %0 a character: what they can spend, and the options.
+      FUN`SCREEN`ADVANCE:
+        value: |-
+          setq(adv_have,squish(iter(lattr(%0/FATE`ADV`*),if(not(hasattr(%0,%i0`VOID)),get(%0/%i0`OPEN)))))[box([if(words(%q<adv_have>),To spend: [itemize(iter(squish(iter(M S H R,if(member(%q<adv_have>,%i0),%i0))),[words(setr(adv_count,matchall(%q<adv_have>,%i0)))] [get(%!/DATA`ADV`TOKEN`%i0)][if(gt(words(%q<adv_count>),1),s)],%b,|),|)].,tone(muted,Nothing to spend. Staff give milestones and breakthroughs.))]%r[rule()]%r[ldatatable(,Advance|Costs|Option,iter(filterbool(%!/FUN`ADV`APPLIES,lattr(%!/ADVANCE`*),,,%0),+sheet/advance [get(%!/%i0`USAGE)]|[firstof(get(%!/DATA`ADV`TOKEN`[get(%!/%i0`TOKEN)]),milestone or new high concept)]|[get(%!/%i0)],%b,%*<^>),%*<^>)]%r[rule()]%r[tone(muted,+sheet/advances lists every award%, who gave it%, why%, and what it bought.)],Advancing [name(%0)])]
+        flags: [funsyntax]
+      # %0 a character: the award log.
+      FUN`SCREEN`ADVANCES:
+        value: |-
+          setq(adv_all,sort(iter(lattr(%0/FATE`ADV`*),after(%i0,FATE`ADV`)),n))[box(if(words(%q<adv_all>),ldatatable(,#|Award|Given by|Why|Left|Spent on,iter(%q<adv_all>,%i0|[u(%!/FUN`ADV`KINDLABEL,get(%0/FATE`ADV`%i0))][if(hasattr(%0,FATE`ADV`%i0`VOID),%b[tone(warning,void)])]|[name(get(%0/FATE`ADV`%i0`BY))]%, [timefmt($Y-$m-$d,get(%0/FATE`ADV`%i0`AT))]|[firstof(get(%0/FATE`ADV`%i0`WHY),-)][if(hasattr(%0,FATE`ADV`%i0`VOID),%b%(void by [name(first(get(%0/FATE`ADV`%i0`VOID)))]: [rest(rest(get(%0/FATE`ADV`%i0`VOID)))]%))]|[firstof(itemize(iter(get(%0/FATE`ADV`%i0`OPEN),get(%!/DATA`ADV`TOKEN`%i0),%b,|),|),-)]|[firstof(itemize(iter(sort(iter(lattr(%0/FATE`ADV`%i0`USED`*),last(%i0,`)),n),edit(rest(get(%0/FATE`ADV`%i1`USED`%i0)),|,/),%b,|),|),-)],%b,%*<^>),%*<^>),tone(muted,No awards yet.))%r[rule()]%r[tone(muted,Staff give awards with +sheet/milestone%, /breakthrough and /powerup%, and void one with +sheet/void. Nothing is taken off this log.)],Awards: [name(%0)])]
+        flags: [funsyntax]
+
       # %<who>, %<leaf>: removes FATE`<leaf> and everything beneath it.
       INC`DO`WIPE:
         value: |-
@@ -930,7 +1117,7 @@ objects:
       # the API and the ledger.
       FUN`DO`WRITE:
         value: |-
-          if(hasattr(%0,FATE),,attrib_set(%0/FATE,This character's Fate sheet. +sheet shows it.)[set(%0/FATE,wizard)][set(%0/FATE,no_command)])[if(strlen(%2),attrib_set(%0/FATE`%1,%2),attrib_set(%0/FATE`%1))]
+          if(hasattr(%0,FATE),,attrib_set(%0/FATE,This character's Fate sheet. +sheet shows it.)[set(%0/FATE,wizard)][set(%0/FATE,no_command)])[if(strlen(%2),attrib_set(%0/FATE`%1,%2),if(hasattr(%0,FATE`%1),attrib_set(%0/FATE`%1)))]
         flags: [funsyntax]
 
       # ---- the ledger -----------------------------------------------------------------
@@ -1421,7 +1608,7 @@ objects:
     location: "{{sheet}}"
     attributes:
       HELP: |-
-        Your character's Fate sheet, making it, rolling against it and encounters: +sheet, +chargen, +check and +encounter.
+        Your character's Fate sheet, making it, advancing it, rolling against it and encounters: +sheet, +chargen, +check and +encounter.
       SEE: |-
         Cross-references. One leaf per topic; subtopics come from the tree, not from here.
       SEE`SHEET: |-
@@ -1449,7 +1636,7 @@ objects:
 
         Output: `\[SHEET\] Done: Trouble on Alice's sheet: Owes the Duke a favour`
 
-        See `+help chargen` for making a character step by step, `+help sheet play` for stress and fate points, `+help sheet ledger` for where each rating comes from, and `+help check` for rolling.
+        See `+help chargen` for making a character step by step, `+help sheet play` for stress and fate points, `+help sheet ledger` for where each rating comes from, `+help sheet advance` for improving your character, and `+help check` for rolling.
       HELP`SHEET`PLAY: |-
         In play you keep your own stress, consequences and fate points:
 
@@ -1477,6 +1664,23 @@ objects:
         `+sheet/ledger`
 
         Output: a table with the columns `#`, `From`, `For` and `Grant`, such as `1  sheet  Fight  set to Good \(+3\)`.
+      HELP`SHEET`ADVANCE: |-
+        Staff give awards for play: a milestone at the end of a session, a breakthrough at the end of an arc, sometimes a power-up after one. You spend them to change your character.
+
+        - A milestone buys one change: switch two skills' ratings, rewrite an aspect other than your high concept, or rewrite a stunt or buy a new one for a point of refresh.
+        - A breakthrough gives a milestone, a skill step \(one skill up a step, even from Mediocre\) and a new high concept.
+        - A power-up gives a point of refresh or a second skill step.
+        - `+sheet/advance` shows what you have to spend and every option. Packages add options, such as switching modes.
+        - `+sheet/advance <option> <what>\[=<value>\]` spends one: `+sheet/advance swap fight=shoot`, `+sheet/advance skill notice`, `+sheet/advance aspect 2=Never again`.
+        - `+sheet/advances \[<name>\]` lists every award: who gave it, when, why, what is left and what it bought.
+
+        Your refresh never goes below 1. Each award stays on the list; staff void a mistaken one, and the list says so.
+
+        For example:
+
+        `+sheet/advance skill fight`
+
+        Output: `\[SHEET\] Done: Alice spends a skill step from award 5: Fight is now Average \(+1\).`
       HELP`CHARGEN: |-
         `+chargen` walks you through making your character. It lists the steps, ticks the ones you have done, and explains the next one.
 
@@ -1560,7 +1764,10 @@ objects:
         - `+sheet/refresh <name>` brings their fate points up to their refresh. `+sheet/refresh <name>=<n>` gives them a refresh of their own, `=default` the game's again.
         - `+sheet/grant <name>/<what>=<n>` adds a grant to their ledger for a skill, a stress track or `refresh`: a plain number sets the value, `+<n>` or `-<n>` adds to it. `+sheet/grant Alice/fight=+1`.
         - `+sheet/revoke <name>/<n>` takes away grant `<n>` of `+sheet/ledger <name>`.
-        - `+sheet/clear <name>` takes away their whole build: every grant, aspect and stunt, and what packages build, such as modes. They make the character again with `+chargen`.
+        - `+sheet/clear <name>` takes away their whole build: every grant, aspect and stunt, and what packages build, such as modes. They make the character again with `+chargen`, and their awards can be spent again, except on what the clear left alone.
+        - `+sheet/milestone <name>\[=<reason>\]` and `+sheet/breakthrough <name>\[=<reason>\]` give an award. `+sheet/powerup <name>/refresh\[=<reason>\]` or `<name>/skill` gives a power-up.
+        - `+sheet/void <name>/<n>=<reason>` takes back what award `<n>` has not spent. The award stays on `+sheet/advances <name>`, marked void with your name and reason.
+        - `+sheet/advance <name>/<option> <what>\[=<value>\]` spends one of their awards for them.
 
         `@role/assign <player>=fate-sheet-keeper` makes someone a keeper.
       LOCK`SHEET`SETTINGS: |-

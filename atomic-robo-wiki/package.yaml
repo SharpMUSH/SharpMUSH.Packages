@@ -5,7 +5,7 @@ version: 1.0.0
 wiki_landing_page: category:atomic_robo_start_here
 wiki_collection_name: Atomic Robo (unofficial)
 authors: [SharpMUSH]
-description: "Rules reference for the Atomic Robo pack as wiki pages: modes, making a character with +chargen, mega-stunts, invention, brainstorms, and scale and machines. Based on the Atomic Robo RPG SRD and the Fate System Toolkit under CC BY 3.0. An unofficial fan package, not affiliated with or endorsed by Evil Hat Productions or the creators of Atomic Robo."
+description: "Rules reference for the Atomic Robo pack as wiki pages: modes, making a character with +chargen, mega-stunts, invention, brainstorms, scale and machines, and advancement. Based on the Atomic Robo RPG SRD and the Fate System Toolkit under CC BY 3.0. An unofficial fan package, not affiliated with or endorsed by Evil Hat Productions or the creators of Atomic Robo."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [fate, rules, wiki, invention, robots]
@@ -63,3 +63,8 @@ wiki:
     title: Scale and Machines
     categories: [atomic_robo_start_here]
     file: wiki/main/atomic_robo_scale_and_machines.md
+
+  - page: main:atomic_robo_advancement
+    title: Atomic Robo Advancement
+    categories: [atomic_robo_start_here]
+    file: wiki/main/atomic_robo_advancement.md

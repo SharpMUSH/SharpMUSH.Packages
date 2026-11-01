@@ -5,7 +5,7 @@ version: 1.0.0
 wiki_landing_page: category:fate_start_here
 wiki_collection_name: Fate
 authors: [SharpMUSH]
-description: "Rules reference for Fate as wiki pages: the ladder and the dice, aspects and fate points, skills and approaches, stunts, the four actions, stress and consequences, making a character with +chargen, and encounters. Based on the Fate Core, Fate Accelerated and Fate Condensed SRDs under CC BY 3.0; not affiliated with or endorsed by Evil Hat Productions."
+description: "Rules reference for Fate as wiki pages: the ladder and the dice, aspects and fate points, skills and approaches, stunts, the four actions, stress and consequences, making a character with +chargen, advancement, and encounters. Based on the Fate Core, Fate Accelerated and Fate Condensed SRDs under CC BY 3.0; not affiliated with or endorsed by Evil Hat Productions."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [fate, rules, wiki, character-creation]
@@ -71,3 +71,8 @@ wiki:
     title: Encounters
     categories: [fate_start_here]
     file: wiki/main/fate_encounters.md
+
+  - page: main:fate_advancement
+    title: Advancement
+    categories: [fate_start_here]
+    file: wiki/main/fate_advancement.md

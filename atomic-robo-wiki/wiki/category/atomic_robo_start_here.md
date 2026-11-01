@@ -6,6 +6,7 @@ Pulp action science on the Fate rules: modes instead of a skill list, mega-stunt
 4. [[Invention|main:atomic_robo_invention]]: building a gadget in play.
 5. [[Brainstorms|main:atomic_robo_brainstorms]]: working out a mystery together.
 6. [[Scale and Machines|main:atomic_robo_scale_and_machines]]: giant robots, tanks and things much bigger than you.
+7. [[Atomic Robo Advancement|main:atomic_robo_advancement]]: what milestones and skill steps buy with modes and machines.
 
 ---
 

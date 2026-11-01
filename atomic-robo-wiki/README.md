@@ -1,7 +1,7 @@
 # atomic-robo-wiki
 
 A rules reference for the [`atomic-robo`](../atomic-robo/) pack, installed as wiki pages: modes, making
-a character with `+chargen`, mega-stunts, invention, brainstorms, and scale and machines. Players read
+a character with `+chargen`, mega-stunts, invention, brainstorms, scale and machines, and advancement. Players read
 them in the portal's wiki and with `+wiki`.
 
 The collection is named **Atomic Robo (unofficial)** and opens on **Start here — Atomic Robo**, pinned to

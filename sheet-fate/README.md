@@ -7,7 +7,8 @@ fate points in play, and roll four Fate dice against an opposition with `+check`
 sees and the game keeps as a recorded roll. Ratings, stress boxes and refresh are built from a ledger
 of grants, so a staff bonus or a package's grant survives the player's own changes. An encounter keeps
 its own copy of each player's fate points, stress and consequences until the GM keeps it or ends the
-encounter.
+encounter. Keepers give milestones, breakthroughs and power-ups, which stay on the character as a log
+of who gave what and why, and players spend them with `+sheet/advance`.
 
 Based on the Fate Core, Fate Accelerated and Fate Condensed SRDs under CC BY 3.0: see
 [NOTICE.md](NOTICE.md). The help and messages are this package's own wording, and the in-game
@@ -44,6 +45,12 @@ Depends on nothing. Bridges add the rest:
 | `+sheet/grant <name>/<what>=<n>\|+<n>\|-<n>` | keeper | A grant of its own for a skill, a track or `refresh`: a number sets it, `+`/`-` adds |
 | `+sheet/revoke <name>/<n>` | keeper | Take away grant `<n>` of their ledger |
 | `+sheet/clear <name>` | keeper | Take away their whole build so they make the character again |
+| `+sheet/milestone <name>[=<reason>]` | keeper | Give a milestone |
+| `+sheet/breakthrough <name>[=<reason>]` | keeper | Give a breakthrough: a milestone, a skill step and a new high concept |
+| `+sheet/powerup <name>/refresh\|skill[=<reason>]` | keeper | Give a point of refresh or a second skill step |
+| `+sheet/void <name>/<n>=<reason>` | keeper | Take back what award `<n>` has not spent; it stays on the log, marked void |
+| `+sheet/advance [[<name>/]<option> <what>[=<value>]]` | player | What there is to spend and on what, or spend one; keepers for anyone |
+| `+sheet/advances [<name>]` | all | Every award: who gave it, when, why, what is left and what it bought |
 | `+chargen [<name>]` | all | The steps of making a character, which are done, and what to do next |
 | `+encounter [<n>]` | all | The encounters in the room, or one of them |
 | `+encounter/start [<title>]` | all | Begin an encounter here and run it as its GM |
@@ -77,6 +84,23 @@ source, `+sheet/boxes` and `+sheet/refresh` the `STAFF` source, and each `+sheet
 `STAFF_<n>`. Packages write their own sources, such as `ROBO_MODE_SCIENCE`. `` FATE`RATING ``,
 `` FATE`BOXES `` and `` FATE`REFRESH `` are rebuilt from the ledger after every change.
 
+## Advancement
+
+An award is `` FATE`ADV`<n> `` on the character, holding its kind (`milestone`, `breakthrough`,
+`refresh` or `skill`), with `BY` (the keeper's objid), `AT` (`secs()`), `WHY`, `GAVE` (its letters) and
+`OPEN` (the letters not spent) beneath. The letters are `M` (milestone), `S` (skill step), `H` (new
+high concept) and `R` (point of refresh). Each spend adds `` USED`<m> ``: its letter and the advance as
+typed. `+sheet/void` writes `VOID` (who, when, why) and empties `OPEN`. Nothing is deleted, so the log
+is the record of every award.
+
+Each option is `` ADVANCE`<KEY> `` on the **Fate Sheet** object, holding its description, with
+`TOKEN` (the letter it costs; `%0` the character, `%1` what was typed after the option, `%2` the value
+after `=`), `USAGE`, `SKIP` (`%0`: 1 when it is not offered) and `RUN` (`%0`, `%1`, `%2`: makes the
+change and returns what happened, or `#-1` and why, before it changes anything). A package adds its
+own the same way. An option with `KEEPS` set buys something `+sheet/clear` does not take away; the
+clear gives every other spent letter back. Raised skills and refresh are grants from the `ADVANCE`
+source; `swap` exchanges the two skills' grants from every source.
+
 ## The numbers
 
 - Shifts are the total less the opposition. Below 0 is `fail`, 0 is `partial` (a tie), 1 or 2
@@ -101,6 +125,7 @@ FATE`POINTS                 fate points; unset is the refresh
 FATE`REFRESH                a refresh from the ledger; unset is the game's
 FATE`ENCOUNTERS             the encounters they are in, in the order they joined
 FATE`USING                  the one +encounter/use picked
+FATE`ADV`<n>                an award, with BY, AT, WHY, GAVE, OPEN, USED`<m> and VOID beneath
 ```
 
 Encounters live on **Fate Encounters**:

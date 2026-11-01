@@ -738,6 +738,12 @@ objects:
           null(uargs({{sheet-fate/sheet}}/API`GRANT,who,%0,source,%1,target,%2,key,%3,kind,%4,value,%5))
         flags: [funsyntax]
 
+      # %0 a character, %1 and %2 two of their modes: switches their ratings and grants again. #-1 and why.
+      FUN`ADV`MODES:
+        value: |-
+          setqm(adv_m1,u(%!/FUN`LIST`FIND,MODE,%1),adv_m2,u(%!/FUN`LIST`FIND,MODE,%2))[cond(not(hasattr(%0,FATE`MODE`%q<adv_m1>)),#-1 You have no mode '%1'.,not(hasattr(%0,FATE`MODE`%q<adv_m2>)),#-1 You have no mode '%2'.,not(comp(%q<adv_m1>,%q<adv_m2>)),#-1 Name two different modes.,1,[setqm(adv_r1,get(%0/FATE`MODE`%q<adv_m1>),adv_r2,get(%0/FATE`MODE`%q<adv_m2>))][u({{sheet-fate/sheet}}/FUN`DO`WRITE,%0,MODE`%q<adv_m1>,%q<adv_r2>)][u({{sheet-fate/sheet}}/FUN`DO`WRITE,%0,MODE`%q<adv_m2>,%q<adv_r1>)][u(%!/FUN`RATE`ALL,%0)][u(%!/FUN`DISPLAY`MODES,%0,u(%!/FUN`MODE`HELD,%0))].)]
+        flags: [funsyntax]
+
       # ---- +chargen steps -------------------------------------------------------------
       # %0 a character. The sheet's CHARGEN`MODES, FOCUS and MEGA steps call these.
       FUN`CHARGEN`MODES`DONE:
@@ -820,7 +826,7 @@ objects:
         flags: [funsyntax]
       FUN`POINTS`TOTAL:
         value: |-
-          default(%0/FATE`SKILLPOINTS,get(%!/DATA`CONFIG`POINTS))
+          add(default(%0/FATE`SKILLPOINTS,get(%!/DATA`CONFIG`POINTS)),default(%0/FATE`BONUSPOINTS,0))
         flags: [funsyntax]
       FUN`POINTS`LEFT:
         value: |-
@@ -1151,6 +1157,8 @@ objects:
 
         You choose modes until your character is approved; then staff change them. `+sheet/set` does not rate skills here. `+chargen` walks you through modes and skill points, and `+sheet/ledger` shows what each mode grants: a staff grant stays when your modes change.
 
+        After that, awards from staff change them: `+sheet/advance modes <mode>=<mode>` switches two modes' ratings for a milestone, and `+sheet/advance point` buys a skill point for a skill step. See `+help sheet advance`.
+
         For example:
 
         `+mode/set science=fair`
@@ -1213,6 +1221,8 @@ objects:
         - `+machine/scrap` takes it off your sheet.
 
         Each step of scale between the machine and its foe gives the larger one +1 on the roll, or 2 shifts of harm, or both, as the game sets. A hit adds the machine's Weapon rating; its Armor takes shifts off a hit it takes.
+
+        You fill the machine in until your character is approved. After that, `+sheet/advance machine concept=<aspect>` or `machine flaw=<aspect>` rewrites one for a milestone, and `+sheet/advance upgrade weapon` or `upgrade armor` raises one by 1, to 4 at most, for a skill step. `+sheet/clear` leaves the machine as it is, so what those bought stays spent.
 
         For example:
 
@@ -1301,7 +1311,62 @@ objects:
         MACHINE`STRESS
       # What +sheet/clear takes away besides the sheet's own build: modes, bought steps and mega-stunts.
       BUILD`ROBO: |-
-        MODE FOCUS MODESTRESS MEGA
+        MODE FOCUS MODESTRESS MEGA BONUSPOINTS
+      # Advancement: a skill step buys a skill point, a milestone may swap two modes' ratings or rewrite the
+      # machine's concept or flaw, and a skill step may raise its Weapon or Armor. The machine's two set KEEPS:
+      # +sheet/clear leaves the machine as it is, so what they bought stays spent.
+      ADVANCE`POINT: |-
+        Gain a skill point, for +mode/focus
+      ADVANCE`POINT`TOKEN: |-
+        S
+      ADVANCE`POINT`USAGE: |-
+        point
+      ADVANCE`POINT`RUN:
+        value: |-
+          [u(%!/FUN`DO`WRITE,%0,BONUSPOINTS,inc(default(%0/FATE`BONUSPOINTS,0)))]One more skill point: [u({{science}}/FUN`DISPLAY`POINTSLEFT,%0)] +mode/focus <skill> spends it.
+        flags: [funsyntax]
+      ADVANCE`MODES: |-
+        Switch the ratings of two of your modes
+      ADVANCE`MODES`TOKEN: |-
+        M
+      ADVANCE`MODES`USAGE: |-
+        modes <mode>=<mode>
+      ADVANCE`MODES`RUN:
+        value: |-
+          u({{science}}/FUN`ADV`MODES,%0,%1,%2)
+        flags: [funsyntax]
+      ADVANCE`MACHINE: |-
+        Rewrite your machine's concept or flaw
+      ADVANCE`MACHINE`TOKEN: |-
+        M
+      ADVANCE`MACHINE`USAGE: |-
+        machine concept=<aspect> or machine flaw=<aspect>
+      ADVANCE`MACHINE`KEEPS: |-
+        1
+      ADVANCE`MACHINE`SKIP:
+        value: |-
+          not(hasattr(%0,FATE`MACHINE))
+        flags: [funsyntax]
+      ADVANCE`MACHINE`RUN:
+        value: |-
+          cond(not(member(concept flaw,lcstr(%1))),#-1 Rewrite the machine's concept or flaw.,not(strlen(%2)),#-1 Write the new aspect after =.,gt(strlen(%2),200),#-1 Keep an aspect to 200 characters.,1,[u(%!/FUN`DO`WRITE,%0,MACHINE`[ucstr(%1)],%2)][get(%0/FATE`MACHINE)]'s [lcstr(%1)] is now: %2)
+        flags: [funsyntax]
+      ADVANCE`UPGRADE: |-
+        Raise your machine's Weapon or Armor by 1, to 4 at most
+      ADVANCE`UPGRADE`TOKEN: |-
+        S
+      ADVANCE`UPGRADE`USAGE: |-
+        upgrade weapon or upgrade armor
+      ADVANCE`UPGRADE`KEEPS: |-
+        1
+      ADVANCE`UPGRADE`SKIP:
+        value: |-
+          not(hasattr(%0,FATE`MACHINE))
+        flags: [funsyntax]
+      ADVANCE`UPGRADE`RUN:
+        value: |-
+          setq(r_now,default(%0/FATE`MACHINE`[ucstr(%1)],0))[cond(not(member(weapon armor,lcstr(%1))),#-1 Upgrade the machine's weapon or armor.,gte(%q<r_now>,4),#-1 [get(%0/FATE`MACHINE)]'s [capstr(lcstr(%1))] is 4 already.,1,[u(%!/FUN`DO`WRITE,%0,MACHINE`[ucstr(%1)],inc(%q<r_now>))][get(%0/FATE`MACHINE)] has [capstr(lcstr(%1))]:[inc(%q<r_now>)].)]
+        flags: [funsyntax]
       CHARGEN`MODES: |-
         Modes
       CHARGEN`MODES`ORDER: |-

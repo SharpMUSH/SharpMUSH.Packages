@@ -81,6 +81,7 @@ On each character, beside the sheet's own leaves:
 FATE`MODE`<KEY>                 a mode's rating
 FATE`FOCUS`<SKILL>              steps bought for a skill
 FATE`SKILLPOINTS                a keeper's skill point total; unset is the game's
+FATE`BONUSPOINTS                skill points bought with +sheet/advance point
 FATE`MODESTRESS`<KEY>           physical, mental or split
 FATE`MEGA`<n>                   a mega-stunt's benefits; WEAK beneath: chosen weaknesses and costs
 FATE`MACHINE                    the machine's name; SCALE, CONCEPT, FLAW, WEAPON, ARMOR, STRESS beneath
@@ -97,6 +98,19 @@ modes, mega-stunts, machine and inventions on `+sheet`), `` PLAY`MACHINE `` (an 
 machine's stress, and `+machine/stress` marks the copy), `` BUILD`ROBO `` (`+sheet/clear` takes the
 modes, bought steps and mega-stunts too) and three `+chargen` steps: Modes, Skill points (optional)
 and Mega-stunt (optional, for a weird mode only). The sheet's own Ratings step is skipped.
+
+It adds four `+sheet/advance` options as `` ADVANCE` `` hooks, and the sheet's own `swap` and
+`skill` are not offered while `` GATE`SET `` is:
+
+| Option | Costs | What it does |
+|---|---|---|
+| `modes <mode>=<mode>` | milestone | Switch two modes' ratings |
+| `point` | skill step | One more skill point for `+mode/focus` |
+| `machine concept=<aspect>` or `machine flaw=<aspect>` | milestone | Rewrite the machine's concept or flaw |
+| `upgrade weapon` or `upgrade armor` | skill step | The machine's Weapon or Armor up by 1, to 4 at most |
+
+The machine options are offered only while there is a machine, and set `KEEPS`: `+sheet/clear` leaves the
+machine alone, so what they bought stays spent.
 
 The modes and scales are `+config` tables on **Atomic Robo Store**: `MODE` (with `SKILLS`,
 `WEIRD`, `ORDER`) and `SCALE` (with `STEP`). It adds Combat, Vehicles and the sciences to the Fate
