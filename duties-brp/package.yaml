@@ -1,0 +1,123 @@
+format: "1.16"
+package: duties-brp
+title: "Duties: percentile (BRP) rolls"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Lets Duties roll on the percentile (BRP) sheet: a roll provider called brp, so a duty's checks roll 1d100 under a skill or characteristic roll, doubled or halved for difficulty, with help making a roll one step easier, and skill gains or healing as rewards. Pick it with +config duties/system=brp."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [duties, brp, sheet, dice, bridge]
+category: Characters
+requires_server: ">=0.1"
+
+# A bridge: it joins two packages that do not know about each other. Duties asks the game's one active roll
+# provider for every check, and sheet-brp holds the sheet and rolls against it. This package is a provider
+# that answers Duties' questions with the sheet's API, and the one leaf that registers it.
+depends:
+  - package: duties
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/duties/
+      branch: main
+  - package: sheet-brp
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH.Packages
+      path: sheet-brp/
+      branch: main
+
+objects:
+  # The provider. Duties calls each FN`DUTIES` attribute with u() and named arguments, so it runs as this
+  # object; WIZARD because the sheet's API is on a WIZARD object, which a lesser one may not call. Its only writes
+  # are rewards, through the sheet's API`RAISE and API`HEAL.
+  - ref: provider
+    type: thing
+    name: Duties BRP Provider
+    location: "{{sheet-brp/sheet}}"
+    flags: [WIZARD, no_command]
+    attributes:
+      # The characteristic rolls and every skill; always marks the ones with a base chance.
+      FN`DUTIES`TRAITS:
+        value: |-
+          u({{sheet-brp/sheet}}/API`TRAITS)
+        flags: [funsyntax]
+      # A fumble is the critical failure, a critical the critical success; a special success counts as a success.
+      FN`DUTIES`TIERS:
+        value: |-
+          crit-fail fail success crit-success
+        flags: [funsyntax]
+      # %<difficulty> a difficulty word or a level: "Difficult (halved)".
+      FN`DUTIES`DC:
+        value: |-
+          setq(provider_level,u({{sheet-brp/sheet}}/API`TARGET,%<difficulty>))[if(strlen(%q<provider_level>),u(%!/FUN`LEVEL`SHOW,%q<provider_level>),#-1 NO SUCH DIFFICULTY)]
+        flags: [funsyntax]
+      # %<roller>: the roll this character improvises with, their highest (the first of equals).
+      FN`DUTIES`FALLBACK:
+        value: |-
+          setq(provider_roller,%<roller>)[last(sortkey(%!/FUN`TRAIT`SORTKEY,revwords(u({{sheet-brp/sheet}}/API`ALWAYS)),n))]
+        flags: [funsyntax]
+      # %<roller>, %<trait>: 1 when a skill stands above its base chance.
+      FN`DUTIES`TRAINED:
+        value: |-
+          u({{sheet-brp/sheet}}/API`TRAINED,%<roller>,%<trait>)
+        flags: [funsyntax]
+      # %<roller>, %<trait>, %<difficulty>, %<mods>, %<context>. A helper in %<mods> makes the roll one step easier
+      # (difficult to average, average to easy), as an augment does. Returns {"tier","text","roll","margin","system"};
+      # margin is the chance less the roll, system holds level, chance, rating, total, difficulty and augmented.
+      FN`DUTIES`CHECK:
+        value: |-
+          setqm(provider_level,u({{sheet-brp/sheet}}/API`TARGET,%<difficulty>),
+          provider_helped,gt(u(%!/FUN`MODS`HELPERS,%<mods>),0),
+          provider_eased,if(%q<provider_helped>,u(%!/FUN`LEVEL`EASIER,%q<provider_level>),%q<provider_level>),
+          provider_rolled,if(strlen(%q<provider_level>),uargs({{sheet-brp/sheet}}/API`CHECK,roller,%<roller>,trait,%<trait>,modifier,0,target,%q<provider_eased>)))[cond(not(strlen(%q<provider_level>)),#-1 NO SUCH DIFFICULTY,strmatch(%q<provider_rolled>,#-*),%q<provider_rolled>,u(%!/FUN`CHECK`RESULT,%q<provider_rolled>))]
+        flags: [funsyntax]
+      # %0 the sheet's check JSON.
+      FUN`CHECK`RESULT:
+        value: |-
+          setqm(result_total,json_query(%0,extract,$.total),
+          result_chance,json_query(%0,extract,$.chance))[json(object,tier,json(string,json_query(%0,extract,$.tier)),text,json(string,[json_query(%0,extract,$.label)] %(%q<provider_eased>%, %q<result_chance>%%%): [if(strlen(%q<result_total>),[json_query(%0,extract,$.text)]:%b)][u(%!/FUN`LEVEL`WORDS,json_query(%0,extract,$.level))][if(cand(%q<provider_helped>,comp(%q<provider_eased>,%q<provider_level>)),%b%(one step easier for the help%))]),roll,json(string,json_query(%0,extract,$.roll)),margin,json(string,if(strlen(%q<result_total>),sub(%q<result_chance>,%q<result_total>))),system,json(object,level,json(string,json_query(%0,extract,$.level)),chance,%q<result_chance>,rating,json_query(%0,extract,$.rating),total,json(string,%q<result_total>),difficulty,json(string,%q<provider_eased>),augmented,%q<provider_helped>))]
+        flags: [funsyntax]
+      # The rewards this provider hands out, for the duty editor.
+      FN`DUTIES`REWARDS:
+        value: |-
+          lit([{"kind":"skill","label":"Skill increase","fields":[{"key":"skill","type":"text"},{"key":"amount","type":"integer"}]},{"kind":"heal","label":"Hit points back","fields":[{"key":"amount","type":"integer"}]}])
+        flags: [funsyntax]
+      # Queued once per reward and member: %<roller>, %<reward>, %<context>. skill raises the named skill by amount
+      # percent (1 when none); heal gives back that many hit points, never past the most.
+      ON`DUTIES`GRANT:
+        value: |-
+          @assert hastype(%<roller>,player); think setqm(grant_kind,json_query(%<reward>,extract,$.kind),grant_amount,max(1,firstof(json_query(%<reward>,extract,$.amount),1)),grant_skill,u({{sheet-brp/sheet}}/API`FIND,json_query(%<reward>,extract,$.skill))); @assert isint(%q<grant_amount>); @switch %q<grant_kind>=skill,{@assert strlen(%q<grant_skill>); @pemit %<roller>=notice(DUTIES,[u({{sheet-brp/sheet}}/API`LABEL,%q<grant_skill>)] rises by %q<grant_amount>%% to [u({{sheet-brp/sheet}}/API`RAISE,%<roller>,%q<grant_skill>,%q<grant_amount>)]%%.,ok)},heal,{@pemit %<roller>=notice(DUTIES,You get %q<grant_amount> hit point[if(neq(%q<grant_amount>,1),s)] back. You have [u({{sheet-brp/sheet}}/API`HEAL,%<roller>,HP,%q<grant_amount>)].,ok)}
+        flags: [cmdsyntax]
+
+      # %0 a level: what it shows as.
+      FUN`LEVEL`SHOW:
+        value: |-
+          switch(%0,automatic,Automatic,easy,Easy %(doubled%),difficult,Difficult %(halved%),impossible,Impossible,Average)
+        flags: [funsyntax]
+      # %0 the sheet's result level: how the text says it.
+      FUN`LEVEL`WORDS:
+        value: |-
+          switch(%0,critical,a critical success,special,a special success,success,a success,fumble,a fumble,automatic,a success without a roll,a failure)
+        flags: [funsyntax]
+      # %0 a level: one step easier. Easy stays easy; automatic and impossible stay as they are.
+      FUN`LEVEL`EASIER:
+        value: |-
+          switch(%0,difficult,average,average,easy,%0)
+        flags: [funsyntax]
+      # %0 %<mods>: how many helpers it names.
+      FUN`MODS`HELPERS:
+        value: |-
+          if(cand(strlen(%0),strmatch(json_query(json_query(%0,get,helpers)),array)),json_query(json_query(%0,get,helpers),size),0)
+        flags: [funsyntax]
+      # %0 a key: its percentage for provider_roller, for sorting.
+      FUN`TRAIT`SORTKEY:
+        value: |-
+          u({{sheet-brp/sheet}}/API`RATING,%q<provider_roller>,%0)
+        flags: [funsyntax]
+
+  - ref: provider_registration
+    target: "{{duties/duties}}"
+    attributes:
+      PROVIDER`BRP: |-
+        {{provider}}

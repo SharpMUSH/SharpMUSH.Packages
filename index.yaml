@@ -100,3 +100,66 @@ packages:
     package: duties-pbta
     version: 1.0.0
     description: Duties roll provider "pbta" on the PbtA sheet
+  - path: sheet-fitd/
+    name: FitD Sheet
+    package: sheet-fitd
+    version: 1.0.0
+    description: Forged in the Dark character sheet (actions, stress, trauma, harm, coin, clocks) with +check on a d6 pool; Blades in the Dark SRD under CC BY 3.0
+  - path: sheet-fitd-help/
+    package: sheet-fitd-help
+    version: 1.0.0
+    description: Puts the FitD sheet topics into +help
+  - path: sheet-fitd-config/
+    package: sheet-fitd-config
+    version: 1.0.0
+    description: Puts the FitD sheet settings and action and attribute tables into +config
+  - path: sheet-fitd-chargen/
+    package: sheet-fitd-chargen
+    version: 1.0.0
+    description: Joins the FitD sheet to +app character applications
+  - path: sheet-brp/
+    name: BRP Sheet
+    package: sheet-brp
+    version: 1.0.0
+    description: Percentile character sheet on Basic Roleplaying (characteristics, skills with base chances, hit points, power points) with +check on 1d100; ORC Licensed Material
+  - path: sheet-brp-help/
+    package: sheet-brp-help
+    version: 1.0.0
+    description: Puts the BRP sheet topics into +help
+  - path: sheet-brp-config/
+    package: sheet-brp-config
+    version: 1.0.0
+    description: Puts the BRP sheet settings and skill table into +config
+  - path: sheet-brp-chargen/
+    package: sheet-brp-chargen
+    version: 1.0.0
+    description: Joins the BRP sheet to +app character applications
+  - path: sheet-ironsworn/
+    name: Ironsworn Sheet
+    package: sheet-ironsworn
+    version: 1.0.0
+    description: Ironsworn character sheet (stats, meters, momentum, iron vows) with +check action rolls and +vow; Ironsworn SRD under CC BY 4.0
+  - path: sheet-ironsworn-help/
+    package: sheet-ironsworn-help
+    version: 1.0.0
+    description: Puts the Ironsworn sheet topics into +help
+  - path: sheet-ironsworn-config/
+    package: sheet-ironsworn-config
+    version: 1.0.0
+    description: Puts the Ironsworn sheet settings and stat table into +config
+  - path: sheet-ironsworn-chargen/
+    package: sheet-ironsworn-chargen
+    version: 1.0.0
+    description: Joins the Ironsworn sheet to +app character applications
+  - path: duties-fitd/
+    package: duties-fitd
+    version: 1.0.0
+    description: Duties roll provider "fitd" on the FitD sheet
+  - path: duties-brp/
+    package: duties-brp
+    version: 1.0.0
+    description: Duties roll provider "brp" on the BRP sheet
+  - path: duties-ironsworn/
+    package: duties-ironsworn
+    version: 1.0.0
+    description: Duties roll provider "ironsworn" on the Ironsworn sheet

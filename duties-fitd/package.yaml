@@ -1,0 +1,134 @@
+format: "1.16"
+package: duties-fitd
+title: "Duties: Forged in the Dark rolls"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Lets Duties roll on the Forged in the Dark sheet: a roll provider called fitd, so a duty's checks roll an action's dice against a position, with assists and pushes paid in stress, and coin or stress relief as rewards. Pick it with +config duties/system=fitd."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [duties, fitd, sheet, dice, bridge]
+category: Characters
+requires_server: ">=0.1"
+
+# A bridge: it joins two packages that do not know about each other. Duties asks the game's one active roll
+# provider for every check, and sheet-fitd holds the sheet and rolls against it. This package is a provider
+# that answers Duties' questions with the sheet's API, and the one leaf that registers it.
+depends:
+  - package: duties
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/duties/
+      branch: main
+  - package: sheet-fitd
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH.Packages
+      path: sheet-fitd/
+      branch: main
+
+objects:
+  # The provider. Duties calls each FN`DUTIES` attribute with u() and named arguments, so it runs as this
+  # object; WIZARD because the sheet's API is on a WIZARD object, which a lesser one may not call. Its writes go
+  # through the sheet's API: stress for an assist or a push, coin and stress relief as rewards.
+  - ref: provider
+    type: thing
+    name: Duties FitD Provider
+    location: "{{sheet-fitd/sheet}}"
+    flags: [WIZARD, no_command]
+    attributes:
+      # Every action; one rated 0 still rolls (two dice, the lower kept), so each can be rolled.
+      FN`DUTIES`TRAITS:
+        value: |-
+          u({{sheet-fitd/sheet}}/API`TRAITS)
+        flags: [funsyntax]
+      # 1-3 a bad outcome, 4-5 a partial success, a 6 a full success, two 6s a critical.
+      FN`DUTIES`TIERS:
+        value: |-
+          fail partial success crit-success
+        flags: [funsyntax]
+      # %<difficulty> a difficulty word or a position: "Risky", "Desperate, 1 die fewer", "No roll".
+      FN`DUTIES`DC:
+        value: |-
+          setqm(provider_position,u({{sheet-fitd/sheet}}/API`TARGET,%<difficulty>),
+          provider_dice,u(%!/FUN`DIFFICULTY`DICE,%<difficulty>))[cond(not(strlen(%q<provider_position>)),#-1 NO SUCH DIFFICULTY,strmatch(%q<provider_position>,none),No roll,[capstr(%q<provider_position>)][u(%!/FUN`DISPLAY`DICE,%q<provider_dice>)])]
+        flags: [funsyntax]
+      # %<roller>: the action this character improvises with, their highest rated (the first of equals).
+      FN`DUTIES`FALLBACK:
+        value: |-
+          setq(provider_roller,%<roller>)[last(sortkey(%!/FUN`ACTION`SORTKEY,revwords(u({{sheet-fitd/sheet}}/API`ALWAYS)),n))]
+        flags: [funsyntax]
+      # %<roller>, %<trait>, %<difficulty>, %<mods>, %<context>. The first helper in %<mods> assists: +1 die, and
+      # they take 1 stress. An invoke in %<mods> is a push: +1 die for 2 stress, once a roll. A difficulty whose
+      # position is none succeeds without a roll. Returns {"tier","text","roll","system"}, system holding
+      # position, effect, dice, highest, sixes, assist and push.
+      FN`DUTIES`CHECK:
+        value: |-
+          setqm(provider_position,u({{sheet-fitd/sheet}}/API`TARGET,%<difficulty>),
+          provider_dice,u(%!/FUN`DIFFICULTY`DICE,%<difficulty>),
+          provider_key,u({{sheet-fitd/sheet}}/API`FIND,%<trait>))[cond(not(strlen(%q<provider_position>)),#-1 NO SUCH DIFFICULTY,not(hastype(%<roller>,player)),#-1 There is no character to roll for.,not(strlen(%q<provider_key>)),#-1 There is no action '%<trait>'.,strmatch(%q<provider_position>,none),u(%!/FUN`CHECK`FREE,%q<provider_key>),u(%!/FUN`CHECK`ROLL,%<roller>,%q<provider_key>,%<mods>))]
+        flags: [funsyntax]
+      # %0 the action: a success with no roll.
+      FUN`CHECK`FREE:
+        value: |-
+          json(object,tier,json(string,success),text,json(string,[u({{sheet-fitd/sheet}}/API`LABEL,%0)]: no roll needed),roll,json(string,),system,json(object,position,json(string,none)))
+        flags: [funsyntax]
+      # %0 the roller, %1 the action, %2 %<mods>. Charges the assist and the push, rolls, and builds the result.
+      FUN`CHECK`ROLL:
+        value: |-
+          setqm(provider_helper,first(u(%!/FUN`MODS`HELPERS,%2)),
+          provider_push,gt(u(%!/FUN`MODS`INVOKES,%2),0),
+          provider_charged,if(strlen(%q<provider_helper>),u({{sheet-fitd/sheet}}/API`STRESS,%q<provider_helper>,1))[if(%q<provider_push>,u({{sheet-fitd/sheet}}/API`STRESS,%0,2))],
+          provider_rolled,uargs({{sheet-fitd/sheet}}/API`CHECK,roller,%0,trait,%1,modifier,add(%q<provider_dice>,t(strlen(%q<provider_helper>)),%q<provider_push>),target,%q<provider_position>))[if(strmatch(%q<provider_rolled>,#-*),%q<provider_rolled>,u(%!/FUN`CHECK`RESULT,%q<provider_rolled>))]
+        flags: [funsyntax]
+      # %0 the sheet's check JSON.
+      FUN`CHECK`RESULT:
+        value: |-
+          json(object,tier,json(string,json_query(%0,extract,$.tier)),text,json(string,[json_query(%0,extract,$.label)] %([json_query(%0,extract,$.target)]%): [json_query(%0,extract,$.text)][u(%!/FUN`CHECK`EXTRAS)]),roll,json_query(%0,extract,$.roll),system,json(object,position,json(string,json_query(%0,extract,$.target)),effect,json(string,standard),dice,json_query(%0,extract,$.dice),highest,json_query(%0,extract,$.total),sixes,json_query(%0,extract,$.sixes),assist,json(string,%q<provider_helper>),push,json(boolean,%q<provider_push>)))
+        flags: [funsyntax]
+      FUN`CHECK`EXTRAS:
+        value: |-
+          if(cor(strlen(%q<provider_helper>),%q<provider_push>),%b%([trim(if(strlen(%q<provider_helper>),+1 die from [name(%q<provider_helper>)]'s help)[if(cand(strlen(%q<provider_helper>),%q<provider_push>),%,%b)][if(%q<provider_push>,+1 die from a push)])]%))
+        flags: [funsyntax]
+      # The rewards this provider hands out, for the duty editor.
+      FN`DUTIES`REWARDS:
+        value: |-
+          lit([{"kind":"coin","label":"Coin","fields":[{"key":"amount","type":"integer"}]},{"kind":"stress","label":"Stress relief","fields":[{"key":"amount","type":"integer"}]}])
+        flags: [funsyntax]
+      # Queued once per reward and member: %<roller>, %<reward> ({"kind","amount",...}), %<context>. Coin is added
+      # to the sheet, stress relief clears that much stress; an amount below 1 counts as 1.
+      ON`DUTIES`GRANT:
+        value: |-
+          @assert hastype(%<roller>,player); think setqm(grant_kind,json_query(%<reward>,extract,$.kind),grant_amount,max(1,firstof(json_query(%<reward>,extract,$.amount),1))); @assert isint(%q<grant_amount>); @switch %q<grant_kind>=coin,{@pemit %<roller>=notice(DUTIES,You gain %q<grant_amount> coin. You have [u({{sheet-fitd/sheet}}/API`AWARD,%<roller>,%q<grant_amount>)].,ok)},stress,{@pemit %<roller>=notice(DUTIES,You clear %q<grant_amount> stress. You have [json_query(u({{sheet-fitd/sheet}}/API`STRESS,%<roller>,-%q<grant_amount>),extract,$.stress)].,ok)}
+        flags: [cmdsyntax]
+
+      # %0 a difficulty word: the dice the game adds or takes at it, or 0 for a position word.
+      FUN`DIFFICULTY`DICE:
+        value: |-
+          setq(difficulty_at,member(trivial easy standard hard extreme,lcstr(%0)))[if(%q<difficulty_at>,extract(get({{sheet-fitd/sheet}}/DATA`CONFIG`DICE),%q<difficulty_at>,1),0)]
+        flags: [funsyntax]
+      FUN`DISPLAY`DICE:
+        value: |-
+          switch(%0,0,,1,%, 1 die more,-1,%, 1 die fewer,if(gt(%0,0),%, %0 dice more,%, [abs(%0)] dice fewer))
+        flags: [funsyntax]
+      # %0 %<mods>: the helpers' objids, a space list.
+      FUN`MODS`HELPERS:
+        value: |-
+          if(cand(strlen(%0),strmatch(json_query(json_query(%0,get,helpers)),array)),iter(lnum(0,dec(json_query(json_query(%0,get,helpers),size))),json_query(%0,extract,$.helpers%[%i0%])))
+        flags: [funsyntax]
+      # %0 %<mods>: how many invokes the player asked for.
+      FUN`MODS`INVOKES:
+        value: |-
+          setq(invokes_asked,if(strlen(%0),json_query(%0,extract,$.invokes)))[if(cand(isint(%q<invokes_asked>),gt(%q<invokes_asked>,0)),%q<invokes_asked>,0)]
+        flags: [funsyntax]
+      # %0 an action key: its rating for provider_roller, for sorting.
+      FUN`ACTION`SORTKEY:
+        value: |-
+          u({{sheet-fitd/sheet}}/API`RATING,%q<provider_roller>,%0)
+        flags: [funsyntax]
+
+  - ref: provider_registration
+    target: "{{duties/duties}}"
+    attributes:
+      PROVIDER`FITD: |-
+        {{provider}}

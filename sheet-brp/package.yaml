@@ -1,0 +1,1029 @@
+format: "1.16"
+package: sheet-brp
+title: "Percentile sheet (BRP)"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "A percentile character sheet on the Basic Roleplaying rules: seven characteristics, a skill list with base chances the game edits, hit points and power points. +check rolls 1d100 under a skill or a characteristic roll, doubled or halved for difficulty, and reads critical, special, success, failure or fumble. The skill list is ORC Licensed Material from Basic Roleplaying: Universal Game Engine."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [sheet, brp, percentile, d100, skills]
+category: Characters
+requires_server: ">=0.1"
+
+# One permission, for the people who keep sheets: change any character's sheet at any time and read every
+# sheet. A player fills in their own characteristics and skills until they are approved, and keeps their own hit
+# points and power points at any time. Changing the lists and settings is config.admin, as +config is.
+categories:
+  roles:
+    - name: Percentile sheet
+      description: Roles for the people who keep percentile character sheets.
+  permissions:
+    - name: Percentile sheet
+      description: Keeping percentile character sheets.
+permissions:
+  - name: softcode.brp.admin
+    category: Percentile sheet
+    description: Read every percentile sheet and change any character's at any time.
+roles:
+  - slug: brp-sheet-keeper
+    name: BRP Sheet Keeper
+    category: Percentile sheet
+    priority: 11
+    permissions:
+      softcode.brp.admin: allow
+
+# Every character's BRP tree is their percentile sheet: only wizards write it, so a player can't make the root
+# before the sheet does, and it is never a command.
+attributes:
+  BRP:
+    flags: [wizard, no_command]
+
+objects:
+  # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook),
+  # writes the sheet attributes on characters, and reads them for other packages.
+  #
+  # A character's sheet is their own attributes under BRP`: BRP`CHAR`<KEY> a characteristic (unset is 10),
+  # BRP`SKILL`<KEY> a skill's percentage (unset is its base chance), BRP`HP and BRP`PP the hit points and power
+  # points left (unset is the most). The BRP root is wizard-flagged, so only this object writes them.
+  #
+  # +sheet and +check are added with /noparse/rsnoparse and hooked to CMD`<word>, so what a player types reaches
+  # the code exactly as typed and nothing a player wrote is ever evaluated.
+  #
+  # Trees: CMD` the hooked commands, INC`COMMAND` the parse and dispatch, INC`SHEET` and INC`CHECK` one routine
+  # per switch, INC`NEED` the guards they share, INC`DO` the writes. FUN`TRAIT` characteristics and skills together,
+  # FUN`LIST` the store's lists, FUN`BASE` base chances, FUN`CHANCE` the numbers, FUN`PERM` who may do what,
+  # FUN`SCREEN` and FUN`DISPLAY` the screens. API` the functions other packages call (VISUAL), the same names in
+  # every sheet package. Bridges add HINT`<message> lines, GATE`EDIT (a reason a player may not change their own
+  # sheet now) and ALLOW`VIEW`<name> (who else may read a sheet).
+  - ref: sheet
+    type: thing
+    name: BRP Sheet
+    location: "{{$master_room}}"
+    flags: [WIZARD]
+    attributes:
+      # ---- settings ---------------------------------------------------------------
+      # +config brp shows and changes them (sheet-brp-config); the code reads each with get(%!/DATA`CONFIG`<NAME>).
+      DATA`CONFIG: |-
+        Settings for the percentile sheet. One leaf per setting.
+      DATA`CONFIG`LABEL: |-
+        Percentile sheet
+      DATA`CONFIG`CHARCAP: |-
+        18
+      DATA`CONFIG`CHARCAP`TYPE: |-
+        integer
+      DATA`CONFIG`CHARCAP`DEFAULT: |-
+        18
+      DATA`CONFIG`CHARCAP`MIN: |-
+        3
+      DATA`CONFIG`CHARCAP`MAX: |-
+        99
+      DATA`CONFIG`CHARCAP`LABEL: |-
+        Highest characteristic
+      DATA`CONFIG`CHARCAP`DESCRIPTION: |-
+        The highest characteristic a player gives themselves. Sheet keepers may go to 99.
+      DATA`CONFIG`CHARCAP`EXAMPLE: |-
+        21
+      DATA`CONFIG`SKILLCAP: |-
+        75
+      DATA`CONFIG`SKILLCAP`TYPE: |-
+        integer
+      DATA`CONFIG`SKILLCAP`DEFAULT: |-
+        75
+      DATA`CONFIG`SKILLCAP`MIN: |-
+        1
+      DATA`CONFIG`SKILLCAP`MAX: |-
+        999
+      DATA`CONFIG`SKILLCAP`LABEL: |-
+        Highest skill
+      DATA`CONFIG`SKILLCAP`DESCRIPTION: |-
+        The highest percentage a player gives a skill. Sheet keepers may go to 999.
+      DATA`CONFIG`SKILLCAP`EXAMPLE: |-
+        90
+      DATA`CONFIG`HITPOINTS: |-
+        average
+      DATA`CONFIG`HITPOINTS`TYPE: |-
+        choice
+      DATA`CONFIG`HITPOINTS`DEFAULT: |-
+        average
+      DATA`CONFIG`HITPOINTS`CHOICES: |-
+        average total
+      DATA`CONFIG`HITPOINTS`LABEL: |-
+        Hit points
+      DATA`CONFIG`HITPOINTS`DESCRIPTION: |-
+        average: hit points are CON and SIZ added and halved, rounded up. total: CON and SIZ added, for hardier characters.
+      DATA`CONFIG`HITPOINTS`EXAMPLE: |-
+        total
+      DATA`CONFIG`DIFFICULTY: |-
+        automatic easy average difficult difficult
+      DATA`CONFIG`DIFFICULTY`TYPE: |-
+        text
+      DATA`CONFIG`DIFFICULTY`DEFAULT: |-
+        automatic easy average difficult difficult
+      DATA`CONFIG`DIFFICULTY`MAX: |-
+        60
+      DATA`CONFIG`DIFFICULTY`CHECK: |-
+        CHECK`DIFFICULTY
+      DATA`CONFIG`DIFFICULTY`LABEL: |-
+        Each difficulty
+      DATA`CONFIG`DIFFICULTY`DESCRIPTION: |-
+        What trivial, easy, standard, hard and extreme mean, in that order: automatic (no roll), easy (doubled), average, difficult (halved) or impossible (fails).
+      DATA`CONFIG`DIFFICULTY`EXAMPLE: |-
+        automatic easy average difficult impossible
+      DATA`CONFIG`PUBLIC: |-
+        0
+      DATA`CONFIG`PUBLIC`TYPE: |-
+        boolean
+      DATA`CONFIG`PUBLIC`DEFAULT: |-
+        0
+      DATA`CONFIG`PUBLIC`LABEL: |-
+        Sheets anyone can read
+      DATA`CONFIG`PUBLIC`DESCRIPTION: |-
+        Whether +sheet <name> shows anyone's sheet to everyone. Otherwise only the character and sheet keepers see it.
+      DATA`CONFIG`PUBLIC`EXAMPLE: |-
+        yes
+      DATA`CONFIG`SKILLS`TYPE: |-
+        table
+      DATA`CONFIG`SKILLS`LABEL: |-
+        Skills
+      DATA`CONFIG`SKILLS`DESCRIPTION: |-
+        The skills on every sheet, with their base chances.
+      DATA`CONFIG`SKILLS`STORE: |-
+        {{store}}
+      DATA`CONFIG`SKILLS`PATH: |-
+        SKILL
+      DATA`CONFIG`SKILLS`ENTRY: |-
+        label
+      DATA`CONFIG`SKILLS`FIELDS: |-
+        label base category
+      DATA`CONFIG`SKILLS`KEYPATTERN: |-
+        ^[A-Za-z0-9-]{1,20}$
+      DATA`CONFIG`SKILLS`FIELD`LABEL`TYPE: |-
+        text
+      DATA`CONFIG`SKILLS`FIELD`LABEL`MIN: |-
+        1
+      DATA`CONFIG`SKILLS`FIELD`LABEL`MAX: |-
+        30
+      DATA`CONFIG`SKILLS`FIELD`LABEL`LABEL: |-
+        Label
+      DATA`CONFIG`SKILLS`FIELD`LABEL`DESCRIPTION: |-
+        The name the sheet shows.
+      DATA`CONFIG`SKILLS`FIELD`BASE`TYPE: |-
+        text
+      DATA`CONFIG`SKILLS`FIELD`BASE`DEFAULT: |-
+        0
+      DATA`CONFIG`SKILLS`FIELD`BASE`MAX: |-
+        30
+      DATA`CONFIG`SKILLS`FIELD`BASE`CHECK: |-
+        CHECK`BASE
+      DATA`CONFIG`SKILLS`FIELD`BASE`LABEL: |-
+        Base chance
+      DATA`CONFIG`SKILLS`FIELD`BASE`DESCRIPTION: |-
+        The chance everyone has: a number, a characteristic times a number (DEX*2), or terms added (INT+POW).
+      DATA`CONFIG`SKILLS`FIELD`CATEGORY`TYPE: |-
+        choice
+      DATA`CONFIG`SKILLS`FIELD`CATEGORY`DEFAULT: |-
+        mental
+      DATA`CONFIG`SKILLS`FIELD`CATEGORY`CHOICES: |-
+        combat communication manipulation mental perception physical
+      DATA`CONFIG`SKILLS`FIELD`CATEGORY`LABEL: |-
+        Category
+      DATA`CONFIG`SKILLS`FIELD`CATEGORY`DESCRIPTION: |-
+        Which group the sheet lists it under.
+      CHECK`DIFFICULTY: |-
+        if(cand(eq(words(%0),5),not(words(setdiff(lcstr(%0),automatic easy average difficult impossible)))),,Give five words%, trivial to extreme%, each automatic%, easy%, average%, difficult or impossible.)
+      CHECK`BASE: |-
+        if(isint(u(%!/FUN`BASE`EVAL,,%0)),,Write a number%, a characteristic times a number such as DEX*2%, or terms added such as INT+POW.)
+
+      # Which INC` routine each switch runs: DATA`ROUTE`<table>`<switch>. BARE is the command alone, ARG the
+      # command with something after it and no switch.
+      DATA`ROUTE: |-
+        Which routine each switch runs. One leaf per switch.
+      DATA`ROUTE`SHEET`BARE: |-
+        SHEET`SHOW
+      DATA`ROUTE`SHEET`ARG: |-
+        SHEET`SHOW
+      DATA`ROUTE`SHEET`SET: |-
+        SHEET`SET
+      DATA`ROUTE`SHEET`HP: |-
+        SHEET`HP
+      DATA`ROUTE`SHEET`PP: |-
+        SHEET`PP
+      DATA`ROUTE`SHEET`TRAITS: |-
+        SHEET`TRAITS
+      DATA`ROUTE`CHECK`BARE: |-
+        CHECK`USAGE
+      DATA`ROUTE`CHECK`ARG: |-
+        CHECK`ROLL
+      DATA`ROUTE`CHECK`PRIVATE: |-
+        CHECK`ROLL
+      DATA`DIFFICULTIES: |-
+        trivial easy standard hard extreme
+      # What +check also takes after =, and what each comes to.
+      DATA`LEVELS: |-
+        automatic easy average difficult impossible
+      DATA`LEVEL`AUTOMATIC: |-
+        automatic, no roll
+      DATA`LEVEL`EASY: |-
+        easy, doubled
+      DATA`LEVEL`AVERAGE: |-
+        average
+      DATA`LEVEL`DIFFICULT: |-
+        difficult, halved
+      DATA`LEVEL`IMPOSSIBLE: |-
+        impossible
+      DATA`CATEGORIES: |-
+        combat communication manipulation mental perception physical
+
+      # ---- commands ---------------------------------------------------------------
+      # %1 the switches and %2 what follows, exactly as typed.
+      CMD`SHEET:
+        value: |-
+          $(?is)^\+sheet(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,sheet,table,SHEET,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`CHECK:
+        value: |-
+          $(?is)^\+check(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,check,table,CHECK,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      # A line a bridge adds to one of this object's messages: HINT`<message>, set here by a bridge such as
+      # sheet-brp-help. %1 on are passed to it. Nothing when no bridge set one, so the message stands without it.
+      FUN`HINT:
+        value: |-
+          if(hasattr(%!,HINT`%0),%b[u(%!/HINT`%0,%1,%2)])
+        flags: [funsyntax]
+      INC`COMMAND`RUN:
+        value: |-
+          @assert hastype(%#,player)=@pemit %#=notice(SHEET,Only players have a sheet.,warn); think u(%!/FUN`COMMAND`PARSE,%<word>,%<table>,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(SHEET,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(SHEET,+%q<cmd_word> has no /%q<cmd_switch> switch.[u(%!/FUN`HINT,SWITCHES,%q<cmd_word>)],warn); @include %!/INC`%q<cmd_route>
+        flags: [cmdsyntax]
+      # %0 the word, %1 its route table, %2 the switches and %3 the argument, as typed. Sets cmd_word,
+      # cmd_switch_list, cmd_switch, cmd_argument, cmd_has_equals, cmd_left_side and cmd_right_side around the
+      # first =, cmd_route (the INC` routine to run), viewer_objid and viewer_keeper.
+      FUN`COMMAND`PARSE:
+        value: |-
+          setqm(cmd_word,lcstr(%0),
+          cmd_switch_list,lcstr(trim(edit(%2,/,%b))),
+          cmd_switch,first(%q<cmd_switch_list>),
+          cmd_argument,trim(%3),
+          cmd_has_equals,strmatch(%3,*=*),
+          cmd_left_side,trim(before(%3,=)),
+          cmd_right_side,trim(after(%3,=)),
+          cmd_route,get(%!/DATA`ROUTE`%1`[if(strlen(%q<cmd_switch>),ucstr(%q<cmd_switch>),if(strlen(%q<cmd_argument>),ARG,BARE))]),
+          viewer_objid,objid(%#),
+          viewer_keeper,u(%!/FUN`PERM`KEEPER,%#))
+        flags: [funsyntax]
+
+      # ---- guards -----------------------------------------------------------------
+      # %<name> a player's name: sheet_who, their objid.
+      INC`NEED`TARGET:
+        value: |-
+          @assert strlen(setr(sheet_who,u(%!/FUN`PLAYER`MATCH,%<name>)))=@pemit %#=notice(SHEET,There is no player called '%<name>'.,warn)
+        flags: [cmdsyntax]
+      # %<text>: <name>/<what> for a sheet keeper, else <what> on your own sheet. sheet_who and sheet_what.
+      INC`NEED`WHO:
+        value: |-
+          @if strmatch(%<text>,*/*)={@include/args %!/INC`NEED`TARGET=name,before(%<text>,/); think setq(sheet_what,trim(after(%<text>,/)))},{think setqm(sheet_who,%q<viewer_objid>,sheet_what,%<text>)}; @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error)
+        flags: [cmdsyntax]
+      # Changes only a keeper makes once a character is approved: characteristics and skills.
+      INC`NEED`EDITABLE:
+        value: |-
+          @assert cor(%q<viewer_keeper>,not(isapproved(%#)))=@pemit %#=notice(SHEET,Your character is approved%, so staff change your sheet now.,error); @assert cor(%q<viewer_keeper>,not(strlen(setr(set_gate,u(%!/FUN`GATE`EDIT,%#)))))=@pemit %#=notice(SHEET,%q<set_gate>,warn)
+        flags: [cmdsyntax]
+      # %<key> typed text: trait_key, the characteristic or skill it names, and trait_kind, CHAR or SKILL.
+      INC`NEED`TRAIT:
+        value: |-
+          @assert strlen(setr(trait_key,u(%!/FUN`TRAIT`FIND,%<key>)))=@pemit %#=notice(SHEET,There is no characteristic or skill '%<key>'. +sheet/traits lists them.,warn); think setq(trait_kind,u(%!/FUN`TRAIT`KIND,%q<trait_key>))
+        flags: [cmdsyntax]
+
+      # ---- +sheet -----------------------------------------------------------------
+      INC`SHEET`SHOW:
+        value: |-
+          @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`SHEET,%q<sheet_who>,%#)
+        flags: [cmdsyntax]
+      # +sheet/set [<name>/]<characteristic or skill>=<value>. Empty puts it back: 10, or the base chance.
+      INC`SHEET`SET:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/set <characteristic or skill>=<value>%, such as +sheet/set dex=14 or +sheet/set climb=55.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_left_side>; @include %!/INC`NEED`EDITABLE; @include/args %!/INC`NEED`TRAIT=key,%q<sheet_what>; think setqm(set_value,edit(%q<cmd_right_side>,%%,),set_low,if(strmatch(%q<trait_kind>,CHAR),1,0),set_high,if(strmatch(%q<trait_kind>,CHAR),if(%q<viewer_keeper>,99,get(%!/DATA`CONFIG`CHARCAP)),if(%q<viewer_keeper>,999,get(%!/DATA`CONFIG`SKILLCAP)))); @break not(strlen(%q<set_value>))={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,%q<trait_kind>`%q<trait_key>,value,; @pemit %#=notice(SHEET,[u(%!/FUN`TRAIT`NAME,%q<trait_key>)] is back to [u(%!/API`RATING,%q<sheet_who>,%q<trait_key>)][if(strmatch(%q<trait_kind>,SKILL),%%)] on [name(%q<sheet_who>)]'s sheet.,ok)}; @assert cand(isint(%q<set_value>),gte(%q<set_value>,%q<set_low>),lte(%q<set_value>,%q<set_high>))=@pemit %#=notice(SHEET,[if(strmatch(%q<trait_kind>,CHAR),A characteristic,A skill)] is a whole number from %q<set_low> to %q<set_high>.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,%q<trait_kind>`%q<trait_key>,value,%q<set_value>; @pemit %#=notice(SHEET,[u(%!/FUN`TRAIT`NAME,%q<trait_key>)] is %q<set_value>[if(strmatch(%q<trait_kind>,SKILL),%%)] on [name(%q<sheet_who>)]'s sheet.[if(not(comp(%q<sheet_who>,%q<viewer_objid>)),u(%!/FUN`HINT,SET))],ok)
+        flags: [cmdsyntax]
+      # +sheet/hp [<name>=]<n>|+<n>|-<n>|full, and the same for /pp.
+      INC`SHEET`HP:
+        value: |-
+          @include/args %!/INC`SHEET`POOL=pool,HP,noun,hit points
+        flags: [cmdsyntax]
+      INC`SHEET`PP:
+        value: |-
+          @include/args %!/INC`SHEET`POOL=pool,PP,noun,power points
+        flags: [cmdsyntax]
+      # %<pool> HP or PP, %<noun> what it is called.
+      INC`SHEET`POOL:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/[lcstr(%<pool>)] -<n> loses %<noun>%, +<n> gets some back%, <n> sets them%, full fills them.,warn); @if %q<cmd_has_equals>={@include/args %!/INC`NEED`WHO=text,%q<cmd_left_side>/; think setq(pool_typed,%q<cmd_right_side>)},{think setqm(sheet_who,%q<viewer_objid>,pool_typed,%q<cmd_argument>)}; think setqm(pool_most,u(%!/API`MOST,%q<sheet_who>,%<pool>),pool_now,u(%!/API`LEFT,%q<sheet_who>,%<pool>),pool_to,cond(strmatch(%q<pool_typed>,full),%q<pool_most>,strmatch(%q<pool_typed>,+*),add(%q<pool_now>,rest(%q<pool_typed>,+)),strmatch(%q<pool_typed>,-*),add(%q<pool_now>,%q<pool_typed>),%q<pool_typed>)); @assert isint(%q<pool_to>)=@pemit %#=notice(SHEET,'%q<pool_typed>' is not a number of %<noun>. Give -<n>%, +<n>%, <n> or full.,warn); think setq(pool_to,min(%q<pool_to>,%q<pool_most>)); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,%<pool>,value,if(neq(%q<pool_to>,%q<pool_most>),%q<pool_to>); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<pool_to> of %q<pool_most> %<noun>.[if(lte(%q<pool_to>,0),%b[if(strmatch(%<pool>,HP),tone(strong,At 0 or below a character is dying.),tone(strong,No power points are left.))])],ok)
+        flags: [cmdsyntax]
+      INC`SHEET`TRAITS:
+        value: |-
+          @pemit %#=u(%!/FUN`SCREEN`TRAITS)
+        flags: [cmdsyntax]
+
+      # ---- +check -----------------------------------------------------------------
+      INC`CHECK`USAGE:
+        value: |-
+          @pemit %#=notice(SHEET,+check <skill or characteristic>%[=<difficulty>%]%, such as +check climb=difficult or +check dex. +<n> or -<n> after it adds or takes percent. /private rolls where only you see it.,warn)
+        flags: [cmdsyntax]
+      # +check[/private] <trait>[+<n>|-<n>][=<difficulty>]: rolls 1d100 for the room.
+      INC`CHECK`ROLL:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@include %!/INC`CHECK`USAGE; think u(%!/FUN`CHECK`READ,%q<cmd_left_side>); @assert isint(%q<check_modifier>)=@pemit %#=notice(SHEET,'%q<cmd_left_side>' ends in something that is not a number to add.,warn); @include/args %!/INC`NEED`TRAIT=key,%q<check_typed>; @assert not(strmatch(%q<trait_key>,SIZ))=@pemit %#=notice(SHEET,SIZ has no roll of its own.,warn); think setq(check_level,u(%!/API`TARGET,%q<cmd_right_side>)); @assert cor(not(%q<cmd_has_equals>),strlen(%q<check_level>))=@pemit %#=notice(SHEET,'%q<cmd_right_side>' is not a difficulty. Give [itemize(v(DATA`LEVELS),,or)]%, or one of [itemize(v(DATA`DIFFICULTIES))].,warn); think setq(check_result,uargs(%!/API`CHECK,roller,%q<viewer_objid>,trait,%q<trait_key>,modifier,%q<check_modifier>,target,%q<check_level>)); @assert not(strmatch(%q<check_result>,#-*))=@pemit %#=notice(SHEET,%q<check_result>,error); think setq(check_line,u(%!/FUN`DISPLAY`CHECK,%q<check_result>)); @break member(%q<cmd_switch_list>,private)=@pemit %#=notice(SHEET,You privately roll %q<check_line>); @remit %l=notice(SHEET,tone(strong,name(%#)) rolls %q<check_line>)
+        flags: [cmdsyntax]
+      # %0 the trait as typed, with a modifier at its end: check_typed and check_modifier (0 when none).
+      FUN`CHECK`READ:
+        value: |-
+          setqm(check_plus,if(pos(+,%0),trim(last(%0,+))),
+          check_minus,if(pos(-,%0),trim(last(%0,-))),
+          check_modifier,cond(strlen(%q<check_plus>),%q<check_plus>,isint(%q<check_minus>),-%q<check_minus>,0),
+          check_typed,trim(cond(strlen(%q<check_plus>),left(%0,sub(strlen(%0),inc(strlen(last(%0,+))))),isint(%q<check_minus>),left(%0,sub(strlen(%0),inc(strlen(last(%0,-))))),%0)))
+        flags: [funsyntax]
+
+      # ---- writes -----------------------------------------------------------------
+      # %<who> an objid, %<leaf> what under BRP` to write, %<value> what to store; empty clears it. The BRP root is
+      # wizard-flagged and no_command the first time, and its leaves take that from it.
+      INC`DO`SET:
+        value: |-
+          @if not(hasattr(%<who>,BRP))={&BRP %<who>=This character's percentile sheet. +sheet shows it.; @set %<who>/BRP=wizard; @set %<who>/BRP=no_command}; @if strlen(%<value>)={&BRP`%<leaf> %<who>=%<value>},{&BRP`%<leaf> %<who>}
+        flags: [cmdsyntax]
+
+      # ---- lists ------------------------------------------------------------------
+      # %0 a list on the store (CHAR, SKILL): its keys, in order (characteristics) or by label (skills).
+      FUN`LIST`ALL:
+        value: |-
+          setq(list_path,%0)[sortkey(%!/FUN`LIST`SORTKEY,iter(lattr({{store}}/%0`*),after(%i0,`)))]
+        flags: [funsyntax]
+      FUN`LIST`SORTKEY:
+        value: |-
+          rjust(default({{store}}/%q<list_path>`%0`ORDER,50),3,0)[lcstr(get({{store}}/%q<list_path>`%0))]
+        flags: [funsyntax]
+      # %0 a list, %1 typed text: the key it names, by key, by label, or by the start of one, or nothing.
+      FUN`LIST`FIND:
+        value: |-
+          setqm(find_typed,trim(%1),
+          find_all,u(%!/FUN`LIST`ALL,%0),
+          find_exact,iter(%q<find_all>,if(cor(not(comp(%i0,ucstr(edit(%q<find_typed>,%b,-)))),not(comp(lcstr(get({{store}}/%0`%i0)),lcstr(%q<find_typed>))),not(comp(lcstr(get({{store}}/%0`%i0`ROLL)),lcstr(%q<find_typed>)))),%i0)),
+          find_start,iter(%q<find_all>,if(cor(not(comp(left(%i0,strlen(%q<find_typed>)),ucstr(edit(%q<find_typed>,%b,-)))),not(comp(lcstr(left(get({{store}}/%0`%i0),strlen(%q<find_typed>))),lcstr(%q<find_typed>)))),%i0)))[if(strlen(%q<find_typed>),first(firstof(%q<find_exact>,if(eq(words(%q<find_start>),1),%q<find_start>))))]
+        flags: [funsyntax]
+      # ---- characteristics and skills together ------------------------------------------
+      # %0 typed text: a characteristic's key (or its roll's name) first, then a skill's.
+      FUN`TRAIT`FIND:
+        value: |-
+          firstof(u(%!/FUN`LIST`FIND,CHAR,%0),u(%!/FUN`LIST`FIND,SKILL,%0))
+        flags: [funsyntax]
+      # %0 a key: CHAR or SKILL.
+      FUN`TRAIT`KIND:
+        value: |-
+          if(hasattr({{store}},CHAR`%0),CHAR,SKILL)
+        flags: [funsyntax]
+      # %0 a key: a skill's label, or a characteristic's roll ("Agility").
+      # What +sheet/set calls a trait: Dexterity (DEX) for a characteristic, the skill's name for a skill.
+      FUN`TRAIT`NAME:
+        value: |-
+          if(strmatch(u(%!/FUN`TRAIT`KIND,%0),CHAR),[get({{store}}/CHAR`%0)] %(%0%),firstof(get({{store}}/SKILL`%0),lcstr(%0)))
+        flags: [funsyntax]
+      FUN`TRAIT`LABEL:
+        value: |-
+          if(strmatch(u(%!/FUN`TRAIT`KIND,%0),CHAR),firstof(get({{store}}/CHAR`%0`ROLL),get({{store}}/CHAR`%0)),firstof(get({{store}}/SKILL`%0),lcstr(%0)))
+        flags: [funsyntax]
+      # The characteristics with a roll (all but SIZ).
+      FUN`TRAIT`ROLLS:
+        value: |-
+          filterbool(%!/FUN`TRAIT`HASROLL,u(%!/FUN`LIST`ALL,CHAR))
+        flags: [funsyntax]
+      FUN`TRAIT`HASROLL:
+        value: |-
+          hasattr({{store}},CHAR`%0`ROLL)
+        flags: [funsyntax]
+
+      # ---- base chances -------------------------------------------------------------
+      # %0 a character (or nothing, for 10s), %1 a base: terms added with +, each a number, a characteristic, or a
+      # characteristic*number. The chance, or #-1 when a term is neither.
+      FUN`BASE`EVAL:
+        value: |-
+          setq(base_who,%0)[setq(base_terms,iter(%1,u(%!/FUN`BASE`TERM,trim(%i0)),+,%b))][if(words(filterbool(%!/FUN`BASE`BAD,%q<base_terms>)),#-1,ladd(%q<base_terms>))]
+        flags: [funsyntax]
+      FUN`BASE`TERM:
+        value: |-
+          cond(isint(%0),%0,cand(strmatch(%0,*%*),hasattr({{store}},CHAR`[ucstr(trim(before(%0,*)))]),isint(trim(after(%0,*)))),mul(u(%!/FUN`CHAR`VALUE,%q<base_who>,ucstr(trim(before(%0,*)))),trim(after(%0,*))),hasattr({{store}},CHAR`[ucstr(%0)]),u(%!/FUN`CHAR`VALUE,%q<base_who>,ucstr(%0)),x)
+        flags: [funsyntax]
+      FUN`BASE`BAD:
+        value: |-
+          not(isint(%0))
+        flags: [funsyntax]
+      # %0 a character (or nothing), %1 a characteristic: its value, 10 when not set.
+      FUN`CHAR`VALUE:
+        value: |-
+          if(strlen(%0),default(%0/BRP`CHAR`%1,10),10)
+        flags: [funsyntax]
+      # %0 a character, %1 a skill: its base chance.
+      FUN`SKILL`BASE:
+        value: |-
+          max(0,u(%!/FUN`BASE`EVAL,%0,default({{store}}/SKILL`%1`BASE,0)))
+        flags: [funsyntax]
+
+      # ---- the numbers --------------------------------------------------------------
+      # %0 a chance, %1 a level (automatic easy average difficult impossible): the chance at that level, rounded up.
+      FUN`CHANCE`AT:
+        value: |-
+          switch(%1,easy,mul(%0,2),difficult,ceil(fdiv(%0,2)),impossible,0,%0)
+        flags: [funsyntax]
+      # %0 the roll (1 to 100), %1 the chance, %2 1 when the trait's base is 5 or more (01-05 then always succeed).
+      # fumble, critical, special, success or failure.
+      FUN`CHANCE`LEVEL:
+        value: |-
+          cond(gte(%0,min(100,add(95,ceil(fdiv(max(%1,0),20))))),fumble,lte(%0,ceil(fdiv(max(%1,0),20))),critical,lte(%0,ceil(fdiv(max(%1,0),5))),special,lte(%0,%1),success,cand(%2,lte(%0,5)),success,failure)
+        flags: [funsyntax]
+      # %0 a character, %1 HP or PP: the most they hold.
+      API`MOST:
+        value: |-
+          if(strmatch(%1,PP),u(%!/FUN`CHAR`VALUE,%0,POW),setq(most_sum,add(u(%!/FUN`CHAR`VALUE,%0,CON),u(%!/FUN`CHAR`VALUE,%0,SIZ)))[if(strmatch(get(%!/DATA`CONFIG`HITPOINTS),total),%q<most_sum>,ceil(fdiv(%q<most_sum>,2)))])
+        flags: [VISUAL]
+      # %0 a character, %1 HP or PP: what they have left.
+      API`LEFT:
+        value: |-
+          default(%0/BRP`%1,u(%!/API`MOST,%0,%1))
+        flags: [VISUAL]
+
+      # ---- who may do what ----------------------------------------------------------
+      FUN`PERM`KEEPER:
+        value: |-
+          permission(%0,softcode.brp.admin)
+        flags: [funsyntax]
+      # %0 who asks, %1 whose sheet: 1 when they may read it. ALLOW`VIEW`<name>, which a bridge adds, may let
+      # more people read it.
+      FUN`PERM`VIEW:
+        value: |-
+          cor(not(comp(objid(%0),%1)),u(%!/FUN`PERM`KEEPER,%0),get(%!/DATA`CONFIG`PUBLIC),words(filterbool(%!/FUN`PERM`ALLOWS,lattr(%!/ALLOW`VIEW`*),,,%0,%1)))
+        flags: [funsyntax]
+      FUN`PERM`ALLOWS:
+        value: |-
+          u(%!/%0,%1,%2)
+        flags: [funsyntax]
+      FUN`GATE`EDIT:
+        value: |-
+          if(hasattr(%!,GATE`EDIT),u(%!/GATE`EDIT,%0))
+        flags: [funsyntax]
+      FUN`PLAYER`MATCH:
+        value: |-
+          if(isdbref(setr(found_player,pmatch(%0))),objid(%q<found_player>))
+        flags: [funsyntax]
+
+      # ---- screens ------------------------------------------------------------------
+      # %0 a check's JSON: "Climb (55%, difficult, halved: 28%): 1d100[23] = 23: success (roll 9)".
+      FUN`DISPLAY`CHECK:
+        value: |-
+          setqm(display_tier,json_query(%0,extract,$.tier),
+          display_level,json_query(%0,extract,$.level),
+          display_target,json_query(%0,extract,$.target))[json_query(%0,extract,$.label)] %([json_query(%0,extract,$.rating)]%%[if(cand(strlen(%q<display_target>),comp(%q<display_target>,average)),%, [v(DATA`LEVEL`%q<display_target>)])][if(neq(json_query(%0,extract,$.rating),json_query(%0,extract,$.chance)),: [json_query(%0,extract,$.chance)]%%)]%): [if(strlen(json_query(%0,extract,$.text)),[json_query(%0,extract,$.text)]:%b)][tone(u(%!/FUN`DISPLAY`TIERTONE,%q<display_tier>),u(%!/FUN`DISPLAY`LEVEL,%q<display_level>))][if(json_query(%0,extract,$.roll),%b[tone(muted,%(roll [json_query(%0,extract,$.roll)]%))])]
+        flags: [funsyntax]
+      FUN`DISPLAY`LEVEL:
+        value: |-
+          switch(%0,critical,a critical success,special,a special success,success,a success,fumble,a fumble,automatic,a success without a roll,a failure)
+        flags: [funsyntax]
+      FUN`DISPLAY`TIERTONE:
+        value: |-
+          switch(%0,crit-success,success,success,success,crit-fail,error,warning)
+        flags: [funsyntax]
+      # %0 the character, %1 who reads it.
+      FUN`SCREEN`SHEET:
+        value: |-
+          setq(screen_chars,u(%!/FUN`LIST`ALL,CHAR))[box(lfields(lit({"cols":4}),iter(%q<screen_chars>,%i0,%b,%*<|>),iter(%q<screen_chars>,u(%!/FUN`CHAR`VALUE,%0,%i0),%b,%*<|>),%*<|>)%r[lfields(lit({"cols":2}),Hit points%*<|>Power points,[u(%!/API`LEFT,%0,HP)]/[u(%!/API`MOST,%0,HP)]%*<|>[u(%!/API`LEFT,%0,PP)]/[u(%!/API`MOST,%0,PP)],%*<|>)]%r[rule(Characteristic rolls)]%r[lfields(lit({"cols":3}),iter(u(%!/FUN`TRAIT`ROLLS),get({{store}}/CHAR`%i0`ROLL),%b,%*<|>),iter(u(%!/FUN`TRAIT`ROLLS),[u(%!/API`RATING,%0,%i0)]%%,%b,%*<|>),%*<|>)]%r[rule(Skills)]%r[u(%!/FUN`SCREEN`SKILLS,%0)]%r[rule()]%r[tone(muted,u(%!/FUN`DISPLAY`FOOTER,%0,%1))],name(%0))]
+        flags: [funsyntax]
+      # %0 the character: every skill and its percentage, three to a row; a skill above its base is in strong.
+      FUN`SCREEN`SKILLS:
+        value: |-
+          setq(screen_skills,u(%!/FUN`LIST`ALL,SKILL))[ldatatable(lit({"nowrap":"1|2|3|4|5|6"}),Skill|%%|Skill|%%|Skill|%%,iter(lnum(0,dec(ceil(fdiv(words(%q<screen_skills>),3)))),iter(lnum(1,3),setq(screen_cell,extract(%q<screen_skills>,add(mul(%i1,3),%i0),1))[if(strlen(%q<screen_cell>),get({{store}}/SKILL`%q<screen_cell>)|[if(u(%!/API`TRAINED,%0,%q<screen_cell>),tone(strong,[u(%!/API`RATING,%0,%q<screen_cell>)]%%),[u(%!/API`RATING,%0,%q<screen_cell>)]%%)],|)],%b,|),%b,%*<^>),%*<^>)]
+        flags: [funsyntax]
+      FUN`DISPLAY`FOOTER:
+        value: |-
+          cond(cand(not(comp(objid(%1),%0)),not(isapproved(%1)),not(u(%!/FUN`PERM`KEEPER,%1))),+sheet/set <characteristic or skill>=<value> fills it in. +check <skill> rolls.[u(%!/FUN`HINT,FOOTER)],not(comp(objid(%1),%0)),+check <skill>=<difficulty> rolls. +sheet/hp -<n> loses hit points%, +sheet/pp -<n> spends power points.,+check <skill> rolls 1d100 under the percentage.)
+        flags: [funsyntax]
+      FUN`SCREEN`TRAITS:
+        value: |-
+          box(ldatatable(lit({"nowrap":"1|2|3"}),Key|Characteristic|Roll,iter(u(%!/FUN`LIST`ALL,CHAR),lcstr(%i0)|[get({{store}}/CHAR`%i0)]|[firstof(get({{store}}/CHAR`%i0`ROLL),-)],,%*<^>),%*<^>)%r[rule()]%r[ldatatable(lit({"nowrap":"1|2|3|4"}),Key|Skill|Base|Category,iter(u(%!/FUN`LIST`ALL,SKILL),lcstr(%i0)|[get({{store}}/SKILL`%i0)]|[edit(default({{store}}/SKILL`%i0`BASE,0),*,x)]|[default({{store}}/SKILL`%i0`CATEGORY,mental)],,%*<^>),%*<^>)]%r[rule()]%r[tone(muted,Difficulty: [itemize(v(DATA`LEVELS),,or)]%, or [itemize(v(DATA`DIFFICULTIES),,or)].)],Characteristics and skills)
+        flags: [funsyntax]
+
+      # ---- the sheet API ------------------------------------------------------------
+      # What other packages call: u({{sheet-brp/sheet}}/API`<NAME>,...). Every sheet package has these names.
+      # They read and roll; API`RAISE and API`HEAL are the ones that write.
+      API:
+        value: |-
+          The percentile sheet's functions for other packages. See the package README.
+        flags: [VISUAL]
+      # JSON list of the characteristic rolls and skills: [{"key","label","group","always"}], group
+      # characteristic or the skill's category. always is true for a characteristic roll and a skill with a base
+      # chance above 0 for an average character.
+      API`TRAITS:
+        value: |-
+          json_array(iter(u(%!/FUN`TRAIT`ROLLS),json(object,key,json(string,lcstr(%i0)),label,json(string,u(%!/FUN`TRAIT`LABEL,%i0)),group,json(string,characteristic),always,json(boolean,1)),%b,|)|[iter(u(%!/FUN`LIST`ALL,SKILL),json(object,key,json(string,lcstr(%i0)),label,json(string,get({{store}}/SKILL`%i0)),group,json(string,default({{store}}/SKILL`%i0`CATEGORY,mental)),always,json(boolean,gt(u(%!/FUN`SKILL`BASE,,%i0),0))),%b,|)],|)
+        flags: [VISUAL]
+      # The keys an average character can roll, lower case.
+      API`ALWAYS:
+        value: |-
+          lcstr(u(%!/FUN`TRAIT`ROLLS) [filterbool(%!/FUN`SKILL`HASBASE,u(%!/FUN`LIST`ALL,SKILL))])
+        flags: [VISUAL]
+      FUN`SKILL`HASBASE:
+        value: |-
+          gt(u(%!/FUN`SKILL`BASE,,%0),0)
+        flags: [funsyntax]
+      API`FIND:
+        value: |-
+          lcstr(u(%!/FUN`TRAIT`FIND,%0))
+        flags: [VISUAL]
+      API`LABEL:
+        value: |-
+          u(%!/FUN`TRAIT`LABEL,ucstr(%0))
+        flags: [VISUAL]
+      # %0 a character, %1 a key: the percentage, a characteristic times 5 or a skill's (its base when not set).
+      API`RATING:
+        value: |-
+          setq(rating_key,ucstr(%1))[if(strmatch(u(%!/FUN`TRAIT`KIND,%q<rating_key>),CHAR),mul(u(%!/FUN`CHAR`VALUE,%0,%q<rating_key>),5),default(%0/BRP`SKILL`%q<rating_key>,u(%!/FUN`SKILL`BASE,%0,%q<rating_key>)))]
+        flags: [VISUAL]
+      # %0 a character, %1 a key: 1 when a skill stands above its base chance; a characteristic roll always.
+      API`TRAINED:
+        value: |-
+          setq(trained_key,ucstr(%1))[if(strmatch(u(%!/FUN`TRAIT`KIND,%q<trained_key>),CHAR),1,gt(u(%!/API`RATING,%0,%q<trained_key>),u(%!/FUN`SKILL`BASE,%0,%q<trained_key>)))]
+        flags: [VISUAL]
+      API`HAS:
+        value: |-
+          hasattr(%0,BRP)
+        flags: [VISUAL]
+      # %0 a difficulty word or a level: the level (automatic easy average difficult impossible), or nothing.
+      API`TARGET:
+        value: |-
+          cond(member(v(DATA`DIFFICULTIES),lcstr(%0)),lcstr(extract(get(%!/DATA`CONFIG`DIFFICULTY),member(v(DATA`DIFFICULTIES),lcstr(%0)),1)),member(v(DATA`LEVELS),lcstr(%0)),lcstr(%0),strmatch(%0,normal),average)
+        flags: [VISUAL]
+      # %0 fumble, critical, special, success, failure or automatic: the tier.
+      API`TIER:
+        value: |-
+          switch(%0,fumble,crit-fail,critical,crit-success,special,success,success,success,automatic,success,failure,fail)
+        flags: [VISUAL]
+      # %0 a character, %1 a skill, %2 percent to add: raises it, never past 999, and returns the new percentage.
+      API`RAISE:
+        value: |-
+          setqm(raise_key,ucstr(%1),raise_new,min(999,max(0,add(u(%!/API`RATING,%0,%1),%2))))[if(hasattr(%0,BRP),,attrib_set(%0/BRP,This character's percentile sheet. +sheet shows it.)[set(%0/BRP,wizard)][set(%0/BRP,no_command)])][attrib_set(%0/BRP`SKILL`%q<raise_key>,%q<raise_new>)]%q<raise_new>
+        flags: [VISUAL]
+      # %0 a character, %1 HP or PP, %2 how many to give back: never past the most. Returns what they have.
+      API`HEAL:
+        value: |-
+          setqm(heal_most,u(%!/API`MOST,%0,%1),heal_new,min(%q<heal_most>,add(u(%!/API`LEFT,%0,%1),%2)))[if(hasattr(%0,BRP),,attrib_set(%0/BRP,This character's percentile sheet. +sheet shows it.)[set(%0/BRP,wizard)][set(%0/BRP,no_command)])][attrib_set(%0/BRP`%1,if(neq(%q<heal_new>,%q<heal_most>),%q<heal_new>))]%q<heal_new>
+        flags: [VISUAL]
+      # Named: %<roller> an objid, %<trait> a key, %<modifier> percent to add, %<target> a level or nothing
+      # (average). Rolls 1d100 and keeps the roll (roll() record); automatic and impossible roll nothing. Returns
+      # {"tier","level","total","rating","chance","target","label","text","roll","formula"}. #-1 and why when the
+      # trait or roller is wrong.
+      API`CHECK:
+        value: |-
+          setq(check_api_key,ucstr(u(%!/FUN`TRAIT`FIND,%<trait>)))[cond(not(hastype(%<roller>,player)),#-1 There is no character to roll for.,not(strlen(%q<check_api_key>)),#-1 There is no characteristic or skill '%<trait>'.,strmatch(%q<check_api_key>,SIZ),#-1 SIZ has no roll of its own.,u(%!/FUN`CHECK`ROLLED,%<roller>,%q<check_api_key>,firstof(%<target>,average),firstof(%<modifier>,0)))]
+        flags: [VISUAL]
+      # %0 the roller, %1 the key, %2 the level, %3 percent to add.
+      FUN`CHECK`ROLLED:
+        value: |-
+          setqm(rolled_rating,u(%!/API`RATING,%0,%1),
+          rolled_chance,add(u(%!/FUN`CHANCE`AT,%q<rolled_rating>,%2),%3),
+          rolled,if(member(automatic impossible,%2),,roll(1d100,,record)),
+          rolled_total,if(strlen(%q<rolled>),json_query(%q<rolled>,extract,$.total)),
+          rolled_level,switch(%2,automatic,automatic,impossible,failure,u(%!/FUN`CHANCE`LEVEL,%q<rolled_total>,%q<rolled_chance>,cor(strmatch(u(%!/FUN`TRAIT`KIND,%1),CHAR),gte(u(%!/FUN`SKILL`BASE,%0,%1),5)))))[json(object,tier,json(string,u(%!/API`TIER,%q<rolled_level>)),level,json(string,%q<rolled_level>),total,json(string,%q<rolled_total>),rating,%q<rolled_rating>,chance,%q<rolled_chance>,target,json(string,%2),label,json(string,u(%!/FUN`TRAIT`LABEL,%1)),text,json(string,if(strlen(%q<rolled>),json_query(%q<rolled>,extract,$.text))),roll,json(string,if(strlen(%q<rolled>),json_query(%q<rolled>,extract,$.id))),formula,json(string,if(strlen(%q<rolled>),1d100)))]
+        flags: [funsyntax]
+
+      # ---- lifecycle ----------------------------------------------------------------
+      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
+      STARTUP:
+        value: |-
+          @command/add/noparse/rsnoparse +sheet; @hook/override/inline +sheet=%!,CMD`SHEET; @command/add/noparse/rsnoparse +check; @hook/override/inline +check=%!,CMD`CHECK
+        flags: [cmdsyntax]
+      AINSTALL:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+      AUPDATE:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+
+  # The lists. Inside the BRP Sheet, so no player can reach it, and no_command, so nothing kept on it is ever
+  # matched as a command. CHAR`<KEY> a characteristic, with ROLL (its roll's name) and ORDER beneath; SKILL`<KEY> a
+  # skill's label, with BASE and CATEGORY beneath. Staff change the skills with +config brp/skills.
+  #
+  # The characteristics, the characteristic rolls' names, and every skill's name, base chance and category are
+  # ORC Licensed Material from Basic Roleplaying: Universal Game Engine (see NOTICE.md).
+  - ref: store
+    type: thing
+    name: BRP Sheet Store
+    location: "{{sheet}}"
+    flags: [no_command]
+    attributes:
+      CHAR: |-
+        The seven characteristics, one branch each, with the name of their roll beneath.
+      CHAR`STR: |-
+        Strength
+      CHAR`STR`ROLL: |-
+        Effort
+      CHAR`STR`ORDER: |-
+        1
+      CHAR`CON: |-
+        Constitution
+      CHAR`CON`ROLL: |-
+        Stamina
+      CHAR`CON`ORDER: |-
+        2
+      CHAR`SIZ: |-
+        Size
+      CHAR`SIZ`ORDER: |-
+        3
+      CHAR`INT: |-
+        Intelligence
+      CHAR`INT`ROLL: |-
+        Idea
+      CHAR`INT`ORDER: |-
+        4
+      CHAR`POW: |-
+        Power
+      CHAR`POW`ROLL: |-
+        Luck
+      CHAR`POW`ORDER: |-
+        5
+      CHAR`DEX: |-
+        Dexterity
+      CHAR`DEX`ROLL: |-
+        Agility
+      CHAR`DEX`ORDER: |-
+        6
+      CHAR`CHA: |-
+        Charisma
+      CHAR`CHA`ROLL: |-
+        Charm
+      CHAR`CHA`ORDER: |-
+        7
+      SKILL: |-
+        The skills, one branch each, keyed as a player types it, with BASE and CATEGORY beneath.
+      SKILL`APPRAISE: |-
+        Appraise
+      SKILL`APPRAISE`BASE: |-
+        15
+      SKILL`APPRAISE`CATEGORY: |-
+        mental
+      SKILL`ART: |-
+        Art
+      SKILL`ART`BASE: |-
+        5
+      SKILL`ART`CATEGORY: |-
+        manipulation
+      SKILL`BARGAIN: |-
+        Bargain
+      SKILL`BARGAIN`BASE: |-
+        5
+      SKILL`BARGAIN`CATEGORY: |-
+        communication
+      SKILL`BRAWL: |-
+        Brawl
+      SKILL`BRAWL`BASE: |-
+        25
+      SKILL`BRAWL`CATEGORY: |-
+        combat
+      SKILL`CLIMB: |-
+        Climb
+      SKILL`CLIMB`BASE: |-
+        40
+      SKILL`CLIMB`CATEGORY: |-
+        physical
+      SKILL`COMMAND: |-
+        Command
+      SKILL`COMMAND`BASE: |-
+        5
+      SKILL`COMMAND`CATEGORY: |-
+        communication
+      SKILL`CRAFT: |-
+        Craft
+      SKILL`CRAFT`BASE: |-
+        5
+      SKILL`CRAFT`CATEGORY: |-
+        manipulation
+      SKILL`DEMOLITION: |-
+        Demolition
+      SKILL`DEMOLITION`BASE: |-
+        1
+      SKILL`DEMOLITION`CATEGORY: |-
+        manipulation
+      SKILL`DISGUISE: |-
+        Disguise
+      SKILL`DISGUISE`BASE: |-
+        1
+      SKILL`DISGUISE`CATEGORY: |-
+        communication
+      SKILL`DODGE: |-
+        Dodge
+      SKILL`DODGE`BASE: |-
+        DEX*2
+      SKILL`DODGE`CATEGORY: |-
+        physical
+      SKILL`DRIVE: |-
+        Drive
+      SKILL`DRIVE`BASE: |-
+        20
+      SKILL`DRIVE`CATEGORY: |-
+        physical
+      SKILL`ETIQUETTE: |-
+        Etiquette
+      SKILL`ETIQUETTE`BASE: |-
+        5
+      SKILL`ETIQUETTE`CATEGORY: |-
+        communication
+      SKILL`FAST-TALK: |-
+        Fast Talk
+      SKILL`FAST-TALK`BASE: |-
+        5
+      SKILL`FAST-TALK`CATEGORY: |-
+        communication
+      SKILL`FINE-MANIPULATION: |-
+        Fine Manipulation
+      SKILL`FINE-MANIPULATION`BASE: |-
+        5
+      SKILL`FINE-MANIPULATION`CATEGORY: |-
+        manipulation
+      SKILL`FIRST-AID: |-
+        First Aid
+      SKILL`FIRST-AID`BASE: |-
+        30
+      SKILL`FIRST-AID`CATEGORY: |-
+        mental
+      SKILL`GAMING: |-
+        Gaming
+      SKILL`GAMING`BASE: |-
+        INT+POW
+      SKILL`GAMING`CATEGORY: |-
+        mental
+      SKILL`GRAPPLE: |-
+        Grapple
+      SKILL`GRAPPLE`BASE: |-
+        25
+      SKILL`GRAPPLE`CATEGORY: |-
+        combat
+      SKILL`HEAVY-MACHINE: |-
+        Heavy Machine
+      SKILL`HEAVY-MACHINE`BASE: |-
+        1
+      SKILL`HEAVY-MACHINE`CATEGORY: |-
+        manipulation
+      SKILL`HIDE: |-
+        Hide
+      SKILL`HIDE`BASE: |-
+        10
+      SKILL`HIDE`CATEGORY: |-
+        physical
+      SKILL`INSIGHT: |-
+        Insight
+      SKILL`INSIGHT`BASE: |-
+        5
+      SKILL`INSIGHT`CATEGORY: |-
+        perception
+      SKILL`JUMP: |-
+        Jump
+      SKILL`JUMP`BASE: |-
+        25
+      SKILL`JUMP`CATEGORY: |-
+        physical
+      SKILL`KNOWLEDGE: |-
+        Knowledge
+      SKILL`KNOWLEDGE`BASE: |-
+        5
+      SKILL`KNOWLEDGE`CATEGORY: |-
+        mental
+      SKILL`LANGUAGE-OWN: |-
+        Language (Own)
+      SKILL`LANGUAGE-OWN`BASE: |-
+        INT*5
+      SKILL`LANGUAGE-OWN`CATEGORY: |-
+        communication
+      SKILL`LANGUAGE-OTHER: |-
+        Language (Other)
+      SKILL`LANGUAGE-OTHER`BASE: |-
+        0
+      SKILL`LANGUAGE-OTHER`CATEGORY: |-
+        communication
+      SKILL`LISTEN: |-
+        Listen
+      SKILL`LISTEN`BASE: |-
+        25
+      SKILL`LISTEN`CATEGORY: |-
+        perception
+      SKILL`MARTIAL-ARTS: |-
+        Martial Arts
+      SKILL`MARTIAL-ARTS`BASE: |-
+        1
+      SKILL`MARTIAL-ARTS`CATEGORY: |-
+        combat
+      SKILL`MEDICINE: |-
+        Medicine
+      SKILL`MEDICINE`BASE: |-
+        5
+      SKILL`MEDICINE`CATEGORY: |-
+        mental
+      SKILL`NAVIGATE: |-
+        Navigate
+      SKILL`NAVIGATE`BASE: |-
+        10
+      SKILL`NAVIGATE`CATEGORY: |-
+        perception
+      SKILL`PERFORM: |-
+        Perform
+      SKILL`PERFORM`BASE: |-
+        5
+      SKILL`PERFORM`CATEGORY: |-
+        communication
+      SKILL`PERSUADE: |-
+        Persuade
+      SKILL`PERSUADE`BASE: |-
+        15
+      SKILL`PERSUADE`CATEGORY: |-
+        communication
+      SKILL`PILOT: |-
+        Pilot
+      SKILL`PILOT`BASE: |-
+        1
+      SKILL`PILOT`CATEGORY: |-
+        physical
+      SKILL`PSYCHOTHERAPY: |-
+        Psychotherapy
+      SKILL`PSYCHOTHERAPY`BASE: |-
+        1
+      SKILL`PSYCHOTHERAPY`CATEGORY: |-
+        mental
+      SKILL`REPAIR: |-
+        Repair
+      SKILL`REPAIR`BASE: |-
+        15
+      SKILL`REPAIR`CATEGORY: |-
+        manipulation
+      SKILL`RESEARCH: |-
+        Research
+      SKILL`RESEARCH`BASE: |-
+        25
+      SKILL`RESEARCH`CATEGORY: |-
+        perception
+      SKILL`RIDE: |-
+        Ride
+      SKILL`RIDE`BASE: |-
+        5
+      SKILL`RIDE`CATEGORY: |-
+        physical
+      SKILL`SCIENCE: |-
+        Science
+      SKILL`SCIENCE`BASE: |-
+        1
+      SKILL`SCIENCE`CATEGORY: |-
+        mental
+      SKILL`SENSE: |-
+        Sense
+      SKILL`SENSE`BASE: |-
+        10
+      SKILL`SENSE`CATEGORY: |-
+        perception
+      SKILL`SLEIGHT-OF-HAND: |-
+        Sleight of Hand
+      SKILL`SLEIGHT-OF-HAND`BASE: |-
+        5
+      SKILL`SLEIGHT-OF-HAND`CATEGORY: |-
+        manipulation
+      SKILL`SPOT: |-
+        Spot
+      SKILL`SPOT`BASE: |-
+        25
+      SKILL`SPOT`CATEGORY: |-
+        perception
+      SKILL`STATUS: |-
+        Status
+      SKILL`STATUS`BASE: |-
+        15
+      SKILL`STATUS`CATEGORY: |-
+        communication
+      SKILL`STEALTH: |-
+        Stealth
+      SKILL`STEALTH`BASE: |-
+        10
+      SKILL`STEALTH`CATEGORY: |-
+        physical
+      SKILL`STRATEGY: |-
+        Strategy
+      SKILL`STRATEGY`BASE: |-
+        1
+      SKILL`STRATEGY`CATEGORY: |-
+        mental
+      SKILL`SWIM: |-
+        Swim
+      SKILL`SWIM`BASE: |-
+        25
+      SKILL`SWIM`CATEGORY: |-
+        physical
+      SKILL`TEACH: |-
+        Teach
+      SKILL`TEACH`BASE: |-
+        10
+      SKILL`TEACH`CATEGORY: |-
+        communication
+      SKILL`TECHNICAL-SKILL: |-
+        Technical Skill
+      SKILL`TECHNICAL-SKILL`BASE: |-
+        5
+      SKILL`TECHNICAL-SKILL`CATEGORY: |-
+        mental
+      SKILL`THROW: |-
+        Throw
+      SKILL`THROW`BASE: |-
+        25
+      SKILL`THROW`CATEGORY: |-
+        physical
+      SKILL`TRACK: |-
+        Track
+      SKILL`TRACK`BASE: |-
+        10
+      SKILL`TRACK`CATEGORY: |-
+        perception
+
+  # The +help topics, on an object of their own. sheet-brp-help registers it with +help; without that bridge
+  # nothing reads it. HELP`<TOPIC> is a topic, its subtopics the leaves beneath, LOCK`<TOPIC> who may read it.
+  - ref: sheet_help
+    type: thing
+    name: BRP Sheet Help
+    location: "{{sheet}}"
+    attributes:
+      HELP: |-
+        Your character's percentile sheet, and rolling against it: +sheet and +check.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`SHEET: |-
+        check
+      SEE`CHECK: |-
+        sheet
+      HELP`SHEET: |-
+        `+sheet` shows your character's sheet: seven characteristics, hit points and power points, the characteristic rolls, and every skill as a percentage.
+
+        - `+sheet` shows your own; `+sheet <name>` another character's, when the game lets you read it.
+        - `+sheet/set <characteristic>=<value>` sets one: `+sheet/set dex=14`. An unset characteristic counts as 10.
+        - `+sheet/set <skill>=<percent>` sets a skill: `+sheet/set climb=55`. Leave the value out to put it back to its base chance.
+        - `+sheet/traits` lists the characteristics and the skills with their base chances.
+
+        You fill in your sheet until your character is approved; then staff change it. A skill above its base chance shows in strong.
+
+        For example:
+
+        `+sheet/set first aid=45`
+
+        Output: `\[SHEET\] Done: First Aid is 45% on Alice's sheet.`
+
+        See `+help sheet play` for hit points and power points, and `+help check` for rolling.
+      HELP`SHEET`PLAY: |-
+        Hit points are CON and SIZ added and halved, rounded up; power points equal POW. In play you keep your own:
+
+        - `+sheet/hp -<n>` loses hit points, `+<n>` gets some back, `<n>` sets them, `full` fills them: `+sheet/hp -4`.
+        - `+sheet/pp` does the same for power points: `+sheet/pp -2`.
+
+        For example:
+
+        `+sheet/hp -4`
+
+        Output: `\[SHEET\] Done: Alice has 9 of 13 hit points.`
+      HELP`CHECK: |-
+        `+check <skill>` rolls 1d100 against the skill's percentage, where the room sees it. Equal or under succeeds.
+
+        - `+check <characteristic>` makes a characteristic roll, five times the characteristic: `+check dex` or `+check agility`.
+        - `+check <skill>=<difficulty>`: easy doubles the chance, difficult halves it, automatic needs no roll and impossible fails. The words trivial, easy, standard, hard and extreme work too.
+        - `+check <skill>+<n>` or `-<n>` adds or takes percent: `+check spot-20=easy`.
+        - `/private` rolls where only you see it.
+
+        A roll of a twentieth of the chance or less is a critical success, a fifth or less a special success. 96 to 00 can fumble: the higher the chance, the narrower that range, down to 00 alone at 81% and above. A skill with a base of 5% or more always succeeds on 01 to 05. Every check is kept under a number that `rollinfo()` reads back.
+
+        For example:
+
+        `+check climb=difficult`
+
+        Output: `\[SHEET\] Alice rolls Climb (55%, difficult, halved: 28%): 1d100\[23\] = 23: a success (roll 9)`
+      HELP`SHEET`CREDITS: |-
+        This sheet's characteristics, characteristic rolls and skill list, with each skill's base chance and category, come from Basic Roleplaying: Universal Game Engine, copyright 2023 Chaosium Inc., by Jason Durall and Steve Perrin, and are used under the ORC License \(www.chaosium.com/orclicense\). Basic Roleplaying is the trademark of Chaosium Inc.; Chaosium Inc. and the Chaosium logo are its registered trademarks.
+
+        That material, and this game's changes to it, are offered under the ORC License too. The package's NOTICE.md has the full notice.
+      LOCK`SHEET`STAFF: |-
+        perm^softcode.brp.admin
+      HELP`SHEET`STAFF: |-
+        Sheet keepers \(`softcode.brp.admin`, or the BRP Sheet Keeper role\) read every sheet and change any character's at any time:
+
+        - `+sheet <name>` shows a character's sheet.
+        - `/set` takes `<name>/` first: `+sheet/set Alice/dodge=80`. A keeper may set a characteristic up to 99 and a skill up to 999%.
+        - `+sheet/hp <name>=<n>` and `+sheet/pp <name>=<n>` change their hit points and power points.
+
+        `@role/assign <player>=brp-sheet-keeper` makes someone a keeper.
+      LOCK`SHEET`SETTINGS: |-
+        perm^config.admin
+      HELP`SHEET`SETTINGS: |-
+        `+config brp` lists the settings and `+config brp/<setting>=<value>` changes one \(`config.admin`\):
+
+        - `charcap`: the highest characteristic a player gives themselves \(18\). `skillcap`: the highest skill \(75%\).
+        - `hitpoints`: `average` \(CON and SIZ halved\) or `total` \(CON and SIZ added\).
+        - `difficulty`: what trivial, easy, standard, hard and extreme mean \(`automatic easy average difficult difficult`\).
+        - `public`: whether anyone may read anyone's sheet \(no\).
+        - `skills`: the skill list. `+config/add brp/skills/sail=Sail` adds one; set its `base`, a number, `DEX*2` or `INT+POW`, and its `category`.
+
+        Removing a skill leaves what characters had stored, but the sheet stops showing it.

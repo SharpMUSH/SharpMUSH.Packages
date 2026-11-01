@@ -1,0 +1,11 @@
+# sheet-fitd-chargen
+
+Joins the Forged in the Dark sheet to character applications (`chargen`):
+
+- A player changes their own sheet only while their `+app` application is theirs to change: not
+  while it is submitted, and not once it is approved, waitlisted or retired.
+- Application reviewers (`softcode.chargen.review`) read the sheet of anyone with an application.
+- The sheet's messages say that `+app/submit` sends the sheet in with the application.
+
+A bridge between [`sheet-fitd`](../sheet-fitd/) and `chargen`. Uninstalling it brings back the plain rule:
+a player fills in their sheet until they are approved.

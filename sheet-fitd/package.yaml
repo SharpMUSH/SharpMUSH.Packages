@@ -1,0 +1,944 @@
+format: "1.16"
+package: sheet-fitd
+title: "Forged in the Dark sheet"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "A Forged in the Dark character sheet: twelve action ratings under three attributes, stress, trauma and harm, plus progress clocks. +check rolls a pool of six-sided dice and reads the highest against a position for the room; +check/resist rolls an attribute to resist a consequence. Based on the Blades in the Dark SRD under CC BY 3.0."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [sheet, fitd, forged in the dark, dice, clocks]
+category: Characters
+requires_server: ">=0.1"
+
+# One permission, for the people who keep sheets: change any character's sheet at any time, read every sheet,
+# take traumas off, and change anyone's clocks. A player rates their own actions until they are approved, and
+# keeps their own stress, trauma and harm at any time. Changing the lists and settings is config.admin, as
+# +config is.
+categories:
+  roles:
+    - name: Forged in the Dark sheet
+      description: Roles for the people who keep Forged in the Dark character sheets.
+  permissions:
+    - name: Forged in the Dark sheet
+      description: Keeping Forged in the Dark character sheets.
+permissions:
+  - name: softcode.fitd.admin
+    category: Forged in the Dark sheet
+    description: Read every Forged in the Dark sheet, change any character's at any time, and change anyone's clocks.
+roles:
+  - slug: fitd-sheet-keeper
+    name: FitD Sheet Keeper
+    category: Forged in the Dark sheet
+    priority: 11
+    permissions:
+      softcode.fitd.admin: allow
+
+# Every character's FITD tree is their FitD sheet: only wizards write it, so a player can't make the root
+# before the sheet does, and it is never a command.
+attributes:
+  FITD:
+    flags: [wizard, no_command]
+
+objects:
+  # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook),
+  # writes the sheet attributes on characters, and reads them for other packages.
+  #
+  # A character's sheet is their own attributes under FITD`: FITD`ACTION`<KEY> an action's rating (0 to 4),
+  # FITD`STRESS the stress marked, FITD`TRAUMA the traumas (a |-list), FITD`HARM`<SLOT> a harm (slots 1A 1B 2A
+  # 2B 3A). The FITD root is wizard-flagged, so only this object writes them.
+  #
+  # +sheet, +check and +clock are added with /noparse/rsnoparse and hooked to CMD`<word>, so what a player types
+  # reaches the code exactly as typed and nothing a player wrote is ever evaluated.
+  #
+  # Trees: CMD` the hooked commands, INC`COMMAND` the parse and dispatch, INC`SHEET`, INC`CHECK` and INC`CLOCK`
+  # one routine per switch, INC`NEED` the guards they share, INC`DO` the writes. FUN`TRAIT` the actions,
+  # FUN`ATTRIBUTE` the attributes, FUN`HARM` the harm slots, FUN`POOL` the dice, FUN`PERM` who may do what,
+  # FUN`SCREEN` and FUN`DISPLAY` the screens. API` the functions other packages call (VISUAL), the same names in
+  # every sheet package. Bridges add HINT`<message> lines, GATE`EDIT (a reason a player may not change their own
+  # sheet now) and ALLOW`VIEW`<name> (who else may read a sheet).
+  - ref: sheet
+    type: thing
+    name: FitD Sheet
+    location: "{{$master_room}}"
+    flags: [WIZARD]
+    attributes:
+      # ---- settings ---------------------------------------------------------------
+      # +config fitd shows and changes them (sheet-fitd-config); the code reads each with get(%!/DATA`CONFIG`<NAME>).
+      DATA`CONFIG: |-
+        Settings for the Forged in the Dark sheet. One leaf per setting.
+      DATA`CONFIG`LABEL: |-
+        Forged in the Dark sheet
+      DATA`CONFIG`CAP: |-
+        2
+      DATA`CONFIG`CAP`TYPE: |-
+        integer
+      DATA`CONFIG`CAP`DEFAULT: |-
+        2
+      DATA`CONFIG`CAP`MIN: |-
+        0
+      DATA`CONFIG`CAP`MAX: |-
+        4
+      DATA`CONFIG`CAP`LABEL: |-
+        Highest rating
+      DATA`CONFIG`CAP`DESCRIPTION: |-
+        The highest rating a player gives an action. Sheet keepers may go to 4.
+      DATA`CONFIG`CAP`EXAMPLE: |-
+        3
+      DATA`CONFIG`STRESS: |-
+        9
+      DATA`CONFIG`STRESS`TYPE: |-
+        integer
+      DATA`CONFIG`STRESS`DEFAULT: |-
+        9
+      DATA`CONFIG`STRESS`MIN: |-
+        1
+      DATA`CONFIG`STRESS`MAX: |-
+        20
+      DATA`CONFIG`STRESS`LABEL: |-
+        Stress boxes
+      DATA`CONFIG`STRESS`DESCRIPTION: |-
+        How much stress a character takes before the next point brings a trauma and clears it.
+      DATA`CONFIG`STRESS`EXAMPLE: |-
+        8
+      DATA`CONFIG`TRAUMA: |-
+        4
+      DATA`CONFIG`TRAUMA`TYPE: |-
+        integer
+      DATA`CONFIG`TRAUMA`DEFAULT: |-
+        4
+      DATA`CONFIG`TRAUMA`MIN: |-
+        1
+      DATA`CONFIG`TRAUMA`MAX: |-
+        10
+      DATA`CONFIG`TRAUMA`LABEL: |-
+        Traumas
+      DATA`CONFIG`TRAUMA`DESCRIPTION: |-
+        How many traumas a character takes before they must retire.
+      DATA`CONFIG`TRAUMA`EXAMPLE: |-
+        3
+      DATA`CONFIG`POSITIONS: |-
+        none controlled risky desperate desperate
+      DATA`CONFIG`POSITIONS`TYPE: |-
+        text
+      DATA`CONFIG`POSITIONS`DEFAULT: |-
+        none controlled risky desperate desperate
+      DATA`CONFIG`POSITIONS`MAX: |-
+        60
+      DATA`CONFIG`POSITIONS`CHECK: |-
+        CHECK`POSITIONS
+      DATA`CONFIG`POSITIONS`LABEL: |-
+        Position for each difficulty
+      DATA`CONFIG`POSITIONS`DESCRIPTION: |-
+        The position of trivial, easy, standard, hard and extreme, in that order: controlled, risky, desperate, or none for no roll at all.
+      DATA`CONFIG`POSITIONS`EXAMPLE: |-
+        none controlled controlled risky desperate
+      DATA`CONFIG`DICE: |-
+        0 0 0 0 -1
+      DATA`CONFIG`DICE`TYPE: |-
+        text
+      DATA`CONFIG`DICE`DEFAULT: |-
+        0 0 0 0 -1
+      DATA`CONFIG`DICE`MAX: |-
+        30
+      DATA`CONFIG`DICE`CHECK: |-
+        CHECK`DICE
+      DATA`CONFIG`DICE`LABEL: |-
+        Dice for each difficulty
+      DATA`CONFIG`DICE`DESCRIPTION: |-
+        Dice added to or taken from the pool at trivial, easy, standard, hard and extreme, in that order.
+      DATA`CONFIG`DICE`EXAMPLE: |-
+        1 0 0 -1 -1
+      DATA`CONFIG`PUBLIC: |-
+        0
+      DATA`CONFIG`PUBLIC`TYPE: |-
+        boolean
+      DATA`CONFIG`PUBLIC`DEFAULT: |-
+        0
+      DATA`CONFIG`PUBLIC`LABEL: |-
+        Sheets anyone can read
+      DATA`CONFIG`PUBLIC`DESCRIPTION: |-
+        Whether +sheet <name> shows anyone's sheet to everyone. Otherwise only the character and sheet keepers see it.
+      DATA`CONFIG`PUBLIC`EXAMPLE: |-
+        yes
+      DATA`CONFIG`ACTIONS`TYPE: |-
+        table
+      DATA`CONFIG`ACTIONS`LABEL: |-
+        Actions
+      DATA`CONFIG`ACTIONS`DESCRIPTION: |-
+        The actions a sheet rates, and the attribute each one counts towards.
+      DATA`CONFIG`ACTIONS`STORE: |-
+        {{store}}
+      DATA`CONFIG`ACTIONS`PATH: |-
+        ACTION
+      DATA`CONFIG`ACTIONS`ENTRY: |-
+        label
+      DATA`CONFIG`ACTIONS`FIELDS: |-
+        label attribute order
+      DATA`CONFIG`ACTIONS`KEYPATTERN: |-
+        ^[A-Za-z0-9-]{1,20}$
+      DATA`CONFIG`ACTIONS`FIELD`LABEL`TYPE: |-
+        text
+      DATA`CONFIG`ACTIONS`FIELD`LABEL`MIN: |-
+        1
+      DATA`CONFIG`ACTIONS`FIELD`LABEL`MAX: |-
+        30
+      DATA`CONFIG`ACTIONS`FIELD`LABEL`LABEL: |-
+        Label
+      DATA`CONFIG`ACTIONS`FIELD`LABEL`DESCRIPTION: |-
+        The name the sheet shows.
+      DATA`CONFIG`ACTIONS`FIELD`ATTRIBUTE`TYPE: |-
+        text
+      DATA`CONFIG`ACTIONS`FIELD`ATTRIBUTE`MIN: |-
+        1
+      DATA`CONFIG`ACTIONS`FIELD`ATTRIBUTE`MAX: |-
+        20
+      DATA`CONFIG`ACTIONS`FIELD`ATTRIBUTE`CHECK: |-
+        CHECK`ATTRIBUTE
+      DATA`CONFIG`ACTIONS`FIELD`ATTRIBUTE`LABEL: |-
+        Attribute
+      DATA`CONFIG`ACTIONS`FIELD`ATTRIBUTE`DESCRIPTION: |-
+        The key of the attribute the action counts towards, such as insight.
+      DATA`CONFIG`ACTIONS`FIELD`ORDER`TYPE: |-
+        integer
+      DATA`CONFIG`ACTIONS`FIELD`ORDER`DEFAULT: |-
+        50
+      DATA`CONFIG`ACTIONS`FIELD`ORDER`MIN: |-
+        0
+      DATA`CONFIG`ACTIONS`FIELD`ORDER`MAX: |-
+        999
+      DATA`CONFIG`ACTIONS`FIELD`ORDER`LABEL: |-
+        Order
+      DATA`CONFIG`ACTIONS`FIELD`ORDER`DESCRIPTION: |-
+        Where it comes under its attribute: lower first, then by name.
+      DATA`CONFIG`ATTRIBUTES`TYPE: |-
+        table
+      DATA`CONFIG`ATTRIBUTES`LABEL: |-
+        Attributes
+      DATA`CONFIG`ATTRIBUTES`DESCRIPTION: |-
+        The attributes the actions are grouped under, which a character rolls to resist.
+      DATA`CONFIG`ATTRIBUTES`STORE: |-
+        {{store}}
+      DATA`CONFIG`ATTRIBUTES`PATH: |-
+        ATTRIBUTE
+      DATA`CONFIG`ATTRIBUTES`ENTRY: |-
+        label
+      DATA`CONFIG`ATTRIBUTES`FIELDS: |-
+        label order
+      DATA`CONFIG`ATTRIBUTES`KEYPATTERN: |-
+        ^[A-Za-z0-9-]{1,20}$
+      DATA`CONFIG`ATTRIBUTES`FIELD`LABEL`TYPE: |-
+        text
+      DATA`CONFIG`ATTRIBUTES`FIELD`LABEL`MIN: |-
+        1
+      DATA`CONFIG`ATTRIBUTES`FIELD`LABEL`MAX: |-
+        30
+      DATA`CONFIG`ATTRIBUTES`FIELD`LABEL`LABEL: |-
+        Label
+      DATA`CONFIG`ATTRIBUTES`FIELD`LABEL`DESCRIPTION: |-
+        The name the sheet shows.
+      DATA`CONFIG`ATTRIBUTES`FIELD`ORDER`TYPE: |-
+        integer
+      DATA`CONFIG`ATTRIBUTES`FIELD`ORDER`DEFAULT: |-
+        50
+      DATA`CONFIG`ATTRIBUTES`FIELD`ORDER`MIN: |-
+        0
+      DATA`CONFIG`ATTRIBUTES`FIELD`ORDER`MAX: |-
+        999
+      DATA`CONFIG`ATTRIBUTES`FIELD`ORDER`LABEL: |-
+        Order
+      DATA`CONFIG`ATTRIBUTES`FIELD`ORDER`DESCRIPTION: |-
+        Where it comes in the list: lower first, then by name.
+      CHECK`POSITIONS: |-
+        if(cand(eq(words(%0),5),not(words(setdiff(lcstr(%0),none controlled risky desperate)))),,Give five positions%, trivial to extreme%, each controlled%, risky%, desperate or none.)
+      CHECK`DICE: |-
+        if(cand(eq(words(%0),5),every(%!/FUN`IS`DICE,%0)),,Give five numbers from -3 to 3%, trivial to extreme.)
+      CHECK`ATTRIBUTE: |-
+        if(hasattr({{store}},ATTRIBUTE`%0),,There is no attribute '%0'. +config fitd/attributes lists them.)
+      FUN`IS`DICE: |-
+        cand(isint(%0),gte(%0,-3),lte(%0,3))
+
+      # Which INC` routine each switch runs: DATA`ROUTE`<table>`<switch>. BARE is the command alone, ARG the
+      # command with something after it and no switch.
+      DATA`ROUTE: |-
+        Which routine each switch runs. One leaf per switch.
+      DATA`ROUTE`SHEET`BARE: |-
+        SHEET`SHOW
+      DATA`ROUTE`SHEET`ARG: |-
+        SHEET`SHOW
+      DATA`ROUTE`SHEET`SET: |-
+        SHEET`SET
+      DATA`ROUTE`SHEET`STRESS: |-
+        SHEET`STRESS
+      DATA`ROUTE`SHEET`TRAUMA: |-
+        SHEET`TRAUMA
+      DATA`ROUTE`SHEET`HARM: |-
+        SHEET`HARM
+      DATA`ROUTE`SHEET`COIN: |-
+        SHEET`COIN
+      DATA`ROUTE`SHEET`TRAITS: |-
+        SHEET`TRAITS
+      DATA`ROUTE`CHECK`BARE: |-
+        CHECK`USAGE
+      DATA`ROUTE`CHECK`ARG: |-
+        CHECK`ROLL
+      DATA`ROUTE`CHECK`PRIVATE: |-
+        CHECK`ROLL
+      DATA`ROUTE`CHECK`RESIST: |-
+        CHECK`RESIST
+      DATA`ROUTE`CLOCK`BARE: |-
+        CLOCK`LIST
+      DATA`ROUTE`CLOCK`ARG: |-
+        CLOCK`SHOW
+      DATA`ROUTE`CLOCK`NEW: |-
+        CLOCK`NEW
+      DATA`ROUTE`CLOCK`TICK: |-
+        CLOCK`TICK
+      DATA`ROUTE`CLOCK`REMOVE: |-
+        CLOCK`REMOVE
+      DATA`DIFFICULTIES: |-
+        trivial easy standard hard extreme
+      DATA`POSITIONS: |-
+        controlled risky desperate
+      # Harm: the slots of each level, and what each level is called.
+      DATA`HARM`SLOTS: |-
+        1A 1B 2A 2B 3A
+      DATA`HARM`1: |-
+        Lesser
+      DATA`HARM`2: |-
+        Moderate
+      DATA`HARM`3: |-
+        Severe
+      DATA`CLOCK`SIZES: |-
+        4 6 8 12
+
+      # ---- commands ---------------------------------------------------------------
+      # %1 the switches and %2 what follows, exactly as typed.
+      CMD`SHEET:
+        value: |-
+          $(?is)^\+sheet(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,sheet,table,SHEET,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`CHECK:
+        value: |-
+          $(?is)^\+check(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,check,table,CHECK,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`CLOCK:
+        value: |-
+          $(?is)^\+clock(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,clock,table,CLOCK,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      # A line a bridge adds to one of this object's messages: HINT`<message>, set here by a bridge such as
+      # sheet-fitd-help. %1 on are passed to it. Nothing when no bridge set one, so the message stands without it.
+      FUN`HINT:
+        value: |-
+          if(hasattr(%!,HINT`%0),%b[u(%!/HINT`%0,%1,%2)])
+        flags: [funsyntax]
+      INC`COMMAND`RUN:
+        value: |-
+          @assert hastype(%#,player)=@pemit %#=notice(SHEET,Only players have a sheet.,warn); think u(%!/FUN`COMMAND`PARSE,%<word>,%<table>,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(SHEET,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(SHEET,+%q<cmd_word> has no /%q<cmd_switch> switch.[u(%!/FUN`HINT,SWITCHES,%q<cmd_word>)],warn); @include %!/INC`%q<cmd_route>
+        flags: [cmdsyntax]
+      # %0 the word, %1 its route table, %2 the switches and %3 the argument, as typed. Sets cmd_word,
+      # cmd_switch_list, cmd_switch, cmd_argument, cmd_has_equals, cmd_left_side and cmd_right_side around the
+      # first =, cmd_route (the INC` routine to run), viewer_objid and viewer_keeper.
+      FUN`COMMAND`PARSE:
+        value: |-
+          setqm(cmd_word,lcstr(%0),
+          cmd_switch_list,lcstr(trim(edit(%2,/,%b))),
+          cmd_switch,first(%q<cmd_switch_list>),
+          cmd_argument,trim(%3),
+          cmd_has_equals,strmatch(%3,*=*),
+          cmd_left_side,trim(before(%3,=)),
+          cmd_right_side,trim(after(%3,=)),
+          cmd_route,get(%!/DATA`ROUTE`%1`[if(strlen(%q<cmd_switch>),ucstr(%q<cmd_switch>),if(strlen(%q<cmd_argument>),ARG,BARE))]),
+          viewer_objid,objid(%#),
+          viewer_keeper,u(%!/FUN`PERM`KEEPER,%#))
+        flags: [funsyntax]
+
+      # ---- guards -----------------------------------------------------------------
+      # %<name> a player's name: sheet_who, their objid.
+      INC`NEED`TARGET:
+        value: |-
+          @assert strlen(setr(sheet_who,u(%!/FUN`PLAYER`MATCH,%<name>)))=@pemit %#=notice(SHEET,There is no player called '%<name>'.,warn)
+        flags: [cmdsyntax]
+      # The left of =: <name>/<what> for a sheet keeper, else <what> on your own sheet. sheet_who and sheet_what.
+      INC`NEED`WHO:
+        value: |-
+          @if strmatch(%<text>,*/*)={@include/args %!/INC`NEED`TARGET=name,before(%<text>,/); think setq(sheet_what,trim(after(%<text>,/)))},{think setqm(sheet_who,%q<viewer_objid>,sheet_what,%<text>)}; @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error)
+        flags: [cmdsyntax]
+      # Changes only a keeper makes once a character is approved: action ratings.
+      INC`NEED`EDITABLE:
+        value: |-
+          @assert cor(%q<viewer_keeper>,not(isapproved(%#)))=@pemit %#=notice(SHEET,Your character is approved%, so staff change your sheet now.,error); @assert cor(%q<viewer_keeper>,not(strlen(setr(set_gate,u(%!/FUN`GATE`EDIT,%#)))))=@pemit %#=notice(SHEET,%q<set_gate>,warn)
+        flags: [cmdsyntax]
+      # %<key> typed text: trait_key, the action it names.
+      INC`NEED`ACTION:
+        value: |-
+          @assert strlen(setr(trait_key,u(%!/FUN`LIST`FIND,ACTION,%<key>)))=@pemit %#=notice(SHEET,There is no action '%<key>'. +sheet/traits lists them.,warn)
+        flags: [cmdsyntax]
+
+      # ---- +sheet -----------------------------------------------------------------
+      INC`SHEET`SHOW:
+        value: |-
+          @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`SHEET,%q<sheet_who>,%#)
+        flags: [cmdsyntax]
+      # +sheet/set [<name>/]<action>=<rating>: 0 up to cap, or 4 for a keeper. Empty clears it back to 0.
+      INC`SHEET`SET:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/set <action>=<rating>%, such as +sheet/set [lcstr(first(u(%!/FUN`LIST`ALL,ACTION)))]=2.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_left_side>; @include %!/INC`NEED`EDITABLE; @include/args %!/INC`NEED`ACTION=key,%q<sheet_what>; think setq(set_value,firstof(%q<cmd_right_side>,0)); @assert cand(isint(%q<set_value>),gte(%q<set_value>,0),lte(%q<set_value>,if(%q<viewer_keeper>,4,get(%!/DATA`CONFIG`CAP))))=@pemit %#=notice(SHEET,An action's rating is a whole number from 0 to [if(%q<viewer_keeper>,4,get(%!/DATA`CONFIG`CAP))].,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,ACTION`%q<trait_key>,value,if(%q<set_value>,%q<set_value>); @pemit %#=notice(SHEET,[u(%!/FUN`LIST`LABEL,ACTION,%q<trait_key>)] is %q<set_value> on [name(%q<sheet_who>)]'s sheet.[if(not(comp(%q<sheet_who>,%q<viewer_objid>)),u(%!/FUN`HINT,SET))],ok)
+        flags: [cmdsyntax]
+      # +sheet/stress [<name>=]<n>|+<n>|-<n>|clear. Past the most stress, a trauma is due and stress clears.
+      INC`SHEET`STRESS:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/stress +<n> marks stress%, -<n> clears some%, <n> sets it%, clear empties it.,warn); @if %q<cmd_has_equals>={@include/args %!/INC`NEED`WHO=text,%q<cmd_left_side>/; think setq(stress_typed,%q<cmd_right_side>)},{think setqm(sheet_who,%q<viewer_objid>,stress_typed,%q<cmd_argument>)}; think setqm(stress_now,u(%!/API`STRESSED,%q<sheet_who>),stress_to,cond(strmatch(%q<stress_typed>,clear),0,strmatch(%q<stress_typed>,+*),add(%q<stress_now>,rest(%q<stress_typed>,+)),strmatch(%q<stress_typed>,-*),add(%q<stress_now>,%q<stress_typed>),%q<stress_typed>)); @assert isint(%q<stress_to>)=@pemit %#=notice(SHEET,'%q<stress_typed>' is not stress. Give +<n>%, -<n>%, <n> or clear.,warn); think setq(stress_result,u(%!/API`STRESS,%q<sheet_who>,sub(%q<stress_to>,%q<stress_now>))); @pemit %#=notice(SHEET,u(%!/FUN`DISPLAY`STRESSED,%q<sheet_who>,%q<stress_result>),ok)
+        flags: [cmdsyntax]
+      # +sheet/trauma [<name>/]<trauma> marks one; =remove takes it off (keepers only).
+      INC`SHEET`TRAUMA:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(SHEET,+sheet/trauma <trauma> marks a trauma%, such as cold%, haunted%, obsessed%, paranoid%, reckless%, soft%, unstable or vicious.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_left_side>; @assert cand(lte(strlen(%q<sheet_what>),30),not(strmatch(%q<sheet_what>,*|*)))=@pemit %#=notice(SHEET,Name a trauma in 30 characters or fewer%, without |.,warn); think setq(trauma_list,get(%q<sheet_who>/FITD`TRAUMA)); @break %q<cmd_has_equals>={@assert strmatch(%q<cmd_right_side>,remove)=@pemit %#=notice(SHEET,+sheet/trauma <name>/<trauma>=remove takes a trauma off.,warn); @include %!/INC`NEED`KEEPER; @assert member(lcstr(%q<trauma_list>),lcstr(%q<sheet_what>),|)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has no trauma '%q<sheet_what>'.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,TRAUMA,value,ldelete(%q<trauma_list>,member(lcstr(%q<trauma_list>),lcstr(%q<sheet_what>),|),|); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] no longer has the %q<sheet_what> trauma.,ok)}; @assert not(member(lcstr(%q<trauma_list>),lcstr(%q<sheet_what>),|))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has that trauma already.,warn); @assert lt(words(%q<trauma_list>,|),get(%!/DATA`CONFIG`TRAUMA))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has [get(%!/DATA`CONFIG`TRAUMA)] traumas already: time to retire.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,TRAUMA,value,trim(%q<trauma_list>|[lcstr(%q<sheet_what>)],|); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] takes the [lcstr(%q<sheet_what>)] trauma. [inc(words(%q<trauma_list>,|))] of [get(%!/DATA`CONFIG`TRAUMA)].[if(gte(inc(words(%q<trauma_list>,|)),get(%!/DATA`CONFIG`TRAUMA)),%bThat is the last: time to retire.)],ok)
+        flags: [cmdsyntax]
+      # +sheet/harm [<name>/]<level>=<harm> takes harm in the first free slot of that level or the one above;
+      # an empty harm clears the level.
+      INC`SHEET`HARM:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/harm <level>=<harm>%, level 1 to 3%, such as +sheet/harm 2=Broken arm. An empty harm clears the level.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_left_side>; @assert member(1 2 3,%q<sheet_what>)=@pemit %#=notice(SHEET,Harm comes at level 1%, 2 or 3.,warn); @break not(strlen(%q<cmd_right_side>))={@dolist/inline u(%!/FUN`HARM`SLOTS,%q<sheet_what>)={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,HARM`##,value,}; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s level %q<sheet_what> harm is cleared.,ok)}; @assert lte(strlen(%q<cmd_right_side>),60)=@pemit %#=notice(SHEET,Describe harm in 60 characters or fewer.,warn); think setq(harm_slot,u(%!/FUN`HARM`FREE,%q<sheet_who>,%q<sheet_what>)); @break not(strlen(%q<harm_slot>))=@pemit %#=notice(SHEET,Level 3 is full: harm beyond it is fatal%, or whatever the GM says it is.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,HARM`%q<harm_slot>,value,%q<cmd_right_side>; @pemit %#=notice(SHEET,[name(%q<sheet_who>)] takes level [left(%q<harm_slot>,1)] harm: %q<cmd_right_side>[if(gt(left(%q<harm_slot>,1),%q<sheet_what>),%b%(level %q<sheet_what> was full%))].,ok)
+        flags: [cmdsyntax]
+      # +sheet/coin -<n> spends coin from your own sheet; a keeper gives or takes with <name>=<n>.
+      INC`SHEET`COIN:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/coin -<n> spends coin.,warn); @if %q<cmd_has_equals>={@include %!/INC`NEED`KEEPER; @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; think setq(coin_by,edit(%q<cmd_right_side>,+,))},{think setqm(sheet_who,%q<viewer_objid>,coin_by,%q<cmd_argument>)}; @assert cand(isint(%q<coin_by>),neq(%q<coin_by>,0))=@pemit %#=notice(SHEET,Give a whole number of coin%, not 0.,warn); @assert cor(%q<cmd_has_equals>,lt(%q<coin_by>,0))=@pemit %#=notice(SHEET,You spend coin with a number below 0. Staff give it.,warn); @assert cor(%q<cmd_has_equals>,gte(u(%!/API`COIN,%q<sheet_who>),abs(%q<coin_by>)))=@pemit %#=notice(SHEET,You have [u(%!/API`COIN,%q<sheet_who>)] coin.,warn); think setq(coin_total,u(%!/API`AWARD,%q<sheet_who>,%q<coin_by>)); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<coin_total> coin.,ok); @if cand(%q<cmd_has_equals>,comp(%q<sheet_who>,%q<viewer_objid>))={@pemit %q<sheet_who>=notice(SHEET,[name(%#)] [if(gt(%q<coin_by>,0),gives you %q<coin_by>,takes [abs(%q<coin_by>)] from your)] coin. You have %q<coin_total>.)}
+        flags: [cmdsyntax]
+      INC`SHEET`TRAITS:
+        value: |-
+          @pemit %#=u(%!/FUN`SCREEN`TRAITS)
+        flags: [cmdsyntax]
+      INC`NEED`KEEPER:
+        value: |-
+          @assert %q<viewer_keeper>=@pemit %#=notice(SHEET,Only sheet keepers do that.,error)
+        flags: [cmdsyntax]
+
+      # ---- +check -----------------------------------------------------------------
+      INC`CHECK`USAGE:
+        value: |-
+          @pemit %#=notice(SHEET,+check <action>%[=<position>%]%, such as +check skirmish=risky. +<n> or -<n> after the action adds or takes dice. /private rolls where only you see it%, /resist <attribute> resists a consequence.,warn)
+        flags: [cmdsyntax]
+      # +check[/private] <action>[+<n>|-<n>][=<position or difficulty>]: rolls the pool for the room.
+      INC`CHECK`ROLL:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@include %!/INC`CHECK`USAGE; think u(%!/FUN`CHECK`READ,%q<cmd_left_side>); @assert isint(%q<check_modifier>)=@pemit %#=notice(SHEET,'%q<cmd_left_side>' ends in something that is not a number of dice.,warn); @include/args %!/INC`NEED`ACTION=key,%q<check_typed>; think setq(check_position,u(%!/API`TARGET,%q<cmd_right_side>)); @assert cor(not(%q<cmd_has_equals>),strlen(%q<check_position>))=@pemit %#=notice(SHEET,'%q<cmd_right_side>' is not a position. Give controlled%, risky or desperate%, or one of [itemize(v(DATA`DIFFICULTIES))].,warn); think setq(check_result,uargs(%!/API`CHECK,roller,%q<viewer_objid>,trait,%q<trait_key>,modifier,%q<check_modifier>,target,%q<check_position>)); @assert not(strmatch(%q<check_result>,#-*))=@pemit %#=notice(SHEET,%q<check_result>,error); think setq(check_line,u(%!/FUN`DISPLAY`CHECK,%q<check_result>)); @break member(%q<cmd_switch_list>,private)=@pemit %#=notice(SHEET,You privately roll %q<check_line>); @remit %l=notice(SHEET,tone(strong,name(%#)) rolls %q<check_line>)
+        flags: [cmdsyntax]
+      # +check/resist <attribute>: rolls the attribute and marks the stress it costs.
+      INC`CHECK`RESIST:
+        value: |-
+          @assert strlen(setr(resist_key,u(%!/FUN`LIST`FIND,ATTRIBUTE,%q<cmd_argument>)))=@pemit %#=notice(SHEET,+check/resist <attribute>: [itemize(lcstr(u(%!/FUN`LIST`ALL,ATTRIBUTE)))].,warn); think setqm(resist_dice,u(%!/API`ATTRIBUTE,%q<viewer_objid>,%q<resist_key>),resist_rolled,u(%!/FUN`POOL`ROLL,%q<resist_dice>),resist_high,json_query(%q<resist_rolled>,extract,$.total),resist_crit,u(%!/FUN`POOL`CRIT,%q<resist_rolled>,%q<resist_dice>),resist_cost,if(%q<resist_crit>,-1,sub(6,%q<resist_high>)),resist_result,u(%!/API`STRESS,%q<viewer_objid>,%q<resist_cost>)); @remit %l=notice(SHEET,tone(strong,name(%#)) resists with [u(%!/FUN`LIST`LABEL,ATTRIBUTE,%q<resist_key>)]: [json_query(%q<resist_rolled>,extract,$.text)]: [cond(%q<resist_crit>,clears 1 stress,%q<resist_cost>,takes %q<resist_cost> stress,takes no stress)]. [u(%!/FUN`DISPLAY`STRESSED,%q<viewer_objid>,%q<resist_result>)] [tone(muted,%(roll [json_query(%q<resist_rolled>,extract,$.id)]%))])
+        flags: [cmdsyntax]
+      # %0 the action as typed, with dice to add at its end: check_typed and check_modifier (0 when none).
+      FUN`CHECK`READ:
+        value: |-
+          setqm(check_plus,if(pos(+,%0),trim(last(%0,+))),
+          check_minus,if(pos(-,%0),trim(last(%0,-))),
+          check_modifier,cond(strlen(%q<check_plus>),%q<check_plus>,isint(%q<check_minus>),-%q<check_minus>,0),
+          check_typed,trim(cond(strlen(%q<check_plus>),left(%0,sub(strlen(%0),inc(strlen(last(%0,+))))),isint(%q<check_minus>),left(%0,sub(strlen(%0),inc(strlen(last(%0,-))))),%0)))
+        flags: [funsyntax]
+
+      # ---- +clock -----------------------------------------------------------------
+      # Clocks are the game's, on the store: CLOCK`<KEY> the label, with SIZE, FILLED and OWNER beneath.
+      INC`CLOCK`LIST:
+        value: |-
+          @pemit %#=u(%!/FUN`SCREEN`CLOCKS)
+        flags: [cmdsyntax]
+      INC`CLOCK`SHOW:
+        value: |-
+          @include/args %!/INC`NEED`CLOCK=name,%q<cmd_argument>; @pemit %#=notice(CLOCK,u(%!/FUN`DISPLAY`CLOCK,%q<clock_key>))
+        flags: [cmdsyntax]
+      # +clock/new <name>=<segments>: 4, 6, 8 or 12.
+      INC`CLOCK`NEW:
+        value: |-
+          @assert cand(strlen(%q<cmd_left_side>),%q<cmd_has_equals>)=@pemit %#=notice(CLOCK,+clock/new <name>=<segments>%, [itemize(v(DATA`CLOCK`SIZES),,or)] segments.,warn); @assert cand(lte(strlen(%q<cmd_left_side>),40),not(strmatch(%q<cmd_left_side>,*`*)))=@pemit %#=notice(CLOCK,Name a clock in 40 characters or fewer.,warn); @assert member(v(DATA`CLOCK`SIZES),%q<cmd_right_side>)=@pemit %#=notice(CLOCK,A clock has [itemize(v(DATA`CLOCK`SIZES),,or)] segments.,warn); think setq(clock_key,u(%!/FUN`CLOCK`KEY,%q<cmd_left_side>)); @assert strlen(%q<clock_key>)=@pemit %#=notice(CLOCK,Give the clock a name with a letter or number in it.,warn); @assert not(hasattr({{store}},CLOCK`%q<clock_key>))=@pemit %#=notice(CLOCK,There is a clock called that already.,warn); &CLOCK`%q<clock_key> {{store}}=%q<cmd_left_side>; &CLOCK`%q<clock_key>`SIZE {{store}}=%q<cmd_right_side>; &CLOCK`%q<clock_key>`FILLED {{store}}=0; &CLOCK`%q<clock_key>`OWNER {{store}}=%q<viewer_objid>; @remit %l=notice(CLOCK,tone(strong,name(%#)) starts a clock: [u(%!/FUN`DISPLAY`CLOCK,%q<clock_key>)])
+        flags: [cmdsyntax]
+      # +clock/tick <name>[=<n>]: fills one segment, or n (below 0 empties some).
+      INC`CLOCK`TICK:
+        value: |-
+          @include/args %!/INC`NEED`CLOCK=name,%q<cmd_left_side>; @include %!/INC`NEED`CLOCKOWNER; think setq(tick_by,firstof(%q<cmd_right_side>,1)); @assert cand(isint(%q<tick_by>),neq(%q<tick_by>,0))=@pemit %#=notice(CLOCK,Tick a whole number of segments%, not 0.,warn); think setq(tick_to,bound(add(get({{store}}/CLOCK`%q<clock_key>`FILLED),%q<tick_by>),0,get({{store}}/CLOCK`%q<clock_key>`SIZE))); &CLOCK`%q<clock_key>`FILLED {{store}}=%q<tick_to>; @remit %l=notice(CLOCK,tone(strong,name(%#)) ticks a clock: [u(%!/FUN`DISPLAY`CLOCK,%q<clock_key>)][if(eq(%q<tick_to>,get({{store}}/CLOCK`%q<clock_key>`SIZE)),%b[tone(strong,It is full.)])])
+        flags: [cmdsyntax]
+      INC`CLOCK`REMOVE:
+        value: |-
+          @include/args %!/INC`NEED`CLOCK=name,%q<cmd_argument>; @include %!/INC`NEED`CLOCKOWNER; think setq(clock_label,get({{store}}/CLOCK`%q<clock_key>)); @wipe {{store}}/CLOCK`%q<clock_key>; @pemit %#=notice(CLOCK,The clock '%q<clock_label>' is gone.,ok)
+        flags: [cmdsyntax]
+      # %<name> typed text: clock_key, the clock it names.
+      INC`NEED`CLOCK:
+        value: |-
+          @assert strlen(setr(clock_key,u(%!/FUN`LIST`FIND,CLOCK,%<name>)))=@pemit %#=notice(CLOCK,There is no clock '%<name>'. +clock lists them.,warn)
+        flags: [cmdsyntax]
+      INC`NEED`CLOCKOWNER:
+        value: |-
+          @assert cor(%q<viewer_keeper>,not(comp(get({{store}}/CLOCK`%q<clock_key>`OWNER),%q<viewer_objid>)))=@pemit %#=notice(CLOCK,Only whoever started a clock%, and sheet keepers%, change it.,error)
+        flags: [cmdsyntax]
+      # %0 a clock's name as typed: its key, the letters, digits and hyphens of it.
+      FUN`CLOCK`KEY:
+        value: |-
+          left(ucstr(edit(squish(regeditall(%0,\[^A-Za-z0-9 -\],)),%b,-)),20)
+        flags: [funsyntax]
+
+      # ---- writes -----------------------------------------------------------------
+      # %<who> an objid, %<leaf> what under FITD` to write, %<value> what to store; empty clears it. The FITD root
+      # is wizard-flagged and no_command the first time, and its leaves take that from it.
+      INC`DO`SET:
+        value: |-
+          @if not(hasattr(%<who>,FITD))={&FITD %<who>=This character's Forged in the Dark sheet. +sheet shows it.; @set %<who>/FITD=wizard; @set %<who>/FITD=no_command}; @if strlen(%<value>)={&FITD`%<leaf> %<who>=%<value>},{&FITD`%<leaf> %<who>}
+        flags: [cmdsyntax]
+
+      # ---- lists ------------------------------------------------------------------
+      # %0 a list on the store (ACTION, ATTRIBUTE, CLOCK): its keys, in order then by key.
+      FUN`LIST`ALL:
+        value: |-
+          setq(list_path,%0)[sortkey(%!/FUN`LIST`SORTKEY,iter(lattr({{store}}/%0`*),after(%i0,`)))]
+        flags: [funsyntax]
+      FUN`LIST`SORTKEY:
+        value: |-
+          rjust(default({{store}}/%q<list_path>`%0`ORDER,50),3,0)%0
+        flags: [funsyntax]
+      FUN`LIST`LABEL:
+        value: |-
+          firstof(get({{store}}/%0`%1),lcstr(%1))
+        flags: [funsyntax]
+      # %0 a list, %1 typed text: the key it names, by key, by label, or by the start of one, or nothing.
+      FUN`LIST`FIND:
+        value: |-
+          setqm(find_typed,trim(%1),
+          find_all,u(%!/FUN`LIST`ALL,%0),
+          find_exact,iter(%q<find_all>,if(cor(not(comp(%i0,ucstr(%q<find_typed>))),not(comp(lcstr(get({{store}}/%0`%i0)),lcstr(%q<find_typed>)))),%i0)),
+          find_start,iter(%q<find_all>,if(cor(not(comp(left(%i0,strlen(%q<find_typed>)),ucstr(%q<find_typed>))),not(comp(lcstr(left(get({{store}}/%0`%i0),strlen(%q<find_typed>))),lcstr(%q<find_typed>)))),%i0)))[if(strlen(%q<find_typed>),first(firstof(%q<find_exact>,if(eq(words(%q<find_start>),1),%q<find_start>))))]
+        flags: [funsyntax]
+      # %0 an attribute key: the actions under it, in order.
+      FUN`ATTRIBUTE`ACTIONS:
+        value: |-
+          setq(attribute_of,%0)[filterbool(%!/FUN`ATTRIBUTE`HAS,u(%!/FUN`LIST`ALL,ACTION))]
+        flags: [funsyntax]
+      FUN`ATTRIBUTE`HAS:
+        value: |-
+          not(comp(ucstr(get({{store}}/ACTION`%0`ATTRIBUTE)),%q<attribute_of>))
+        flags: [funsyntax]
+
+      # ---- harm -------------------------------------------------------------------
+      FUN`HARM`SLOTS:
+        value: |-
+          filterbool(%!/FUN`HARM`OFLEVEL,v(DATA`HARM`SLOTS),,,%0)
+        flags: [funsyntax]
+      FUN`HARM`OFLEVEL:
+        value: |-
+          eq(left(%0,1),%1)
+        flags: [funsyntax]
+      # %0 a character, %1 a level: the first free slot at that level or above, or nothing when level 3 is full.
+      FUN`HARM`FREE:
+        value: |-
+          first(iter(v(DATA`HARM`SLOTS),if(cand(gte(left(%i0,1),%1),not(hasattr(%0,FITD`HARM`%i0))),%i0)))
+        flags: [funsyntax]
+
+      # ---- dice -------------------------------------------------------------------
+      # %0 a pool: rolls it and keeps the roll. One die or more keeps the highest; none rolls two and keeps the lower.
+      FUN`POOL`ROLL:
+        value: |-
+          roll(if(gt(%0,0),%0d6kh1,2d6kl1),,record)
+        flags: [funsyntax]
+      # %0 a recorded roll, %1 the pool: 1 when two dice or more show 6, which a pool of none never counts.
+      FUN`POOL`CRIT:
+        value: |-
+          cand(gt(%1,0),gte(words(iter(lnum(0,dec(json_query(json_query(%0,extract,$.dice%[0%].results),size))),if(eq(json_query(%0,extract,$.dice%[0%].results%[%i0%].result),6),x))),2))
+        flags: [funsyntax]
+
+      # ---- who may do what ----------------------------------------------------------
+      FUN`PERM`KEEPER:
+        value: |-
+          permission(%0,softcode.fitd.admin)
+        flags: [funsyntax]
+      # %0 who asks, %1 whose sheet: 1 when they may read it. ALLOW`VIEW`<name>, which a bridge adds, may let
+      # more people read it.
+      FUN`PERM`VIEW:
+        value: |-
+          cor(not(comp(objid(%0),%1)),u(%!/FUN`PERM`KEEPER,%0),get(%!/DATA`CONFIG`PUBLIC),words(filterbool(%!/FUN`PERM`ALLOWS,lattr(%!/ALLOW`VIEW`*),,,%0,%1)))
+        flags: [funsyntax]
+      FUN`PERM`ALLOWS:
+        value: |-
+          u(%!/%0,%1,%2)
+        flags: [funsyntax]
+      FUN`GATE`EDIT:
+        value: |-
+          if(hasattr(%!,GATE`EDIT),u(%!/GATE`EDIT,%0))
+        flags: [funsyntax]
+      FUN`PLAYER`MATCH:
+        value: |-
+          if(isdbref(setr(found_player,pmatch(%0))),objid(%q<found_player>))
+        flags: [funsyntax]
+
+      # ---- screens ------------------------------------------------------------------
+      # %0 a check's JSON: "Skirmish (risky): 2d6kh1[(3), 6] = 6: success (roll 42)".
+      FUN`DISPLAY`CHECK:
+        value: |-
+          setqm(display_tier,json_query(%0,extract,$.tier),
+          display_target,json_query(%0,extract,$.target))[json_query(%0,extract,$.label)][if(strlen(%q<display_target>),%b%(%q<display_target>%))]: [json_query(%0,extract,$.text)]: [tone(u(%!/FUN`DISPLAY`TIERTONE,%q<display_tier>),u(%!/FUN`DISPLAY`TIER,%q<display_tier>))] [tone(muted,%(roll [json_query(%0,extract,$.roll)]%))]
+        flags: [funsyntax]
+      FUN`DISPLAY`TIER:
+        value: |-
+          switch(%0,crit-success,a critical,success,a full success,partial,a partial success,a bad outcome)
+        flags: [funsyntax]
+      FUN`DISPLAY`TIERTONE:
+        value: |-
+          switch(%0,crit-success,success,success,success,fail,error,warning)
+        flags: [funsyntax]
+      # %0 a character, %1 API`STRESS's JSON: "Alice has 4 of 9 stress." or the trauma it brings.
+      FUN`DISPLAY`STRESSED:
+        value: |-
+          if(json_query(%1,extract,$.trauma),[name(%0)]'s stress runs past [get(%!/DATA`CONFIG`STRESS)]: it clears%, and a trauma is due. +sheet/trauma <trauma> marks it.,[name(%0)] has [json_query(%1,extract,$.stress)] of [get(%!/DATA`CONFIG`STRESS)] stress.)
+        flags: [funsyntax]
+      # %0 a number filled, %1 out of: [####....].
+      FUN`DISPLAY`TRACK:
+        value: |-
+          %[[repeat(#,%0)][repeat(.,sub(%1,%0))]%]
+        flags: [funsyntax]
+      FUN`DISPLAY`CLOCK:
+        value: |-
+          setqm(clock_size,get({{store}}/CLOCK`%0`SIZE),
+          clock_filled,get({{store}}/CLOCK`%0`FILLED))[get({{store}}/CLOCK`%0)] [u(%!/FUN`DISPLAY`TRACK,%q<clock_filled>,%q<clock_size>)] %q<clock_filled>/%q<clock_size>
+        flags: [funsyntax]
+      FUN`SCREEN`CLOCKS:
+        value: |-
+          setq(screen_clocks,u(%!/FUN`LIST`ALL,CLOCK))[box(if(words(%q<screen_clocks>),ldatatable(lit({"nowrap":"2|3|4","rule":""}),Clock|Filled|>Segments|Started by,iter(%q<screen_clocks>,get({{store}}/CLOCK`%i0)|[u(%!/FUN`DISPLAY`TRACK,get({{store}}/CLOCK`%i0`FILLED),get({{store}}/CLOCK`%i0`SIZE))]|[get({{store}}/CLOCK`%i0`FILLED)]/[get({{store}}/CLOCK`%i0`SIZE)]|[name(get({{store}}/CLOCK`%i0`OWNER))],,%*<^>),%*<^>),tone(muted,There are no clocks.))%r[rule()]%r[tone(muted,+clock/new <name>=<segments> starts one%, +clock/tick <name> fills a segment.)],Clocks)]
+        flags: [funsyntax]
+      # %0 the character, %1 who reads it.
+      FUN`SCREEN`SHEET:
+        value: |-
+          setqm(screen_stress,u(%!/API`STRESSED,%0),
+          screen_traumas,get(%0/FITD`TRAUMA))[box(lfields(lit({"cols":2}),Stress%*<|>Coin%*<|>Trauma,[u(%!/FUN`DISPLAY`TRACK,%q<screen_stress>,get(%!/DATA`CONFIG`STRESS))] %q<screen_stress>/[get(%!/DATA`CONFIG`STRESS)]%*<|>[u(%!/API`COIN,%0)]%*<|>[firstof(itemize(%q<screen_traumas>,|),tone(muted,none))],%*<|>)%r[rule(Harm)]%r[lfields(,iter(3 2 1,%i0 [v(DATA`HARM`%i0)],%b,%*<|>),iter(3 2 1,firstof(itemize(squish(iter(u(%!/FUN`HARM`SLOTS,%i0),get(%0/FITD`HARM`%i0),%b,|),|),|),tone(muted,-)),%b,%*<|>),%*<|>)]%r[rule(Actions)]%r[u(%!/FUN`SCREEN`ACTIONS,%0)]%r[rule()]%r[tone(muted,u(%!/FUN`DISPLAY`FOOTER,%0,%1))],name(%0))]
+        flags: [funsyntax]
+      # %0 the character: one table per attribute, its rating (the actions rated 1 or more) beside its name.
+      FUN`SCREEN`ACTIONS:
+        value: |-
+          ldatatable(lit({"nowrap":"1|2|3","rule":""}),Attribute|Action|>Rating,iter(u(%!/FUN`LIST`ALL,ATTRIBUTE),iter(u(%!/FUN`ATTRIBUTE`ACTIONS,%i0),[if(eq(inum(0),1),[u(%!/FUN`LIST`LABEL,ATTRIBUTE,%i1)] [u(%!/API`ATTRIBUTE,%0,%i1)])]|[u(%!/FUN`LIST`LABEL,ACTION,%i0)]|[u(%!/FUN`DISPLAY`TRACK,u(%!/API`RATING,%0,%i0),4)],,%*<^>),,%*<^>),%*<^>)
+        flags: [funsyntax]
+      FUN`DISPLAY`FOOTER:
+        value: |-
+          cond(cand(not(comp(objid(%1),%0)),not(isapproved(%1)),not(u(%!/FUN`PERM`KEEPER,%1))),+sheet/set <action>=<rating> rates an action. +check <action>=<position> rolls.[u(%!/FUN`HINT,FOOTER)],not(comp(objid(%1),%0)),+check <action>=<position> rolls. +sheet/stress +<n> marks stress%, +sheet/harm <level>=<harm> takes harm.,+check <action> rolls a die for each point of the rating.)
+        flags: [funsyntax]
+      FUN`SCREEN`TRAITS:
+        value: |-
+          box(ldatatable(lit({"nowrap":"1|2"}),Key|Action|Attribute,iter(u(%!/FUN`LIST`ALL,ACTION),lcstr(%i0)|[u(%!/FUN`LIST`LABEL,ACTION,%i0)]|[u(%!/FUN`LIST`LABEL,ATTRIBUTE,get({{store}}/ACTION`%i0`ATTRIBUTE))],,%*<^>),%*<^>)%r[rule()]%r[tone(muted,Positions: controlled%, risky%, desperate. Difficulties: [itemize(v(DATA`DIFFICULTIES))].)],Forged in the Dark actions)
+        flags: [funsyntax]
+
+      # ---- the sheet API ------------------------------------------------------------
+      # What other packages call: u({{sheet-fitd/sheet}}/API`<NAME>,...). Every sheet package has these names.
+      # They read and roll; API`STRESS and API`AWARD are the ones that write.
+      API:
+        value: |-
+          The Forged in the Dark sheet's functions for other packages. See the package README.
+        flags: [VISUAL]
+      # JSON list of the actions: [{"key","label","group","always"}], group the attribute's key. always is true for
+      # every one: an action rated 0 rolls two dice and keeps the lower.
+      API`TRAITS:
+        value: |-
+          json_array(iter(u(%!/FUN`LIST`ALL,ACTION),json(object,key,json(string,lcstr(%i0)),label,json(string,u(%!/FUN`LIST`LABEL,ACTION,%i0)),group,json(string,lcstr(get({{store}}/ACTION`%i0`ATTRIBUTE))),always,json(boolean,1)),%b,|),|)
+        flags: [VISUAL]
+      API`ALWAYS:
+        value: |-
+          lcstr(u(%!/FUN`LIST`ALL,ACTION))
+        flags: [VISUAL]
+      API`FIND:
+        value: |-
+          lcstr(u(%!/FUN`LIST`FIND,ACTION,%0))
+        flags: [VISUAL]
+      API`LABEL:
+        value: |-
+          u(%!/FUN`LIST`LABEL,ACTION,ucstr(%0))
+        flags: [VISUAL]
+      # %0 a character, %1 an action: its rating, 0 when not set.
+      API`RATING:
+        value: |-
+          default(%0/FITD`ACTION`[ucstr(%1)],0)
+        flags: [VISUAL]
+      # %0 a character, %1 an attribute: how many of its actions are rated 1 or more, the dice it resists with.
+      API`ATTRIBUTE:
+        value: |-
+          setq(attribute_who,%0)[words(filterbool(%!/FUN`ATTRIBUTE`RATED,u(%!/FUN`ATTRIBUTE`ACTIONS,ucstr(%1))))]
+        flags: [VISUAL]
+      FUN`ATTRIBUTE`RATED:
+        value: |-
+          gt(u(%!/API`RATING,%q<attribute_who>,%0),0)
+        flags: [funsyntax]
+      API`HAS:
+        value: |-
+          hasattr(%0,FITD)
+        flags: [VISUAL]
+      # %0 a position or a difficulty word: the position (controlled, risky, desperate, or none), or nothing.
+      API`TARGET:
+        value: |-
+          cond(member(v(DATA`DIFFICULTIES),lcstr(%0)),lcstr(extract(get(%!/DATA`CONFIG`POSITIONS),member(v(DATA`DIFFICULTIES),lcstr(%0)),1)),member(v(DATA`POSITIONS),lcstr(%0)),lcstr(%0))
+        flags: [VISUAL]
+      # %0 the highest die, %1 how many dice showed 6 (only counted from a pool of one die or more): crit-success
+      # on two 6s or more, success on a 6, partial on 4 or 5, fail on 1 to 3.
+      API`TIER:
+        value: |-
+          cond(not(isint(%0)),,gte(%1,2),crit-success,eq(%0,6),success,gte(%0,4),partial,fail)
+        flags: [VISUAL]
+      # %0 a character: the stress they have marked.
+      API`STRESSED:
+        value: |-
+          default(%0/FITD`STRESS,0)
+        flags: [VISUAL]
+      # %0 a character, %1 stress to mark (or clear, below 0). Past the most stress it clears and a trauma is due.
+      # Writes it and returns {"stress","trauma"}, trauma 1 when one is due.
+      API`STRESS:
+        value: |-
+          setqm(stress_new,max(0,add(u(%!/API`STRESSED,%0),%1)),
+          stress_over,gt(%q<stress_new>,get(%!/DATA`CONFIG`STRESS)))[if(hasattr(%0,FITD),,attrib_set(%0/FITD,This character's Forged in the Dark sheet. +sheet shows it.)[set(%0/FITD,wizard)][set(%0/FITD,no_command)])][attrib_set(%0/FITD`STRESS,if(%q<stress_over>,,if(%q<stress_new>,%q<stress_new>)))][json(object,stress,if(%q<stress_over>,0,%q<stress_new>),trauma,%q<stress_over>)]
+        flags: [VISUAL]
+      # %0 a character: their coin.
+      API`COIN:
+        value: |-
+          default(%0/FITD`COIN,0)
+        flags: [VISUAL]
+      # %0 a character, %1 coin to give (or take, below 0): writes it, never below 0, and returns the new count.
+      API`AWARD:
+        value: |-
+          setq(award_new,max(0,add(u(%!/API`COIN,%0),%1)))[if(hasattr(%0,FITD),,attrib_set(%0/FITD,This character's Forged in the Dark sheet. +sheet shows it.)[set(%0/FITD,wizard)][set(%0/FITD,no_command)])][attrib_set(%0/FITD`COIN,if(%q<award_new>,%q<award_new>))]%q<award_new>
+        flags: [VISUAL]
+      # Named: %<roller> an objid, %<trait> an action key, %<modifier> dice to add (or take), %<target> the position
+      # or nothing. Rolls the pool and keeps the roll (roll() record), and returns
+      # {"tier","total","sixes","dice","target","label","text","roll","formula"}. #-1 and why when the action or
+      # roller is wrong.
+      API`CHECK:
+        value: |-
+          cond(not(hastype(%<roller>,player)),#-1 There is no character to roll for.,not(strlen(u(%!/FUN`LIST`FIND,ACTION,%<trait>))),#-1 There is no action '%<trait>'.,u(%!/FUN`CHECK`ROLLED,u(%!/FUN`LIST`FIND,ACTION,%<trait>),max(0,add(u(%!/API`RATING,%<roller>,u(%!/FUN`LIST`FIND,ACTION,%<trait>)),firstof(%<modifier>,0))),%<target>))
+        flags: [VISUAL]
+      # %0 the key, %1 the pool, %2 the position or nothing.
+      FUN`CHECK`ROLLED:
+        value: |-
+          setqm(rolled,u(%!/FUN`POOL`ROLL,%1),
+          rolled_total,json_query(%q<rolled>,extract,$.total),
+          rolled_sixes,if(u(%!/FUN`POOL`CRIT,%q<rolled>,%1),2,eq(%q<rolled_total>,6)))[json(object,tier,json(string,u(%!/API`TIER,%q<rolled_total>,%q<rolled_sixes>)),total,%q<rolled_total>,sixes,%q<rolled_sixes>,dice,%1,target,json(string,%2),label,json(string,u(%!/FUN`LIST`LABEL,ACTION,%0)),text,json(string,json_query(%q<rolled>,extract,$.text)),roll,json_query(%q<rolled>,extract,$.id),formula,json(string,json_query(%q<rolled>,extract,$.formula)))]
+        flags: [funsyntax]
+
+      # ---- lifecycle ----------------------------------------------------------------
+      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
+      STARTUP:
+        value: |-
+          @command/add/noparse/rsnoparse +sheet; @hook/override/inline +sheet=%!,CMD`SHEET; @command/add/noparse/rsnoparse +check; @hook/override/inline +check=%!,CMD`CHECK; @command/add/noparse/rsnoparse +clock; @hook/override/inline +clock=%!,CMD`CLOCK
+        flags: [cmdsyntax]
+      AINSTALL:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+      AUPDATE:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+
+  # The lists, and the game's clocks. Inside the FitD Sheet, so no player can reach it, and no_command, so nothing
+  # kept on it is ever matched as a command. ACTION`<KEY> an action's label, with ATTRIBUTE and ORDER beneath;
+  # ATTRIBUTE`<KEY> an attribute's label; CLOCK`<KEY> a clock. Staff change the lists with +config fitd/actions and
+  # /attributes; +clock changes the clocks.
+  - ref: store
+    type: thing
+    name: FitD Sheet Store
+    location: "{{sheet}}"
+    flags: [no_command]
+    attributes:
+      ATTRIBUTE: |-
+        The attributes, one branch each, keyed as a player types it.
+      ATTRIBUTE`INSIGHT: |-
+        Insight
+      ATTRIBUTE`INSIGHT`ORDER: |-
+        1
+      ATTRIBUTE`PROWESS: |-
+        Prowess
+      ATTRIBUTE`PROWESS`ORDER: |-
+        2
+      ATTRIBUTE`RESOLVE: |-
+        Resolve
+      ATTRIBUTE`RESOLVE`ORDER: |-
+        3
+      ACTION: |-
+        The actions, one branch each, with the attribute each counts towards.
+      ACTION`HUNT: |-
+        Hunt
+      ACTION`HUNT`ATTRIBUTE: |-
+        insight
+      ACTION`HUNT`ORDER: |-
+        1
+      ACTION`STUDY: |-
+        Study
+      ACTION`STUDY`ATTRIBUTE: |-
+        insight
+      ACTION`STUDY`ORDER: |-
+        2
+      ACTION`SURVEY: |-
+        Survey
+      ACTION`SURVEY`ATTRIBUTE: |-
+        insight
+      ACTION`SURVEY`ORDER: |-
+        3
+      ACTION`TINKER: |-
+        Tinker
+      ACTION`TINKER`ATTRIBUTE: |-
+        insight
+      ACTION`TINKER`ORDER: |-
+        4
+      ACTION`FINESSE: |-
+        Finesse
+      ACTION`FINESSE`ATTRIBUTE: |-
+        prowess
+      ACTION`FINESSE`ORDER: |-
+        5
+      ACTION`PROWL: |-
+        Prowl
+      ACTION`PROWL`ATTRIBUTE: |-
+        prowess
+      ACTION`PROWL`ORDER: |-
+        6
+      ACTION`SKIRMISH: |-
+        Skirmish
+      ACTION`SKIRMISH`ATTRIBUTE: |-
+        prowess
+      ACTION`SKIRMISH`ORDER: |-
+        7
+      ACTION`WRECK: |-
+        Wreck
+      ACTION`WRECK`ATTRIBUTE: |-
+        prowess
+      ACTION`WRECK`ORDER: |-
+        8
+      ACTION`ATTUNE: |-
+        Attune
+      ACTION`ATTUNE`ATTRIBUTE: |-
+        resolve
+      ACTION`ATTUNE`ORDER: |-
+        9
+      ACTION`COMMAND: |-
+        Command
+      ACTION`COMMAND`ATTRIBUTE: |-
+        resolve
+      ACTION`COMMAND`ORDER: |-
+        10
+      ACTION`CONSORT: |-
+        Consort
+      ACTION`CONSORT`ATTRIBUTE: |-
+        resolve
+      ACTION`CONSORT`ORDER: |-
+        11
+      ACTION`SWAY: |-
+        Sway
+      ACTION`SWAY`ATTRIBUTE: |-
+        resolve
+      ACTION`SWAY`ORDER: |-
+        12
+      CLOCK: |-
+        The game's progress clocks, one branch each, with SIZE, FILLED and OWNER beneath.
+
+  # The +help topics, on an object of their own. sheet-fitd-help registers it with +help; without that bridge
+  # nothing reads it. HELP`<TOPIC> is a topic, its subtopics the leaves beneath, LOCK`<TOPIC> who may read it.
+  - ref: sheet_help
+    type: thing
+    name: FitD Sheet Help
+    location: "{{sheet}}"
+    attributes:
+      HELP: |-
+        Your character's Forged in the Dark sheet, rolling against it, and progress clocks: +sheet, +check and +clock.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`SHEET: |-
+        check clock
+      SEE`CHECK: |-
+        sheet clock
+      SEE`CLOCK: |-
+        sheet check
+      HELP`SHEET: |-
+        `+sheet` shows your character's sheet: stress, coin, trauma, harm, and twelve actions rated 0 to 4 under three attributes, Insight, Prowess and Resolve.
+
+        - `+sheet` shows your own; `+sheet <name>` another character's, when the game lets you read it.
+        - `+sheet/set <action>=<rating>` rates an action: `+sheet/set skirmish=2`. Leave the rating out to put it back to 0.
+        - `+sheet/traits` lists the actions and their attributes.
+
+        You rate actions until your character is approved; then staff change them. An attribute's rating is how many of its actions are rated 1 or more.
+
+        For example:
+
+        `+sheet/set prowl=2`
+
+        Output: `\[SHEET\] Done: Prowl is 2 on Alice's sheet.`
+
+        See `+help sheet play` for stress, trauma and harm, and `+help check` for rolling.
+      HELP`SHEET`PLAY: |-
+        In play you keep your own stress, trauma, harm and coin:
+
+        - `+sheet/stress +<n>` marks stress, `-<n>` clears some, `<n>` sets it and `clear` empties it: `+sheet/stress +2`.
+        - Stress past the most \(9\) clears it, and you take a trauma: `+sheet/trauma <trauma>`, such as cold, haunted, obsessed, paranoid, reckless, soft, unstable or vicious. At four traumas the character retires.
+        - `+sheet/coin -<n>` spends coin. Staff give it.
+        - `+sheet/harm <level>=<harm>` takes harm at level 1 \(lesser\), 2 \(moderate\) or 3 \(severe\): `+sheet/harm 2=Cracked ribs`. Level 1 and 2 hold two harms, level 3 one; a full level pushes the harm up a level. `+sheet/harm <level>=` clears a level.
+
+        For example:
+
+        `+sheet/harm 1=Shaken`
+
+        Output: `\[SHEET\] Done: Alice takes level 1 harm: Shaken.`
+      HELP`CHECK: |-
+        `+check <action>` rolls one six-sided die per point of the action's rating and reads the highest, where the room sees it. An action rated 0 rolls two dice and reads the lower.
+
+        - `+check <action>=<position>` names the position: controlled, risky or desperate, or a difficulty: trivial, easy, standard, hard or extreme.
+        - `+check <action>+<n>` or `-<n>` adds or takes dice, such as +1 for help or for pushing yourself: `+check wreck+1=risky`.
+        - `/private` rolls where only you see it. `+check/resist <attribute>` resists a consequence: see `+help check resist`.
+
+        A 6 is a full success, 4 or 5 a partial success \(you do it, with a cost\), 1 to 3 a bad outcome. Two 6s or more are a critical. Every check is kept under a number that `rollinfo()` reads back.
+
+        For example:
+
+        `+check skirmish=risky`
+
+        Output: `\[SHEET\] Alice rolls Skirmish (risky): 2d6kh1\[(3), 6\] = 6: a full success (roll 42)`
+      HELP`CHECK`RESIST: |-
+        `+check/resist <attribute>` rolls one die per point of the attribute: Insight, Prowess or Resolve. The stress it costs is 6 less the highest die, and the sheet marks it. Two 6s clear 1 stress instead.
+
+        For example:
+
+        `+check/resist prowess`
+
+        Output: `\[SHEET\] Alice resists with Prowess: 3d6kh1\[(2), 5, (1)\] = 5: takes 1 stress. Alice has 3 of 9 stress. (roll 43)`
+      HELP`CLOCK: |-
+        A clock tracks progress against something: a guard growing suspicious, a ritual nearly done. Clocks belong to the game, so anyone may read them.
+
+        - `+clock` lists the clocks; `+clock <name>` shows one.
+        - `+clock/new <name>=<segments>` starts one with 4, 6, 8 or 12 segments.
+        - `+clock/tick <name>` fills a segment; `+clock/tick <name>=<n>` fills n, or empties some with a number below 0.
+        - `+clock/remove <name>` takes it away.
+
+        Only whoever started a clock, and sheet keepers, change it.
+
+        For example:
+
+        `+clock/tick alarm=2`
+
+        Output: `\[CLOCK\] Alice ticks a clock: Alarm \[##..\] 2/4`
+      HELP`SHEET`CREDITS: |-
+        This sheet is based on Blades in the Dark \(found at http://www.bladesinthedark.com/\), product of One Seven Design, developed and authored by John Harper, and licensed for our use under the Creative Commons Attribution 3.0 Unported license \(http://creativecommons.org/licenses/by/3.0/\).
+
+        It is not endorsed or sponsored by One Seven Design.
+      LOCK`SHEET`STAFF: |-
+        perm^softcode.fitd.admin
+      HELP`SHEET`STAFF: |-
+        Sheet keepers \(`softcode.fitd.admin`, or the FitD Sheet Keeper role\) read every sheet and change any character's at any time:
+
+        - `+sheet <name>` shows a character's sheet.
+        - `/set`, `/trauma` and `/harm` take `<name>/` first: `+sheet/set Alice/hunt=4`. A keeper may rate an action up to 4.
+        - `+sheet/stress <name>=<n>` changes their stress. `+sheet/coin <name>=<n>` gives coin, or takes it with a number below 0.
+        - `+sheet/trauma <name>/<trauma>=remove` takes a trauma off.
+        - Keepers tick and remove anyone's clocks.
+
+        `@role/assign <player>=fitd-sheet-keeper` makes someone a keeper.
+      LOCK`SHEET`SETTINGS: |-
+        perm^config.admin
+      HELP`SHEET`SETTINGS: |-
+        `+config fitd` lists the settings and `+config fitd/<setting>=<value>` changes one \(`config.admin`\):
+
+        - `cap`: the highest rating a player gives an action \(2\).
+        - `stress`: how much stress a character holds \(9\). `trauma`: traumas before retiring \(4\).
+        - `positions`: the position of trivial, easy, standard, hard and extreme \(`none controlled risky desperate desperate`\). `none` means no roll: it simply succeeds.
+        - `dice`: dice added or taken at each difficulty \(`0 0 0 0 -1`\).
+        - `public`: whether anyone may read anyone's sheet \(no\).
+        - `actions`, `attributes`: the two lists. `+config/add fitd/actions/ride=Ride` adds an action; set its `attribute` field.
+
+        Removing an action leaves what characters had stored, but the sheet stops showing it.
