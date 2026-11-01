@@ -7,6 +7,7 @@ This game plays a JRPG-style tabletop system that is compatible with Fabula Ulti
 - [[Fabula Points and Bonds|main:fabula_points_and_bonds]]: invoking your traits, and drawing on a bond.
 - [[Resources and Levels|main:fabula_resources_and_levels]]: HP, MP, IP, crisis, defences, experience, levelling up and zenit.
 - [[Status Effects|main:fabula_status_effects]]: dazed, enraged, poisoned, shaken, slow and weak.
+- [[Conflicts|main:fabula_conflicts]]: turns, attacks, damage types and affinities, surrender and villains.
 - [[Classes|main:fabula_classes]]: the fifteen Core Rulebook classes and what their first level gives.
 
 ## Playing on this game
