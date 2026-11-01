@@ -1176,7 +1176,7 @@ objects:
       # limit and never floods the queue.
       INC`IMPORT`BATCH:
         value: |-
-          &FEED`TOUCHED me=[secs()]; @assert lte(get(me/FEED`AT),get(me/FEED`LINES))={&FEED`FILE`[u(FUN`FEED`KEY,first(get(me/FEED`CURRENT),|))] me=[elements(get(me/FEED`CURRENT),4,|)]; @trigger me/INC`UPDATE`NEXT}; @dolist/inplace [lnum(get(me/FEED`AT),min(add(get(me/FEED`AT),39),get(me/FEED`LINES)))]=@include me/INC`IMPORT`LINE=%i0; &FEED`AT me=[add(get(me/FEED`AT),40)]; @trigger me/INC`IMPORT`BATCH
+          &FEED`TOUCHED me=[secs()]; @assert lte(get(me/FEED`AT),get(me/FEED`LINES))={&FEED`FILE`[u(FUN`FEED`KEY,first(get(me/FEED`CURRENT),|))] me=[elements(get(me/FEED`CURRENT),4,|)]; @trigger me/INC`UPDATE`NEXT}; @dolist/inplace [lnum(get(me/FEED`AT),min(add(get(me/FEED`AT),11),get(me/FEED`LINES)))]=@include me/INC`IMPORT`LINE=%i0; &FEED`AT me=[add(get(me/FEED`AT),12)]; @trigger me/INC`IMPORT`BATCH
         flags: [cmdsyntax]
       # %0 a line's number in FEED`BODY: <_id> <hash> <leaf> <value>. A line of an item whose stored
       # HASH matches, and whose PREP was made for the core's DATA`PREP`VERSION, is skipped.
