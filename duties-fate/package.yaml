@@ -1,0 +1,126 @@
+format: "1.16"
+package: duties-fate
+title: "Duties: Fate sheet rolls"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Lets Duties roll on the Fate sheet: a roll provider called fate, so a duty's checks roll four Fate dice plus a skill or approach against an opposition on the ladder, with teamwork, paid invokes and fate points as rewards. Pick it with +config duties/system=fate."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [duties, fate, sheet, dice, bridge]
+category: Characters
+requires_server: ">=0.1"
+
+# A bridge: it joins two packages that do not know about each other. Duties asks the game's one active roll
+# provider for every check, and sheet-fate holds the sheet and rolls against it. This package is a provider
+# that answers Duties' questions with the sheet's API, and the one leaf that registers it.
+depends:
+  - package: duties
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/duties/
+      branch: main
+  - package: sheet-fate
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH.Packages
+      path: sheet-fate/
+      branch: main
+
+objects:
+  # The provider. Duties calls each FN`DUTIES` attribute with u() and named arguments, so it runs as this
+  # object; WIZARD because the sheet's API is on a WIZARD object, which a lesser one may not call. The only
+  # writes are fate points, through the sheet's API`AWARD: spent on a paid invoke, given as a reward.
+  - ref: provider
+    type: thing
+    name: Duties Fate Provider
+    location: "{{sheet-fate/sheet}}"
+    flags: [WIZARD, no_command]
+    attributes:
+      # Every skill or approach; an unrated one rolls at Mediocre, so each can be rolled.
+      FN`DUTIES`TRAITS:
+        value: |-
+          u({{sheet-fate/sheet}}/API`TRAITS)
+        flags: [funsyntax]
+      # A tie is the partial success, three shifts or more success with style. Fate has no critical failure.
+      FN`DUTIES`TIERS:
+        value: |-
+          fail partial success crit-success
+        flags: [funsyntax]
+      # %<difficulty> a difficulty word, a ladder word or a number: "Fair (+2)".
+      FN`DUTIES`DC:
+        value: |-
+          setq(provider_opposition,u({{sheet-fate/sheet}}/API`TARGET,%<difficulty>))[if(isint(%q<provider_opposition>),u(%!/FUN`LADDER`SHOW,%q<provider_opposition>),#-1 NO SUCH DIFFICULTY)]
+        flags: [funsyntax]
+      # %<roller>: the skill or approach this character improvises with, their highest rated (the first of equals).
+      FN`DUTIES`FALLBACK:
+        value: |-
+          setq(provider_roller,%<roller>)[last(sortkey(%!/FUN`TRAIT`SORTKEY,revwords(u({{sheet-fate/sheet}}/API`ALWAYS)),n))]
+        flags: [funsyntax]
+      # %<roller>, %<trait>, %<difficulty>, %<mods>, %<context>. %<mods> may name helpers (objids): each who has
+      # the skill at Average (+1) or better adds +1, as teamwork does. It may ask for invokes: each costs a fate
+      # point, spent here, and adds +2; no more are made than the roller has points for. Returns {"tier","text",
+      # "roll","margin","system"}, system holding shifts, opposition, ladder, teamwork and invokes.
+      FN`DUTIES`CHECK:
+        value: |-
+          setqm(provider_opposition,u({{sheet-fate/sheet}}/API`TARGET,%<difficulty>),
+          provider_teamwork,u(%!/FUN`MODS`TEAMWORK,%<mods>,%<trait>),
+          provider_invokes,min(u(%!/FUN`MODS`INVOKES,%<mods>),u({{sheet-fate/sheet}}/API`POINTS,%<roller>)))[cond(not(isint(%q<provider_opposition>)),#-1 NO SUCH DIFFICULTY,not(strlen(u({{sheet-fate/sheet}}/API`FIND,%<trait>))),#-1 There is no skill '%<trait>'.,u(%!/FUN`CHECK`ROLL,%<roller>,%<trait>))]
+        flags: [funsyntax]
+      # %0 the roller, %1 the trait. Spends the invokes, rolls, and builds the result.
+      FUN`CHECK`ROLL:
+        value: |-
+          setq(provider_spent,if(%q<provider_invokes>,u({{sheet-fate/sheet}}/API`AWARD,%0,-%q<provider_invokes>)))[setq(provider_rolled,uargs({{sheet-fate/sheet}}/API`CHECK,roller,%0,trait,%1,modifier,add(%q<provider_teamwork>,mul(2,%q<provider_invokes>)),target,%q<provider_opposition>))][if(strmatch(%q<provider_rolled>,#-*),%q<provider_rolled>,u(%!/FUN`CHECK`RESULT,%q<provider_rolled>))]
+        flags: [funsyntax]
+      # %0 the sheet's check JSON.
+      FUN`CHECK`RESULT:
+        value: |-
+          setq(provider_shifts,json_query(%0,extract,$.shifts))[json(object,tier,json(string,json_query(%0,extract,$.tier)),text,json(string,[json_query(%0,extract,$.label)]: [json_query(%0,extract,$.text)] against [u(%!/FUN`LADDER`SHOW,%q<provider_opposition>)][u(%!/FUN`CHECK`EXTRAS)]),roll,json_query(%0,extract,$.roll),margin,%q<provider_shifts>,system,json(object,shifts,%q<provider_shifts>,opposition,%q<provider_opposition>,ladder,json(string,u({{sheet-fate/sheet}}/API`LADDER,json_query(%0,extract,$.total))),teamwork,%q<provider_teamwork>,invokes,%q<provider_invokes>))]
+        flags: [funsyntax]
+      FUN`CHECK`EXTRAS:
+        value: |-
+          if(cor(%q<provider_teamwork>,%q<provider_invokes>),%b%([trim(if(%q<provider_teamwork>,+%q<provider_teamwork> from teamwork)[if(cand(%q<provider_teamwork>,%q<provider_invokes>),%,%b)][if(%q<provider_invokes>,+[mul(2,%q<provider_invokes>)] from [%q<provider_invokes>] invoke[if(neq(%q<provider_invokes>,1),s)])])]%))
+        flags: [funsyntax]
+      # The rewards a duty may give on this sheet, for Duties' editor.
+      FN`DUTIES`REWARDS:
+        value: |-
+          lit([{"kind":"fate-point","label":"Fate points","fields":[{"key":"amount","type":"integer"}]}])
+        flags: [funsyntax]
+      # Queued once for each reward and member: %<roller>, %<reward> {"kind","amount"}, %<context>. Gives the
+      # fate points and tells the player.
+      ON`DUTIES`GRANT:
+        value: |-
+          @assert strmatch(json_query(%<reward>,extract,$.kind),fate-point); think setq(grant_amount,firstof(json_query(%<reward>,extract,$.amount),1)); @assert cand(isint(%q<grant_amount>),gt(%q<grant_amount>,0),hastype(%<roller>,player)); @pemit %<roller>=notice(DUTIES,You gain %q<grant_amount> fate point[if(neq(%q<grant_amount>,1),s)]. You have [u({{sheet-fate/sheet}}/API`AWARD,%<roller>,%q<grant_amount>)].,ok)
+        flags: [cmdsyntax]
+
+      # %0 %<mods>, %1 the trait: +1 for each helper rated Average (+1) or better in it.
+      FUN`MODS`TEAMWORK:
+        value: |-
+          setq(teamwork_trait,%1)[ladd(iter(u(%!/FUN`MODS`HELPERS,%0),gte(u({{sheet-fate/sheet}}/API`RATING,%i0,%q<teamwork_trait>),1)),0)]
+        flags: [funsyntax]
+      # %0 %<mods>: the helpers' objids, a space list.
+      FUN`MODS`HELPERS:
+        value: |-
+          if(cand(strlen(%0),strmatch(json_query(json_query(%0,get,helpers)),array)),iter(lnum(0,dec(json_query(json_query(%0,get,helpers),size))),json_query(%0,extract,$.helpers%[%i0%])))
+        flags: [funsyntax]
+      # %0 %<mods>: how many invokes the player asked for.
+      FUN`MODS`INVOKES:
+        value: |-
+          setq(invokes_asked,if(strlen(%0),json_query(%0,extract,$.invokes)))[if(cand(isint(%q<invokes_asked>),gt(%q<invokes_asked>,0)),%q<invokes_asked>,0)]
+        flags: [funsyntax]
+      # %0 a key: its rating for provider_roller, for sorting.
+      FUN`TRAIT`SORTKEY:
+        value: |-
+          u({{sheet-fate/sheet}}/API`RATING,%q<provider_roller>,%0)
+        flags: [funsyntax]
+      # %0 a rating: Fair (+2).
+      FUN`LADDER`SHOW:
+        value: |-
+          setq(ladder_word,u({{sheet-fate/sheet}}/API`LADDER,%0))[if(strlen(%q<ladder_word>),%q<ladder_word> %([if(gte(%0,0),+%0,%0)]%),if(gte(%0,0),+%0,%0))]
+        flags: [funsyntax]
+
+  - ref: provider_registration
+    target: "{{duties/duties}}"
+    attributes:
+      PROVIDER`FATE: |-
+        {{provider}}

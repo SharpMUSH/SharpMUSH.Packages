@@ -1,0 +1,894 @@
+format: "1.16"
+package: sheet-d20
+title: "D20 sheet"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "A d20 character sheet: six ability scores, a skill list the game edits, training and level. +sheet shows it, +sheet/set fills it in, and +check rolls 1d20 plus a trait against a DC for the room."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [sheet, d20, dice, checks, skills]
+category: Characters
+requires_server: ">=0.1"
+
+# One permission, for the people who keep sheets: change any character's sheet at any time and read every
+# sheet. A player fills in their own sheet until they are approved. Changing the traits and settings is
+# config.admin, as +config is.
+categories:
+  roles:
+    - name: D20 sheet
+      description: Roles for the people who keep d20 character sheets.
+  permissions:
+    - name: D20 sheet
+      description: Keeping d20 character sheets.
+permissions:
+  - name: softcode.d20.admin
+    category: D20 sheet
+    description: Read every d20 sheet and change any character's at any time.
+roles:
+  - slug: d20-sheet-keeper
+    name: D20 Sheet Keeper
+    category: D20 sheet
+    priority: 11
+    permissions:
+      softcode.d20.admin: allow
+
+# Every character's D20 tree is their d20 sheet: only wizards write it, so a player can't make the root
+# before the sheet does, and it is never a command.
+attributes:
+  D20:
+    flags: [wizard, no_command]
+
+objects:
+  # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook),
+  # writes the sheet attributes on characters, and reads them for other packages.
+  #
+  # A character's sheet is their own attributes under D20`: D20`<TRAIT> holds an ability's score or a
+  # skill's training (0 untrained, 1 trained, 2 expert), and D20`LEVEL the level. The D20 root is
+  # wizard-flagged, so only this object writes them.
+  #
+  # +sheet and +check are added with /noparse/rsnoparse and hooked to CMD`<word>, so what a player types
+  # reaches the code exactly as typed and nothing a player wrote is ever evaluated.
+  #
+  # Trees: CMD` the hooked commands, INC`COMMAND` the parse and dispatch, INC`SHEET` and INC`CHECK` one
+  # routine per switch, INC`NEED` the guards they share, INC`DO` the writes. FUN`TRAIT` the trait table,
+  # FUN`RATING` the numbers, FUN`PERM` who may do what, FUN`SCREEN` and FUN`DISPLAY` the screens.
+  # API` the functions other packages call (VISUAL), the same names in every sheet package.
+  # Bridges add HINT`<message> lines, GATE`EDIT (a reason a player may not change their own sheet now)
+  # and ALLOW`VIEW`<name> (who else may read a sheet).
+  - ref: sheet
+    type: thing
+    name: D20 Sheet
+    location: "{{$master_room}}"
+    flags: [WIZARD]
+    attributes:
+      # ---- settings ---------------------------------------------------------------
+      # +config d20 shows and changes them (sheet-d20-config); the code reads each with get(%!/DATA`CONFIG`<NAME>).
+      DATA`CONFIG: |-
+        Settings for the d20 sheet. One leaf per setting.
+      DATA`CONFIG`LABEL: |-
+        D20 sheet
+      DATA`CONFIG`SCORE-DEFAULT: |-
+        10
+      DATA`CONFIG`SCORE-DEFAULT`TYPE: |-
+        integer
+      DATA`CONFIG`SCORE-DEFAULT`DEFAULT: |-
+        10
+      DATA`CONFIG`SCORE-DEFAULT`MIN: |-
+        1
+      DATA`CONFIG`SCORE-DEFAULT`MAX: |-
+        30
+      DATA`CONFIG`SCORE-DEFAULT`LABEL: |-
+        Score before it is set
+      DATA`CONFIG`SCORE-DEFAULT`DESCRIPTION: |-
+        The ability score a character has until one is set.
+      DATA`CONFIG`SCORE-DEFAULT`EXAMPLE: |-
+        8
+      DATA`CONFIG`SCORE-MIN: |-
+        1
+      DATA`CONFIG`SCORE-MIN`TYPE: |-
+        integer
+      DATA`CONFIG`SCORE-MIN`DEFAULT: |-
+        1
+      DATA`CONFIG`SCORE-MIN`MIN: |-
+        1
+      DATA`CONFIG`SCORE-MIN`MAX: |-
+        30
+      DATA`CONFIG`SCORE-MIN`LABEL: |-
+        Lowest score
+      DATA`CONFIG`SCORE-MIN`DESCRIPTION: |-
+        The lowest ability score +sheet/set takes.
+      DATA`CONFIG`SCORE-MIN`EXAMPLE: |-
+        3
+      DATA`CONFIG`SCORE-MAX: |-
+        20
+      DATA`CONFIG`SCORE-MAX`TYPE: |-
+        integer
+      DATA`CONFIG`SCORE-MAX`DEFAULT: |-
+        20
+      DATA`CONFIG`SCORE-MAX`MIN: |-
+        1
+      DATA`CONFIG`SCORE-MAX`MAX: |-
+        30
+      DATA`CONFIG`SCORE-MAX`LABEL: |-
+        Highest score
+      DATA`CONFIG`SCORE-MAX`DESCRIPTION: |-
+        The highest ability score a player gives themselves. Sheet keepers may go to 30.
+      DATA`CONFIG`SCORE-MAX`EXAMPLE: |-
+        18
+      DATA`CONFIG`LEVEL-MAX: |-
+        20
+      DATA`CONFIG`LEVEL-MAX`TYPE: |-
+        integer
+      DATA`CONFIG`LEVEL-MAX`DEFAULT: |-
+        20
+      DATA`CONFIG`LEVEL-MAX`MIN: |-
+        1
+      DATA`CONFIG`LEVEL-MAX`MAX: |-
+        100
+      DATA`CONFIG`LEVEL-MAX`LABEL: |-
+        Highest level
+      DATA`CONFIG`LEVEL-MAX`DESCRIPTION: |-
+        The highest level a character can have.
+      DATA`CONFIG`LEVEL-MAX`EXAMPLE: |-
+        10
+      DATA`CONFIG`BONUS-BASE: |-
+        2
+      DATA`CONFIG`BONUS-BASE`TYPE: |-
+        integer
+      DATA`CONFIG`BONUS-BASE`DEFAULT: |-
+        2
+      DATA`CONFIG`BONUS-BASE`MIN: |-
+        0
+      DATA`CONFIG`BONUS-BASE`MAX: |-
+        10
+      DATA`CONFIG`BONUS-BASE`LABEL: |-
+        Training bonus at level 1
+      DATA`CONFIG`BONUS-BASE`DESCRIPTION: |-
+        What a trained skill adds at level 1. An expert adds it twice.
+      DATA`CONFIG`BONUS-BASE`EXAMPLE: |-
+        3
+      DATA`CONFIG`BONUS-EVERY: |-
+        4
+      DATA`CONFIG`BONUS-EVERY`TYPE: |-
+        integer
+      DATA`CONFIG`BONUS-EVERY`DEFAULT: |-
+        4
+      DATA`CONFIG`BONUS-EVERY`MIN: |-
+        0
+      DATA`CONFIG`BONUS-EVERY`MAX: |-
+        100
+      DATA`CONFIG`BONUS-EVERY`LABEL: |-
+        Levels per bonus step
+      DATA`CONFIG`BONUS-EVERY`DESCRIPTION: |-
+        The training bonus grows by 1 every this many levels after the first. 0 keeps it the same at every level.
+      DATA`CONFIG`BONUS-EVERY`EXAMPLE: |-
+        5
+      DATA`CONFIG`CRITS: |-
+        1
+      DATA`CONFIG`CRITS`TYPE: |-
+        boolean
+      DATA`CONFIG`CRITS`DEFAULT: |-
+        1
+      DATA`CONFIG`CRITS`LABEL: |-
+        Natural 20 and natural 1
+      DATA`CONFIG`CRITS`DESCRIPTION: |-
+        Whether a natural 20 on the die is a critical success and a natural 1 a critical failure, whatever the total.
+      DATA`CONFIG`CRITS`EXAMPLE: |-
+        no
+      DATA`CONFIG`DCS: |-
+        5 10 15 20 25
+      DATA`CONFIG`DCS`TYPE: |-
+        list
+      DATA`CONFIG`DCS`DEFAULT: |-
+        5 10 15 20 25
+      DATA`CONFIG`DCS`MIN: |-
+        5
+      DATA`CONFIG`DCS`MAX: |-
+        5
+      DATA`CONFIG`DCS`CHECK: |-
+        CHECK`DCS
+      DATA`CONFIG`DCS`LABEL: |-
+        DC for each difficulty
+      DATA`CONFIG`DCS`DESCRIPTION: |-
+        The DC of trivial, easy, standard, hard and extreme, in that order.
+      DATA`CONFIG`DCS`EXAMPLE: |-
+        5 10 13 16 20
+      DATA`CONFIG`PUBLIC: |-
+        0
+      DATA`CONFIG`PUBLIC`TYPE: |-
+        boolean
+      DATA`CONFIG`PUBLIC`DEFAULT: |-
+        0
+      DATA`CONFIG`PUBLIC`LABEL: |-
+        Sheets anyone can read
+      DATA`CONFIG`PUBLIC`DESCRIPTION: |-
+        Whether +sheet <name> shows anyone's sheet to everyone. Otherwise only the character and sheet keepers see it.
+      DATA`CONFIG`PUBLIC`EXAMPLE: |-
+        yes
+      # The traits, a +config table: entries on the store under TRAIT`, each holding its label, with KIND
+      # (ability or skill) and, for a skill, ABILITY (the ability it adds) beneath.
+      DATA`CONFIG`TRAITS`TYPE: |-
+        table
+      DATA`CONFIG`TRAITS`LABEL: |-
+        Traits
+      DATA`CONFIG`TRAITS`DESCRIPTION: |-
+        The abilities and skills on every sheet.
+      DATA`CONFIG`TRAITS`STORE: |-
+        {{store}}
+      DATA`CONFIG`TRAITS`PATH: |-
+        TRAIT
+      DATA`CONFIG`TRAITS`ENTRY: |-
+        label
+      DATA`CONFIG`TRAITS`FIELDS: |-
+        label kind ability order
+      DATA`CONFIG`TRAITS`KEYPATTERN: |-
+        ^[A-Za-z0-9-]{1,20}$
+      DATA`CONFIG`TRAITS`FIELD`LABEL`TYPE: |-
+        text
+      DATA`CONFIG`TRAITS`FIELD`LABEL`MIN: |-
+        1
+      DATA`CONFIG`TRAITS`FIELD`LABEL`MAX: |-
+        30
+      DATA`CONFIG`TRAITS`FIELD`LABEL`LABEL: |-
+        Label
+      DATA`CONFIG`TRAITS`FIELD`LABEL`DESCRIPTION: |-
+        The name the sheet shows.
+      DATA`CONFIG`TRAITS`FIELD`KIND`TYPE: |-
+        choice
+      DATA`CONFIG`TRAITS`FIELD`KIND`CHOICES: |-
+        ability skill
+      DATA`CONFIG`TRAITS`FIELD`KIND`DEFAULT: |-
+        skill
+      DATA`CONFIG`TRAITS`FIELD`KIND`LABEL: |-
+        Kind
+      DATA`CONFIG`TRAITS`FIELD`KIND`DESCRIPTION: |-
+        ability: a score, adding (score - 10) / 2, rounded down. skill: adds its ability's and the training bonus.
+      DATA`CONFIG`TRAITS`FIELD`ABILITY`TYPE: |-
+        text
+      DATA`CONFIG`TRAITS`FIELD`ABILITY`MAX: |-
+        20
+      DATA`CONFIG`TRAITS`FIELD`ABILITY`CHECK: |-
+        CHECK`ABILITY
+      DATA`CONFIG`TRAITS`FIELD`ABILITY`LABEL: |-
+        Ability
+      DATA`CONFIG`TRAITS`FIELD`ABILITY`DESCRIPTION: |-
+        For a skill, the key of the ability it adds, such as str.
+      DATA`CONFIG`TRAITS`FIELD`ORDER`TYPE: |-
+        integer
+      DATA`CONFIG`TRAITS`FIELD`ORDER`DEFAULT: |-
+        50
+      DATA`CONFIG`TRAITS`FIELD`ORDER`MIN: |-
+        0
+      DATA`CONFIG`TRAITS`FIELD`ORDER`MAX: |-
+        999
+      DATA`CONFIG`TRAITS`FIELD`ORDER`LABEL: |-
+        Order
+      DATA`CONFIG`TRAITS`FIELD`ORDER`DESCRIPTION: |-
+        Where it comes in its list: lower first, then by name.
+      # +config's CHECK for DCS (%0 the list): five whole numbers, each above the one before.
+      CHECK`DCS: |-
+        if(cand(every(%!/FUN`IS`WHOLE,%0),eq(words(%0),5),not(comp(%0,sort(%0,n))),eq(words(setunion(%0,%0,,n)),5)),,Give five whole numbers from trivial to extreme%, each higher than the last.)
+      # +config's CHECK for a skill's ABILITY (%0 the key): an ability on the sheet, or nothing.
+      CHECK`ABILITY: |-
+        if(cor(not(strlen(%0)),strmatch(get({{store}}/TRAIT`%0`KIND),ability)),,There is no ability with the key %0.)
+      FUN`IS`WHOLE: |-
+        cand(isint(%0),gte(%0,0))
+
+      # Which INC` routine each switch runs: DATA`ROUTE`<table>`<switch>. BARE is the command alone, ARG the
+      # command with something after it and no switch.
+      DATA`ROUTE: |-
+        Which routine each switch runs. One leaf per switch.
+      DATA`ROUTE`SHEET`BARE: |-
+        SHEET`SHOW
+      DATA`ROUTE`SHEET`ARG: |-
+        SHEET`SHOW
+      DATA`ROUTE`SHEET`SET: |-
+        SHEET`SET
+      DATA`ROUTE`SHEET`TRAITS: |-
+        SHEET`TRAITS
+      DATA`ROUTE`SHEET`GEAR: |-
+        SHEET`GEAR
+      DATA`ROUTE`CHECK`BARE: |-
+        CHECK`USAGE
+      DATA`ROUTE`CHECK`ARG: |-
+        CHECK`ROLL
+      # What each training value is called, and the words a player may type for it.
+      DATA`TRAINING`0: |-
+        untrained
+      DATA`TRAINING`1: |-
+        trained
+      DATA`TRAINING`2: |-
+        expert
+      DATA`DIFFICULTIES: |-
+        trivial easy standard hard extreme
+
+      # ---- commands ---------------------------------------------------------------
+      # %1 the switches and %2 what follows, exactly as typed.
+      CMD`SHEET:
+        value: |-
+          $(?is)^\+sheet(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,sheet,table,SHEET,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`CHECK:
+        value: |-
+          $(?is)^\+check(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,check,table,CHECK,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      # A line a bridge adds to one of this object's messages: HINT`<message>, set here by a bridge such as
+      # sheet-d20-help. %1 on are passed to it. Nothing when no bridge set one, so the message stands without it.
+      FUN`HINT:
+        value: |-
+          if(hasattr(%!,HINT`%0),%b[u(%!/HINT`%0,%1,%2)])
+        flags: [funsyntax]
+      # Parses the command, checks the switch, and runs its routine. +check takes its own switches (/private,
+      # /advantage, /disadvantage), so it goes to CHECK`ROLL with them.
+      INC`COMMAND`RUN:
+        value: |-
+          think u(%!/FUN`COMMAND`PARSE,%<word>,%<table>,%<switches>,%<argument>); @assert strlen(%q<cmd_route>)=@pemit %#=notice(SHEET,+%q<cmd_word> has no /%q<cmd_switch> switch.[u(%!/FUN`HINT,SWITCHES,%q<cmd_word>)],warn); @include %!/INC`%q<cmd_route>
+        flags: [cmdsyntax]
+      # %0 the word, %1 its route table, %2 the switches and %3 the argument, as typed. Sets cmd_word,
+      # cmd_switch_list, cmd_switch (the first), cmd_argument, cmd_has_equals, cmd_left_side and
+      # cmd_right_side around the first =, cmd_route (the INC` routine to run) and viewer_objid.
+      FUN`COMMAND`PARSE:
+        value: |-
+          setqm(cmd_word,lcstr(%0),
+          cmd_switch_list,lcstr(trim(edit(%2,/,%b))),
+          cmd_switch,first(%q<cmd_switch_list>),
+          cmd_argument,trim(%3),
+          cmd_has_equals,strmatch(%3,*=*),
+          cmd_left_side,trim(before(%3,=)),
+          cmd_right_side,trim(after(%3,=)),
+          cmd_route,u(%!/FUN`COMMAND`ROUTE,%1),
+          viewer_objid,objid(%#))
+        flags: [funsyntax]
+      # %0 the route table: the routine for the switch given. +check's switches are all CHECK`ROLL's.
+      FUN`COMMAND`ROUTE:
+        value: |-
+          cond(cand(strmatch(%0,CHECK),strlen(%q<cmd_switch>)),if(every(%!/FUN`CHECK`SWITCH,%q<cmd_switch_list>),if(strlen(%q<cmd_argument>),CHECK`ROLL,CHECK`USAGE)),strlen(%q<cmd_switch>),get(%!/DATA`ROUTE`%0`[ucstr(%q<cmd_switch>)]),get(%!/DATA`ROUTE`%0`[if(strlen(%q<cmd_argument>),ARG,BARE)]))
+        flags: [funsyntax]
+      FUN`CHECK`SWITCH:
+        value: |-
+          member(private advantage disadvantage,%0)
+        flags: [funsyntax]
+
+      # ---- guards -----------------------------------------------------------------
+      # %<name> a player's name: sheet_who, their objid.
+      INC`NEED`TARGET:
+        value: |-
+          @assert strlen(setr(sheet_who,u(%!/FUN`PLAYER`MATCH,%<name>)))=@pemit %#=notice(SHEET,There is no player called '%<name>'.,warn)
+        flags: [cmdsyntax]
+      # %<key> as typed: trait_key, the trait it names (or LEVEL or COIN), and trait_kind.
+      INC`NEED`TRAIT:
+        value: |-
+          @assert strlen(%<key>)=@pemit %#=notice(SHEET,Which trait? +sheet/traits lists them.,warn); @assert strlen(setr(trait_key,switch(lcstr(trim(%<key>)),level,LEVEL,coin,COIN,u(%!/FUN`TRAIT`FIND,%<key>))))=@pemit %#=notice(SHEET,There is no trait '%<key>'. +sheet/traits lists them.,warn); think setq(trait_kind,u(%!/FUN`TRAIT`KIND,%q<trait_key>))
+        flags: [cmdsyntax]
+
+      # ---- +sheet -----------------------------------------------------------------
+      # +sheet shows your own; +sheet <name> another's, to them, sheet keepers, and whoever a bridge allows.
+      INC`SHEET`SHOW:
+        value: |-
+          @assert hastype(%#,player)=@pemit %#=notice(SHEET,Only players have a sheet.,warn); @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`SHEET,%q<sheet_who>,%#)
+        flags: [cmdsyntax]
+      # +sheet/set <trait>=<value> for your own sheet; +sheet/set <name>/<trait>=<value> for a sheet keeper.
+      # An empty value clears the trait.
+      INC`SHEET`SET:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/set <trait>=<value>%, such as +sheet/set str=14 or +sheet/set athletics=trained.,warn); @include %!/INC`NEED`EDITOR; @include %!/INC`SHEET`SET`VALUE
+        flags: [cmdsyntax]
+      # cmd_left_side as [<name>/]<what>: sheet_who, set_typed (<what>) and set_keeper, once they may change
+      # that sheet now.
+      INC`NEED`EDITOR:
+        value: |-
+          @if strmatch(%q<cmd_left_side>,*/*)={@include/args %!/INC`NEED`TARGET=name,before(%q<cmd_left_side>,/); think setq(set_typed,after(%q<cmd_left_side>,/))},{think setqm(sheet_who,%q<viewer_objid>,set_typed,%q<cmd_left_side>)}; think setq(set_keeper,u(%!/FUN`PERM`KEEPER,%#)); @assert cor(%q<set_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error); @assert cor(%q<set_keeper>,not(isapproved(%#)))=@pemit %#=notice(SHEET,Your character is approved%, so staff change your sheet now.,error); @assert cor(%q<set_keeper>,not(strlen(setr(set_gate,u(%!/FUN`GATE`EDIT,%#)))))=@pemit %#=notice(SHEET,%q<set_gate>,warn)
+        flags: [cmdsyntax]
+      # The trait and value: set_value, what is stored, after each kind's own check.
+      INC`SHEET`SET`VALUE:
+        value: |-
+          @include/args %!/INC`NEED`TRAIT=key,%q<set_typed>; @break not(strlen(%q<cmd_right_side>))={@include/args %!/INC`DO`SET=who,%q<sheet_who>,key,%q<trait_key>,value,; @pemit %#=notice(SHEET,u(%!/FUN`TRAIT`LABEL,%q<trait_key>) is cleared on [name(%q<sheet_who>)]'s sheet.,ok)}; think setq(set_value,u(%!/FUN`VALUE`[if(member(LEVEL COIN,%q<trait_key>),%q<trait_key>,ucstr(%q<trait_kind>))],%q<cmd_right_side>,%q<set_keeper>)); @assert not(strmatch(%q<set_value>,#-1 *))=@pemit %#=notice(SHEET,after(%q<set_value>,#-1%b),warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,key,%q<trait_key>,value,%q<set_value>; @pemit %#=notice(SHEET,u(%!/FUN`TRAIT`LABEL,%q<trait_key>) is [u(%!/FUN`DISPLAY`VALUE,%q<sheet_who>,%q<trait_key>)] on [name(%q<sheet_who>)]'s sheet.[if(not(comp(%q<sheet_who>,%q<viewer_objid>)),u(%!/FUN`HINT,SET))],ok)
+        flags: [cmdsyntax]
+      # +sheet/gear [<name>/]<item>=<count> sets how many of an item the sheet lists; 0 takes it off.
+      INC`SHEET`GEAR:
+        value: |-
+          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>))=@pemit %#=notice(SHEET,+sheet/gear <item>=<count>%, such as +sheet/gear Rope=1. A count of 0 takes it off.,warn); @include %!/INC`NEED`EDITOR; @assert strlen(setr(gear_key,u(%!/FUN`GEAR`KEY,%q<set_typed>)))=@pemit %#=notice(SHEET,An item's name needs a letter or a digit.,warn); @assert cand(isint(%q<cmd_right_side>),gte(%q<cmd_right_side>,0),lte(%q<cmd_right_side>,9999))=@pemit %#=notice(SHEET,A count is a whole number from 0 to 9999.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,key,GEAR`%q<gear_key>,value,if(%q<cmd_right_side>,%q<cmd_right_side>|[firstof(after(get(%q<sheet_who>/D20`GEAR`%q<gear_key>),|),trim(%q<set_typed>))]); @pemit %#=notice(SHEET,if(%q<cmd_right_side>,[name(%q<sheet_who>)]'s sheet lists %q<cmd_right_side> [after(get(%q<sheet_who>/D20`GEAR`%q<gear_key>),|)].,[trim(%q<set_typed>)] is off [name(%q<sheet_who>)]'s sheet.),ok)
+        flags: [cmdsyntax]
+      # +sheet/traits: every trait, and what a skill adds.
+      INC`SHEET`TRAITS:
+        value: |-
+          @pemit %#=u(%!/FUN`SCREEN`TRAITS)
+        flags: [cmdsyntax]
+
+      # ---- +check -----------------------------------------------------------------
+      INC`CHECK`USAGE:
+        value: |-
+          @pemit %#=notice(SHEET,+check <trait>%[=<DC or difficulty>%]%, such as +check athletics=15 or +check stealth+2=hard. /private rolls where only you see it%, /advantage and /disadvantage roll two dice.,warn)
+        flags: [cmdsyntax]
+      # +check[/private][/advantage|/disadvantage] <trait>[+<n>|-<n>][=<target>]: rolls for the room.
+      INC`CHECK`ROLL:
+        value: |-
+          @assert hastype(%#,player)=@pemit %#=notice(SHEET,Only players have a sheet.,warn); @assert not(cand(member(%q<cmd_switch_list>,advantage),member(%q<cmd_switch_list>,disadvantage)))=@pemit %#=notice(SHEET,Roll with advantage or disadvantage%, not both.,warn); think u(%!/FUN`CHECK`READ,%q<cmd_left_side>); @assert isint(%q<check_modifier>)=@pemit %#=notice(SHEET,'%q<cmd_left_side>' ends in something that is not a number to add.,warn); @include/args %!/INC`NEED`TRAIT=key,%q<check_typed>; think setq(check_dc,u(%!/API`TARGET,%q<cmd_right_side>)); @assert cor(not(%q<cmd_has_equals>),isint(%q<check_dc>))=@pemit %#=notice(SHEET,'%q<cmd_right_side>' is not a DC. Give a number or one of [itemize(v(DATA`DIFFICULTIES))].,warn); think setq(check_result,uargs(%!/API`CHECK,roller,%q<viewer_objid>,trait,%q<trait_key>,modifier,%q<check_modifier>,target,%q<check_dc>,dice,u(%!/FUN`CHECK`DICE,%q<cmd_switch_list>))); @assert not(strmatch(%q<check_result>,#-*))=@pemit %#=notice(SHEET,%q<check_result>,error); think setq(check_line,u(%!/FUN`DISPLAY`CHECK,%q<check_result>)); @break member(%q<cmd_switch_list>,private)=@pemit %#=notice(SHEET,You privately check %q<check_line>); @remit %l=notice(SHEET,tone(strong,name(%#)) checks %q<check_line>)
+        flags: [cmdsyntax]
+      # %0 the trait as typed, with a modifier at its end: check_typed and check_modifier (0 when none).
+      FUN`CHECK`READ:
+        value: |-
+          setqm(check_plus,if(pos(+,%0),trim(last(%0,+))),
+          check_minus,if(pos(-,%0),trim(last(%0,-))),
+          check_modifier,cond(strlen(%q<check_plus>),%q<check_plus>,isint(%q<check_minus>),-%q<check_minus>,0),
+          check_typed,trim(cond(strlen(%q<check_plus>),left(%0,sub(strlen(%0),inc(strlen(last(%0,+))))),isint(%q<check_minus>),left(%0,sub(strlen(%0),inc(strlen(last(%0,-))))),%0)))
+        flags: [funsyntax]
+      # %0 the switches: the die.
+      FUN`CHECK`DICE:
+        value: |-
+          cond(member(%0,advantage),2d20kh,member(%0,disadvantage),2d20kl,1d20)
+        flags: [funsyntax]
+
+      # ---- writes -----------------------------------------------------------------
+      # %<who> an objid, %<key> a trait (or LEVEL), %<value> what to store; empty clears it. The D20 root is
+      # wizard-flagged and no_command the first time, and its leaves take that from it.
+      INC`DO`SET:
+        value: |-
+          @if not(hasattr(%<who>,D20))={&D20 %<who>=This character's d20 sheet. +sheet shows it.; @set %<who>/D20=wizard; @set %<who>/D20=no_command}; @if strlen(%<value>)={&D20`%<key> %<who>=%<value>},{&D20`%<key> %<who>}
+
+      # ---- values -----------------------------------------------------------------
+      # Each kind's check of a typed value, %1 1 for a sheet keeper: what to store, or #-1 and why.
+      FUN`VALUE`ABILITY:
+        value: |-
+          setq(value_max,if(%1,30,get(%!/DATA`CONFIG`SCORE-MAX)))[if(cand(isint(%0),gte(%0,get(%!/DATA`CONFIG`SCORE-MIN)),lte(%0,%q<value_max>)),%0,#-1 A score is a whole number from [get(%!/DATA`CONFIG`SCORE-MIN)] to %q<value_max>.)]
+        flags: [funsyntax]
+      FUN`VALUE`SKILL:
+        value: |-
+          switch(lcstr(%0),untrained,0,0,0,trained,1,1,1,expert,2,2,2,#-1 Training is untrained%, trained or expert.)
+        flags: [funsyntax]
+      FUN`VALUE`COIN:
+        value: |-
+          if(cand(isint(%0),gte(%0,0)),%0,#-1 Coin is a whole number%, 0 or more.)
+        flags: [funsyntax]
+      FUN`VALUE`LEVEL:
+        value: |-
+          if(cand(isint(%0),gte(%0,1),lte(%0,get(%!/DATA`CONFIG`LEVEL-MAX))),%0,#-1 A level is a whole number from 1 to [get(%!/DATA`CONFIG`LEVEL-MAX)].)
+        flags: [funsyntax]
+
+      # ---- the trait table ----------------------------------------------------------
+      # The keys, upper case, each list in its order then by key.
+      FUN`TRAIT`ALL:
+        value: |-
+          sortkey(%!/FUN`TRAIT`SORTKEY,iter(lattr({{store}}/TRAIT`*),after(%i0,`)))
+        flags: [funsyntax]
+      FUN`TRAIT`SORTKEY:
+        value: |-
+          rjust(default({{store}}/TRAIT`%0`ORDER,50),3,0)%0
+        flags: [funsyntax]
+      # %0 ability or skill: the keys of that kind.
+      FUN`TRAIT`OFKIND:
+        value: |-
+          filterbool(%!/FUN`TRAIT`IS,u(%!/FUN`TRAIT`ALL),,,%0)
+        flags: [funsyntax]
+      FUN`TRAIT`IS:
+        value: |-
+          not(comp(u(%!/FUN`TRAIT`KIND,%0),%1))
+        flags: [funsyntax]
+      FUN`TRAIT`KIND:
+        value: |-
+          if(strmatch(get({{store}}/TRAIT`%0`KIND),ability),ability,skill)
+        flags: [funsyntax]
+      FUN`TRAIT`LABEL:
+        value: |-
+          switch(%0,LEVEL,Level,COIN,Coin,firstof(get({{store}}/TRAIT`%0),lcstr(%0)))
+        flags: [funsyntax]
+      # %0 typed text: the key it names, by key, by label, or by the start of one, or nothing.
+      FUN`TRAIT`FIND:
+        value: |-
+          setqm(find_typed,trim(%0),
+          find_all,u(%!/FUN`TRAIT`ALL),
+          find_exact,iter(%q<find_all>,if(cor(not(comp(%i0,ucstr(%q<find_typed>))),not(comp(lcstr(get({{store}}/TRAIT`%i0)),lcstr(%q<find_typed>)))),%i0)),
+          find_start,iter(%q<find_all>,if(cor(not(comp(left(%i0,strlen(%q<find_typed>)),ucstr(%q<find_typed>))),not(comp(lcstr(left(get({{store}}/TRAIT`%i0),strlen(%q<find_typed>))),lcstr(%q<find_typed>)))),%i0)))[if(strlen(%q<find_typed>),first(firstof(%q<find_exact>,if(eq(words(%q<find_start>),1),%q<find_start>))))]
+        flags: [funsyntax]
+
+      # ---- the numbers --------------------------------------------------------------
+      # %0 a character, %1 a key: what is stored, or the default.
+      FUN`RATING`STORED:
+        value: |-
+          default(%0/D20`%1,switch(%1,LEVEL,1,COIN,0,if(strmatch(u(%!/FUN`TRAIT`KIND,%1),ability),get(%!/DATA`CONFIG`SCORE-DEFAULT),0)))
+        flags: [funsyntax]
+      # %0 a score: what it adds, (score - 10) / 2 rounded down.
+      FUN`RATING`MODIFIER:
+        value: |-
+          floor(fdiv(sub(%0,10),2))
+        flags: [funsyntax]
+      # %0 a level: the training bonus.
+      FUN`RATING`BONUS:
+        value: |-
+          add(get(%!/DATA`CONFIG`BONUS-BASE),if(get(%!/DATA`CONFIG`BONUS-EVERY),div(sub(max(%0,1),1),get(%!/DATA`CONFIG`BONUS-EVERY)),0))
+        flags: [funsyntax]
+      # %0 a character, %1 a skill key: its ability's modifier plus training times the bonus.
+      FUN`RATING`SKILL:
+        value: |-
+          setq(rating_ability,ucstr(get({{store}}/TRAIT`%1`ABILITY)))[add(if(strlen(%q<rating_ability>),u(%!/FUN`RATING`MODIFIER,u(%!/FUN`RATING`STORED,%0,%q<rating_ability>)),0),mul(u(%!/FUN`RATING`STORED,%0,%1),u(%!/FUN`RATING`BONUS,u(%!/FUN`RATING`STORED,%0,LEVEL))))]
+        flags: [funsyntax]
+
+      # ---- who may do what ----------------------------------------------------------
+      FUN`PERM`KEEPER:
+        value: |-
+          permission(%0,softcode.d20.admin)
+        flags: [funsyntax]
+      # %0 who asks, %1 whose sheet: 1 when they may read it. ALLOW`VIEW`<name>, which a bridge adds, may let
+      # more people read it.
+      FUN`PERM`VIEW:
+        value: |-
+          cor(not(comp(objid(%0),%1)),u(%!/FUN`PERM`KEEPER,%0),get(%!/DATA`CONFIG`PUBLIC),words(filterbool(%!/FUN`PERM`ALLOWS,lattr(%!/ALLOW`VIEW`*),,,%0,%1)))
+        flags: [funsyntax]
+      FUN`PERM`ALLOWS:
+        value: |-
+          u(%!/%0,%1,%2)
+        flags: [funsyntax]
+      # %0 a player: why they may not change their own sheet now, from GATE`EDIT when a bridge adds one.
+      FUN`GATE`EDIT:
+        value: |-
+          if(hasattr(%!,GATE`EDIT),u(%!/GATE`EDIT,%0))
+        flags: [funsyntax]
+
+      # ---- screens ------------------------------------------------------------------
+      FUN`DISPLAY`SIGNED:
+        value: |-
+          if(gte(%0,0),+%0,%0)
+        flags: [funsyntax]
+      # %0 a character, %1 a key: the value as the sheet writes it.
+      FUN`DISPLAY`VALUE:
+        value: |-
+          setq(display_stored,u(%!/FUN`RATING`STORED,%0,%1))[cond(member(LEVEL COIN,%1),%q<display_stored>,strmatch(u(%!/FUN`TRAIT`KIND,%1),ability),%q<display_stored>,v(DATA`TRAINING`%q<display_stored>))]
+        flags: [funsyntax]
+      # %0 a check's JSON: "Athletics: 1d20[14] + 5 = 19 vs DC 15: success (roll 42)".
+      FUN`DISPLAY`CHECK:
+        value: |-
+          setqm(display_tier,json_query(%0,extract,$.tier),
+          display_dc,json_query(%0,extract,$.target))[json_query(%0,extract,$.label)]: [json_query(%0,extract,$.text)][if(strlen(%q<display_dc>),%bvs DC %q<display_dc>)][if(strlen(%q<display_tier>),: [tone(u(%!/FUN`DISPLAY`TIERTONE,%q<display_tier>),u(%!/FUN`DISPLAY`TIER,%q<display_tier>))])] [tone(muted,%(roll [json_query(%0,extract,$.roll)]%))]
+        flags: [funsyntax]
+      FUN`DISPLAY`TIER:
+        value: |-
+          switch(%0,crit-success,critical success,crit-fail,critical failure,%0)
+        flags: [funsyntax]
+      FUN`DISPLAY`TIERTONE:
+        value: |-
+          switch(%0,crit-success,success,success,success,crit-fail,error,warning)
+        flags: [funsyntax]
+      # %0 the character, %1 who reads it.
+      FUN`SCREEN`SHEET:
+        value: |-
+          setqm(screen_level,u(%!/FUN`RATING`STORED,%0,LEVEL),
+          screen_abilities,u(%!/FUN`TRAIT`OFKIND,ability),
+          screen_skills,u(%!/FUN`TRAIT`OFKIND,skill))[box(lfields(lit({"cols":2}),Level%*<|>Training bonus%*<|>Coin,%q<screen_level>%*<|>[u(%!/FUN`DISPLAY`SIGNED,u(%!/FUN`RATING`BONUS,%q<screen_level>))]%*<|>[u(%!/FUN`RATING`STORED,%0,COIN)],%*<|>)%r[rule(Abilities)]%r[ldatatable(lit({"nowrap":"1|2|3","rule":""}),Ability|>Score|>Adds,iter(%q<screen_abilities>,u(%!/FUN`TRAIT`LABEL,%i0)|[u(%!/FUN`RATING`STORED,%0,%i0)]|[u(%!/FUN`DISPLAY`SIGNED,u(%!/API`RATING,%0,%i0))],,%*<^>),%*<^>)]%r[rule(Skills)]%r[ldatatable(lit({"nowrap":"2|3|4","rule":""}),Skill|Ability|Training|>Adds,iter(%q<screen_skills>,u(%!/FUN`TRAIT`LABEL,%i0)|[lcstr(get({{store}}/TRAIT`%i0`ABILITY))]|[v(DATA`TRAINING`[u(%!/FUN`RATING`STORED,%0,%i0)])]|[u(%!/FUN`DISPLAY`SIGNED,u(%!/API`RATING,%0,%i0))],,%*<^>),%*<^>)][if(words(lattr(%0/D20`GEAR`*)),%r[rule(Gear)]%r[u(%!/FUN`GEAR`LIST,%0)])]%r[rule()]%r[tone(muted,u(%!/FUN`DISPLAY`FOOTER,%0,%1))],name(%0))]
+        flags: [funsyntax]
+      # %0 the character, %1 who reads it: what they can do next.
+      FUN`DISPLAY`FOOTER:
+        value: |-
+          cond(cand(not(comp(objid(%1),%0)),not(isapproved(%1)),not(u(%!/FUN`PERM`KEEPER,%1))),+sheet/set <trait>=<value> fills it in. +check <trait> rolls.[u(%!/FUN`HINT,FOOTER)],u(%!/FUN`PERM`KEEPER,%1),+sheet/set [if(comp(objid(%1),%0),[name(%0)]/)]<trait>=<value> changes it. +check <trait> rolls.,+check <trait> rolls 1d20 plus what a trait adds.)
+        flags: [funsyntax]
+      FUN`SCREEN`TRAITS:
+        value: |-
+          setq(screen_all,u(%!/FUN`TRAIT`ALL))[box(ldatatable(lit({"nowrap":"1|3"}),Key|Trait|Kind|Adds,iter(%q<screen_all>,lcstr(%i0)|[u(%!/FUN`TRAIT`LABEL,%i0)]|[u(%!/FUN`TRAIT`KIND,%i0)]|[if(strmatch(u(%!/FUN`TRAIT`KIND,%i0),ability),its score's modifier,lcstr(get({{store}}/TRAIT`%i0`ABILITY)) and training)],,%*<^>),%*<^>)%r[rule()]%r[tone(muted,Training is [itemize([v(DATA`TRAINING`0)] [v(DATA`TRAINING`1)] [v(DATA`TRAINING`2)],,or)]: a trained skill adds the training bonus%, an expert twice that.)],D20 traits)]
+        flags: [funsyntax]
+      # %0 a character: their gear, "2 Rope, 1 Healing potion and 3 Torches".
+      FUN`GEAR`LIST:
+        value: |-
+          itemize(iter(lattr(%0/D20`GEAR`*),[before(get(%0/%i0),|)] [after(get(%0/%i0),|)],%b,|),|)
+        flags: [funsyntax]
+      # %0 an item's name: the key it is kept under, its letters and digits in upper case with - between.
+      FUN`GEAR`KEY:
+        value: |-
+          left(trim(regeditall(ucstr(trim(%0)),\[^A-Z0-9\]+,-),-,b),40)
+        flags: [funsyntax]
+      FUN`PLAYER`MATCH:
+        value: |-
+          if(isdbref(setr(found_player,pmatch(%0))),objid(%q<found_player>))
+        flags: [funsyntax]
+
+      # ---- the sheet API ------------------------------------------------------------
+      # What other packages call: u({{sheet-d20/sheet}}/API`<NAME>,...). Every sheet package has these names.
+      # They read and roll, and change nothing on the sheet, except API`COIN and API`GEAR, which add rewards.
+      API:
+        value: |-
+          The d20 sheet's functions for other packages. See the package README.
+        flags: [VISUAL]
+      # JSON list of every trait: [{"key","label","group","always"}], group ability or skill. Keys are lower
+      # case. always is true for a trait every character can roll: the abilities.
+      API`TRAITS:
+        value: |-
+          json_array(iter(u(%!/FUN`TRAIT`ALL),json(object,key,json(string,lcstr(%i0)),label,json(string,u(%!/FUN`TRAIT`LABEL,%i0)),group,json(string,u(%!/FUN`TRAIT`KIND,%i0)),always,json(boolean,strmatch(u(%!/FUN`TRAIT`KIND,%i0),ability))),%b,|),|)
+        flags: [VISUAL]
+      # The trait keys every character can roll, lower case: the abilities.
+      API`ALWAYS:
+        value: |-
+          lcstr(u(%!/FUN`TRAIT`OFKIND,ability))
+        flags: [VISUAL]
+      # %0 typed text: the trait key it names, lower case, or nothing.
+      API`FIND:
+        value: |-
+          lcstr(u(%!/FUN`TRAIT`FIND,%0))
+        flags: [VISUAL]
+      # %0 a key: its label.
+      API`LABEL:
+        value: |-
+          u(%!/FUN`TRAIT`LABEL,ucstr(%0))
+        flags: [VISUAL]
+      # %0 a character, %1 a key: what the trait adds to a roll.
+      API`RATING:
+        value: |-
+          if(strmatch(u(%!/FUN`TRAIT`KIND,ucstr(%1)),ability),u(%!/FUN`RATING`MODIFIER,u(%!/FUN`RATING`STORED,%0,ucstr(%1))),u(%!/FUN`RATING`SKILL,%0,ucstr(%1)))
+        flags: [VISUAL]
+      # %0 a character, %1 a key: 1 when they are trained in it. Every ability counts as trained.
+      API`TRAINED:
+        value: |-
+          if(strmatch(u(%!/FUN`TRAIT`KIND,ucstr(%1)),ability),1,t(u(%!/FUN`RATING`STORED,%0,ucstr(%1))))
+        flags: [VISUAL]
+      # %0 a character: 1 when anything is set on their sheet.
+      API`HAS:
+        value: |-
+          hasattr(%0,D20)
+        flags: [VISUAL]
+      # %0 a DC or one of the difficulty words: the DC, or nothing.
+      API`TARGET:
+        value: |-
+          cond(isint(%0),%0,member(v(DATA`DIFFICULTIES),lcstr(%0)),extract(get(%!/DATA`CONFIG`DCS),member(v(DATA`DIFFICULTIES),lcstr(%0)),1))
+        flags: [VISUAL]
+      # %0 the total, %1 the die's natural result, %2 the DC or nothing: the tier, or nothing without a DC
+      # and without a natural 20 or 1 that counts.
+      API`TIER:
+        value: |-
+          cond(cand(get(%!/DATA`CONFIG`CRITS),eq(%1,20)),crit-success,cand(get(%!/DATA`CONFIG`CRITS),eq(%1,1)),crit-fail,not(strlen(%2)),,gte(%0,%2),success,fail)
+        flags: [VISUAL]
+      # %0 a character, %1 coin to add (less than 0 takes it away): their coin after, never below 0.
+      API`COIN:
+        value: |-
+          setq(coin_new,max(0,add(u(%!/FUN`RATING`STORED,%0,COIN),%1)))[u(%!/FUN`API`ROOT,%0)][attrib_set(%0/D20`COIN,%q<coin_new>)]%q<coin_new>
+        flags: [VISUAL]
+      # %0 a character, %1 an item's name, %2 how many to add (less than 0 takes some away): how many they
+      # have after. The item is off the sheet at 0.
+      API`GEAR:
+        value: |-
+          setqm(gear_key,u(%!/FUN`GEAR`KEY,%1),
+          gear_had,get(%0/D20`GEAR`%q<gear_key>),
+          gear_new,max(0,add(first(before(%q<gear_had>,|)),%2)))[if(strlen(%q<gear_key>),[u(%!/FUN`API`ROOT,%0)][if(%q<gear_new>,attrib_set(%0/D20`GEAR`%q<gear_key>,%q<gear_new>|[firstof(after(%q<gear_had>,|),trim(%1))]),if(strlen(%q<gear_had>),attrib_set(%0/D20`GEAR`%q<gear_key>)))]%q<gear_new>,#-1 An item's name needs a letter or a digit.)]
+        flags: [VISUAL]
+      FUN`API`ROOT:
+        value: |-
+          if(hasattr(%0,D20),,attrib_set(%0/D20,This character's d20 sheet. +sheet shows it.)[set(%0/D20,wizard)][set(%0/D20,no_command)])
+        flags: [funsyntax]
+      # Named: %<roller> an objid, %<trait> a key, %<modifier> a number to add, %<target> a DC or nothing,
+      # %<dice> 1d20, 2d20kh or 2d20kl. Rolls and keeps the roll (roll() record), and returns
+      # {"tier","total","natural","target","margin","label","text","roll","formula"}; tier and margin are empty
+      # without a DC. #-1 and why when the trait or roller is wrong.
+      API`CHECK:
+        value: |-
+          cond(not(hastype(%<roller>,player)),#-1 There is no character to roll for.,not(strlen(u(%!/FUN`TRAIT`FIND,%<trait>))),#-1 There is no trait '%<trait>'.,u(%!/FUN`CHECK`ROLLED,ucstr(u(%!/FUN`TRAIT`FIND,%<trait>)),firstof(%<dice>,1d20),add(u(%!/API`RATING,%<roller>,u(%!/FUN`TRAIT`FIND,%<trait>)),firstof(%<modifier>,0)),%<target>))
+        flags: [VISUAL]
+      # %0 the key, %1 the die, %2 what is added, %3 the DC or nothing.
+      FUN`CHECK`ROLLED:
+        value: |-
+          setqm(rolled_formula,%1[if(gte(%2,0),+%2,%2)],
+          rolled,roll(%q<rolled_formula>,,record),
+          rolled_natural,json_query(%q<rolled>,extract,$.dice%[0%].total),
+          rolled_total,json_query(%q<rolled>,extract,$.total),
+          rolled_tier,u(%!/API`TIER,%q<rolled_total>,%q<rolled_natural>,%3))[json(object,tier,json(string,%q<rolled_tier>),total,%q<rolled_total>,natural,%q<rolled_natural>,target,json(string,%3),margin,json(string,if(strlen(%3),sub(%q<rolled_total>,%3))),label,json(string,u(%!/FUN`TRAIT`LABEL,%0)),text,json(string,json_query(%q<rolled>,extract,$.text)),roll,json_query(%q<rolled>,extract,$.id),formula,json(string,%q<rolled_formula>))]
+        flags: [funsyntax]
+
+      # ---- lifecycle ----------------------------------------------------------------
+      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
+      STARTUP:
+        value: |-
+          @command/add/noparse/rsnoparse +sheet; @hook/override/inline +sheet=%!,CMD`SHEET; @command/add/noparse/rsnoparse +check; @hook/override/inline +check=%!,CMD`CHECK
+        flags: [cmdsyntax]
+      AINSTALL:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+      AUPDATE:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+
+  # The traits on every sheet. Inside the D20 Sheet, so no player can reach it, and no_command, so nothing
+  # kept on it is ever matched as a command. A trait is TRAIT`<KEY>, its value the label, with KIND (ability or
+  # skill), ABILITY (a skill's ability key) and ORDER beneath. Staff change them with +config d20/traits.
+  - ref: store
+    type: thing
+    name: D20 Sheet Store
+    location: "{{sheet}}"
+    flags: [no_command]
+    attributes:
+      TRAIT: |-
+        The traits on every d20 sheet, one branch each, keyed as a player types it.
+      TRAIT`STR: |-
+        Strength
+      TRAIT`STR`KIND: |-
+        ability
+      TRAIT`STR`ORDER: |-
+        1
+      TRAIT`DEX: |-
+        Dexterity
+      TRAIT`DEX`KIND: |-
+        ability
+      TRAIT`DEX`ORDER: |-
+        2
+      TRAIT`CON: |-
+        Constitution
+      TRAIT`CON`KIND: |-
+        ability
+      TRAIT`CON`ORDER: |-
+        3
+      TRAIT`INT: |-
+        Intelligence
+      TRAIT`INT`KIND: |-
+        ability
+      TRAIT`INT`ORDER: |-
+        4
+      TRAIT`WIS: |-
+        Wisdom
+      TRAIT`WIS`KIND: |-
+        ability
+      TRAIT`WIS`ORDER: |-
+        5
+      TRAIT`CHA: |-
+        Charisma
+      TRAIT`CHA`KIND: |-
+        ability
+      TRAIT`CHA`ORDER: |-
+        6
+      TRAIT`ATHLETICS: |-
+        Athletics
+      TRAIT`ATHLETICS`KIND: |-
+        skill
+      TRAIT`ATHLETICS`ABILITY: |-
+        str
+      TRAIT`ACROBATICS: |-
+        Acrobatics
+      TRAIT`ACROBATICS`KIND: |-
+        skill
+      TRAIT`ACROBATICS`ABILITY: |-
+        dex
+      TRAIT`STEALTH: |-
+        Stealth
+      TRAIT`STEALTH`KIND: |-
+        skill
+      TRAIT`STEALTH`ABILITY: |-
+        dex
+      TRAIT`THIEVERY: |-
+        Thievery
+      TRAIT`THIEVERY`KIND: |-
+        skill
+      TRAIT`THIEVERY`ABILITY: |-
+        dex
+      TRAIT`ENDURANCE: |-
+        Endurance
+      TRAIT`ENDURANCE`KIND: |-
+        skill
+      TRAIT`ENDURANCE`ABILITY: |-
+        con
+      TRAIT`LORE: |-
+        Lore
+      TRAIT`LORE`KIND: |-
+        skill
+      TRAIT`LORE`ABILITY: |-
+        int
+      TRAIT`INVESTIGATION: |-
+        Investigation
+      TRAIT`INVESTIGATION`KIND: |-
+        skill
+      TRAIT`INVESTIGATION`ABILITY: |-
+        int
+      TRAIT`MEDICINE: |-
+        Medicine
+      TRAIT`MEDICINE`KIND: |-
+        skill
+      TRAIT`MEDICINE`ABILITY: |-
+        wis
+      TRAIT`PERCEPTION: |-
+        Perception
+      TRAIT`PERCEPTION`KIND: |-
+        skill
+      TRAIT`PERCEPTION`ABILITY: |-
+        wis
+      TRAIT`SURVIVAL: |-
+        Survival
+      TRAIT`SURVIVAL`KIND: |-
+        skill
+      TRAIT`SURVIVAL`ABILITY: |-
+        wis
+      TRAIT`INSIGHT: |-
+        Insight
+      TRAIT`INSIGHT`KIND: |-
+        skill
+      TRAIT`INSIGHT`ABILITY: |-
+        wis
+      TRAIT`PERSUASION: |-
+        Persuasion
+      TRAIT`PERSUASION`KIND: |-
+        skill
+      TRAIT`PERSUASION`ABILITY: |-
+        cha
+      TRAIT`DECEPTION: |-
+        Deception
+      TRAIT`DECEPTION`KIND: |-
+        skill
+      TRAIT`DECEPTION`ABILITY: |-
+        cha
+      TRAIT`INTIMIDATION: |-
+        Intimidation
+      TRAIT`INTIMIDATION`KIND: |-
+        skill
+      TRAIT`INTIMIDATION`ABILITY: |-
+        cha
+      TRAIT`PERFORMANCE: |-
+        Performance
+      TRAIT`PERFORMANCE`KIND: |-
+        skill
+      TRAIT`PERFORMANCE`ABILITY: |-
+        cha
+
+  # The +help topics, on an object of their own. sheet-d20-help registers it with +help; without that bridge
+  # nothing reads it. HELP`<TOPIC> is a topic, its subtopics the leaves beneath, LOCK`<TOPIC> who may read it.
+  - ref: sheet_help
+    type: thing
+    name: D20 Sheet Help
+    location: "{{sheet}}"
+    attributes:
+      HELP: |-
+        Your character's d20 sheet, and rolling against it: +sheet and +check.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`SHEET: |-
+        check
+      SEE`CHECK: |-
+        sheet
+      HELP`SHEET: |-
+        `+sheet` shows your character's sheet: six ability scores, your level, and a list of skills, each untrained, trained or expert.
+
+        - `+sheet` shows your own; `+sheet <name>` shows another character's, when the game lets you read it.
+        - `+sheet/set <trait>=<value>` fills in your sheet until your character is approved: `+sheet/set str=14`, `+sheet/set athletics=trained`, `+sheet/set level=3`. Leave the value out to clear it.
+        - `+sheet/gear <item>=<count>` lists what you carry: `+sheet/gear Rope=1`. A count of 0 takes it off. `+sheet/set coin=<n>` sets your coin.
+        - `+sheet/traits` lists every ability and skill, with the key you type for each.
+
+        An ability adds its modifier to a roll: the score less 10, halved and rounded down, so 14 adds +2 and 9 adds -1. A skill adds its ability's modifier, plus the training bonus when you are trained, twice it when you are an expert. The bonus is +2 at level 1 and grows as you level.
+
+        For example, with Strength 14 at level 1:
+
+        `+sheet/set athletics=trained`
+
+        Output: `\[SHEET\] Done: Athletics is trained on Alice's sheet.` Athletics now adds +4.
+
+        Once you are approved, staff change your sheet. See `+help check` for rolling.
+      HELP`CHECK: |-
+        `+check <trait>` rolls 1d20 and adds what a trait adds, where the room sees it.
+
+        - `+check <trait>=<DC>` rolls against a number: `+check athletics=15`.
+        - `+check <trait>=<difficulty>` rolls against a difficulty: trivial, easy, standard, hard or extreme, DC 5 to 25 unless your game changed them.
+        - `+check <trait>+<n>` or `-<n>` adds or takes away a number for this roll: `+check stealth+2=hard`.
+        - `/private` rolls where only you see it. `/advantage` rolls two dice and keeps the higher, `/disadvantage` the lower.
+
+        Meeting the DC is a success. A natural 20 on the die is a critical success and a natural 1 a critical failure, whatever the total, unless your game turns that off. Every check is kept under a number that `rollinfo()` reads back.
+
+        For example:
+
+        `+check/advantage perception=15`
+
+        Output: `\[SHEET\] Alice checks Perception: 2d20kh\[17, (4)\] + 2 = 19 vs DC 15: success (roll 42)`
+      LOCK`SHEET`STAFF: |-
+        perm^softcode.d20.admin
+      HELP`SHEET`STAFF: |-
+        Sheet keepers \(`softcode.d20.admin`, or the D20 Sheet Keeper role\) read every sheet and change any character's at any time:
+
+        - `+sheet <name>` shows a character's sheet.
+        - `+sheet/set <name>/<trait>=<value>` changes it: `+sheet/set Alice/level=4`, `+sheet/set Alice/coin=50`. A keeper may set a score up to 30.
+        - `+sheet/gear <name>/<item>=<count>` changes their gear: `+sheet/gear Alice/Healing potion=2`.
+
+        `@role/assign <player>=d20-sheet-keeper` makes someone a keeper.
+      LOCK`SHEET`SETTINGS: |-
+        perm^config.admin
+      HELP`SHEET`SETTINGS: |-
+        `+config d20` lists the settings and `+config d20/<setting>=<value>` changes one \(`config.admin`\):
+
+        - `score-default`, `score-min`, `score-max`: an ability score before it is set \(10\), the lowest \(1\) and the highest a player gives themselves \(20\).
+        - `level-max`: the highest level \(20\).
+        - `bonus-base`, `bonus-every`: the training bonus at level 1 \(2\), and how many levels it takes to grow by 1 \(4\).
+        - `crits`: whether a natural 20 and a natural 1 decide a check \(yes\).
+        - `dcs`: the DCs of trivial, easy, standard, hard and extreme \(`5 10 15 20 25`\).
+        - `public`: whether anyone may read anyone's sheet \(no\).
+        - `traits`: the abilities and skills. `+config d20/traits` lists them; `+config/add d20/traits/climb=Climb` adds one, then `+config d20/traits/climb/ability=str` says what it adds.
+
+        A skill's ability is the key of an ability. Removing a trait leaves what characters had stored, but the sheet stops showing it.

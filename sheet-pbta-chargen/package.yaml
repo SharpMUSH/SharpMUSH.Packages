@@ -1,0 +1,49 @@
+format: "1.16"
+package: sheet-pbta-chargen
+title: "PbtA sheet: character applications"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Joins the PbtA sheet to character applications: a player changes their sheet only while their +app application is theirs to change, reviewers read the sheets of the characters they review, and the sheet's messages point at +app."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [sheet, pbta, chargen, approval, bridge]
+category: Characters
+requires_server: ">=0.1"
+
+# A bridge: it joins two packages that do not know about each other. sheet-pbta lets a player fill in their own
+# sheet until they are approved; this adds the lines that tie that to the state of their application on the
+# Chargen Store. Uninstalling it brings the plain rule back; neither package changes.
+depends:
+  - package: sheet-pbta
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH.Packages
+      path: sheet-pbta/
+      branch: main
+  - package: chargen
+    version: ">=2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/chargen/
+      branch: main
+
+objects:
+  # Each runs as the PbtA Sheet, which is WIZARD and so reads the Chargen Store.
+  - ref: sheet_gates
+    target: "{{sheet-pbta/sheet}}"
+    attributes:
+      # %0 the player: why they may not change their own sheet now, or nothing. A submitted application is
+      # with staff; one that is approved or waiting for a place is settled.
+      GATE`EDIT:
+        value: |-
+          switch(get({{chargen/store}}/APP`[u({{chargen/chargen}}/FUN`APP`KEY,%0)]`STATE),submitted,Your application is with staff. +app/withdraw takes it back to change your sheet.,approved,Your application is approved%, so staff change your sheet now.,waitlist,Your application is approved and waits for a place%, so staff change your sheet now.,retired,Your application was retired. Ask staff about your sheet.)
+        flags: [funsyntax]
+      # %0 who asks, %1 whose sheet: reviewers read the sheet of anyone with an application.
+      ALLOW`VIEW`CHARGEN:
+        value: |-
+          cand(permission(%0,softcode.chargen.review),hasattr({{chargen/store}},APP`[u({{chargen/chargen}}/FUN`APP`KEY,%1)]))
+        flags: [funsyntax]
+      HINT`SET: |-
+        +app/submit sends your application to staff when your sheet is done.
+      HINT`FOOTER: |-
+        +app/submit sends it to staff with your application.

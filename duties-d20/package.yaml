@@ -1,0 +1,104 @@
+format: "1.16"
+package: duties-d20
+title: "Duties: d20 sheet rolls"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Lets Duties roll on the d20 sheet: a roll provider called d20, so a duty's checks roll 1d20 plus a character's ability or skill against a DC. Pick it with +config duties/system=d20."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [duties, d20, sheet, dice, bridge]
+category: Characters
+requires_server: ">=0.1"
+
+# A bridge: it joins two packages that do not know about each other. Duties asks the game's one active roll
+# provider for every check, and sheet-d20 holds the sheet and rolls against it. This package is a provider
+# that answers Duties' questions with the sheet's API, and the one leaf that registers it.
+depends:
+  - package: duties
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/duties/
+      branch: main
+  - package: sheet-d20
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH.Packages
+      path: sheet-d20/
+      branch: main
+
+objects:
+  # The provider. Duties calls each FN`DUTIES` attribute with u() and named arguments, so it runs as this
+  # object; WIZARD because the sheet's API is on a WIZARD object, which a lesser one may not call. It writes
+  # nothing: every number comes from {{sheet-d20/sheet}}'s API`.
+  - ref: provider
+    type: thing
+    name: Duties D20 Provider
+    location: "{{sheet-d20/sheet}}"
+    flags: [WIZARD, no_command]
+    attributes:
+      # Every trait on the sheet; the abilities are the ones anyone can roll.
+      FN`DUTIES`TRAITS:
+        value: |-
+          u({{sheet-d20/sheet}}/API`TRAITS)
+        flags: [funsyntax]
+      # With natural 20s and 1s on, they are the critical tiers; there is no partial success.
+      FN`DUTIES`TIERS:
+        value: |-
+          if(get({{sheet-d20/sheet}}/DATA`CONFIG`CRITS),crit-fail fail success crit-success,fail success)
+        flags: [funsyntax]
+      # %<difficulty> a difficulty word or a DC: "DC 15".
+      FN`DUTIES`DC:
+        value: |-
+          setq(provider_dc,u({{sheet-d20/sheet}}/API`TARGET,%<difficulty>))[if(isint(%q<provider_dc>),DC %q<provider_dc>,#-1 NO SUCH DIFFICULTY)]
+        flags: [funsyntax]
+      # %<roller>: the ability this character improvises with, the one that adds most (the first of equals).
+      FN`DUTIES`FALLBACK:
+        value: |-
+          setq(provider_roller,%<roller>)[last(sortkey(%!/FUN`ABILITY`SORTKEY,revwords(u({{sheet-d20/sheet}}/API`ALWAYS)),n))]
+        flags: [funsyntax]
+      # %<roller>, %<trait>: 1 when trained in it.
+      FN`DUTIES`TRAINED:
+        value: |-
+          u({{sheet-d20/sheet}}/API`TRAINED,%<roller>,%<trait>)
+        flags: [funsyntax]
+      # %<roller>, %<trait>, %<difficulty>, %<mods>, %<context>. A helper in %<mods> gives advantage: two dice,
+      # the higher kept. Returns {"tier","text","roll","margin","system"}, system holding dc, total and natural.
+      FN`DUTIES`CHECK:
+        value: |-
+          setqm(provider_dc,u({{sheet-d20/sheet}}/API`TARGET,%<difficulty>),
+          provider_helpers,u(%!/FUN`MODS`HELPERS,%<mods>),
+          provider_rolled,if(isint(%q<provider_dc>),uargs({{sheet-d20/sheet}}/API`CHECK,roller,%<roller>,trait,%<trait>,modifier,0,target,%q<provider_dc>,dice,if(%q<provider_helpers>,2d20kh,1d20))))[cond(not(isint(%q<provider_dc>)),#-1 NO SUCH DIFFICULTY,strmatch(%q<provider_rolled>,#-*),%q<provider_rolled>,u(%!/FUN`CHECK`RESULT,%q<provider_rolled>,%q<provider_helpers>))]
+        flags: [funsyntax]
+      # The rewards a duty may give on this sheet, for Duties' editor.
+      FN`DUTIES`REWARDS:
+        value: |-
+          lit([{"kind":"coin","label":"Coin","fields":[{"key":"amount","type":"integer"}]},{"kind":"item","label":"Item","fields":[{"key":"item","type":"text"},{"key":"amount","type":"integer"}]}])
+        flags: [funsyntax]
+      # Queued once for each reward and member: %<roller>, %<reward> {"kind","amount","item"}, %<context>. Puts
+      # the coin or the item on the sheet and tells the player.
+      ON`DUTIES`GRANT:
+        value: |-
+          @assert hastype(%<roller>,player); think setqm(grant_kind,json_query(%<reward>,extract,$.kind),grant_amount,firstof(json_query(%<reward>,extract,$.amount),1),grant_item,trim(json_query(%<reward>,extract,$.item))); @assert cand(isint(%q<grant_amount>),gt(%q<grant_amount>,0)); @switch %q<grant_kind>=coin,{@pemit %<roller>=notice(DUTIES,You gain %q<grant_amount> coin. You have [u({{sheet-d20/sheet}}/API`COIN,%<roller>,%q<grant_amount>)].,ok)},item,{@assert strlen(%q<grant_item>); @pemit %<roller>=notice(DUTIES,You gain %q<grant_amount> %q<grant_item>. You have [u({{sheet-d20/sheet}}/API`GEAR,%<roller>,%q<grant_item>,%q<grant_amount>)].,ok)}
+        flags: [cmdsyntax]
+      # %0 the sheet's check JSON, %1 how many helped.
+      FUN`CHECK`RESULT:
+        value: |-
+          json(object,tier,json(string,json_query(%0,extract,$.tier)),text,json(string,[json_query(%0,extract,$.label)]: [json_query(%0,extract,$.text)] vs DC [json_query(%0,extract,$.target)][if(%1,%b%(advantage from help%))]),roll,json_query(%0,extract,$.roll),margin,json_query(%0,extract,$.margin),system,json(object,dc,json_query(%0,extract,$.target),total,json_query(%0,extract,$.total),natural,json_query(%0,extract,$.natural),helpers,%1))
+        flags: [funsyntax]
+      # %0 %<mods>, a JSON object: how many helpers it names.
+      FUN`MODS`HELPERS:
+        value: |-
+          if(cand(strlen(%0),strmatch(json_query(json_query(%0,get,helpers)),array)),json_query(json_query(%0,get,helpers),size),0)
+        flags: [funsyntax]
+      # %0 an ability key: what it adds for provider_roller, for sorting.
+      FUN`ABILITY`SORTKEY:
+        value: |-
+          u({{sheet-d20/sheet}}/API`RATING,%q<provider_roller>,%0)
+        flags: [funsyntax]
+
+  - ref: provider_registration
+    target: "{{duties/duties}}"
+    attributes:
+      PROVIDER`D20: |-
+        {{provider}}

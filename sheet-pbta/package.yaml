@@ -1,0 +1,1279 @@
+format: "1.16"
+package: sheet-pbta
+title: "PbtA sheet"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "A Powered by the Apocalypse character sheet: stats, moves and playbooks the game edits, forward, ongoing, hold and XP. +sheet shows and fills it in, and +check rolls 2d6 plus a stat for a move, a full hit on 10+, a partial hit on 7-9. Ships the Dungeon World basic and special moves (CC BY 3.0) as its example set."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [sheet, pbta, dice, moves, playbooks]
+category: Characters
+requires_server: ">=0.1"
+
+# One permission, for the people who keep sheets: change any character's sheet at any time, read every sheet,
+# and give XP. A player fills in their own stats, playbook and moves until they are approved, and keeps their
+# own forward, ongoing and hold in play. Changing the lists and settings is config.admin, as +config is.
+categories:
+  roles:
+    - name: PbtA sheet
+      description: Roles for the people who keep PbtA character sheets.
+  permissions:
+    - name: PbtA sheet
+      description: Keeping PbtA character sheets.
+permissions:
+  - name: softcode.pbta.admin
+    category: PbtA sheet
+    description: Read every PbtA sheet, change any character's at any time, and give XP.
+roles:
+  - slug: pbta-sheet-keeper
+    name: PbtA Sheet Keeper
+    category: PbtA sheet
+    priority: 11
+    permissions:
+      softcode.pbta.admin: allow
+
+# Every character's PBTA tree is their PbtA sheet: only wizards write it, so a player can't make the root
+# before the sheet does, and it is never a command.
+attributes:
+  PBTA:
+    flags: [wizard, no_command]
+
+objects:
+  # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook),
+  # writes the sheet attributes on characters, and reads them for other packages.
+  #
+  # A character's sheet is their own attributes under PBTA`: PBTA`STAT`<KEY> a stat, PBTA`PLAYBOOK their
+  # playbook's key, PBTA`MOVES the moves they took beyond their playbook's own (a space list of keys),
+  # PBTA`FORWARD and PBTA`ONGOING the modifiers, PBTA`HOLD`<MOVE> hold, PBTA`XP experience. The PBTA root
+  # is wizard-flagged, so only this object writes them.
+  #
+  # +sheet and +check are added with /noparse/rsnoparse and hooked to CMD`<word>, so what a player types
+  # reaches the code exactly as typed and nothing a player wrote is ever evaluated. Move text on the store
+  # is read with get(), never evaluated either.
+  #
+  # Trees: CMD` the hooked commands, INC`COMMAND` the parse and dispatch, INC`SHEET` and INC`CHECK` one
+  # routine per switch, INC`NEED` the guards they share, INC`DO` the writes. FUN`STAT` stats, FUN`MOVE`
+  # moves, FUN`PLAYBOOK` playbooks, FUN`TRAIT` a key that is either, FUN`PERM` who may do what,
+  # FUN`SCREEN` and FUN`DISPLAY` the screens. API` the functions other packages call (VISUAL), the same
+  # names in every sheet package. Bridges add HINT`<message> lines, GATE`EDIT (a reason a player may not
+  # change their own sheet now) and ALLOW`VIEW`<name> (who else may read a sheet).
+  - ref: sheet
+    type: thing
+    name: PbtA Sheet
+    location: "{{$master_room}}"
+    flags: [WIZARD]
+    attributes:
+      # ---- settings ---------------------------------------------------------------
+      # +config pbta shows and changes them (sheet-pbta-config); the code reads each with get(%!/DATA`CONFIG`<NAME>).
+      DATA`CONFIG: |-
+        Settings for the PbtA sheet. One leaf per setting.
+      DATA`CONFIG`LABEL: |-
+        PbtA sheet
+      DATA`CONFIG`CAP: |-
+        2
+      DATA`CONFIG`CAP`TYPE: |-
+        integer
+      DATA`CONFIG`CAP`DEFAULT: |-
+        2
+      DATA`CONFIG`CAP`MIN: |-
+        0
+      DATA`CONFIG`CAP`MAX: |-
+        3
+      DATA`CONFIG`CAP`LABEL: |-
+        Highest stat
+      DATA`CONFIG`CAP`DESCRIPTION: |-
+        The highest stat a player gives themselves. Sheet keepers may go to +3.
+      DATA`CONFIG`CAP`EXAMPLE: |-
+        3
+      DATA`CONFIG`CRITICAL: |-
+        0
+      DATA`CONFIG`CRITICAL`TYPE: |-
+        boolean
+      DATA`CONFIG`CRITICAL`DEFAULT: |-
+        0
+      DATA`CONFIG`CRITICAL`LABEL: |-
+        Critical on 12+
+      DATA`CONFIG`CRITICAL`DESCRIPTION: |-
+        Whether a total of 12 or more is a critical hit rather than a plain full hit.
+      DATA`CONFIG`CRITICAL`EXAMPLE: |-
+        yes
+      DATA`CONFIG`MODIFIERS: |-
+        1 0 -1 -2
+      DATA`CONFIG`MODIFIERS`TYPE: |-
+        list
+      DATA`CONFIG`MODIFIERS`DEFAULT: |-
+        1 0 -1 -2
+      DATA`CONFIG`MODIFIERS`MIN: |-
+        4
+      DATA`CONFIG`MODIFIERS`MAX: |-
+        4
+      DATA`CONFIG`MODIFIERS`CHECK: |-
+        CHECK`MODIFIERS
+      DATA`CONFIG`MODIFIERS`LABEL: |-
+        Modifier for each difficulty
+      DATA`CONFIG`MODIFIERS`DESCRIPTION: |-
+        What easy, standard, hard and extreme add to a roll, in that order. A trivial task is not rolled.
+      DATA`CONFIG`MODIFIERS`EXAMPLE: |-
+        1 0 -1 -3
+      DATA`CONFIG`PUBLIC: |-
+        0
+      DATA`CONFIG`PUBLIC`TYPE: |-
+        boolean
+      DATA`CONFIG`PUBLIC`DEFAULT: |-
+        0
+      DATA`CONFIG`PUBLIC`LABEL: |-
+        Sheets anyone can read
+      DATA`CONFIG`PUBLIC`DESCRIPTION: |-
+        Whether +sheet <name> shows anyone's sheet to everyone. Otherwise only the character and sheet keepers see it.
+      DATA`CONFIG`PUBLIC`EXAMPLE: |-
+        yes
+      DATA`CONFIG`STATS`TYPE: |-
+        table
+      DATA`CONFIG`STATS`LABEL: |-
+        Stats
+      DATA`CONFIG`STATS`DESCRIPTION: |-
+        The stats every sheet has.
+      DATA`CONFIG`STATS`STORE: |-
+        {{store}}
+      DATA`CONFIG`STATS`PATH: |-
+        STAT
+      DATA`CONFIG`STATS`ENTRY: |-
+        label
+      DATA`CONFIG`STATS`FIELDS: |-
+        label order
+      DATA`CONFIG`STATS`KEYPATTERN: |-
+        ^[A-Za-z0-9]{1,12}$
+      DATA`CONFIG`STATS`FIELD`LABEL`TYPE: |-
+        text
+      DATA`CONFIG`STATS`FIELD`LABEL`MIN: |-
+        1
+      DATA`CONFIG`STATS`FIELD`LABEL`MAX: |-
+        30
+      DATA`CONFIG`STATS`FIELD`LABEL`LABEL: |-
+        Label
+      DATA`CONFIG`STATS`FIELD`LABEL`DESCRIPTION: |-
+        The name the sheet shows.
+      DATA`CONFIG`STATS`FIELD`ORDER`TYPE: |-
+        integer
+      DATA`CONFIG`STATS`FIELD`ORDER`DEFAULT: |-
+        50
+      DATA`CONFIG`STATS`FIELD`ORDER`MIN: |-
+        0
+      DATA`CONFIG`STATS`FIELD`ORDER`MAX: |-
+        999
+      DATA`CONFIG`STATS`FIELD`ORDER`LABEL: |-
+        Order
+      DATA`CONFIG`STATS`FIELD`ORDER`DESCRIPTION: |-
+        Where it comes in its list: lower first, then by name.
+      DATA`CONFIG`MOVES`TYPE: |-
+        table
+      DATA`CONFIG`MOVES`LABEL: |-
+        Moves
+      DATA`CONFIG`MOVES`DESCRIPTION: |-
+        The moves a character rolls. A move with no playbook is a basic move every character has.
+      DATA`CONFIG`MOVES`STORE: |-
+        {{store}}
+      DATA`CONFIG`MOVES`PATH: |-
+        MOVE
+      DATA`CONFIG`MOVES`ENTRY: |-
+        label
+      DATA`CONFIG`MOVES`FIELDS: |-
+        label stat playbook text hit partial miss source order
+      DATA`CONFIG`MOVES`KEYPATTERN: |-
+        ^[A-Za-z0-9-]{1,30}$
+      DATA`CONFIG`MOVES`FIELD`LABEL`TYPE: |-
+        text
+      DATA`CONFIG`MOVES`FIELD`LABEL`MIN: |-
+        1
+      DATA`CONFIG`MOVES`FIELD`LABEL`MAX: |-
+        40
+      DATA`CONFIG`MOVES`FIELD`LABEL`LABEL: |-
+        Label
+      DATA`CONFIG`MOVES`FIELD`LABEL`DESCRIPTION: |-
+        The move's name.
+      DATA`CONFIG`MOVES`FIELD`STAT`TYPE: |-
+        text
+      DATA`CONFIG`MOVES`FIELD`STAT`MAX: |-
+        100
+      DATA`CONFIG`MOVES`FIELD`STAT`CHECK: |-
+        CHECK`MOVESTAT
+      DATA`CONFIG`MOVES`FIELD`STAT`LABEL: |-
+        Rolls with
+      DATA`CONFIG`MOVES`FIELD`STAT`DESCRIPTION: |-
+        The stat the move adds, several for the player to choose from, or empty to add none.
+      DATA`CONFIG`MOVES`FIELD`STAT`EXAMPLE: |-
+        str dex
+      DATA`CONFIG`MOVES`FIELD`PLAYBOOK`TYPE: |-
+        text
+      DATA`CONFIG`MOVES`FIELD`PLAYBOOK`MAX: |-
+        30
+      DATA`CONFIG`MOVES`FIELD`PLAYBOOK`LABEL: |-
+        Playbook
+      DATA`CONFIG`MOVES`FIELD`PLAYBOOK`DESCRIPTION: |-
+        The playbook the move belongs to, or empty for a basic move.
+      DATA`CONFIG`MOVES`FIELD`TEXT`TYPE: |-
+        text
+      DATA`CONFIG`MOVES`FIELD`TEXT`MAX: |-
+        2000
+      DATA`CONFIG`MOVES`FIELD`TEXT`LABEL: |-
+        Text
+      DATA`CONFIG`MOVES`FIELD`TEXT`DESCRIPTION: |-
+        The whole move, as +sheet/move shows it.
+      DATA`CONFIG`MOVES`FIELD`HIT`TYPE: |-
+        text
+      DATA`CONFIG`MOVES`FIELD`HIT`MAX: |-
+        1000
+      DATA`CONFIG`MOVES`FIELD`HIT`LABEL: |-
+        On a 10+
+      DATA`CONFIG`MOVES`FIELD`HIT`DESCRIPTION: |-
+        What a full hit gives, shown under the roll.
+      DATA`CONFIG`MOVES`FIELD`PARTIAL`TYPE: |-
+        text
+      DATA`CONFIG`MOVES`FIELD`PARTIAL`MAX: |-
+        1000
+      DATA`CONFIG`MOVES`FIELD`PARTIAL`LABEL: |-
+        On a 7-9
+      DATA`CONFIG`MOVES`FIELD`PARTIAL`DESCRIPTION: |-
+        What a partial hit gives, shown under the roll.
+      DATA`CONFIG`MOVES`FIELD`MISS`TYPE: |-
+        text
+      DATA`CONFIG`MOVES`FIELD`MISS`MAX: |-
+        1000
+      DATA`CONFIG`MOVES`FIELD`MISS`LABEL: |-
+        On a miss
+      DATA`CONFIG`MOVES`FIELD`MISS`DESCRIPTION: |-
+        What a miss means, shown under the roll; often empty.
+      DATA`CONFIG`MOVES`FIELD`SOURCE`TYPE: |-
+        text
+      DATA`CONFIG`MOVES`FIELD`SOURCE`MAX: |-
+        60
+      DATA`CONFIG`MOVES`FIELD`SOURCE`LABEL: |-
+        Source
+      DATA`CONFIG`MOVES`FIELD`SOURCE`DESCRIPTION: |-
+        Where the move's text comes from, when it is not your own.
+      DATA`CONFIG`MOVES`FIELD`ORDER`TYPE: |-
+        integer
+      DATA`CONFIG`MOVES`FIELD`ORDER`DEFAULT: |-
+        50
+      DATA`CONFIG`MOVES`FIELD`ORDER`MIN: |-
+        0
+      DATA`CONFIG`MOVES`FIELD`ORDER`MAX: |-
+        999
+      DATA`CONFIG`MOVES`FIELD`ORDER`LABEL: |-
+        Order
+      DATA`CONFIG`MOVES`FIELD`ORDER`DESCRIPTION: |-
+        Where it comes in its list: lower first, then by name.
+      DATA`CONFIG`PLAYBOOKS`TYPE: |-
+        table
+      DATA`CONFIG`PLAYBOOKS`LABEL: |-
+        Playbooks
+      DATA`CONFIG`PLAYBOOKS`DESCRIPTION: |-
+        The playbooks a character picks from, with their suggested stats and starting moves.
+      DATA`CONFIG`PLAYBOOKS`STORE: |-
+        {{store}}
+      DATA`CONFIG`PLAYBOOKS`PATH: |-
+        PLAYBOOK
+      DATA`CONFIG`PLAYBOOKS`ENTRY: |-
+        label
+      DATA`CONFIG`PLAYBOOKS`FIELDS: |-
+        label stats moves order
+      DATA`CONFIG`PLAYBOOKS`KEYPATTERN: |-
+        ^[A-Za-z0-9-]{1,30}$
+      DATA`CONFIG`PLAYBOOKS`FIELD`LABEL`TYPE: |-
+        text
+      DATA`CONFIG`PLAYBOOKS`FIELD`LABEL`MIN: |-
+        1
+      DATA`CONFIG`PLAYBOOKS`FIELD`LABEL`MAX: |-
+        30
+      DATA`CONFIG`PLAYBOOKS`FIELD`LABEL`LABEL: |-
+        Label
+      DATA`CONFIG`PLAYBOOKS`FIELD`LABEL`DESCRIPTION: |-
+        The playbook's name.
+      DATA`CONFIG`PLAYBOOKS`FIELD`STATS`TYPE: |-
+        text
+      DATA`CONFIG`PLAYBOOKS`FIELD`STATS`MAX: |-
+        200
+      DATA`CONFIG`PLAYBOOKS`FIELD`STATS`CHECK: |-
+        CHECK`PLAYBOOKSTATS
+      DATA`CONFIG`PLAYBOOKS`FIELD`STATS`LABEL: |-
+        Suggested stats
+      DATA`CONFIG`PLAYBOOKS`FIELD`STATS`DESCRIPTION: |-
+        <stat>=<n> pairs, given to a character who picks the playbook before setting any stat.
+      DATA`CONFIG`PLAYBOOKS`FIELD`STATS`EXAMPLE: |-
+        str=2 con=1 wis=1 dex=0 int=0 cha=-1
+      DATA`CONFIG`PLAYBOOKS`FIELD`MOVES`TYPE: |-
+        text
+      DATA`CONFIG`PLAYBOOKS`FIELD`MOVES`MAX: |-
+        400
+      DATA`CONFIG`PLAYBOOKS`FIELD`MOVES`LABEL: |-
+        Starting moves
+      DATA`CONFIG`PLAYBOOKS`FIELD`MOVES`DESCRIPTION: |-
+        The keys of the moves every character of the playbook has.
+      DATA`CONFIG`PLAYBOOKS`FIELD`ORDER`TYPE: |-
+        integer
+      DATA`CONFIG`PLAYBOOKS`FIELD`ORDER`DEFAULT: |-
+        50
+      DATA`CONFIG`PLAYBOOKS`FIELD`ORDER`MIN: |-
+        0
+      DATA`CONFIG`PLAYBOOKS`FIELD`ORDER`MAX: |-
+        999
+      DATA`CONFIG`PLAYBOOKS`FIELD`ORDER`LABEL: |-
+        Order
+      DATA`CONFIG`PLAYBOOKS`FIELD`ORDER`DESCRIPTION: |-
+        Where it comes in its list: lower first, then by name.
+      CHECK`MODIFIERS: |-
+        if(cand(every(%!/FUN`IS`MODIFIER,%0),eq(words(%0),4),not(comp(%0,revwords(sort(%0,n))))),,Give four modifiers from -3 to 3%, easy to extreme%, none higher than the one before.)
+      CHECK`MOVESTAT: |-
+        if(every(%!/FUN`IS`STAT,%0),,Give stat keys from the stats table%, or nothing.)
+      CHECK`PLAYBOOKSTATS: |-
+        if(every(%!/FUN`IS`STATPAIR,%0),,Give <stat>=<n> pairs%, a stat from the stats table and a number from -3 to 3.)
+      FUN`IS`MODIFIER: |-
+        cand(isint(%0),gte(%0,-3),lte(%0,3))
+      FUN`IS`STAT: |-
+        hasattr({{store}},STAT`%0)
+      FUN`IS`STATPAIR: |-
+        cand(u(%!/FUN`IS`STAT,before(%0,=)),u(%!/FUN`IS`MODIFIER,after(%0,=)))
+
+      # Which INC` routine each switch runs: DATA`ROUTE`<table>`<switch>. BARE is the command alone, ARG the
+      # command with something after it and no switch.
+      DATA`ROUTE: |-
+        Which routine each switch runs. One leaf per switch.
+      DATA`ROUTE`SHEET`BARE: |-
+        SHEET`SHOW
+      DATA`ROUTE`SHEET`ARG: |-
+        SHEET`SHOW
+      DATA`ROUTE`SHEET`SET: |-
+        SHEET`SET
+      DATA`ROUTE`SHEET`PLAYBOOK: |-
+        SHEET`PLAYBOOK
+      DATA`ROUTE`SHEET`TAKE: |-
+        SHEET`TAKE
+      DATA`ROUTE`SHEET`DROP: |-
+        SHEET`DROP
+      DATA`ROUTE`SHEET`MOVE: |-
+        SHEET`MOVE
+      DATA`ROUTE`SHEET`FORWARD: |-
+        SHEET`FORWARD
+      DATA`ROUTE`SHEET`ONGOING: |-
+        SHEET`ONGOING
+      DATA`ROUTE`SHEET`HOLD: |-
+        SHEET`HOLD
+      DATA`ROUTE`SHEET`XP: |-
+        SHEET`XP
+      DATA`ROUTE`SHEET`TRAITS: |-
+        SHEET`TRAITS
+      DATA`ROUTE`CHECK`BARE: |-
+        CHECK`USAGE
+      DATA`ROUTE`CHECK`ARG: |-
+        CHECK`ROLL
+      DATA`ROUTE`CHECK`PRIVATE: |-
+        CHECK`ROLL
+      DATA`DIFFICULTIES: |-
+        trivial easy standard hard extreme
+
+      # ---- commands ---------------------------------------------------------------
+      # %1 the switches and %2 what follows, exactly as typed.
+      CMD`SHEET:
+        value: |-
+          $(?is)^\+sheet(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,sheet,table,SHEET,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`CHECK:
+        value: |-
+          $(?is)^\+check(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,check,table,CHECK,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      # A line a bridge adds to one of this object's messages: HINT`<message>, set here by a bridge such as
+      # sheet-pbta-help. %1 on are passed to it. Nothing when no bridge set one, so the message stands without it.
+      FUN`HINT:
+        value: |-
+          if(hasattr(%!,HINT`%0),%b[u(%!/HINT`%0,%1,%2)])
+        flags: [funsyntax]
+      INC`COMMAND`RUN:
+        value: |-
+          @assert hastype(%#,player)=@pemit %#=notice(SHEET,Only players have a sheet.,warn); think u(%!/FUN`COMMAND`PARSE,%<word>,%<table>,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(SHEET,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(SHEET,+%q<cmd_word> has no /%q<cmd_switch> switch.[u(%!/FUN`HINT,SWITCHES,%q<cmd_word>)],warn); @include %!/INC`%q<cmd_route>
+        flags: [cmdsyntax]
+      # %0 the word, %1 its route table, %2 the switches and %3 the argument, as typed. Sets cmd_word,
+      # cmd_switch_list, cmd_switch, cmd_argument, cmd_has_equals, cmd_left_side and cmd_right_side around the
+      # first =, cmd_route (the INC` routine to run), viewer_objid and viewer_keeper.
+      FUN`COMMAND`PARSE:
+        value: |-
+          setqm(cmd_word,lcstr(%0),
+          cmd_switch_list,lcstr(trim(edit(%2,/,%b))),
+          cmd_switch,first(%q<cmd_switch_list>),
+          cmd_argument,trim(%3),
+          cmd_has_equals,strmatch(%3,*=*),
+          cmd_left_side,trim(before(%3,=)),
+          cmd_right_side,trim(after(%3,=)),
+          cmd_route,get(%!/DATA`ROUTE`%1`[if(strlen(%q<cmd_switch>),ucstr(%q<cmd_switch>),if(strlen(%q<cmd_argument>),ARG,BARE))]),
+          viewer_objid,objid(%#),
+          viewer_keeper,u(%!/FUN`PERM`KEEPER,%#))
+        flags: [funsyntax]
+
+      # ---- guards -----------------------------------------------------------------
+      # %<name> a player's name: sheet_who, their objid.
+      INC`NEED`TARGET:
+        value: |-
+          @assert strlen(setr(sheet_who,u(%!/FUN`PLAYER`MATCH,%<name>)))=@pemit %#=notice(SHEET,There is no player called '%<name>'.,warn)
+        flags: [cmdsyntax]
+      # The left of =: <name>/<what> for a sheet keeper, else <what> on your own sheet. sheet_who and sheet_what.
+      INC`NEED`WHO:
+        value: |-
+          @if strmatch(%q<cmd_left_side>,*/*)={@include/args %!/INC`NEED`TARGET=name,before(%q<cmd_left_side>,/); think setq(sheet_what,trim(after(%q<cmd_left_side>,/)))},{think setqm(sheet_who,%q<viewer_objid>,sheet_what,%q<cmd_left_side>)}; @include %!/INC`NEED`OWNSHEET
+        flags: [cmdsyntax]
+      # <name>=<value> for a sheet keeper, else <value> on your own sheet: sheet_who and sheet_value.
+      INC`NEED`WHOVALUE:
+        value: |-
+          @if %q<cmd_has_equals>={@include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; think setq(sheet_value,%q<cmd_right_side>)},{think setqm(sheet_who,%q<viewer_objid>,sheet_value,%q<cmd_argument>)}; @include %!/INC`NEED`OWNSHEET
+        flags: [cmdsyntax]
+      INC`NEED`OWNSHEET:
+        value: |-
+          @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error)
+        flags: [cmdsyntax]
+      # Changes only a keeper makes once a character is approved: stats, playbook, moves.
+      INC`NEED`EDITABLE:
+        value: |-
+          @assert cor(%q<viewer_keeper>,not(isapproved(%#)))=@pemit %#=notice(SHEET,Your character is approved%, so staff change your sheet now.,error); @assert cor(%q<viewer_keeper>,not(strlen(setr(set_gate,u(%!/FUN`GATE`EDIT,%#)))))=@pemit %#=notice(SHEET,%q<set_gate>,warn)
+        flags: [cmdsyntax]
+      INC`NEED`KEEPER:
+        value: |-
+          @assert %q<viewer_keeper>=@pemit %#=notice(SHEET,Only sheet keepers do that.,error)
+        flags: [cmdsyntax]
+      # %<typed> a move's name: move_key.
+      INC`NEED`MOVE:
+        value: |-
+          @assert strlen(%<typed>)=@pemit %#=notice(SHEET,Which move? +sheet/traits lists them.,warn); @assert strlen(setr(move_key,u(%!/FUN`LIST`FIND,MOVE,%<typed>)))=@pemit %#=notice(SHEET,There is no move '%<typed>'. +sheet/traits lists them.,warn)
+        flags: [cmdsyntax]
+
+      # ---- +sheet -----------------------------------------------------------------
+      INC`SHEET`SHOW:
+        value: |-
+          @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`SHEET,%q<sheet_who>,%#)
+        flags: [cmdsyntax]
+      # +sheet/set [<name>/]<stat>=<n>. Empty clears it back to +0.
+      INC`SHEET`SET:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/set <stat>=<number>%, such as +sheet/set [lcstr(first(u(%!/FUN`LIST`ALL,STAT)))]=1.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @assert strlen(setr(stat_key,u(%!/FUN`LIST`FIND,STAT,%q<sheet_what>)))=@pemit %#=notice(SHEET,There is no stat '%q<sheet_what>'. The stats are [itemize(lcstr(u(%!/FUN`LIST`ALL,STAT)))].,warn); @break not(strlen(%q<cmd_right_side>))={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,STAT`%q<stat_key>,value,; @pemit %#=notice(SHEET,u(%!/FUN`STAT`LABEL,%q<stat_key>) is cleared on [name(%q<sheet_who>)]'s sheet.,ok)}; think setq(set_value,edit(%q<cmd_right_side>,+,)); @assert cand(isint(%q<set_value>),gte(%q<set_value>,-3),lte(%q<set_value>,if(%q<viewer_keeper>,3,get(%!/DATA`CONFIG`CAP))))=@pemit %#=notice(SHEET,A stat is a whole number from -3 to [u(%!/FUN`DISPLAY`SIGNED,if(%q<viewer_keeper>,3,get(%!/DATA`CONFIG`CAP)))].,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,STAT`%q<stat_key>,value,%q<set_value>; @pemit %#=notice(SHEET,u(%!/FUN`STAT`LABEL,%q<stat_key>) is [u(%!/FUN`DISPLAY`SIGNED,%q<set_value>)] on [name(%q<sheet_who>)]'s sheet.[if(not(comp(%q<sheet_who>,%q<viewer_objid>)),u(%!/FUN`HINT,SET))],ok)
+        flags: [cmdsyntax]
+      # +sheet/playbook lists them; +sheet/playbook <playbook> picks one (<name>=<playbook> for a keeper). A
+      # sheet with no stat set yet takes the playbook's suggested stats.
+      INC`SHEET`PLAYBOOK:
+        value: |-
+          @break not(strlen(%q<cmd_argument>))=@pemit %#=u(%!/FUN`SCREEN`PLAYBOOKS); @include %!/INC`NEED`WHOVALUE; @include %!/INC`NEED`EDITABLE; @assert strlen(setr(playbook_key,u(%!/FUN`LIST`FIND,PLAYBOOK,%q<sheet_value>)))=@pemit %#=notice(SHEET,There is no playbook '%q<sheet_value>'. +sheet/playbook lists them.,warn); think setq(playbook_stats,if(words(lattr(%q<sheet_who>/PBTA`STAT`*)),,get({{store}}/PLAYBOOK`%q<playbook_key>`STATS))); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,PLAYBOOK,value,%q<playbook_key>; @dolist/inline %q<playbook_stats>={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,STAT`[ucstr(before(##,=))],value,after(##,=)}; @pemit %#=notice(SHEET,[name(%q<sheet_who>)] is [art(u(%!/FUN`PLAYBOOK`LABEL,%q<playbook_key>))] [u(%!/FUN`PLAYBOOK`LABEL,%q<playbook_key>)][if(words(%q<playbook_stats>),%, with its suggested stats)].,ok)
+        flags: [cmdsyntax]
+      # +sheet/take [<name>/]<move>: a move from your playbook beyond its starting ones. Keepers give any move.
+      INC`SHEET`TAKE:
+        value: |-
+          @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @include/args %!/INC`NEED`MOVE=typed,%q<sheet_what>; @assert strlen(get({{store}}/MOVE`%q<move_key>`PLAYBOOK))=@pemit %#=notice(SHEET,u(%!/FUN`MOVE`LABEL,%q<move_key>) is a basic move: everyone has it.,warn); @assert not(u(%!/FUN`MOVE`HAS,%q<sheet_who>,%q<move_key>))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has [u(%!/FUN`MOVE`LABEL,%q<move_key>)] already.,warn); @assert cor(%q<viewer_keeper>,not(comp(ucstr(get({{store}}/MOVE`%q<move_key>`PLAYBOOK)),get(%q<sheet_who>/PBTA`PLAYBOOK))))=@pemit %#=notice(SHEET,u(%!/FUN`MOVE`LABEL,%q<move_key>) belongs to another playbook.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,MOVES,value,setunion(get(%q<sheet_who>/PBTA`MOVES),%q<move_key>); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has [u(%!/FUN`MOVE`LABEL,%q<move_key>)] now.,ok)
+        flags: [cmdsyntax]
+      # +sheet/drop [<name>/]<move>: gives back a move taken with /take.
+      INC`SHEET`DROP:
+        value: |-
+          @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @include/args %!/INC`NEED`MOVE=typed,%q<sheet_what>; @assert member(get(%q<sheet_who>/PBTA`MOVES),%q<move_key>)=@pemit %#=notice(SHEET,if(u(%!/FUN`MOVE`HAS,%q<sheet_who>,%q<move_key>),[u(%!/FUN`MOVE`LABEL,%q<move_key>)] comes with [name(%q<sheet_who>)]'s playbook.,[name(%q<sheet_who>)] does not have [u(%!/FUN`MOVE`LABEL,%q<move_key>)].),warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,MOVES,value,setdiff(get(%q<sheet_who>/PBTA`MOVES),%q<move_key>); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] no longer has [u(%!/FUN`MOVE`LABEL,%q<move_key>)].,ok)
+        flags: [cmdsyntax]
+      # +sheet/move <move>: the whole move.
+      INC`SHEET`MOVE:
+        value: |-
+          @include/args %!/INC`NEED`MOVE=typed,%q<cmd_argument>; @pemit %#=u(%!/FUN`SCREEN`MOVE,%q<move_key>,%#)
+        flags: [cmdsyntax]
+      # +sheet/forward <n> and +sheet/ongoing <n>, or <name>=<n> for a keeper. 0 or nothing clears it.
+      INC`SHEET`FORWARD:
+        value: |-
+          @include/args %!/INC`SHEET`MODIFIER=leaf,FORWARD,noun,forward
+        flags: [cmdsyntax]
+      INC`SHEET`ONGOING:
+        value: |-
+          @include/args %!/INC`SHEET`MODIFIER=leaf,ONGOING,noun,ongoing
+        flags: [cmdsyntax]
+      INC`SHEET`MODIFIER:
+        value: |-
+          @include %!/INC`NEED`WHOVALUE; think setq(set_value,firstof(edit(%q<sheet_value>,+,),0)); @assert cand(isint(%q<set_value>),gte(%q<set_value>,-3),lte(%q<set_value>,3))=@pemit %#=notice(SHEET,+sheet/%<noun> <number>: a whole number from -3 to +3%, 0 to clear it.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,%<leaf>,value,if(%q<set_value>,%q<set_value>); @pemit %#=notice(SHEET,if(%q<set_value>,[name(%q<sheet_who>)] has [u(%!/FUN`DISPLAY`SIGNED,%q<set_value>)] %<noun>.,[name(%q<sheet_who>)]'s %<noun> is cleared.),ok)
+        flags: [cmdsyntax]
+      # +sheet/hold [<name>/]<move>=<n>: hold on a move; 0 clears it.
+      INC`SHEET`HOLD:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/hold <move>=<hold>%, such as +sheet/hold defend=3. 0 clears it.,warn); @include %!/INC`NEED`WHO; @include/args %!/INC`NEED`MOVE=typed,%q<sheet_what>; think setq(set_value,firstof(%q<cmd_right_side>,0)); @assert cand(isint(%q<set_value>),gte(%q<set_value>,0),lte(%q<set_value>,9))=@pemit %#=notice(SHEET,Hold is a whole number from 0 to 9.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,HOLD`%q<move_key>,value,if(%q<set_value>,%q<set_value>); @pemit %#=notice(SHEET,if(%q<set_value>,[name(%q<sheet_who>)] has %q<set_value> hold on [u(%!/FUN`MOVE`LABEL,%q<move_key>)].,[name(%q<sheet_who>)] has no hold on [u(%!/FUN`MOVE`LABEL,%q<move_key>)].),ok)
+        flags: [cmdsyntax]
+      # +sheet/xp <name>=<n> sets XP; <name>=+<n> or -<n> adds or takes.
+      INC`SHEET`XP:
+        value: |-
+          @include %!/INC`NEED`KEEPER; @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>))=@pemit %#=notice(SHEET,+sheet/xp <name>=<xp> sets it%, =+<n> or =-<n> adds or takes.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; think setq(set_value,if(member(+ -,left(%q<cmd_right_side>,1)),add(default(%q<sheet_who>/PBTA`XP,0),edit(%q<cmd_right_side>,+,)),%q<cmd_right_side>)); @assert cand(isint(%q<set_value>),gte(%q<set_value>,0),lte(%q<set_value>,999))=@pemit %#=notice(SHEET,XP is a whole number from 0 to 999.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,XP,value,%q<set_value>; @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<set_value> XP.,ok)
+        flags: [cmdsyntax]
+      INC`SHEET`TRAITS:
+        value: |-
+          @pemit %#=u(%!/FUN`SCREEN`TRAITS)
+        flags: [cmdsyntax]
+
+      # ---- +check -----------------------------------------------------------------
+      INC`CHECK`USAGE:
+        value: |-
+          @pemit %#=notice(SHEET,+check <move or stat>%[=<difficulty>%]%, such as +check hack and slash or +check defy danger/dex. /private rolls where only you see it.,warn)
+        flags: [cmdsyntax]
+      # +check[/private] <move>[/<stat>][+<n>|-<n>][=<difficulty>], or a stat in place of the move: 2d6 for the room.
+      # Forward and ongoing are added, and forward is spent.
+      INC`CHECK`ROLL:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@include %!/INC`CHECK`USAGE; think u(%!/FUN`CHECK`READ,%q<cmd_left_side>); @assert isint(%q<check_modifier>)=@pemit %#=notice(SHEET,'%q<cmd_left_side>' ends in something that is not a number to add.,warn); @assert strlen(setr(trait_key,u(%!/API`FIND,%q<check_typed>)))=@pemit %#=notice(SHEET,There is no move or stat '%q<check_typed>'. +sheet/traits lists them.,warn); @break strmatch(%q<cmd_right_side>,trivial)=@pemit %#=notice(SHEET,A trivial task needs no roll: it simply happens.); think setq(check_target,u(%!/API`TARGET,%q<cmd_right_side>)); @assert cor(not(%q<cmd_has_equals>),isint(%q<check_target>))=@pemit %#=notice(SHEET,'%q<cmd_right_side>' is not a difficulty. Give a number to add or one of [itemize(v(DATA`DIFFICULTIES))].,warn); @include %!/INC`CHECK`STAT; think setqm(check_forward,default(%q<viewer_objid>/PBTA`FORWARD,0),check_ongoing,default(%q<viewer_objid>/PBTA`ONGOING,0)); think setq(check_result,uargs(%!/API`CHECK,roller,%q<viewer_objid>,trait,%q<trait_key>,stat,%q<check_stat>,modifier,add(%q<check_modifier>,%q<check_forward>,%q<check_ongoing>),target,%q<check_target>)); @assert not(strmatch(%q<check_result>,#-*))=@pemit %#=notice(SHEET,after(%q<check_result>,#-1%b),error); @if %q<check_forward>={@include/args %!/INC`DO`SET=who,%q<viewer_objid>,leaf,FORWARD,value,}; think setq(check_line,u(%!/FUN`DISPLAY`CHECK,%q<check_result>)); @break member(%q<cmd_switch_list>,private)=@pemit %#=notice(SHEET,You privately roll %q<check_line>); @remit %l=notice(SHEET,tone(strong,name(%#)) rolls %q<check_line>)
+        flags: [cmdsyntax]
+      # The stat a move rolls with: check_stat, the one typed after / (which must be one the move allows), else
+      # empty for API`CHECK to choose. A move that offers several asks which.
+      INC`CHECK`STAT:
+        value: |-
+          think setqm(check_move,u(%!/FUN`TRAIT`MOVE,%q<trait_key>),check_stat,,check_allowed,u(%!/FUN`MOVE`STATS,u(%!/FUN`TRAIT`MOVE,%q<trait_key>))); @assert cor(strlen(%q<check_move>),not(strlen(%q<check_chosen>)))=@pemit %#=notice(SHEET,A stat rolls alone: +check [lcstr(%q<trait_key>)].,warn); @assert cor(not(strlen(%q<check_chosen>)),strlen(setr(check_stat,u(%!/FUN`LIST`FIND,STAT,%q<check_chosen>))))=@pemit %#=notice(SHEET,There is no stat '%q<check_chosen>'.,warn); @assert cor(not(strlen(%q<check_chosen>)),member(%q<check_allowed>,%q<check_stat>))=@pemit %#=notice(SHEET,u(%!/FUN`MOVE`LABEL,%q<check_move>) [u(%!/FUN`DISPLAY`ROLLSWITH,%q<check_move>)].,warn); @assert cor(not(strlen(%q<check_move>)),strlen(%q<check_chosen>),lte(words(%q<check_allowed>),1))=@pemit %#=notice(SHEET,u(%!/FUN`MOVE`LABEL,%q<check_move>) [u(%!/FUN`DISPLAY`ROLLSWITH,%q<check_move>)]: say which%, such as +check [lcstr(%q<check_move>)]/[lcstr(first(%q<check_allowed>))].,warn)
+        flags: [cmdsyntax]
+      # %0 what was typed left of =: check_typed (the move or stat), check_chosen (a stat after /) and
+      # check_modifier (a number at the end, 0 when none). A - inside a move's key is not a modifier.
+      FUN`CHECK`READ:
+        value: |-
+          setqm(check_plus,if(pos(+,%0),trim(last(%0,+))),
+          check_minus,if(pos(-,%0),trim(last(%0,-))),
+          check_modifier,cond(strlen(%q<check_plus>),%q<check_plus>,isint(%q<check_minus>),-%q<check_minus>,0),
+          check_rest,trim(cond(strlen(%q<check_plus>),left(%0,sub(strlen(%0),inc(strlen(last(%0,+))))),isint(%q<check_minus>),left(%0,sub(strlen(%0),inc(strlen(last(%0,-))))),%0)),
+          check_typed,trim(before(%q<check_rest>,/)),
+          check_chosen,trim(after(%q<check_rest>,/)))
+        flags: [funsyntax]
+
+      # ---- writes -----------------------------------------------------------------
+      # %<who> an objid, %<leaf> what under PBTA` to write, %<value> what to store; empty clears it. The PBTA root
+      # is wizard-flagged and no_command the first time, and its leaves take that from it.
+      INC`DO`SET:
+        value: |-
+          @if not(hasattr(%<who>,PBTA))={&PBTA %<who>=This character's PbtA sheet. +sheet shows it.; @set %<who>/PBTA=wizard; @set %<who>/PBTA=no_command}; @if strlen(%<value>)={&PBTA`%<leaf> %<who>=%<value>},{&PBTA`%<leaf> %<who>}
+        flags: [cmdsyntax]
+
+      # ---- lists on the store -------------------------------------------------------
+      # %0 a list on the store (STAT, MOVE, PLAYBOOK): its keys, in order then by key. FUN`LIST`SORTKEY reads
+      # the list from list_path.
+      FUN`LIST`ALL:
+        value: |-
+          setq(list_path,%0)[sortkey(%!/FUN`LIST`SORTKEY,iter(lattr({{store}}/%0`*),after(%i0,`)))]
+        flags: [funsyntax]
+      FUN`LIST`SORTKEY:
+        value: |-
+          rjust(default({{store}}/%q<list_path>`%0`ORDER,50),3,0)%0
+        flags: [funsyntax]
+      # %0 a list, %1 typed text: the key it names, by key, by label, or by the start of one, or nothing.
+      FUN`LIST`FIND:
+        value: |-
+          setqm(find_typed,edit(trim(%1),%b,-),
+          find_label,lcstr(trim(%1)),
+          find_all,u(%!/FUN`LIST`ALL,%0),
+          find_exact,iter(%q<find_all>,if(cor(not(comp(%i0,ucstr(%q<find_typed>))),not(comp(lcstr(get({{store}}/%0`%i0)),%q<find_label>))),%i0)),
+          find_start,iter(%q<find_all>,if(cor(not(comp(left(%i0,strlen(%q<find_typed>)),ucstr(%q<find_typed>))),not(comp(lcstr(left(get({{store}}/%0`%i0),strlen(%q<find_label>))),%q<find_label>))),%i0)))[if(strlen(%q<find_typed>),first(firstof(%q<find_exact>,if(eq(words(%q<find_start>),1),%q<find_start>))))]
+        flags: [funsyntax]
+
+      # ---- stats, moves and playbooks ---------------------------------------------------
+      FUN`STAT`LABEL:
+        value: |-
+          firstof(get({{store}}/STAT`%0),lcstr(%0))
+        flags: [funsyntax]
+      # %0 a character, %1 a stat key: its value, 0 when unset.
+      FUN`STAT`VALUE:
+        value: |-
+          default(%0/PBTA`STAT`%1,0)
+        flags: [funsyntax]
+      # %0 a character, %1 stat keys: the highest of them for that character, the first of equals.
+      FUN`STAT`BEST:
+        value: |-
+          setq(best_roller,%0)[last(sortkey(%!/FUN`STAT`SORTKEY,revwords(%1),n))]
+        flags: [funsyntax]
+      FUN`STAT`SORTKEY:
+        value: |-
+          u(%!/FUN`STAT`VALUE,%q<best_roller>,%0)
+        flags: [funsyntax]
+      FUN`MOVE`LABEL:
+        value: |-
+          firstof(get({{store}}/MOVE`%0),lcstr(%0))
+        flags: [funsyntax]
+      # %0 a move key: the stats it may roll with, upper case, only ones that exist.
+      FUN`MOVE`STATS:
+        value: |-
+          filterbool(%!/FUN`IS`STAT,ucstr(get({{store}}/MOVE`%0`STAT)))
+        flags: [funsyntax]
+      # %0 a character, %1 a move key: 1 when they have it. A basic move (no playbook) everyone has; a playbook's
+      # starting moves its characters have; the rest are taken with /take.
+      FUN`MOVE`HAS:
+        value: |-
+          cor(not(strlen(get({{store}}/MOVE`%1`PLAYBOOK))),member(ucstr(get({{store}}/PLAYBOOK`[get(%0/PBTA`PLAYBOOK)]`MOVES)),%1),member(get(%0/PBTA`MOVES),%1))
+        flags: [funsyntax]
+      # %0 a character: every move they have, in order.
+      FUN`MOVE`MINE:
+        value: |-
+          filterbool(%!/FUN`MOVE`HASIT,u(%!/FUN`LIST`ALL,MOVE),,,%0)
+        flags: [funsyntax]
+      FUN`MOVE`HASIT:
+        value: |-
+          u(%!/FUN`MOVE`HAS,%1,%0)
+        flags: [funsyntax]
+      FUN`PLAYBOOK`LABEL:
+        value: |-
+          firstof(get({{store}}/PLAYBOOK`%0),lcstr(%0))
+        flags: [funsyntax]
+      # A trait key is a stat's key or move-<move key>. These split it.
+      FUN`TRAIT`MOVE:
+        value: |-
+          if(strmatch(%0,move-*),ucstr(after(%0,-)))
+        flags: [funsyntax]
+      FUN`TRAIT`STAT:
+        value: |-
+          if(not(strmatch(%0,move-*)),ucstr(%0))
+        flags: [funsyntax]
+
+      # ---- who may do what ----------------------------------------------------------
+      FUN`PERM`KEEPER:
+        value: |-
+          permission(%0,softcode.pbta.admin)
+        flags: [funsyntax]
+      # %0 who asks, %1 whose sheet: 1 when they may read it. ALLOW`VIEW`<name>, which a bridge adds, may let
+      # more people read it.
+      FUN`PERM`VIEW:
+        value: |-
+          cor(not(comp(objid(%0),%1)),u(%!/FUN`PERM`KEEPER,%0),get(%!/DATA`CONFIG`PUBLIC),words(filterbool(%!/FUN`PERM`ALLOWS,lattr(%!/ALLOW`VIEW`*),,,%0,%1)))
+        flags: [funsyntax]
+      FUN`PERM`ALLOWS:
+        value: |-
+          u(%!/%0,%1,%2)
+        flags: [funsyntax]
+      FUN`GATE`EDIT:
+        value: |-
+          if(hasattr(%!,GATE`EDIT),u(%!/GATE`EDIT,%0))
+        flags: [funsyntax]
+      FUN`PLAYER`MATCH:
+        value: |-
+          if(isdbref(setr(found_player,pmatch(%0))),objid(%q<found_player>))
+        flags: [funsyntax]
+
+      # ---- screens ------------------------------------------------------------------
+      FUN`DISPLAY`SIGNED:
+        value: |-
+          if(gte(%0,0),+%0,%0)
+        flags: [funsyntax]
+      # %0 a move key: "rolls with Str", "rolls with Str, Dex or Con", or "adds no stat".
+      FUN`DISPLAY`ROLLSWITH:
+        value: |-
+          setq(rolls_stats,u(%!/FUN`MOVE`STATS,%0))[if(words(%q<rolls_stats>),rolls with [itemize(iter(%q<rolls_stats>,u(%!/FUN`STAT`LABEL,%i0),%b,|),|,or)],adds no stat)]
+        flags: [funsyntax]
+      # %0 a check's JSON: "Defy Danger (+Dex): 2d6[4, 5] + 1 = 10: a full hit (roll 42)", then the move's text for
+      # that result on a line of its own. check_forward, when set, notes the forward spent.
+      FUN`DISPLAY`CHECK:
+        value: |-
+          setq(display_outcome,json_query(%0,extract,$.outcome))[json_query(%0,extract,$.label)]: [json_query(%0,extract,$.text)]: [tone(u(%!/FUN`DISPLAY`TIERTONE,json_query(%0,extract,$.tier)),u(%!/FUN`DISPLAY`TIER,json_query(%0,extract,$.tier)))][if(%q<check_forward>,%b%(with [u(%!/FUN`DISPLAY`SIGNED,%q<check_forward>)] forward%))] [tone(muted,%(roll [json_query(%0,extract,$.roll)]%))][if(strlen(%q<display_outcome>),%r%q<display_outcome>)]
+        flags: [funsyntax]
+      FUN`DISPLAY`TIER:
+        value: |-
+          switch(%0,crit-success,a critical hit,success,a full hit,partial,a partial hit,a miss)
+        flags: [funsyntax]
+      FUN`DISPLAY`TIERTONE:
+        value: |-
+          switch(%0,crit-success,success,success,success,partial,warning,error)
+        flags: [funsyntax]
+      # %0 the character, %1 who reads it.
+      FUN`SCREEN`SHEET:
+        value: |-
+          setqm(screen_stats,u(%!/FUN`LIST`ALL,STAT),
+          screen_moves,u(%!/FUN`MOVE`MINE,%0),
+          screen_hold,iter(lattr(%0/PBTA`HOLD`*),after(%i0,PBTA`HOLD`)))[box(lfields(lit({"cols":2}),Playbook%*<|>XP%*<|>Forward%*<|>Ongoing,firstof(u(%!/FUN`PLAYBOOK`LABEL,get(%0/PBTA`PLAYBOOK)),tone(muted,-))%*<|>[default(%0/PBTA`XP,0)]%*<|>[u(%!/FUN`DISPLAY`SIGNED,default(%0/PBTA`FORWARD,0))]%*<|>[u(%!/FUN`DISPLAY`SIGNED,default(%0/PBTA`ONGOING,0))],%*<|>)%r[rule(Stats)]%r[lfields(lit({"cols":3}),iter(%q<screen_stats>,u(%!/FUN`STAT`LABEL,%i0),%b,%*<|>),iter(%q<screen_stats>,u(%!/FUN`DISPLAY`SIGNED,u(%!/FUN`STAT`VALUE,%0,%i0)),%b,%*<|>),%*<|>)]%r[rule(Moves)]%r[lfields(,iter(%q<screen_moves>,u(%!/FUN`MOVE`LABEL,%i0),%b,%*<|>),iter(%q<screen_moves>,u(%!/FUN`DISPLAY`MOVESTAT,%0,%i0),%b,%*<|>),%*<|>)][if(words(%q<screen_hold>),%r[rule(Hold)]%r[lfields(,iter(%q<screen_hold>,u(%!/FUN`MOVE`LABEL,%i0),%b,%*<|>),iter(%q<screen_hold>,get(%0/PBTA`HOLD`%i0),%b,%*<|>),%*<|>)])]%r[rule()]%r[tone(muted,u(%!/FUN`DISPLAY`FOOTER,%0,%1))],name(%0))]
+        flags: [funsyntax]
+      # %0 a character, %1 a move key: what the move adds for them, "+1 (Str)", "best of Str, Dex...", or "no stat".
+      FUN`DISPLAY`MOVESTAT:
+        value: |-
+          setq(movestat_stats,u(%!/FUN`MOVE`STATS,%1))[switch(words(%q<movestat_stats>),0,no stat,1,[u(%!/FUN`DISPLAY`SIGNED,u(%!/FUN`STAT`VALUE,%0,%q<movestat_stats>))] %([u(%!/FUN`STAT`LABEL,%q<movestat_stats>)]%),you choose: [itemize(iter(%q<movestat_stats>,u(%!/FUN`STAT`LABEL,%i0),%b,|),|,or)])]
+        flags: [funsyntax]
+      FUN`DISPLAY`FOOTER:
+        value: |-
+          cond(cand(not(comp(objid(%1),%0)),not(isapproved(%1)),not(u(%!/FUN`PERM`KEEPER,%1))),+sheet/playbook picks a playbook and +sheet/set <stat>=<number> sets a stat. +check <move> rolls.[u(%!/FUN`HINT,FOOTER)],not(comp(objid(%1),%0)),+check <move> rolls. +sheet/move <move> shows a move's text.,+check <move> rolls 2d6 plus a stat.)
+        flags: [funsyntax]
+      # %0 a move key, %1 who reads it.
+      FUN`SCREEN`MOVE:
+        value: |-
+          setq(screen_source,get({{store}}/MOVE`%0`SOURCE))[box(get({{store}}/MOVE`%0`TEXT)%r[rule()]%r[tone(muted,capstr(u(%!/FUN`DISPLAY`ROLLSWITH,%0)).[if(strlen(get({{store}}/MOVE`%0`PLAYBOOK)),%b[u(%!/FUN`PLAYBOOK`LABEL,ucstr(get({{store}}/MOVE`%0`PLAYBOOK)))] move.,%bA basic move.)][if(strlen(%q<screen_source>),%bFrom %q<screen_source>.)] +check [lcstr(%0)] rolls it.)],u(%!/FUN`MOVE`LABEL,%0))]
+        flags: [funsyntax]
+      FUN`SCREEN`TRAITS:
+        value: |-
+          setqm(screen_stats,u(%!/FUN`LIST`ALL,STAT),screen_moves,u(%!/FUN`LIST`ALL,MOVE))[box(ldatatable(lit({"nowrap":"1|3","grow":"||1"}),Key|Move|Rolls with,iter(%q<screen_moves>,lcstr(%i0)|[u(%!/FUN`MOVE`LABEL,%i0)]|[u(%!/FUN`DISPLAY`MOVEROLL,%i0)],,%*<^>),%*<^>)%r[rule()]%r[tone(muted,Stats: [itemize(iter(%q<screen_stats>,u(%!/FUN`STAT`LABEL,%i0) %([lcstr(%i0)]%),%b,|),|)]. +sheet/move <move> shows one.)],PbtA moves)]
+        flags: [funsyntax]
+      FUN`DISPLAY`MOVEROLL:
+        value: |-
+          setq(moveroll_stats,u(%!/FUN`MOVE`STATS,%0))[if(words(%q<moveroll_stats>),itemize(iter(%q<moveroll_stats>,u(%!/FUN`STAT`LABEL,%i0),%b,|),|,or),-)][if(strlen(get({{store}}/MOVE`%0`PLAYBOOK)),%b[tone(muted,%([u(%!/FUN`PLAYBOOK`LABEL,ucstr(get({{store}}/MOVE`%0`PLAYBOOK)))]%))])]
+        flags: [funsyntax]
+      FUN`SCREEN`PLAYBOOKS:
+        value: |-
+          setq(screen_playbooks,u(%!/FUN`LIST`ALL,PLAYBOOK))[box(if(words(%q<screen_playbooks>),ldatatable(lit({"nowrap":"1","grow":"||1"}),Playbook|Suggested stats|Starting moves,iter(%q<screen_playbooks>,u(%!/FUN`PLAYBOOK`LABEL,%i0)|[u(%!/FUN`DISPLAY`PAIRS,get({{store}}/PLAYBOOK`%i0`STATS))]|[itemize(iter(get({{store}}/PLAYBOOK`%i0`MOVES),u(%!/FUN`MOVE`LABEL,ucstr(%i0)),%b,|),|)],,%*<^>),%*<^>),There are no playbooks.)%r[rule()]%r[tone(muted,+sheet/playbook <playbook> picks one.)],PbtA playbooks)]
+        flags: [funsyntax]
+      # "str=2 dex=1" as "Str +2, Dex +1".
+      FUN`DISPLAY`PAIRS:
+        value: |-
+          itemize(iter(%0,[u(%!/FUN`STAT`LABEL,ucstr(before(%i0,=)))] [u(%!/FUN`DISPLAY`SIGNED,after(%i0,=))],%b,|),|)
+        flags: [funsyntax]
+
+      # ---- the sheet API ------------------------------------------------------------
+      # What other packages call: u({{sheet-pbta/sheet}}/API`<NAME>,...). Every sheet package has these names.
+      # They read and roll; API`SPEND and API`AWARD are the ones that write.
+      API:
+        value: |-
+          The PbtA sheet's functions for other packages. See the package README.
+        flags: [VISUAL]
+      # JSON list of the stats and moves: [{"key","label","group","always"}], group stat or move. A move's key is
+      # move-<key>. Every stat is always; a move is always when it is basic, since everyone has it.
+      API`TRAITS:
+        value: |-
+          json_array(iter(u(%!/FUN`LIST`ALL,STAT),json(object,key,json(string,lcstr(%i0)),label,json(string,u(%!/FUN`STAT`LABEL,%i0)),group,json(string,stat),always,json(boolean,1)),%b,|)|[iter(u(%!/FUN`LIST`ALL,MOVE),json(object,key,json(string,move-[lcstr(%i0)]),label,json(string,u(%!/FUN`MOVE`LABEL,%i0)),group,json(string,move),always,json(boolean,not(strlen(get({{store}}/MOVE`%i0`PLAYBOOK))))),%b,|)],|)
+        flags: [VISUAL]
+      # The keys every character can roll, lower case: the stats and the basic moves.
+      API`ALWAYS:
+        value: |-
+          lcstr(squish(u(%!/FUN`LIST`ALL,STAT) [iter(u(%!/FUN`LIST`ALL,MOVE),if(strlen(get({{store}}/MOVE`%i0`PLAYBOOK)),,move-%i0))]))
+        flags: [VISUAL]
+      # %0 typed text: a stat's key, or move-<key> for a move, lower case; nothing when it names neither. A stat
+      # matched exactly comes first, then a move, then the start of a stat's name.
+      API`FIND:
+        value: |-
+          setqm(api_stat,u(%!/FUN`LIST`FIND,STAT,%0),api_move,u(%!/FUN`LIST`FIND,MOVE,%0))[lcstr(cond(cand(strlen(%q<api_stat>),cor(not(comp(%q<api_stat>,ucstr(trim(%0)))),not(comp(lcstr(u(%!/FUN`STAT`LABEL,%q<api_stat>)),lcstr(trim(%0)))))),%q<api_stat>,strlen(%q<api_move>),move-%q<api_move>,%q<api_stat>))]
+        flags: [VISUAL]
+      API`LABEL:
+        value: |-
+          if(strlen(u(%!/FUN`TRAIT`MOVE,%0)),u(%!/FUN`MOVE`LABEL,u(%!/FUN`TRAIT`MOVE,%0)),u(%!/FUN`STAT`LABEL,ucstr(%0)))
+        flags: [VISUAL]
+      # %0 a character, %1 a key: what it adds to a roll. A move adds its stat, the best for them of several,
+      # 0 when it names none.
+      API`RATING:
+        value: |-
+          setq(rating_move,u(%!/FUN`TRAIT`MOVE,%1))[u(%!/FUN`STAT`VALUE,%0,if(strlen(%q<rating_move>),u(%!/FUN`STAT`BEST,%0,u(%!/FUN`MOVE`STATS,%q<rating_move>)),ucstr(%1)))]
+        flags: [VISUAL]
+      # %0 a character, %1 a key: 1 when they may roll it (every stat; a move they have).
+      API`HAS:
+        value: |-
+          if(strlen(%1),if(strlen(u(%!/FUN`TRAIT`MOVE,%1)),u(%!/FUN`MOVE`HAS,%0,u(%!/FUN`TRAIT`MOVE,%1)),1),hasattr(%0,PBTA))
+        flags: [VISUAL]
+      # %0 a difficulty word (easy to extreme) or a number: what it adds, or nothing. Trivial is nothing: it is
+      # not rolled.
+      API`TARGET:
+        value: |-
+          cond(member(easy standard hard extreme,lcstr(%0)),extract(get(%!/DATA`CONFIG`MODIFIERS),member(easy standard hard extreme,lcstr(%0)),1),isint(edit(%0,+,)),edit(%0,+,))
+        flags: [VISUAL]
+      # %0 the total: fail on 6 or less, partial on 7-9, success on 10 or more, crit-success on 12 or more when
+      # the game uses criticals.
+      API`TIER:
+        value: |-
+          cond(not(isint(%0)),,lte(%0,6),fail,lte(%0,9),partial,cand(get(%!/DATA`CONFIG`CRITICAL),gte(%0,12)),crit-success,success)
+        flags: [VISUAL]
+      # %0 a character: their forward and ongoing together, what the next roll adds.
+      API`MODIFIERS:
+        value: |-
+          add(default(%0/PBTA`FORWARD,0),default(%0/PBTA`ONGOING,0))
+        flags: [VISUAL]
+      # %0 a character: spends their forward, which lasts one roll. Returns what it was.
+      API`SPEND:
+        value: |-
+          setq(spend_forward,default(%0/PBTA`FORWARD,0))[if(%q<spend_forward>,attrib_set(%0/PBTA`FORWARD))]%q<spend_forward>
+        flags: [VISUAL]
+      # %0 a character, %1 XP to give (or take, below 0): writes it, never below 0, and returns the new total.
+      API`AWARD:
+        value: |-
+          setq(award_new,max(0,add(default(%0/PBTA`XP,0),%1)))[if(hasattr(%0,PBTA),,attrib_set(%0/PBTA,This character's PbtA sheet. +sheet shows it.)[set(%0/PBTA,wizard)][set(%0/PBTA,no_command)])][attrib_set(%0/PBTA`XP,%q<award_new>)]%q<award_new>
+        flags: [VISUAL]
+      # Named: %<roller> an objid, %<trait> a key, %<stat> a stat key for a move that offers several (the best
+      # when empty), %<modifier> a number to add, %<target> the difficulty's modifier or nothing. Rolls 2d6 plus the
+      # stat and keeps the roll (roll() record), and returns {"tier","total","target","margin","label","text",
+      # "roll","formula","move","stat","outcome"}: margin is always empty, outcome the move's text for the tier.
+      # #-1 and why when the trait, stat or roller is wrong, or the roller lacks the move.
+      API`CHECK:
+        value: |-
+          setqm(check_api_move,u(%!/FUN`TRAIT`MOVE,%<trait>),
+          check_api_stat,cond(strlen(u(%!/FUN`TRAIT`MOVE,%<trait>)),if(strlen(%<stat>),ucstr(%<stat>),u(%!/FUN`STAT`BEST,%<roller>,u(%!/FUN`MOVE`STATS,u(%!/FUN`TRAIT`MOVE,%<trait>)))),1,ucstr(%<trait>)))[cond(not(hastype(%<roller>,player)),#-1 There is no character to roll for.,cand(strlen(%q<check_api_move>),not(hasattr({{store}},MOVE`%q<check_api_move>))),#-1 There is no move '%<trait>'.,cand(not(strlen(%q<check_api_move>)),not(u(%!/FUN`IS`STAT,%q<check_api_stat>))),#-1 There is no stat '%<trait>'.,cand(strlen(%q<check_api_move>),not(u(%!/FUN`MOVE`HAS,%<roller>,%q<check_api_move>))),#-1 You don't have [u(%!/FUN`MOVE`LABEL,%q<check_api_move>)].,cand(strlen(%q<check_api_move>),strlen(%<stat>),not(member(u(%!/FUN`MOVE`STATS,%q<check_api_move>),%q<check_api_stat>))),#-1 [u(%!/FUN`MOVE`LABEL,%q<check_api_move>)] [u(%!/FUN`DISPLAY`ROLLSWITH,%q<check_api_move>)].,u(%!/FUN`CHECK`ROLLED,%q<check_api_move>,%q<check_api_stat>,add(if(strlen(%q<check_api_stat>),u(%!/FUN`STAT`VALUE,%<roller>,%q<check_api_stat>),0),firstof(%<modifier>,0),firstof(%<target>,0)),%<target>))]
+        flags: [VISUAL]
+      # %0 the move key or nothing, %1 the stat key or nothing, %2 what is added, %3 the difficulty's modifier.
+      FUN`CHECK`ROLLED:
+        value: |-
+          setqm(rolled_formula,2d6[if(gte(%2,0),+%2,%2)],
+          rolled,roll(%q<rolled_formula>,,record),
+          rolled_total,json_query(%q<rolled>,extract,$.total),
+          rolled_tier,u(%!/API`TIER,%q<rolled_total>))[json(object,tier,json(string,%q<rolled_tier>),total,%q<rolled_total>,target,json(string,%3),margin,json(string,),label,json(string,u(%!/FUN`CHECK`LABEL,%0,%1)),text,json(string,json_query(%q<rolled>,extract,$.text)),roll,json_query(%q<rolled>,extract,$.id),formula,json(string,%q<rolled_formula>),move,json(string,lcstr(%0)),stat,json(string,lcstr(%1)),outcome,json(string,if(strlen(%0),get({{store}}/MOVE`%0`[switch(%q<rolled_tier>,crit-success,HIT,success,HIT,partial,PARTIAL,MISS)]))))]
+        flags: [funsyntax]
+      # "Defy Danger (+Dex)", "Last Breath", or a stat's label.
+      FUN`CHECK`LABEL:
+        value: |-
+          if(strlen(%0),u(%!/FUN`MOVE`LABEL,%0)[if(strlen(%1),%b%(+[u(%!/FUN`STAT`LABEL,%1)]%))],u(%!/FUN`STAT`LABEL,%1))
+        flags: [funsyntax]
+
+      # ---- lifecycle ----------------------------------------------------------------
+      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
+      STARTUP:
+        value: |-
+          @command/add/noparse/rsnoparse +sheet; @hook/override/inline +sheet=%!,CMD`SHEET; @command/add/noparse/rsnoparse +check; @hook/override/inline +check=%!,CMD`CHECK
+        flags: [cmdsyntax]
+      AINSTALL:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+      AUPDATE:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+
+  # The lists. Inside the PbtA Sheet, so no player can reach it, and no_command, so nothing kept on it is ever
+  # matched as a command. STAT`<KEY> a stat's label with ORDER; MOVE`<KEY> a move's label with STAT, PLAYBOOK,
+  # TEXT, HIT, PARTIAL, MISS, SOURCE and ORDER; PLAYBOOK`<KEY> a playbook's label with STATS, MOVES and ORDER.
+  # Staff change them with +config pbta/stats, /moves and /playbooks. The values are read with get(), never
+  # evaluated.
+  #
+  # The stats and the moves whose SOURCE is Dungeon World are from Dungeon World by Sage LaTorra and Adam Koebel,
+  # under CC BY 3.0 (see NOTICE.md). The two playbooks and their moves are this package's own.
+  - ref: store
+    type: thing
+    name: PbtA Sheet Store
+    location: "{{sheet}}"
+    flags: [no_command]
+    attributes:
+      STAT: |-
+        The stats every sheet has, one branch each, keyed as a player types it.
+      STAT`STR: |-
+        Str
+      STAT`STR`ORDER: |-
+        1
+      STAT`DEX: |-
+        Dex
+      STAT`DEX`ORDER: |-
+        2
+      STAT`CON: |-
+        Con
+      STAT`CON`ORDER: |-
+        3
+      STAT`INT: |-
+        Int
+      STAT`INT`ORDER: |-
+        4
+      STAT`WIS: |-
+        Wis
+      STAT`WIS`ORDER: |-
+        5
+      STAT`CHA: |-
+        Cha
+      STAT`CHA`ORDER: |-
+        6
+      PLAYBOOK: |-
+        The playbooks, one branch each, with STATS (suggested) and MOVES (starting moves) beneath.
+      PLAYBOOK`WARDEN: |-
+        Warden
+      PLAYBOOK`WARDEN`STATS: |-
+        con=2 str=1 wis=1 dex=0 cha=0 int=-1
+      PLAYBOOK`WARDEN`MOVES: |-
+        hold-the-line
+      PLAYBOOK`WARDEN`ORDER: |-
+        1
+      PLAYBOOK`WAYFARER: |-
+        Wayfarer
+      PLAYBOOK`WAYFARER`STATS: |-
+        wis=2 dex=1 int=1 cha=0 con=0 str=-1
+      PLAYBOOK`WAYFARER`MOVES: |-
+        know-the-way
+      PLAYBOOK`WAYFARER`ORDER: |-
+        2
+      MOVE: |-
+        The moves, one branch each. A move with no PLAYBOOK is a basic move.
+      MOVE`HOLD-THE-LINE: |-
+        Hold the Line
+      MOVE`HOLD-THE-LINE`STAT: |-
+        con
+      MOVE`HOLD-THE-LINE`PLAYBOOK: |-
+        warden
+      MOVE`HOLD-THE-LINE`TEXT: |-
+        When you stand your ground so that others can get away, roll+Con. On a 10+, everyone you cover gets clear and nothing gets past you. On a 7–9, they get clear, but you take a blow or are driven back; the GM says which.
+      MOVE`HOLD-THE-LINE`HIT: |-
+        On a 10+, everyone you cover gets clear and nothing gets past you.
+      MOVE`HOLD-THE-LINE`PARTIAL: |-
+        On a 7–9, they get clear, but you take a blow or are driven back; the GM says which.
+      MOVE`HOLD-THE-LINE`ORDER: |-
+        40
+      MOVE`KNOW-THE-WAY: |-
+        Know the Way
+      MOVE`KNOW-THE-WAY`STAT: |-
+        wis
+      MOVE`KNOW-THE-WAY`PLAYBOOK: |-
+        wayfarer
+      MOVE`KNOW-THE-WAY`TEXT: |-
+        When you lead the party through country you have travelled before, roll+Wis. On a 10+, you arrive where and when you meant to. On a 7–9, you arrive, but late, tired or somewhere a little off; the GM says which.
+      MOVE`KNOW-THE-WAY`HIT: |-
+        On a 10+, you arrive where and when you meant to.
+      MOVE`KNOW-THE-WAY`PARTIAL: |-
+        On a 7–9, you arrive, but late, tired or somewhere a little off; the GM says which.
+      MOVE`KNOW-THE-WAY`ORDER: |-
+        41
+      MOVE`READ-THE-SKY: |-
+        Read the Sky
+      MOVE`READ-THE-SKY`STAT: |-
+        wis
+      MOVE`READ-THE-SKY`PLAYBOOK: |-
+        wayfarer
+      MOVE`READ-THE-SKY`TEXT: |-
+        When you study the sky before setting out, roll+Wis. On a 10+, you know the coming day's weather, and the party takes +1 forward on the road. On a 7–9, you know the weather, but not when it will turn.
+      MOVE`READ-THE-SKY`HIT: |-
+        On a 10+, you know the coming day's weather, and the party takes +1 forward on the road.
+      MOVE`READ-THE-SKY`PARTIAL: |-
+        On a 7–9, you know the weather, but not when it will turn.
+      MOVE`READ-THE-SKY`ORDER: |-
+        42
+      MOVE`HACK-AND-SLASH: |-
+        Hack and Slash
+      MOVE`HACK-AND-SLASH`STAT: |-
+        str
+      MOVE`HACK-AND-SLASH`TEXT: |-
+        When you attack an enemy in melee, roll+Str. On a 10+ you deal your damage to the enemy and avoid their attack. At your option, you may choose to do +1d6 damage but expose yourself to the enemy’s attack. On a 7–9, you deal your damage to the enemy and the enemy makes an attack against you.
+      MOVE`HACK-AND-SLASH`HIT: |-
+        On a 10+ you deal your damage to the enemy and avoid their attack. At your option, you may choose to do +1d6 damage but expose yourself to the enemy’s attack.
+      MOVE`HACK-AND-SLASH`PARTIAL: |-
+        On a 7–9, you deal your damage to the enemy and the enemy makes an attack against you.
+      MOVE`HACK-AND-SLASH`ORDER: |-
+        1
+      MOVE`HACK-AND-SLASH`SOURCE: |-
+        Dungeon World
+      MOVE`VOLLEY: |-
+        Volley
+      MOVE`VOLLEY`STAT: |-
+        dex
+      MOVE`VOLLEY`TEXT: |-
+        When you take aim and shoot at an enemy at range, roll+Dex. On a 10+ you have a clear shot—deal your damage. On a 7–9, choose one (whichever you choose you deal your damage):
+        - You have to move to get the shot placing you in danger of the GM’s choice
+        - You have to take what you can get: -1d6 damage
+        - You have to take several shots, reducing your ammo by one.
+      MOVE`VOLLEY`HIT: |-
+        On a 10+ you have a clear shot—deal your damage.
+      MOVE`VOLLEY`PARTIAL: |-
+        On a 7–9, choose one (whichever you choose you deal your damage):
+        - You have to move to get the shot placing you in danger of the GM’s choice
+        - You have to take what you can get: -1d6 damage
+        - You have to take several shots, reducing your ammo by one.
+      MOVE`VOLLEY`ORDER: |-
+        2
+      MOVE`VOLLEY`SOURCE: |-
+        Dungeon World
+      MOVE`DEFY-DANGER: |-
+        Defy Danger
+      MOVE`DEFY-DANGER`STAT: |-
+        str dex con int wis cha
+      MOVE`DEFY-DANGER`TEXT: |-
+        When you act despite an imminent threat or suffer a calamity, say how you deal with it and roll. If you do it…
+        - …by powering through, +Str
+        - …by getting out of the way or acting fast, +Dex
+        - …by enduring, +Con
+        - …with quick thinking, +Int
+        - …through mental fortitude, +Wis
+        - …using charm and social grace, +Cha
+        On a 10+, you do what you set out to, the threat doesn’t come to bear. On a 7–9, you stumble, hesitate, or flinch: the GM will offer you a worse outcome, hard bargain, or ugly choice.
+      MOVE`DEFY-DANGER`HIT: |-
+        On a 10+, you do what you set out to, the threat doesn’t come to bear.
+      MOVE`DEFY-DANGER`PARTIAL: |-
+        On a 7–9, you stumble, hesitate, or flinch: the GM will offer you a worse outcome, hard bargain, or ugly choice.
+      MOVE`DEFY-DANGER`ORDER: |-
+        3
+      MOVE`DEFY-DANGER`SOURCE: |-
+        Dungeon World
+      MOVE`DEFEND: |-
+        Defend
+      MOVE`DEFEND`STAT: |-
+        con
+      MOVE`DEFEND`TEXT: |-
+        When you stand in defense of a person, item, or location under attack, roll+Con. On a 10+, hold 3. On a 7–9, hold 1. So long as you stand in defense, when you or the thing you defend is attacked you may spend hold, 1 for 1, to choose an option:
+        - Redirect an attack from the thing you defend to yourself
+        - Halve the attack’s effect or damage
+        - Open up the attacker to an ally giving that ally +1 forward against the attacker
+        - Deal damage to the attacker equal to your level
+      MOVE`DEFEND`HIT: |-
+        On a 10+, hold 3.
+      MOVE`DEFEND`PARTIAL: |-
+        On a 7–9, hold 1.
+      MOVE`DEFEND`ORDER: |-
+        4
+      MOVE`DEFEND`SOURCE: |-
+        Dungeon World
+      MOVE`SPOUT-LORE: |-
+        Spout Lore
+      MOVE`SPOUT-LORE`STAT: |-
+        int
+      MOVE`SPOUT-LORE`TEXT: |-
+        When you consult your accumulated knowledge about something, roll+Int. On a 10+ the GM will tell you something interesting and useful about the subject relevant to your situation. On a 7–9 the GM will only tell you something interesting—it’s on you to make it useful. The GM might ask you “How do you know this?” Tell them the truth, now.
+      MOVE`SPOUT-LORE`HIT: |-
+        On a 10+ the GM will tell you something interesting and useful about the subject relevant to your situation.
+      MOVE`SPOUT-LORE`PARTIAL: |-
+        On a 7–9 the GM will only tell you something interesting—it’s on you to make it useful.
+      MOVE`SPOUT-LORE`ORDER: |-
+        5
+      MOVE`SPOUT-LORE`SOURCE: |-
+        Dungeon World
+      MOVE`DISCERN-REALITIES: |-
+        Discern Realities
+      MOVE`DISCERN-REALITIES`STAT: |-
+        wis
+      MOVE`DISCERN-REALITIES`TEXT: |-
+        When you closely study a situation or person, roll+Wis. On a 10+ ask the GM 3 questions from the list below. On a 7–9 ask 1. Take +1 forward when acting on the answers.
+        - What happened here recently?
+        - What is about to happen?
+        - What should I be on the lookout for?
+        - What here is useful or valuable to me?
+        - Who’s really in control here?
+        - What here is not what it appears to be?
+      MOVE`DISCERN-REALITIES`HIT: |-
+        On a 10+ ask the GM 3 questions from the list below.
+        - What happened here recently?
+        - What is about to happen?
+        - What should I be on the lookout for?
+        - What here is useful or valuable to me?
+        - Who’s really in control here?
+        - What here is not what it appears to be?
+        Take +1 forward when acting on the answers.
+      MOVE`DISCERN-REALITIES`PARTIAL: |-
+        On a 7–9 ask 1.
+        - What happened here recently?
+        - What is about to happen?
+        - What should I be on the lookout for?
+        - What here is useful or valuable to me?
+        - Who’s really in control here?
+        - What here is not what it appears to be?
+        Take +1 forward when acting on the answers.
+      MOVE`DISCERN-REALITIES`ORDER: |-
+        6
+      MOVE`DISCERN-REALITIES`SOURCE: |-
+        Dungeon World
+      MOVE`PARLEY: |-
+        Parley
+      MOVE`PARLEY`STAT: |-
+        cha
+      MOVE`PARLEY`TEXT: |-
+        When you have leverage on a GM character and manipulate them, roll+Cha. Leverage is something they need or want. On a hit they ask you for something and do it if you make them a promise first. On a 7–9, they need some concrete assurance of your promise, right now.
+      MOVE`PARLEY`HIT: |-
+        On a hit they ask you for something and do it if you make them a promise first.
+      MOVE`PARLEY`PARTIAL: |-
+        On a hit they ask you for something and do it if you make them a promise first. On a 7–9, they need some concrete assurance of your promise, right now.
+      MOVE`PARLEY`ORDER: |-
+        7
+      MOVE`PARLEY`SOURCE: |-
+        Dungeon World
+      MOVE`AID-OR-INTERFERE: |-
+        Aid or Interfere
+      MOVE`AID-OR-INTERFERE`TEXT: |-
+        When you help or hinder someone, roll+Bond with them. On a 10+ they take +1 or -2, your choice. On a 7–9 you also expose yourself to danger, retribution, or cost.
+      MOVE`AID-OR-INTERFERE`HIT: |-
+        On a 10+ they take +1 or -2, your choice.
+      MOVE`AID-OR-INTERFERE`PARTIAL: |-
+        On a 10+ they take +1 or -2, your choice. On a 7–9 you also expose yourself to danger, retribution, or cost.
+      MOVE`AID-OR-INTERFERE`ORDER: |-
+        8
+      MOVE`AID-OR-INTERFERE`SOURCE: |-
+        Dungeon World
+      MOVE`LAST-BREATH: |-
+        Last Breath
+      MOVE`LAST-BREATH`TEXT: |-
+        When you’re dying you catch a glimpse of what lies beyond the Black Gates of Death’s Kingdom (the GM will describe it). Then roll (just roll, +nothing—yeah, Death doesn’t care how tough or cool you are). On a 10+ you’ve cheated death—you’re in a bad spot but you’re still alive. On a 7–9 Death will offer you a bargain. Take it and stabilize or refuse and pass beyond the Black Gates into whatever fate awaits you. On a miss, your fate is sealed. You’re marked as Death’s own and you’ll cross the threshold soon. The GM will tell you when.
+      MOVE`LAST-BREATH`HIT: |-
+        On a 10+ you’ve cheated death—you’re in a bad spot but you’re still alive.
+      MOVE`LAST-BREATH`PARTIAL: |-
+        On a 7–9 Death will offer you a bargain. Take it and stabilize or refuse and pass beyond the Black Gates into whatever fate awaits you.
+      MOVE`LAST-BREATH`MISS: |-
+        On a miss, your fate is sealed. You’re marked as Death’s own and you’ll cross the threshold soon. The GM will tell you when.
+      MOVE`LAST-BREATH`ORDER: |-
+        20
+      MOVE`LAST-BREATH`SOURCE: |-
+        Dungeon World
+      MOVE`TAKE-WATCH: |-
+        Take Watch
+      MOVE`TAKE-WATCH`STAT: |-
+        wis
+      MOVE`TAKE-WATCH`TEXT: |-
+        When you’re on watch and something approaches the camp roll+Wis. On a 10+ you’re able to wake the camp and prepare a response, the camp takes +1 forward. On a 7–9 you react just a moment too late; the camp is awake but hasn’t had time to prepare. You have weapons and armor but little else. On a miss whatever lurks outside the campfire’s light has the drop on you.
+      MOVE`TAKE-WATCH`HIT: |-
+        On a 10+ you’re able to wake the camp and prepare a response, the camp takes +1 forward.
+      MOVE`TAKE-WATCH`PARTIAL: |-
+        On a 7–9 you react just a moment too late; the camp is awake but hasn’t had time to prepare. You have weapons and armor but little else.
+      MOVE`TAKE-WATCH`MISS: |-
+        On a miss whatever lurks outside the campfire’s light has the drop on you.
+      MOVE`TAKE-WATCH`ORDER: |-
+        21
+      MOVE`TAKE-WATCH`SOURCE: |-
+        Dungeon World
+      MOVE`PERILOUS-JOURNEY: |-
+        Undertake a Perilous Journey
+      MOVE`PERILOUS-JOURNEY`STAT: |-
+        wis
+      MOVE`PERILOUS-JOURNEY`TEXT: |-
+        When you travel through hostile territory, choose one member of the party to act as trailblazer, one to scout ahead, and one to be quartermaster (the same character cannot have two jobs). If you don’t have enough party members or choose not to assign a job, treat that job as if it had rolled a 6. Each character with a job to do rolls+Wis. On a 10+ the quartermaster reduces the number of rations required by one. On a 10+ the trailblazer reduces the amount of time it takes to reach your destination (the GM will say by how much). On a 10+ the scout will spot any trouble quick enough to let you get the drop on it. On a 7–9 each roles performs their job as expected: the normal number of rations are consumed, the journey takes about as long as expected, no one gets the drop on you but you don’t get the drop on them either.
+      MOVE`PERILOUS-JOURNEY`HIT: |-
+        On a 10+ the quartermaster reduces the number of rations required by one. On a 10+ the trailblazer reduces the amount of time it takes to reach your destination (the GM will say by how much). On a 10+ the scout will spot any trouble quick enough to let you get the drop on it.
+      MOVE`PERILOUS-JOURNEY`PARTIAL: |-
+        On a 7–9 each roles performs their job as expected: the normal number of rations are consumed, the journey takes about as long as expected, no one gets the drop on you but you don’t get the drop on them either.
+      MOVE`PERILOUS-JOURNEY`ORDER: |-
+        22
+      MOVE`PERILOUS-JOURNEY`SOURCE: |-
+        Dungeon World
+      MOVE`CAROUSE: |-
+        Carouse
+      MOVE`CAROUSE`TEXT: |-
+        When you return triumphant and throw a big party, spend 100 coin and roll + extra 100s of coin spent. On a 10+ choose 3. On a 7–9 choose 1. On a miss, you still choose one, but things get really out of hand.
+        - You befriend a useful NPC
+        - You hear rumors of an opportunity
+        - You gain useful information
+        - You are not entangled, ensorcelled, or tricked
+      MOVE`CAROUSE`HIT: |-
+        On a 10+ choose 3.
+        - You befriend a useful NPC
+        - You hear rumors of an opportunity
+        - You gain useful information
+        - You are not entangled, ensorcelled, or tricked
+      MOVE`CAROUSE`PARTIAL: |-
+        On a 7–9 choose 1.
+        - You befriend a useful NPC
+        - You hear rumors of an opportunity
+        - You gain useful information
+        - You are not entangled, ensorcelled, or tricked
+      MOVE`CAROUSE`MISS: |-
+        On a miss, you still choose one, but things get really out of hand.
+        - You befriend a useful NPC
+        - You hear rumors of an opportunity
+        - You gain useful information
+        - You are not entangled, ensorcelled, or tricked
+      MOVE`CAROUSE`ORDER: |-
+        23
+      MOVE`CAROUSE`SOURCE: |-
+        Dungeon World
+      MOVE`SUPPLY: |-
+        Supply
+      MOVE`SUPPLY`STAT: |-
+        cha
+      MOVE`SUPPLY`TEXT: |-
+        When you go to buy something with gold on hand, if it’s something readily available in the settlement you’re in, you can buy it at market price. If it’s something special, beyond what’s usually available here, or non-mundane, roll+Cha. On a 10+ you find what you’re looking for at a fair price. On a 7–9 you’ll have to pay more or settle for something similar.
+      MOVE`SUPPLY`HIT: |-
+        On a 10+ you find what you’re looking for at a fair price.
+      MOVE`SUPPLY`PARTIAL: |-
+        On a 7–9 you’ll have to pay more or settle for something similar.
+      MOVE`SUPPLY`ORDER: |-
+        24
+      MOVE`SUPPLY`SOURCE: |-
+        Dungeon World
+      MOVE`RECRUIT: |-
+        Recruit
+      MOVE`RECRUIT`TEXT: |-
+        When you put out word that you’re looking to hire help, roll. If you make it known…
+        - …that your pay is generous, take +1
+        - …what you’re setting out to do, take +1
+        - …that they’ll get a share of whatever you find, take +1
+        If you have a useful reputation around these parts take an additional +1. On a 10+ you’ve got your pick of a number of skilled applicants, your choice who you hire, no penalty for not taking them along. On a 7–9 you’ll have to settle for someone close or turn them away. On a miss someone influential and ill-suited declares they’d like to come along (a foolhardy youth, a loose-cannon, or a veiled enemy, for example), bring them and take the consequences or turn them away. If you turn away applicants you take -1 forward to Recruit.
+      MOVE`RECRUIT`HIT: |-
+        On a 10+ you’ve got your pick of a number of skilled applicants, your choice who you hire, no penalty for not taking them along.
+      MOVE`RECRUIT`PARTIAL: |-
+        On a 7–9 you’ll have to settle for someone close or turn them away.
+      MOVE`RECRUIT`MISS: |-
+        On a miss someone influential and ill-suited declares they’d like to come along (a foolhardy youth, a loose-cannon, or a veiled enemy, for example), bring them and take the consequences or turn them away.
+      MOVE`RECRUIT`ORDER: |-
+        25
+      MOVE`RECRUIT`SOURCE: |-
+        Dungeon World
+      MOVE`OUTSTANDING-WARRANTS: |-
+        Outstanding Warrants
+      MOVE`OUTSTANDING-WARRANTS`STAT: |-
+        cha
+      MOVE`OUTSTANDING-WARRANTS`TEXT: |-
+        When you return to a civilized place in which you’ve caused trouble before, roll+Cha. On a hit, word has spread of your deeds and everyone recognizes you. On a 7–9, that, and, the GM chooses a complication:
+        - The local constabulary has a warrant out for your arrest
+        - Someone has put a price on your head
+        - Someone important to you has been put in a bad spot as a result of your actions
+      MOVE`OUTSTANDING-WARRANTS`HIT: |-
+        On a hit, word has spread of your deeds and everyone recognizes you.
+      MOVE`OUTSTANDING-WARRANTS`PARTIAL: |-
+        On a hit, word has spread of your deeds and everyone recognizes you. On a 7–9, that, and, the GM chooses a complication:
+        - The local constabulary has a warrant out for your arrest
+        - Someone has put a price on your head
+        - Someone important to you has been put in a bad spot as a result of your actions
+      MOVE`OUTSTANDING-WARRANTS`ORDER: |-
+        26
+      MOVE`OUTSTANDING-WARRANTS`SOURCE: |-
+        Dungeon World
+  # The +help topics, on an object of their own. sheet-pbta-help registers it with +help; without that bridge
+  # nothing reads it. HELP`<TOPIC> is a topic, its subtopics the leaves beneath, LOCK`<TOPIC> who may read it.
+  - ref: sheet_help
+    type: thing
+    name: PbtA Sheet Help
+    location: "{{sheet}}"
+    attributes:
+      HELP: |-
+        Your character's PbtA sheet, and rolling moves against it: +sheet and +check.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`SHEET: |-
+        check
+      SEE`CHECK: |-
+        sheet
+      HELP`SHEET: |-
+        `+sheet` shows your character's sheet: playbook, XP, forward and ongoing, stats, the moves you have, and hold.
+
+        - `+sheet` shows your own; `+sheet <name>` another character's, when the game lets you read it.
+        - `+sheet/playbook` lists the playbooks; `+sheet/playbook <playbook>` picks one. If you have set no stat yet, you get its suggested stats.
+        - `+sheet/set <stat>=<number>` sets a stat, from -3 up to +2 unless your game changed it. Leave the number out to clear it.
+        - `+sheet/take <move>` takes a move from your playbook; `+sheet/drop <move>` gives it back.
+        - `+sheet/traits` lists every move and stat; `+sheet/move <move>` shows one move's whole text.
+
+        You set stats and pick moves until your character is approved; then staff change them.
+
+        For example:
+
+        `+sheet/set str=2`
+
+        Output: `\[SHEET\] Done: Str is +2 on Alice's sheet.`
+
+        See `+help sheet play` for forward, ongoing and hold, and `+help check` for rolling.
+      HELP`SHEET`PLAY: |-
+        In play you keep your own forward, ongoing and hold:
+
+        - `+sheet/forward <number>` gives you forward: it is added to your next roll, then spent. `+sheet/forward 0` clears it.
+        - `+sheet/ongoing <number>` gives you ongoing: it is added to every roll until you clear it with `+sheet/ongoing 0`.
+        - `+sheet/hold <move>=<number>` records hold a move gave you, such as `+sheet/hold defend=3`. Set it lower as you spend it; 0 clears it.
+
+        For example:
+
+        `+sheet/forward 1`
+
+        Output: `\[SHEET\] Done: Alice has +1 forward.`
+
+        Staff give XP; your sheet shows it.
+      HELP`CHECK: |-
+        `+check <move>` makes a move: it rolls two six-sided dice and adds the stat the move names, where the room sees it.
+
+        - 10 or more is a full hit, 7 to 9 a partial hit, 6 or less a miss. Under the roll you see what the move says for that result.
+        - A move that lets you choose the stat takes it after a `/`: `+check defy danger/dex`.
+        - `+check <stat>` rolls a stat alone, for anything no move covers.
+        - `+check <move>+<n>` or `-<n>` adds or takes away a number for this roll, such as your bond when you aid someone: `+check aid+1`.
+        - `+check <move>=<difficulty>` adds the difficulty's modifier: easy +1, standard +0, hard -1, extreme -2 unless your game changed them. A trivial task needs no roll.
+        - `/private` rolls where only you see it.
+
+        Your forward and ongoing are added, and the forward is spent. Every roll is kept under a number that `rollinfo()` reads back.
+
+        For example:
+
+        `+check hack and slash`
+
+        Output: `\[SHEET\] Alice rolls Hack and Slash (+Str): 2d6\[4, 5\] + 2 = 11: a full hit (roll 42)`
+      HELP`SHEET`CREDITS: |-
+        The stats and the Dungeon World moves on this sheet \(the eight basic moves, and Last Breath, Take Watch, Undertake a Perilous Journey, Carouse, Supply, Recruit and Outstanding Warrants\) are from Dungeon World by Sage LaTorra and Adam Koebel, licensed under the Creative Commons Attribution 3.0 Unported License \(https://creativecommons.org/licenses/by/3.0/\). Each move's text is as the authors wrote it, split into the whole move and the part for each result.
+
+        The Warden and Wayfarer playbooks and their moves, the help and the messages are this sheet's own.
+      LOCK`SHEET`STAFF: |-
+        perm^softcode.pbta.admin
+      HELP`SHEET`STAFF: |-
+        Sheet keepers \(`softcode.pbta.admin`, or the PbtA Sheet Keeper role\) read every sheet and change any character's at any time:
+
+        - `+sheet <name>` shows a character's sheet.
+        - `/set`, `/take`, `/drop` and `/hold` take `<name>/` first: `+sheet/set Alice/str=3`. A keeper may set a stat up to +3, and give a move from any playbook.
+        - `/playbook`, `/forward` and `/ongoing` take `<name>=` first: `+sheet/playbook Alice=wayfarer`.
+        - `+sheet/xp <name>=<xp>` sets XP; `=+1` or `=-1` adds or takes.
+
+        `@role/assign <player>=pbta-sheet-keeper` makes someone a keeper.
+      LOCK`SHEET`SETTINGS: |-
+        perm^config.admin
+      HELP`SHEET`SETTINGS: |-
+        `+config pbta` lists the settings and `+config pbta/<setting>=<value>` changes one \(`config.admin`\):
+
+        - `cap`: the highest stat a player gives themselves \(+2\).
+        - `critical`: whether 12 or more is a critical hit \(no\).
+        - `modifiers`: what easy, standard, hard and extreme add \(`1 0 -1 -2`\).
+        - `public`: whether anyone may read anyone's sheet \(no\).
+        - `stats`: the stats. `moves`: each move's name, the stat it rolls with \(several to choose from, or none\), its playbook \(none for a basic move\), its text and what each result says. `playbooks`: each playbook's suggested stats and starting moves.
+
+        For example, `+config/add pbta/moves/sneak=Sneak` adds a move; `+config pbta/moves/sneak/stat=dex` makes it roll with Dex.
+
+        Removing a stat or a move leaves what characters had stored, but the sheet stops showing it.

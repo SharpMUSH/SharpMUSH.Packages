@@ -1,0 +1,1001 @@
+format: "1.16"
+package: sheet-fate
+title: "Fate sheet"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "A Fate character sheet: skills or the six approaches on the ladder, aspects, stress tracks, consequences and fate points. +sheet shows and fills it in, and +check rolls four Fate dice plus a rating against an opposition for the room. Fate Core and Fate Accelerated SRD material under CC BY 3.0."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [sheet, fate, dice, checks, aspects]
+category: Characters
+requires_server: ">=0.1"
+
+# One permission, for the people who keep sheets: change any character's sheet at any time, read every sheet,
+# and hand out fate points. A player fills in their own skills and aspects until they are approved, and marks
+# their own stress, consequences and spent fate points at any time. Changing the lists and settings is
+# config.admin, as +config is.
+categories:
+  roles:
+    - name: Fate sheet
+      description: Roles for the people who keep Fate character sheets.
+  permissions:
+    - name: Fate sheet
+      description: Keeping Fate character sheets.
+permissions:
+  - name: softcode.fate.admin
+    category: Fate sheet
+    description: Read every Fate sheet, change any character's at any time, and award and refresh fate points.
+roles:
+  - slug: fate-sheet-keeper
+    name: Fate Sheet Keeper
+    category: Fate sheet
+    priority: 11
+    permissions:
+      softcode.fate.admin: allow
+
+# Every character's FATE tree is their Fate sheet: only wizards write it, so a player can't make the root
+# before the sheet does, and it is never a command.
+attributes:
+  FATE:
+    flags: [wizard, no_command]
+
+objects:
+  # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook),
+  # writes the sheet attributes on characters, and reads them for other packages.
+  #
+  # A character's sheet is their own attributes under FATE`: FATE`RATING`<KEY> a skill's or approach's rating,
+  # FATE`ASPECT`<SLOT> an aspect (CONCEPT, TROUBLE, then 1, 2, ...), FATE`STRESS`<TRACK> the marked boxes,
+  # FATE`CONSEQUENCE`<SLOT> a consequence, FATE`POINTS the fate points and FATE`REFRESH a refresh of their own.
+  # The FATE root is wizard-flagged, so only this object writes them.
+  #
+  # +sheet and +check are added with /noparse/rsnoparse and hooked to CMD`<word>, so what a player types
+  # reaches the code exactly as typed and nothing a player wrote is ever evaluated.
+  #
+  # Trees: CMD` the hooked commands, INC`COMMAND` the parse and dispatch, INC`SHEET` and INC`CHECK` one
+  # routine per switch, INC`NEED` the guards they share, INC`DO` the writes. FUN`TRAIT` the skills or
+  # approaches, FUN`LADDER` the ladder, FUN`PERM` who may do what, FUN`SCREEN` and FUN`DISPLAY` the screens.
+  # API` the functions other packages call (VISUAL), the same names in every sheet package.
+  # Bridges add HINT`<message> lines, GATE`EDIT (a reason a player may not change their own sheet now)
+  # and ALLOW`VIEW`<name> (who else may read a sheet).
+  - ref: sheet
+    type: thing
+    name: Fate Sheet
+    location: "{{$master_room}}"
+    flags: [WIZARD]
+    attributes:
+      # ---- settings ---------------------------------------------------------------
+      # +config fate shows and changes them (sheet-fate-config); the code reads each with get(%!/DATA`CONFIG`<NAME>).
+      DATA`CONFIG: |-
+        Settings for the Fate sheet. One leaf per setting.
+      DATA`CONFIG`LABEL: |-
+        Fate sheet
+      DATA`CONFIG`MODE: |-
+        skills
+      DATA`CONFIG`MODE`TYPE: |-
+        choice
+      DATA`CONFIG`MODE`DEFAULT: |-
+        skills
+      DATA`CONFIG`MODE`CHOICES: |-
+        skills approaches
+      DATA`CONFIG`MODE`LABEL: |-
+        Skills or approaches
+      DATA`CONFIG`MODE`DESCRIPTION: |-
+        skills: the skill list, each rated from Mediocre up. approaches: the six approaches instead.
+      DATA`CONFIG`MODE`EXAMPLE: |-
+        approaches
+      DATA`CONFIG`CAP: |-
+        4
+      DATA`CONFIG`CAP`TYPE: |-
+        integer
+      DATA`CONFIG`CAP`DEFAULT: |-
+        4
+      DATA`CONFIG`CAP`MIN: |-
+        0
+      DATA`CONFIG`CAP`MAX: |-
+        8
+      DATA`CONFIG`CAP`LABEL: |-
+        Highest rating
+      DATA`CONFIG`CAP`DESCRIPTION: |-
+        The highest rating a player gives a skill or approach. Sheet keepers may go to +8.
+      DATA`CONFIG`CAP`EXAMPLE: |-
+        3
+      DATA`CONFIG`PYRAMID: |-
+        1
+      DATA`CONFIG`PYRAMID`TYPE: |-
+        boolean
+      DATA`CONFIG`PYRAMID`DEFAULT: |-
+        1
+      DATA`CONFIG`PYRAMID`LABEL: |-
+        Skill columns
+      DATA`CONFIG`PYRAMID`DESCRIPTION: |-
+        Whether the sheet warns when a skills sheet has more skills at a rating than at the one below it.
+      DATA`CONFIG`PYRAMID`EXAMPLE: |-
+        no
+      DATA`CONFIG`REFRESH: |-
+        3
+      DATA`CONFIG`REFRESH`TYPE: |-
+        integer
+      DATA`CONFIG`REFRESH`DEFAULT: |-
+        3
+      DATA`CONFIG`REFRESH`MIN: |-
+        0
+      DATA`CONFIG`REFRESH`MAX: |-
+        20
+      DATA`CONFIG`REFRESH`LABEL: |-
+        Refresh
+      DATA`CONFIG`REFRESH`DESCRIPTION: |-
+        How many fate points a character starts each session with, unless a keeper sets their own.
+      DATA`CONFIG`REFRESH`EXAMPLE: |-
+        2
+      DATA`CONFIG`ASPECTS: |-
+        5
+      DATA`CONFIG`ASPECTS`TYPE: |-
+        integer
+      DATA`CONFIG`ASPECTS`DEFAULT: |-
+        5
+      DATA`CONFIG`ASPECTS`MIN: |-
+        2
+      DATA`CONFIG`ASPECTS`MAX: |-
+        10
+      DATA`CONFIG`ASPECTS`LABEL: |-
+        Aspects
+      DATA`CONFIG`ASPECTS`DESCRIPTION: |-
+        How many aspects a sheet has: a high concept, a trouble, and the rest free.
+      DATA`CONFIG`ASPECTS`EXAMPLE: |-
+        3
+      DATA`CONFIG`OPPOSITION: |-
+        0 1 2 3 4
+      DATA`CONFIG`OPPOSITION`TYPE: |-
+        list
+      DATA`CONFIG`OPPOSITION`DEFAULT: |-
+        0 1 2 3 4
+      DATA`CONFIG`OPPOSITION`MIN: |-
+        5
+      DATA`CONFIG`OPPOSITION`MAX: |-
+        5
+      DATA`CONFIG`OPPOSITION`CHECK: |-
+        CHECK`OPPOSITION
+      DATA`CONFIG`OPPOSITION`LABEL: |-
+        Opposition for each difficulty
+      DATA`CONFIG`OPPOSITION`DESCRIPTION: |-
+        The opposition of trivial, easy, standard, hard and extreme, on the ladder, in that order.
+      DATA`CONFIG`OPPOSITION`EXAMPLE: |-
+        0 2 3 4 6
+      DATA`CONFIG`PUBLIC: |-
+        0
+      DATA`CONFIG`PUBLIC`TYPE: |-
+        boolean
+      DATA`CONFIG`PUBLIC`DEFAULT: |-
+        0
+      DATA`CONFIG`PUBLIC`LABEL: |-
+        Sheets anyone can read
+      DATA`CONFIG`PUBLIC`DESCRIPTION: |-
+        Whether +sheet <name> shows anyone's sheet to everyone. Otherwise only the character and sheet keepers see it.
+      DATA`CONFIG`PUBLIC`EXAMPLE: |-
+        yes
+      DATA`CONFIG`SKILLS`TYPE: |-
+        table
+      DATA`CONFIG`SKILLS`LABEL: |-
+        Skills
+      DATA`CONFIG`SKILLS`DESCRIPTION: |-
+        The skills a skills sheet rates.
+      DATA`CONFIG`SKILLS`STORE: |-
+        {{store}}
+      DATA`CONFIG`SKILLS`PATH: |-
+        SKILL
+      DATA`CONFIG`SKILLS`ENTRY: |-
+        label
+      DATA`CONFIG`SKILLS`FIELDS: |-
+        label order
+      DATA`CONFIG`SKILLS`KEYPATTERN: |-
+        ^[A-Za-z0-9-]{1,20}$
+      DATA`CONFIG`SKILLS`FIELD`LABEL`TYPE: |-
+        text
+      DATA`CONFIG`SKILLS`FIELD`LABEL`MIN: |-
+        1
+      DATA`CONFIG`SKILLS`FIELD`LABEL`MAX: |-
+        30
+      DATA`CONFIG`SKILLS`FIELD`LABEL`LABEL: |-
+        Label
+      DATA`CONFIG`SKILLS`FIELD`LABEL`DESCRIPTION: |-
+        The name the sheet shows.
+      DATA`CONFIG`SKILLS`FIELD`ORDER`TYPE: |-
+        integer
+      DATA`CONFIG`SKILLS`FIELD`ORDER`DEFAULT: |-
+        50
+      DATA`CONFIG`SKILLS`FIELD`ORDER`MIN: |-
+        0
+      DATA`CONFIG`SKILLS`FIELD`ORDER`MAX: |-
+        999
+      DATA`CONFIG`SKILLS`FIELD`ORDER`LABEL: |-
+        Order
+      DATA`CONFIG`SKILLS`FIELD`ORDER`DESCRIPTION: |-
+        Where it comes in its list: lower first, then by name.
+      DATA`CONFIG`APPROACHES`TYPE: |-
+        table
+      DATA`CONFIG`APPROACHES`LABEL: |-
+        Approaches
+      DATA`CONFIG`APPROACHES`DESCRIPTION: |-
+        The approaches an approaches sheet rates.
+      DATA`CONFIG`APPROACHES`STORE: |-
+        {{store}}
+      DATA`CONFIG`APPROACHES`PATH: |-
+        APPROACH
+      DATA`CONFIG`APPROACHES`ENTRY: |-
+        label
+      DATA`CONFIG`APPROACHES`FIELDS: |-
+        label order
+      DATA`CONFIG`APPROACHES`KEYPATTERN: |-
+        ^[A-Za-z0-9-]{1,20}$
+      DATA`CONFIG`APPROACHES`FIELD`LABEL`TYPE: |-
+        text
+      DATA`CONFIG`APPROACHES`FIELD`LABEL`MIN: |-
+        1
+      DATA`CONFIG`APPROACHES`FIELD`LABEL`MAX: |-
+        30
+      DATA`CONFIG`APPROACHES`FIELD`LABEL`LABEL: |-
+        Label
+      DATA`CONFIG`APPROACHES`FIELD`LABEL`DESCRIPTION: |-
+        The name the sheet shows.
+      DATA`CONFIG`APPROACHES`FIELD`ORDER`TYPE: |-
+        integer
+      DATA`CONFIG`APPROACHES`FIELD`ORDER`DEFAULT: |-
+        50
+      DATA`CONFIG`APPROACHES`FIELD`ORDER`MIN: |-
+        0
+      DATA`CONFIG`APPROACHES`FIELD`ORDER`MAX: |-
+        999
+      DATA`CONFIG`APPROACHES`FIELD`ORDER`LABEL: |-
+        Order
+      DATA`CONFIG`APPROACHES`FIELD`ORDER`DESCRIPTION: |-
+        Where it comes in its list: lower first, then by name.
+      DATA`CONFIG`TRACKS`TYPE: |-
+        table
+      DATA`CONFIG`TRACKS`LABEL: |-
+        Stress tracks
+      DATA`CONFIG`TRACKS`DESCRIPTION: |-
+        The stress tracks on every sheet, and how many boxes each has.
+      DATA`CONFIG`TRACKS`STORE: |-
+        {{store}}
+      DATA`CONFIG`TRACKS`PATH: |-
+        TRACK
+      DATA`CONFIG`TRACKS`ENTRY: |-
+        label
+      DATA`CONFIG`TRACKS`FIELDS: |-
+        label boxes order
+      DATA`CONFIG`TRACKS`KEYPATTERN: |-
+        ^[A-Za-z0-9-]{1,20}$
+      DATA`CONFIG`TRACKS`FIELD`ORDER`TYPE: |-
+        integer
+      DATA`CONFIG`TRACKS`FIELD`ORDER`DEFAULT: |-
+        50
+      DATA`CONFIG`TRACKS`FIELD`ORDER`MIN: |-
+        0
+      DATA`CONFIG`TRACKS`FIELD`ORDER`MAX: |-
+        999
+      DATA`CONFIG`TRACKS`FIELD`ORDER`LABEL: |-
+        Order
+      DATA`CONFIG`TRACKS`FIELD`ORDER`DESCRIPTION: |-
+        Where it comes in its list: lower first, then by name.
+      DATA`CONFIG`TRACKS`FIELD`LABEL`TYPE: |-
+        text
+      DATA`CONFIG`TRACKS`FIELD`LABEL`MIN: |-
+        1
+      DATA`CONFIG`TRACKS`FIELD`LABEL`MAX: |-
+        30
+      DATA`CONFIG`TRACKS`FIELD`LABEL`LABEL: |-
+        Label
+      DATA`CONFIG`TRACKS`FIELD`LABEL`DESCRIPTION: |-
+        The name the sheet shows.
+      DATA`CONFIG`TRACKS`FIELD`BOXES`TYPE: |-
+        integer
+      DATA`CONFIG`TRACKS`FIELD`BOXES`DEFAULT: |-
+        3
+      DATA`CONFIG`TRACKS`FIELD`BOXES`MIN: |-
+        1
+      DATA`CONFIG`TRACKS`FIELD`BOXES`MAX: |-
+        10
+      DATA`CONFIG`TRACKS`FIELD`BOXES`LABEL: |-
+        Boxes
+      DATA`CONFIG`TRACKS`FIELD`BOXES`DESCRIPTION: |-
+        How many boxes the track has. Each box takes one shift.
+      DATA`CONFIG`CONSEQUENCES`TYPE: |-
+        table
+      DATA`CONFIG`CONSEQUENCES`LABEL: |-
+        Consequences
+      DATA`CONFIG`CONSEQUENCES`DESCRIPTION: |-
+        The consequence slots on every sheet, and how many shifts each takes.
+      DATA`CONFIG`CONSEQUENCES`STORE: |-
+        {{store}}
+      DATA`CONFIG`CONSEQUENCES`PATH: |-
+        CONSEQUENCE
+      DATA`CONFIG`CONSEQUENCES`ENTRY: |-
+        label
+      DATA`CONFIG`CONSEQUENCES`FIELDS: |-
+        label shifts order
+      DATA`CONFIG`CONSEQUENCES`KEYPATTERN: |-
+        ^[A-Za-z0-9-]{1,20}$
+      DATA`CONFIG`CONSEQUENCES`FIELD`ORDER`TYPE: |-
+        integer
+      DATA`CONFIG`CONSEQUENCES`FIELD`ORDER`DEFAULT: |-
+        50
+      DATA`CONFIG`CONSEQUENCES`FIELD`ORDER`MIN: |-
+        0
+      DATA`CONFIG`CONSEQUENCES`FIELD`ORDER`MAX: |-
+        999
+      DATA`CONFIG`CONSEQUENCES`FIELD`ORDER`LABEL: |-
+        Order
+      DATA`CONFIG`CONSEQUENCES`FIELD`ORDER`DESCRIPTION: |-
+        Where it comes in its list: lower first, then by name.
+      DATA`CONFIG`CONSEQUENCES`FIELD`LABEL`TYPE: |-
+        text
+      DATA`CONFIG`CONSEQUENCES`FIELD`LABEL`MIN: |-
+        1
+      DATA`CONFIG`CONSEQUENCES`FIELD`LABEL`MAX: |-
+        30
+      DATA`CONFIG`CONSEQUENCES`FIELD`LABEL`LABEL: |-
+        Label
+      DATA`CONFIG`CONSEQUENCES`FIELD`LABEL`DESCRIPTION: |-
+        The name the sheet shows.
+      DATA`CONFIG`CONSEQUENCES`FIELD`SHIFTS`TYPE: |-
+        integer
+      DATA`CONFIG`CONSEQUENCES`FIELD`SHIFTS`DEFAULT: |-
+        2
+      DATA`CONFIG`CONSEQUENCES`FIELD`SHIFTS`MIN: |-
+        1
+      DATA`CONFIG`CONSEQUENCES`FIELD`SHIFTS`MAX: |-
+        20
+      DATA`CONFIG`CONSEQUENCES`FIELD`SHIFTS`LABEL: |-
+        Shifts
+      DATA`CONFIG`CONSEQUENCES`FIELD`SHIFTS`DESCRIPTION: |-
+        How many shifts of a hit the consequence takes.
+      CHECK`OPPOSITION: |-
+        if(cand(every(%!/FUN`IS`RATING,%0),eq(words(%0),5),not(comp(%0,sort(%0,n)))),,Give five ratings from -2 to 8%, trivial to extreme%, none lower than the one before.)
+      FUN`IS`RATING: |-
+        cand(isint(%0),gte(%0,-2),lte(%0,8))
+
+      # Which INC` routine each switch runs: DATA`ROUTE`<table>`<switch>. BARE is the command alone, ARG the
+      # command with something after it and no switch.
+      DATA`ROUTE: |-
+        Which routine each switch runs. One leaf per switch.
+      DATA`ROUTE`SHEET`BARE: |-
+        SHEET`SHOW
+      DATA`ROUTE`SHEET`ARG: |-
+        SHEET`SHOW
+      DATA`ROUTE`SHEET`SET: |-
+        SHEET`SET
+      DATA`ROUTE`SHEET`ASPECT: |-
+        SHEET`ASPECT
+      DATA`ROUTE`SHEET`STRESS: |-
+        SHEET`STRESS
+      DATA`ROUTE`SHEET`RECOVER: |-
+        SHEET`RECOVER
+      DATA`ROUTE`SHEET`CONSEQUENCE: |-
+        SHEET`CONSEQUENCE
+      DATA`ROUTE`SHEET`SPEND: |-
+        SHEET`SPEND
+      DATA`ROUTE`SHEET`AWARD: |-
+        SHEET`AWARD
+      DATA`ROUTE`SHEET`REFRESH: |-
+        SHEET`REFRESH
+      DATA`ROUTE`SHEET`TRAITS: |-
+        SHEET`TRAITS
+      DATA`ROUTE`CHECK`BARE: |-
+        CHECK`USAGE
+      DATA`ROUTE`CHECK`ARG: |-
+        CHECK`ROLL
+      DATA`ROUTE`CHECK`PRIVATE: |-
+        CHECK`ROLL
+      # The ladder: DATA`LADDER`<n>, N1 and N2 for -1 and -2.
+      DATA`LADDER`8: |-
+        Legendary
+      DATA`LADDER`7: |-
+        Epic
+      DATA`LADDER`6: |-
+        Fantastic
+      DATA`LADDER`5: |-
+        Superb
+      DATA`LADDER`4: |-
+        Great
+      DATA`LADDER`3: |-
+        Good
+      DATA`LADDER`2: |-
+        Fair
+      DATA`LADDER`1: |-
+        Average
+      DATA`LADDER`0: |-
+        Mediocre
+      DATA`LADDER`N1: |-
+        Poor
+      DATA`LADDER`N2: |-
+        Terrible
+      DATA`DIFFICULTIES: |-
+        trivial easy standard hard extreme
+
+      # ---- commands ---------------------------------------------------------------
+      # %1 the switches and %2 what follows, exactly as typed.
+      CMD`SHEET:
+        value: |-
+          $(?is)^\+sheet(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,sheet,table,SHEET,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`CHECK:
+        value: |-
+          $(?is)^\+check(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,check,table,CHECK,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      # A line a bridge adds to one of this object's messages: HINT`<message>, set here by a bridge such as
+      # sheet-fate-help. %1 on are passed to it. Nothing when no bridge set one, so the message stands without it.
+      FUN`HINT:
+        value: |-
+          if(hasattr(%!,HINT`%0),%b[u(%!/HINT`%0,%1,%2)])
+        flags: [funsyntax]
+      INC`COMMAND`RUN:
+        value: |-
+          @assert hastype(%#,player)=@pemit %#=notice(SHEET,Only players have a sheet.,warn); think u(%!/FUN`COMMAND`PARSE,%<word>,%<table>,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(SHEET,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(SHEET,+%q<cmd_word> has no /%q<cmd_switch> switch.[u(%!/FUN`HINT,SWITCHES,%q<cmd_word>)],warn); @include %!/INC`%q<cmd_route>
+        flags: [cmdsyntax]
+      # %0 the word, %1 its route table, %2 the switches and %3 the argument, as typed. Sets cmd_word,
+      # cmd_switch_list, cmd_switch, cmd_argument, cmd_has_equals, cmd_left_side and cmd_right_side around the
+      # first =, cmd_route (the INC` routine to run), viewer_objid and viewer_keeper.
+      FUN`COMMAND`PARSE:
+        value: |-
+          setqm(cmd_word,lcstr(%0),
+          cmd_switch_list,lcstr(trim(edit(%2,/,%b))),
+          cmd_switch,first(%q<cmd_switch_list>),
+          cmd_argument,trim(%3),
+          cmd_has_equals,strmatch(%3,*=*),
+          cmd_left_side,trim(before(%3,=)),
+          cmd_right_side,trim(after(%3,=)),
+          cmd_route,get(%!/DATA`ROUTE`%1`[if(strlen(%q<cmd_switch>),ucstr(%q<cmd_switch>),if(strlen(%q<cmd_argument>),ARG,BARE))]),
+          viewer_objid,objid(%#),
+          viewer_keeper,u(%!/FUN`PERM`KEEPER,%#))
+        flags: [funsyntax]
+
+      # ---- guards -----------------------------------------------------------------
+      # %<name> a player's name: sheet_who, their objid.
+      INC`NEED`TARGET:
+        value: |-
+          @assert strlen(setr(sheet_who,u(%!/FUN`PLAYER`MATCH,%<name>)))=@pemit %#=notice(SHEET,There is no player called '%<name>'.,warn)
+        flags: [cmdsyntax]
+      # The left of =: <name>/<what> for a sheet keeper, else <what> on your own sheet. sheet_who and sheet_what.
+      INC`NEED`WHO:
+        value: |-
+          @if strmatch(%q<cmd_left_side>,*/*)={@include/args %!/INC`NEED`TARGET=name,before(%q<cmd_left_side>,/); think setq(sheet_what,trim(after(%q<cmd_left_side>,/)))},{think setqm(sheet_who,%q<viewer_objid>,sheet_what,%q<cmd_left_side>)}; @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error)
+        flags: [cmdsyntax]
+      # Changes only a keeper makes once a character is approved: ratings, aspects.
+      INC`NEED`EDITABLE:
+        value: |-
+          @assert cor(%q<viewer_keeper>,not(isapproved(%#)))=@pemit %#=notice(SHEET,Your character is approved%, so staff change your sheet now.,error); @assert cor(%q<viewer_keeper>,not(strlen(setr(set_gate,u(%!/FUN`GATE`EDIT,%#)))))=@pemit %#=notice(SHEET,%q<set_gate>,warn)
+        flags: [cmdsyntax]
+      INC`NEED`KEEPER:
+        value: |-
+          @assert %q<viewer_keeper>=@pemit %#=notice(SHEET,Only sheet keepers do that.,error)
+        flags: [cmdsyntax]
+
+      # ---- +sheet -----------------------------------------------------------------
+      INC`SHEET`SHOW:
+        value: |-
+          @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`SHEET,%q<sheet_who>,%#)
+        flags: [cmdsyntax]
+      # +sheet/set [<name>/]<skill>=<rating>: a number or a ladder word. Empty clears it back to Mediocre.
+      INC`SHEET`SET:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/set <[u(%!/FUN`TRAIT`NOUN)]>=<rating>%, such as +sheet/set [lcstr(first(u(%!/FUN`TRAIT`ALL)))]=3 or =good.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @assert strlen(setr(trait_key,u(%!/FUN`TRAIT`FIND,%q<sheet_what>)))=@pemit %#=notice(SHEET,There is no [u(%!/FUN`TRAIT`NOUN)] '%q<sheet_what>'. +sheet/traits lists them.,warn); @break not(strlen(%q<cmd_right_side>))={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,RATING`%q<trait_key>,value,; @pemit %#=notice(SHEET,u(%!/FUN`TRAIT`LABEL,%q<trait_key>) is cleared on [name(%q<sheet_who>)]'s sheet.,ok)}; think setq(set_value,u(%!/FUN`LADDER`READ,%q<cmd_right_side>)); @assert isint(%q<set_value>)=@pemit %#=notice(SHEET,'%q<cmd_right_side>' is not a rating. Give a number from -2 to 8 or a ladder word such as Good.,warn); @assert cand(gte(%q<set_value>,-2),lte(%q<set_value>,if(%q<viewer_keeper>,8,get(%!/DATA`CONFIG`CAP))))=@pemit %#=notice(SHEET,A rating goes from -2 to [u(%!/FUN`LADDER`SHOW,if(%q<viewer_keeper>,8,get(%!/DATA`CONFIG`CAP)))].,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,RATING`%q<trait_key>,value,%q<set_value>; @pemit %#=notice(SHEET,u(%!/FUN`TRAIT`LABEL,%q<trait_key>) is [u(%!/FUN`LADDER`SHOW,%q<set_value>)] on [name(%q<sheet_who>)]'s sheet.[if(not(comp(%q<sheet_who>,%q<viewer_objid>)),u(%!/FUN`HINT,SET))],ok)
+        flags: [cmdsyntax]
+      # +sheet/aspect [<name>/]<slot>=<text>: concept, trouble, or a number. Empty clears it.
+      INC`SHEET`ASPECT:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/aspect <slot>=<aspect>: concept%, trouble%, or 1 to [sub(get(%!/DATA`CONFIG`ASPECTS),2)].,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @assert strlen(setr(aspect_slot,u(%!/FUN`ASPECT`SLOT,%q<sheet_what>)))=@pemit %#=notice(SHEET,There is no aspect '%q<sheet_what>'. Use concept%, trouble%, or 1 to [sub(get(%!/DATA`CONFIG`ASPECTS),2)].,warn); @assert lte(strlen(%q<cmd_right_side>),200)=@pemit %#=notice(SHEET,Keep an aspect to 200 characters.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,ASPECT`%q<aspect_slot>,value,%q<cmd_right_side>; @pemit %#=notice(SHEET,if(strlen(%q<cmd_right_side>),[u(%!/FUN`ASPECT`LABEL,%q<aspect_slot>)] on [name(%q<sheet_who>)]'s sheet: %q<cmd_right_side>,[u(%!/FUN`ASPECT`LABEL,%q<aspect_slot>)] is cleared on [name(%q<sheet_who>)]'s sheet.),ok)
+        flags: [cmdsyntax]
+      # +sheet/stress [<name>/]<track>=<box> marks a box; =clear empties the track. Any time, on your own sheet.
+      INC`SHEET`STRESS:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/stress <track>=<box> marks a box%, =clear empties the track.,warn); @include %!/INC`NEED`WHO; @assert strlen(setr(track_key,u(%!/FUN`LIST`FIND,TRACK,%q<sheet_what>)))=@pemit %#=notice(SHEET,There is no stress track '%q<sheet_what>'. The tracks are [itemize(lcstr(u(%!/FUN`LIST`ALL,TRACK)))].,warn); think setq(track_boxes,default({{store}}/TRACK`%q<track_key>`BOXES,3)); @break strmatch(%q<cmd_right_side>,clear)={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,STRESS`%q<track_key>,value,; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s [lcstr(get({{store}}/TRACK`%q<track_key>))] stress is clear.,ok)}; @assert cand(isint(%q<cmd_right_side>),gte(%q<cmd_right_side>,1),lte(%q<cmd_right_side>,%q<track_boxes>))=@pemit %#=notice(SHEET,The [lcstr(get({{store}}/TRACK`%q<track_key>))] track has boxes 1 to %q<track_boxes>.,warn); think setq(track_marked,get(%q<sheet_who>/FATE`STRESS`%q<track_key>)); @assert not(member(%q<track_marked>,%q<cmd_right_side>))=@pemit %#=notice(SHEET,Box %q<cmd_right_side> is marked already.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,STRESS`%q<track_key>,value,sort(%q<track_marked> %q<cmd_right_side>,n); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] marks [lcstr(get({{store}}/TRACK`%q<track_key>))] stress box %q<cmd_right_side>.,ok)
+        flags: [cmdsyntax]
+      # +sheet/recover [<name>]: clears every stress track.
+      INC`SHEET`RECOVER:
+        value: |-
+          @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error); @dolist/inline u(%!/FUN`LIST`ALL,TRACK)={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,STRESS`##,value,}; @pemit %#=notice(SHEET,Every stress box on [name(%q<sheet_who>)]'s sheet is clear.,ok)
+        flags: [cmdsyntax]
+      # +sheet/consequence [<name>/]<slot>=<aspect>: takes one; empty clears it.
+      INC`SHEET`CONSEQUENCE:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/consequence <slot>=<aspect> takes one%, an empty one clears it. The slots are [itemize(lcstr(u(%!/FUN`LIST`ALL,CONSEQUENCE)))].,warn); @include %!/INC`NEED`WHO; @assert strlen(setr(consequence_key,u(%!/FUN`LIST`FIND,CONSEQUENCE,%q<sheet_what>)))=@pemit %#=notice(SHEET,There is no consequence '%q<sheet_what>'. The slots are [itemize(lcstr(u(%!/FUN`LIST`ALL,CONSEQUENCE)))].,warn); @assert lte(strlen(%q<cmd_right_side>),200)=@pemit %#=notice(SHEET,Keep a consequence to 200 characters.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,CONSEQUENCE`%q<consequence_key>,value,%q<cmd_right_side>; @pemit %#=notice(SHEET,if(strlen(%q<cmd_right_side>),[name(%q<sheet_who>)] takes a [lcstr(get({{store}}/CONSEQUENCE`%q<consequence_key>))] consequence: %q<cmd_right_side>,[name(%q<sheet_who>)]'s [lcstr(get({{store}}/CONSEQUENCE`%q<consequence_key>))] consequence is cleared.),ok)
+        flags: [cmdsyntax]
+      # +sheet/spend[ <what for>]: spends a fate point where the room sees it.
+      INC`SHEET`SPEND:
+        value: |-
+          think setq(spend_points,u(%!/API`POINTS,%q<viewer_objid>)); @assert gt(%q<spend_points>,0)=@pemit %#=notice(SHEET,You have no fate points to spend.,warn); @assert lte(strlen(%q<cmd_argument>),200)=@pemit %#=notice(SHEET,Keep what it is for to 200 characters.,warn); @include/args %!/INC`DO`SET=who,%q<viewer_objid>,leaf,POINTS,value,dec(%q<spend_points>); @remit %l=notice(SHEET,tone(strong,name(%#)) spends a fate point[if(strlen(%q<cmd_argument>),: %q<cmd_argument>)]. [dec(%q<spend_points>)] left.)
+        flags: [cmdsyntax]
+      # +sheet/award <name>[=<n>]: gives fate points, 1 unless a number from -10 to 10 is given.
+      INC`SHEET`AWARD:
+        value: |-
+          @include %!/INC`NEED`KEEPER; @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(SHEET,+sheet/award <name>%[=<points>%],warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; think setq(award_count,firstof(%q<cmd_right_side>,1)); @assert cand(isint(%q<award_count>),gte(%q<award_count>,-10),lte(%q<award_count>,10),neq(%q<award_count>,0))=@pemit %#=notice(SHEET,Award from -10 to 10 fate points%, not 0.,warn); think setq(award_total,u(%!/API`AWARD,%q<sheet_who>,%q<award_count>)); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<award_total> fate point[if(neq(%q<award_total>,1),s)] now.,ok); @pemit %q<sheet_who>=notice(SHEET,if(gt(%q<award_count>,0),[name(%#)] gives you %q<award_count> fate point[if(neq(%q<award_count>,1),s)],[name(%#)] takes [abs(%q<award_count>)] fate point[if(neq(%q<award_count>,-1),s)] from you). You have %q<award_total>.)
+        flags: [cmdsyntax]
+      # +sheet/refresh <name> brings their fate points up to their refresh; <name>=<n> sets their own refresh,
+      # =default the game's again.
+      INC`SHEET`REFRESH:
+        value: |-
+          @include %!/INC`NEED`KEEPER; @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(SHEET,+sheet/refresh <name> brings their fate points up to their refresh. +sheet/refresh <name>=<n> sets their refresh.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; @break %q<cmd_has_equals>={@include %!/INC`SHEET`REFRESH`SET}; think setq(refresh_to,u(%!/FUN`POINTS`REFRESH,%q<sheet_who>)); @assert lt(u(%!/API`POINTS,%q<sheet_who>),%q<refresh_to>)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has [u(%!/API`POINTS,%q<sheet_who>)] fate points%, no fewer than their refresh of %q<refresh_to>.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,POINTS,value,%q<refresh_to>; @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<refresh_to> fate points again.,ok); @pemit %q<sheet_who>=notice(SHEET,Your fate points are back up to %q<refresh_to>.)
+        flags: [cmdsyntax]
+      INC`SHEET`REFRESH`SET:
+        value: |-
+          @break strmatch(%q<cmd_right_side>,default)={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,REFRESH,value,; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s refresh is the game's again: [get(%!/DATA`CONFIG`REFRESH)].,ok)}; @assert cand(isint(%q<cmd_right_side>),gte(%q<cmd_right_side>,0),lte(%q<cmd_right_side>,20))=@pemit %#=notice(SHEET,A refresh is a whole number from 0 to 20%, or default.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,REFRESH,value,%q<cmd_right_side>; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s refresh is %q<cmd_right_side>.,ok)
+        flags: [cmdsyntax]
+      INC`SHEET`TRAITS:
+        value: |-
+          @pemit %#=u(%!/FUN`SCREEN`TRAITS)
+        flags: [cmdsyntax]
+
+      # ---- +check -----------------------------------------------------------------
+      INC`CHECK`USAGE:
+        value: |-
+          @pemit %#=notice(SHEET,+check <[u(%!/FUN`TRAIT`NOUN)]>%[=<opposition>%]%, such as +check [lcstr(first(u(%!/FUN`TRAIT`ALL)))]=2%, =fair or =hard. /private rolls where only you see it.,warn)
+        flags: [cmdsyntax]
+      # +check[/private] <skill>[+<n>|-<n>][=<opposition>]: rolls 4dF for the room.
+      INC`CHECK`ROLL:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@include %!/INC`CHECK`USAGE; think u(%!/FUN`CHECK`READ,%q<cmd_left_side>); @assert isint(%q<check_modifier>)=@pemit %#=notice(SHEET,'%q<cmd_left_side>' ends in something that is not a number to add.,warn); @assert strlen(setr(trait_key,u(%!/FUN`TRAIT`FIND,%q<check_typed>)))=@pemit %#=notice(SHEET,There is no [u(%!/FUN`TRAIT`NOUN)] '%q<check_typed>'. +sheet/traits lists them.,warn); think setq(check_target,u(%!/API`TARGET,%q<cmd_right_side>)); @assert cor(not(%q<cmd_has_equals>),isint(%q<check_target>))=@pemit %#=notice(SHEET,'%q<cmd_right_side>' is not an opposition. Give a number%, a ladder word such as Fair%, or one of [itemize(v(DATA`DIFFICULTIES))].,warn); think setq(check_result,uargs(%!/API`CHECK,roller,%q<viewer_objid>,trait,%q<trait_key>,modifier,%q<check_modifier>,target,%q<check_target>)); @assert not(strmatch(%q<check_result>,#-*))=@pemit %#=notice(SHEET,%q<check_result>,error); think setq(check_line,u(%!/FUN`DISPLAY`CHECK,%q<check_result>)); @break member(%q<cmd_switch_list>,private)=@pemit %#=notice(SHEET,You privately roll %q<check_line>); @remit %l=notice(SHEET,tone(strong,name(%#)) rolls %q<check_line>)
+        flags: [cmdsyntax]
+      # %0 the skill as typed, with a modifier at its end: check_typed and check_modifier (0 when none).
+      FUN`CHECK`READ:
+        value: |-
+          setqm(check_plus,if(pos(+,%0),trim(last(%0,+))),
+          check_minus,if(pos(-,%0),trim(last(%0,-))),
+          check_modifier,cond(strlen(%q<check_plus>),%q<check_plus>,isint(%q<check_minus>),-%q<check_minus>,0),
+          check_typed,trim(cond(strlen(%q<check_plus>),left(%0,sub(strlen(%0),inc(strlen(last(%0,+))))),isint(%q<check_minus>),left(%0,sub(strlen(%0),inc(strlen(last(%0,-))))),%0)))
+        flags: [funsyntax]
+
+      # ---- writes -----------------------------------------------------------------
+      # %<who> an objid, %<leaf> what under FATE` to write, %<value> what to store; empty clears it. The FATE root
+      # is wizard-flagged and no_command the first time, and its leaves take that from it.
+      INC`DO`SET:
+        value: |-
+          @if not(hasattr(%<who>,FATE))={&FATE %<who>=This character's Fate sheet. +sheet shows it.; @set %<who>/FATE=wizard; @set %<who>/FATE=no_command}; @if strlen(%<value>)={&FATE`%<leaf> %<who>=%<value>},{&FATE`%<leaf> %<who>}
+        flags: [cmdsyntax]
+
+      # ---- skills or approaches ------------------------------------------------------
+      # The list the game rates: SKILL or APPROACH.
+      FUN`TRAIT`PATH:
+        value: |-
+          if(strmatch(get(%!/DATA`CONFIG`MODE),approaches),APPROACH,SKILL)
+        flags: [funsyntax]
+      FUN`TRAIT`NOUN:
+        value: |-
+          if(strmatch(get(%!/DATA`CONFIG`MODE),approaches),approach,skill)
+        flags: [funsyntax]
+      FUN`TRAIT`ALL:
+        value: |-
+          u(%!/FUN`LIST`ALL,u(%!/FUN`TRAIT`PATH))
+        flags: [funsyntax]
+      FUN`TRAIT`LABEL:
+        value: |-
+          firstof(get({{store}}/[u(%!/FUN`TRAIT`PATH)]`%0),lcstr(%0))
+        flags: [funsyntax]
+      FUN`TRAIT`FIND:
+        value: |-
+          u(%!/FUN`LIST`FIND,u(%!/FUN`TRAIT`PATH),%0)
+        flags: [funsyntax]
+      # %0 a list on the store (SKILL, APPROACH, TRACK, CONSEQUENCE): its keys, in order then by key. FUN`LIST`SORTKEY
+      # reads the list from list_path.
+      FUN`LIST`ALL:
+        value: |-
+          setq(list_path,%0)[sortkey(%!/FUN`LIST`SORTKEY,iter(lattr({{store}}/%0`*),after(%i0,`)))]
+        flags: [funsyntax]
+      FUN`LIST`SORTKEY:
+        value: |-
+          rjust(default({{store}}/%q<list_path>`%0`ORDER,50),3,0)%0
+        flags: [funsyntax]
+      # %0 a list, %1 typed text: the key it names, by key, by label, or by the start of one, or nothing.
+      FUN`LIST`FIND:
+        value: |-
+          setqm(find_typed,trim(%1),
+          find_all,u(%!/FUN`LIST`ALL,%0),
+          find_exact,iter(%q<find_all>,if(cor(not(comp(%i0,ucstr(%q<find_typed>))),not(comp(lcstr(get({{store}}/%0`%i0)),lcstr(%q<find_typed>)))),%i0)),
+          find_start,iter(%q<find_all>,if(cor(not(comp(left(%i0,strlen(%q<find_typed>)),ucstr(%q<find_typed>))),not(comp(lcstr(left(get({{store}}/%0`%i0),strlen(%q<find_typed>))),lcstr(%q<find_typed>)))),%i0)))[if(strlen(%q<find_typed>),first(firstof(%q<find_exact>,if(eq(words(%q<find_start>),1),%q<find_start>))))]
+        flags: [funsyntax]
+      # %0 typed text: an aspect slot, CONCEPT, TROUBLE or a number, or nothing.
+      FUN`ASPECT`SLOT:
+        value: |-
+          cond(strmatch(%0,concept),CONCEPT,strmatch(%0,high concept),CONCEPT,strmatch(%0,trouble),TROUBLE,cand(isint(%0),gte(%0,1),lte(%0,sub(get(%!/DATA`CONFIG`ASPECTS),2))),%0)
+        flags: [funsyntax]
+      FUN`ASPECT`SLOTS:
+        value: |-
+          CONCEPT TROUBLE[if(gt(get(%!/DATA`CONFIG`ASPECTS),2),%b[lnum(1,sub(get(%!/DATA`CONFIG`ASPECTS),2))])]
+        flags: [funsyntax]
+      FUN`ASPECT`LABEL:
+        value: |-
+          switch(%0,CONCEPT,High concept,TROUBLE,Trouble,Aspect %0)
+        flags: [funsyntax]
+
+      # ---- the ladder ---------------------------------------------------------------
+      # %0 a rating: its ladder word, or nothing off the ladder.
+      FUN`LADDER`WORD:
+        value: |-
+          if(cand(isint(%0),gte(%0,-2),lte(%0,8)),get(%!/DATA`LADDER`[if(lt(%0,0),N[abs(%0)],%0)]))
+        flags: [funsyntax]
+      # %0 a rating: Good (+3), or +9 off the ladder.
+      FUN`LADDER`SHOW:
+        value: |-
+          setq(ladder_word,u(%!/FUN`LADDER`WORD,%0))[if(strlen(%q<ladder_word>),%q<ladder_word> %([u(%!/FUN`DISPLAY`SIGNED,%0)]%),u(%!/FUN`DISPLAY`SIGNED,%0))]
+        flags: [funsyntax]
+      # %0 typed text: a rating from a number (+3, 3) or a ladder word, or nothing.
+      FUN`LADDER`READ:
+        value: |-
+          cond(isint(setr(ladder_number,edit(trim(%0),+,))),%q<ladder_number>,1,first(iter(lnum(-2,8),if(not(comp(lcstr(u(%!/FUN`LADDER`WORD,%i0)),lcstr(trim(%0)))),%i0))))
+        flags: [funsyntax]
+
+      # ---- fate points ----------------------------------------------------------------
+      FUN`POINTS`REFRESH:
+        value: |-
+          default(%0/FATE`REFRESH,get(%!/DATA`CONFIG`REFRESH))
+        flags: [funsyntax]
+
+      # ---- who may do what ----------------------------------------------------------
+      FUN`PERM`KEEPER:
+        value: |-
+          permission(%0,softcode.fate.admin)
+        flags: [funsyntax]
+      # %0 who asks, %1 whose sheet: 1 when they may read it. ALLOW`VIEW`<name>, which a bridge adds, may let
+      # more people read it.
+      FUN`PERM`VIEW:
+        value: |-
+          cor(not(comp(objid(%0),%1)),u(%!/FUN`PERM`KEEPER,%0),get(%!/DATA`CONFIG`PUBLIC),words(filterbool(%!/FUN`PERM`ALLOWS,lattr(%!/ALLOW`VIEW`*),,,%0,%1)))
+        flags: [funsyntax]
+      FUN`PERM`ALLOWS:
+        value: |-
+          u(%!/%0,%1,%2)
+        flags: [funsyntax]
+      FUN`GATE`EDIT:
+        value: |-
+          if(hasattr(%!,GATE`EDIT),u(%!/GATE`EDIT,%0))
+        flags: [funsyntax]
+      FUN`PLAYER`MATCH:
+        value: |-
+          if(isdbref(setr(found_player,pmatch(%0))),objid(%q<found_player>))
+        flags: [funsyntax]
+
+      # ---- screens ------------------------------------------------------------------
+      FUN`DISPLAY`SIGNED:
+        value: |-
+          if(gte(%0,0),+%0,%0)
+        flags: [funsyntax]
+      # %0 a check's JSON: "Fight: 4dF[1, 0, -1, 1] + 3 = 4 (Great) against Fair (+2): success, 2 shifts (roll 42)".
+      FUN`DISPLAY`CHECK:
+        value: |-
+          setqm(display_tier,json_query(%0,extract,$.tier),
+          display_target,json_query(%0,extract,$.target),
+          display_total,json_query(%0,extract,$.total))[json_query(%0,extract,$.label)]: [json_query(%0,extract,$.text)][if(strlen(u(%!/FUN`LADDER`WORD,%q<display_total>)),%b%([u(%!/FUN`LADDER`WORD,%q<display_total>)]%))][if(strlen(%q<display_target>),%bagainst [u(%!/FUN`LADDER`SHOW,%q<display_target>)]: [tone(u(%!/FUN`DISPLAY`TIERTONE,%q<display_tier>),u(%!/FUN`DISPLAY`TIER,%q<display_tier>))]%, [u(%!/FUN`DISPLAY`SHIFTS,json_query(%0,extract,$.shifts))])] [tone(muted,%(roll [json_query(%0,extract,$.roll)]%))]
+        flags: [funsyntax]
+      FUN`DISPLAY`SHIFTS:
+        value: |-
+          switch(%0,0,no shifts,1,1 shift,-1,1 shift short,if(lt(%0,0),[abs(%0)] shifts short,%0 shifts))
+        flags: [funsyntax]
+      FUN`DISPLAY`TIER:
+        value: |-
+          switch(%0,crit-success,success with style,partial,a tie,%0)
+        flags: [funsyntax]
+      FUN`DISPLAY`TIERTONE:
+        value: |-
+          switch(%0,crit-success,success,success,success,fail,error,warning)
+        flags: [funsyntax]
+      # %0 the character, %1 who reads it.
+      FUN`SCREEN`SHEET:
+        value: |-
+          setqm(screen_traits,u(%!/FUN`TRAIT`ALL),
+          screen_aspects,u(%!/FUN`ASPECT`SLOTS),
+          screen_tracks,u(%!/FUN`LIST`ALL,TRACK),
+          screen_consequences,u(%!/FUN`LIST`ALL,CONSEQUENCE),
+          screen_problems,u(%!/FUN`SHEET`PROBLEMS,%0))[box(lfields(lit({"cols":2}),Fate points%*<|>Refresh,u(%!/API`POINTS,%0)%*<|>[u(%!/FUN`POINTS`REFRESH,%0)],%*<|>)%r[rule(Aspects)]%r[lfields(,iter(%q<screen_aspects>,u(%!/FUN`ASPECT`LABEL,%i0),%b,%*<|>),iter(%q<screen_aspects>,firstof(get(%0/FATE`ASPECT`%i0),tone(muted,-)),%b,%*<|>),%*<|>)]%r[rule(capstr(u(%!/FUN`TRAIT`NOUN))s)]%r[u(%!/FUN`SCREEN`RATINGS,%0,%q<screen_traits>)]%r[rule(Stress)]%r[lfields(,iter(%q<screen_tracks>,get({{store}}/TRACK`%i0),%b,%*<|>),iter(%q<screen_tracks>,u(%!/FUN`DISPLAY`BOXES,%0,%i0),%b,%*<|>),%*<|>)]%r[rule(Consequences)]%r[lfields(,iter(%q<screen_consequences>,get({{store}}/CONSEQUENCE`%i0) %([default({{store}}/CONSEQUENCE`%i0`SHIFTS,2)]%),%b,%*<|>),iter(%q<screen_consequences>,firstof(get(%0/FATE`CONSEQUENCE`%i0),tone(muted,-)),%b,%*<|>),%*<|>)]%r[rule()]%r[if(strlen(%q<screen_problems>),tone(warning,%q<screen_problems>)%r)][tone(muted,u(%!/FUN`DISPLAY`FOOTER,%0,%1))],name(%0))]
+        flags: [funsyntax]
+      # %0 the character, %1 the keys. Skills rated other than Mediocre, highest first, one line per rating; approaches
+      # all, each with its rating.
+      FUN`SCREEN`RATINGS:
+        value: |-
+          if(strmatch(u(%!/FUN`TRAIT`PATH),APPROACH),lfields(lit({"cols":2}),iter(%1,u(%!/FUN`TRAIT`LABEL,%i0),%b,%*<|>),iter(%1,u(%!/FUN`LADDER`SHOW,default(%0/FATE`RATING`%i0,0)),%b,%*<|>),%*<|>),setq(ratings_used,revwords(setdiff(setunion(iter(%1,default(%0/FATE`RATING`%i0,0)),,,n),0,,n)))[if(words(%q<ratings_used>),lfields(,iter(%q<ratings_used>,u(%!/FUN`LADDER`SHOW,%i0),%b,%*<|>),iter(%q<ratings_used>,itemize(iter(filterbool(%!/FUN`RATING`IS,%1,,,%0,%i0),u(%!/FUN`TRAIT`LABEL,%i0),%b,|),|),%b,%*<|>),%*<|>),tone(muted,Every skill is Mediocre %(+0%).))])
+        flags: [funsyntax]
+      # %0 a key, %1 a character, %2 a rating: 1 when the key has that rating.
+      FUN`RATING`IS:
+        value: |-
+          eq(default(%1/FATE`RATING`%0,0),%2)
+        flags: [funsyntax]
+      # %0 the character, %1 a track: [X] [ ] [ ].
+      FUN`DISPLAY`BOXES:
+        value: |-
+          setq(boxes_marked,get(%0/FATE`STRESS`%1))[iter(lnum(1,default({{store}}/TRACK`%1`BOXES,3)),if(member(%q<boxes_marked>,%i0),%[X%],%[%b%]))]
+        flags: [funsyntax]
+      # %0 the character: what a skills sheet breaks, or nothing. More skills at a rating than at the one below.
+      FUN`SHEET`PROBLEMS:
+        value: |-
+          if(cand(strmatch(u(%!/FUN`TRAIT`PATH),SKILL),get(%!/DATA`CONFIG`PYRAMID)),setq(problem_counts,iter(lnum(0,8),words(iter(u(%!/FUN`TRAIT`ALL),if(eq(default(%0/FATE`RATING`%i0,0),%i1),%i0)))))[trim(iter(lnum(2,8),if(gt(extract(%q<problem_counts>,inc(%i0),1),extract(%q<problem_counts>,%i0,1)),More skills at [u(%!/FUN`LADDER`SHOW,%i0)] than at [u(%!/FUN`LADDER`SHOW,dec(%i0))].)))])
+        flags: [funsyntax]
+      FUN`DISPLAY`FOOTER:
+        value: |-
+          cond(cand(not(comp(objid(%1),%0)),not(isapproved(%1)),not(u(%!/FUN`PERM`KEEPER,%1))),+sheet/set <[u(%!/FUN`TRAIT`NOUN)]>=<rating> and +sheet/aspect <slot>=<text> fill it in. +check <[u(%!/FUN`TRAIT`NOUN)]> rolls.[u(%!/FUN`HINT,FOOTER)],not(comp(objid(%1),%0)),+check <[u(%!/FUN`TRAIT`NOUN)]> rolls. +sheet/spend spends a fate point%, +sheet/stress <track>=<box> marks stress.,+check <[u(%!/FUN`TRAIT`NOUN)]> rolls four Fate dice plus a rating.)
+        flags: [funsyntax]
+      FUN`SCREEN`TRAITS:
+        value: |-
+          setq(screen_all,u(%!/FUN`TRAIT`ALL))[box(ldatatable(lit({"nowrap":"1"}),Key|[capstr(u(%!/FUN`TRAIT`NOUN))],iter(%q<screen_all>,lcstr(%i0)|[u(%!/FUN`TRAIT`LABEL,%i0)],,%*<^>),%*<^>)%r[rule()]%r[tone(muted,The ladder: [iter(revwords(lnum(-2,8)),u(%!/FUN`LADDER`SHOW,%i0),%b,%,%b)].)],Fate [u(%!/FUN`TRAIT`NOUN)]s)]
+        flags: [funsyntax]
+
+      # ---- the sheet API ------------------------------------------------------------
+      # What other packages call: u({{sheet-fate/sheet}}/API`<NAME>,...). Every sheet package has these names.
+      # They read and roll; API`AWARD is the one that writes.
+      API:
+        value: |-
+          The Fate sheet's functions for other packages. See the package README.
+        flags: [VISUAL]
+      # JSON list of the skills or approaches: [{"key","label","group","always"}], group skill or approach.
+      # always is true for every one: an unrated skill rolls at Mediocre (+0).
+      API`TRAITS:
+        value: |-
+          json_array(iter(u(%!/FUN`TRAIT`ALL),json(object,key,json(string,lcstr(%i0)),label,json(string,u(%!/FUN`TRAIT`LABEL,%i0)),group,json(string,u(%!/FUN`TRAIT`NOUN)),always,json(boolean,1)),%b,|),|)
+        flags: [VISUAL]
+      # The keys every character can roll, lower case: all of them.
+      API`ALWAYS:
+        value: |-
+          lcstr(u(%!/FUN`TRAIT`ALL))
+        flags: [VISUAL]
+      API`FIND:
+        value: |-
+          lcstr(u(%!/FUN`TRAIT`FIND,%0))
+        flags: [VISUAL]
+      API`LABEL:
+        value: |-
+          u(%!/FUN`TRAIT`LABEL,ucstr(%0))
+        flags: [VISUAL]
+      # %0 a character, %1 a key: the rating, 0 (Mediocre) when it is not set.
+      API`RATING:
+        value: |-
+          default(%0/FATE`RATING`[ucstr(%1)],0)
+        flags: [VISUAL]
+      API`HAS:
+        value: |-
+          hasattr(%0,FATE)
+        flags: [VISUAL]
+      # %0 a number, a ladder word or a difficulty word: the opposition, or nothing.
+      API`TARGET:
+        value: |-
+          cond(member(v(DATA`DIFFICULTIES),lcstr(%0)),extract(get(%!/DATA`CONFIG`OPPOSITION),member(v(DATA`DIFFICULTIES),lcstr(%0)),1),strlen(%0),u(%!/FUN`LADDER`READ,%0))
+        flags: [VISUAL]
+      # %0 the shifts (total less opposition): fail below 0, partial on a tie, success at 1 or 2, crit-success
+      # (success with style) at 3 or more.
+      API`TIER:
+        value: |-
+          cond(not(isint(%0)),,lt(%0,0),fail,eq(%0,0),partial,lt(%0,3),success,crit-success)
+        flags: [VISUAL]
+      # %0 a rating: its ladder word.
+      API`LADDER:
+        value: |-
+          u(%!/FUN`LADDER`WORD,%0)
+        flags: [VISUAL]
+      # %0 a character: their fate points.
+      API`POINTS:
+        value: |-
+          default(%0/FATE`POINTS,u(%!/FUN`POINTS`REFRESH,%0))
+        flags: [VISUAL]
+      # %0 a character, %1 a number of fate points to give (or take, below 0): writes them, never below 0, and
+      # returns the new count.
+      API`AWARD:
+        value: |-
+          setq(award_new,max(0,add(u(%!/API`POINTS,%0),%1)))[if(hasattr(%0,FATE),,attrib_set(%0/FATE,This character's Fate sheet. +sheet shows it.)[set(%0/FATE,wizard)][set(%0/FATE,no_command)])][attrib_set(%0/FATE`POINTS,%q<award_new>)]%q<award_new>
+        flags: [VISUAL]
+      # Named: %<roller> an objid, %<trait> a key, %<modifier> a number to add, %<target> the opposition or
+      # nothing. Rolls 4dF plus the rating and keeps the roll (roll() record), and returns
+      # {"tier","total","shifts","target","margin","label","text","roll","formula"}; tier, shifts and margin are
+      # empty without an opposition. #-1 and why when the trait or roller is wrong.
+      API`CHECK:
+        value: |-
+          cond(not(hastype(%<roller>,player)),#-1 There is no character to roll for.,not(strlen(u(%!/FUN`TRAIT`FIND,%<trait>))),#-1 There is no [u(%!/FUN`TRAIT`NOUN)] '%<trait>'.,u(%!/FUN`CHECK`ROLLED,ucstr(u(%!/FUN`TRAIT`FIND,%<trait>)),add(u(%!/API`RATING,%<roller>,u(%!/FUN`TRAIT`FIND,%<trait>)),firstof(%<modifier>,0)),%<target>))
+        flags: [VISUAL]
+      # %0 the key, %1 what is added, %2 the opposition or nothing.
+      FUN`CHECK`ROLLED:
+        value: |-
+          setqm(rolled_formula,4dF[if(gte(%1,0),+%1,%1)],
+          rolled,roll(%q<rolled_formula>,,record),
+          rolled_total,json_query(%q<rolled>,extract,$.total),
+          rolled_shifts,if(strlen(%2),sub(%q<rolled_total>,%2)))[json(object,tier,json(string,u(%!/API`TIER,%q<rolled_shifts>)),total,%q<rolled_total>,shifts,json(string,%q<rolled_shifts>),target,json(string,%2),margin,json(string,%q<rolled_shifts>),label,json(string,u(%!/FUN`TRAIT`LABEL,%0)),text,json(string,json_query(%q<rolled>,extract,$.text)),roll,json_query(%q<rolled>,extract,$.id),formula,json(string,%q<rolled_formula>))]
+        flags: [funsyntax]
+
+      # ---- lifecycle ----------------------------------------------------------------
+      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
+      STARTUP:
+        value: |-
+          @command/add/noparse/rsnoparse +sheet; @hook/override/inline +sheet=%!,CMD`SHEET; @command/add/noparse/rsnoparse +check; @hook/override/inline +check=%!,CMD`CHECK
+        flags: [cmdsyntax]
+      AINSTALL:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+      AUPDATE:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+
+  # The lists on every sheet. Inside the Fate Sheet, so no player can reach it, and no_command, so nothing kept
+  # on it is ever matched as a command. SKILL`<KEY> and APPROACH`<KEY> each hold a label, with ORDER beneath;
+  # TRACK`<KEY> a stress track with BOXES; CONSEQUENCE`<KEY> a consequence slot with SHIFTS. Staff change them
+  # with +config fate/skills, /approaches, /tracks and /consequences.
+  - ref: store
+    type: thing
+    name: Fate Sheet Store
+    location: "{{sheet}}"
+    flags: [no_command]
+    attributes:
+      SKILL: |-
+        The skills a skills sheet rates, one branch each, keyed as a player types it.
+      SKILL`ATHLETICS: |-
+        Athletics
+      SKILL`BURGLARY: |-
+        Burglary
+      SKILL`CONTACTS: |-
+        Contacts
+      SKILL`CRAFTS: |-
+        Crafts
+      SKILL`DECEIVE: |-
+        Deceive
+      SKILL`DRIVE: |-
+        Drive
+      SKILL`EMPATHY: |-
+        Empathy
+      SKILL`FIGHT: |-
+        Fight
+      SKILL`INVESTIGATE: |-
+        Investigate
+      SKILL`LORE: |-
+        Lore
+      SKILL`NOTICE: |-
+        Notice
+      SKILL`PHYSIQUE: |-
+        Physique
+      SKILL`PROVOKE: |-
+        Provoke
+      SKILL`RAPPORT: |-
+        Rapport
+      SKILL`RESOURCES: |-
+        Resources
+      SKILL`SHOOT: |-
+        Shoot
+      SKILL`STEALTH: |-
+        Stealth
+      SKILL`WILL: |-
+        Will
+      APPROACH: |-
+        The approaches an approaches sheet rates, one branch each.
+      APPROACH`CAREFUL: |-
+        Careful
+      APPROACH`CLEVER: |-
+        Clever
+      APPROACH`FLASHY: |-
+        Flashy
+      APPROACH`FORCEFUL: |-
+        Forceful
+      APPROACH`QUICK: |-
+        Quick
+      APPROACH`SNEAKY: |-
+        Sneaky
+      TRACK: |-
+        The stress tracks, one branch each, with BOXES beneath.
+      TRACK`PHYSICAL: |-
+        Physical
+      TRACK`PHYSICAL`BOXES: |-
+        3
+      TRACK`PHYSICAL`ORDER: |-
+        1
+      TRACK`MENTAL: |-
+        Mental
+      TRACK`MENTAL`BOXES: |-
+        3
+      TRACK`MENTAL`ORDER: |-
+        2
+      CONSEQUENCE: |-
+        The consequence slots, one branch each, with SHIFTS beneath.
+      CONSEQUENCE`MILD: |-
+        Mild
+      CONSEQUENCE`MILD`SHIFTS: |-
+        2
+      CONSEQUENCE`MILD`ORDER: |-
+        1
+      CONSEQUENCE`MODERATE: |-
+        Moderate
+      CONSEQUENCE`MODERATE`SHIFTS: |-
+        4
+      CONSEQUENCE`MODERATE`ORDER: |-
+        2
+      CONSEQUENCE`SEVERE: |-
+        Severe
+      CONSEQUENCE`SEVERE`SHIFTS: |-
+        6
+      CONSEQUENCE`SEVERE`ORDER: |-
+        3
+  # The +help topics, on an object of their own. sheet-fate-help registers it with +help; without that bridge
+  # nothing reads it. HELP`<TOPIC> is a topic, its subtopics the leaves beneath, LOCK`<TOPIC> who may read it.
+  - ref: sheet_help
+    type: thing
+    name: Fate Sheet Help
+    location: "{{sheet}}"
+    attributes:
+      HELP: |-
+        Your character's Fate sheet, and rolling against it: +sheet and +check.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`SHEET: |-
+        check
+      SEE`CHECK: |-
+        sheet
+      HELP`SHEET: |-
+        `+sheet` shows your character's sheet: fate points, aspects, skills on the ladder, stress and consequences.
+
+        - `+sheet` shows your own; `+sheet <name>` another character's, when the game lets you read it.
+        - `+sheet/set <skill>=<rating>` rates a skill, as a number or a ladder word: `+sheet/set fight=3`, `+sheet/set notice=fair`. Leave the rating out to put it back to Mediocre.
+        - `+sheet/aspect <slot>=<aspect>` writes an aspect: `concept`, `trouble`, or a number for the others.
+        - `+sheet/traits` lists the skills and the ladder.
+
+        You rate skills and write aspects until your character is approved; then staff change them. The ladder runs from Terrible \(-2\) through Mediocre \(+0\), Average, Fair, Good and Great \(+4\) to Legendary \(+8\). Your game may rate the six approaches instead of skills.
+
+        For example:
+
+        `+sheet/aspect trouble=Owes the Duke a favour`
+
+        Output: `\[SHEET\] Done: Trouble on Alice's sheet: Owes the Duke a favour`
+
+        See `+help sheet play` for stress and fate points, and `+help check` for rolling.
+      HELP`SHEET`PLAY: |-
+        In play you keep your own stress, consequences and fate points:
+
+        - `+sheet/stress <track>=<box>` marks a stress box: `+sheet/stress physical=2`. `+sheet/stress <track>=clear` empties the track.
+        - `+sheet/recover` clears every stress box, once a scene is over.
+        - `+sheet/consequence <slot>=<aspect>` takes a consequence: `+sheet/consequence mild=Bruised ribs`. Leave the aspect out to clear it.
+        - `+sheet/spend \[<what for>\]` spends a fate point where the room sees it: `+sheet/spend Invoking Owes the Duke`.
+
+        For example:
+
+        `+sheet/spend Invoking Never leaves a friend`
+
+        Output: `\[SHEET\] Alice spends a fate point: Invoking Never leaves a friend. 2 left.`
+
+        Staff give fate points back at the start of a session, up to your refresh.
+      HELP`CHECK: |-
+        `+check <skill>` rolls four Fate dice, each -1, 0 or +1, and adds the skill's rating, where the room sees it.
+
+        - `+check <skill>=<opposition>` rolls against an opposition: a number, a ladder word such as `fair`, or a difficulty: trivial, easy, standard, hard or extreme \(+0 to +4 unless your game changed them\).
+        - `+check <skill>+<n>` or `-<n>` adds or takes away a number for this roll, such as +2 for an invoked aspect: `+check fight+2=good`.
+        - `/private` rolls where only you see it.
+
+        Each step above the opposition is a shift. Below it you fail; level with it is a tie; one or two shifts are a success; three or more succeed with style. Every check is kept under a number that `rollinfo()` reads back.
+
+        For example:
+
+        `+check fight=fair`
+
+        Output: `\[SHEET\] Alice rolls Fight: 4dF\[1, 0, -1, 1\] + 3 = 4 (Great) against Fair (+2): success, 2 shifts (roll 42)`
+      HELP`SHEET`CREDITS: |-
+        The Fate sheet is based on Fate Core System and Fate Accelerated Edition \(found at https://www.faterpg.com/\), products of Evil Hat Productions, LLC, developed, authored, and edited by Leonard Balsera, Brian Engard, Jeremy Keller, Ryan Macklin, Mike Olson, Clark Valentine, Amanda Valentine, Fred Hicks, and Rob Donoghue, and licensed for our use under the Creative Commons Attribution 3.0 Unported license \(https://creativecommons.org/licenses/by/3.0/\).
+
+        It is based on Fate Condensed \(found at https://www.faterpg.com/\), a product of Evil Hat Productions, LLC, developed, authored, and edited by PK Sullivan, Lara Turner, Fred Hicks, Richard Bellingham, Robert Hanz, and Sophie Lagacé, and licensed for our use under the Creative Commons Attribution 3.0 Unported license.
+
+        Fate is a trademark of Evil Hat Productions, LLC. This game's sheet is not affiliated with or endorsed by Evil Hat Productions.
+      LOCK`SHEET`STAFF: |-
+        perm^softcode.fate.admin
+      HELP`SHEET`STAFF: |-
+        Sheet keepers \(`softcode.fate.admin`, or the Fate Sheet Keeper role\) read every sheet and change any character's at any time:
+
+        - `+sheet <name>` shows a character's sheet.
+        - `/set`, `/aspect`, `/stress` and `/consequence` take `<name>/` first: `+sheet/set Alice/fight=5`. A keeper may rate a skill up to +8. `+sheet/recover <name>` clears their stress.
+        - `+sheet/award <name>\[=<points>\]` gives fate points, 1 unless you say, or takes them with a number below 0.
+        - `+sheet/refresh <name>` brings their fate points up to their refresh. `+sheet/refresh <name>=<n>` gives them a refresh of their own, `=default` the game's again.
+
+        `@role/assign <player>=fate-sheet-keeper` makes someone a keeper.
+      LOCK`SHEET`SETTINGS: |-
+        perm^config.admin
+      HELP`SHEET`SETTINGS: |-
+        `+config fate` lists the settings and `+config fate/<setting>=<value>` changes one \(`config.admin`\):
+
+        - `mode`: `skills` \(the skill list\) or `approaches` \(Careful, Clever, Flashy, Forceful, Quick and Sneaky\).
+        - `cap`: the highest rating a player gives themselves \(4, Great\).
+        - `pyramid`: whether the sheet warns when it has more skills at a rating than at the one below \(yes\).
+        - `refresh`: fate points each session \(3\). `aspects`: how many aspects a sheet has \(5\).
+        - `opposition`: the opposition of trivial, easy, standard, hard and extreme \(`0 1 2 3 4`\).
+        - `public`: whether anyone may read anyone's sheet \(no\).
+        - `skills`, `approaches`: the two lists. `+config/add fate/skills/sail=Sail` adds a skill.
+        - `tracks`: the stress tracks and their boxes. `consequences`: the consequence slots and their shifts.
+
+        Removing a skill or a track leaves what characters had stored, but the sheet stops showing it.
