@@ -16,3 +16,6 @@ A Duties roll provider called `charge`, over [`sheet-charge`](../sheet-charge/).
 No `FN`DUTIES`TRAINED`: every action rolls. The provider is **Duties Charge Provider**, inside the
 Charge Sheet, WIZARD so it may call the sheet's API; its writes are momentum, milestones and stress,
 through the sheet's `` API`MOMENTUM ``, `` API`MILESTONE `` and `` API`STRESS ``.
+
+A duty always rolls and writes on the character's own sheet, never on an encounter's copy, so a duty
+and an encounter never touch each other: every call passes the sheet API's `live` argument.

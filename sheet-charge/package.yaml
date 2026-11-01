@@ -3,7 +3,7 @@ package: sheet-charge
 title: "Charge sheet"
 version: 1.0.0
 authors: [SharpMUSH]
-description: "A Charge character sheet: details, twelve actions rated in dots, momentum, a stress clock with a condition, milestones and talents, plus progress clocks. +check rolls an action's dice against a risk for the room and gains momentum; push yourself, add tension, assist a friend, and make determination and fortune rolls. Based on the Charge SRD under CC BY 4.0 and Blades in the Dark under CC BY 3.0."
+description: "A Charge character sheet: details, twelve actions rated in dots, momentum, a stress clock with a condition, milestones and talents built up on a ledger, encounters that keep their own copy of each sheet, plus progress clocks. +check rolls an action's dice against a risk for the room and gains momentum; push yourself, add tension, assist a friend, and make determination and fortune rolls. Based on the Charge SRD under CC BY 4.0 and Blades in the Dark under CC BY 3.0."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, charge, forged in the dark, dice, momentum]
@@ -315,6 +315,12 @@ objects:
         SHEET`TALENT
       DATA`ROUTE`SHEET`TRAITS: |-
         SHEET`TRAITS
+      DATA`ROUTE`SHEET`LEDGER: |-
+        SHEET`LEDGER
+      DATA`ROUTE`SHEET`REVOKE: |-
+        SHEET`REVOKE
+      DATA`ROUTE`SHEET`CLEAR: |-
+        SHEET`CLEAR
       DATA`ROUTE`CHECK`BARE: |-
         CHECK`USAGE
       DATA`ROUTE`CHECK`ARG: |-
@@ -343,6 +349,26 @@ objects:
         CLOCK`TICK
       DATA`ROUTE`CLOCK`REMOVE: |-
         CLOCK`REMOVE
+      DATA`ROUTE`ENCOUNTER`BARE: |-
+        ENCOUNTER`SHOW
+      DATA`ROUTE`ENCOUNTER`ARG: |-
+        ENCOUNTER`SHOW
+      DATA`ROUTE`ENCOUNTER`START: |-
+        ENCOUNTER`START
+      DATA`ROUTE`ENCOUNTER`JOIN: |-
+        ENCOUNTER`JOIN
+      DATA`ROUTE`ENCOUNTER`ADD: |-
+        ENCOUNTER`ADD
+      DATA`ROUTE`ENCOUNTER`USE: |-
+        ENCOUNTER`USE
+      DATA`ROUTE`ENCOUNTER`LEAVE: |-
+        ENCOUNTER`LEAVE
+      DATA`ROUTE`ENCOUNTER`REMOVE: |-
+        ENCOUNTER`REMOVE
+      DATA`ROUTE`ENCOUNTER`KEEP: |-
+        ENCOUNTER`KEEP
+      DATA`ROUTE`ENCOUNTER`END: |-
+        ENCOUNTER`END
       DATA`DIFFICULTIES: |-
         trivial easy standard hard extreme
       DATA`RISKS: |-
@@ -365,6 +391,10 @@ objects:
       CMD`CLOCK:
         value: |-
           $(?is)^\+clock(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,clock,table,CLOCK,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`ENCOUNTER:
+        value: |-
+          $(?is)^\+encounter(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,encounter,table,ENCOUNTER,switches,%1,argument,%2
         flags: [regexp, cmdsyntax]
       # A line a bridge adds to one of this object's messages: HINT`<message>, set here by a bridge such as
       # sheet-charge-help. %1 on are passed to it. Nothing when no bridge set one, so the message stands without it.
@@ -437,7 +467,7 @@ objects:
       # keeper sets any action to 0 to 4. Empty clears it back to 0.
       INC`SHEET`SET:
         value: |-
-          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/set <action>=<dots>%, such as +sheet/set [lcstr(first(u(%!/FUN`LIST`ALL,ACTION)))]=2.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_left_side>; @include %!/INC`NEED`EDITABLE; @include/args %!/INC`NEED`ACTION=key,%q<sheet_what>; think setqm(set_value,firstof(%q<cmd_right_side>,0),set_most,if(%q<viewer_keeper>,4,get(%!/DATA`CONFIG`CAP)),set_total,add(u(%!/FUN`DOTS`OTHERS,%q<sheet_who>,%q<trait_key>),%q<set_value>)); @assert cand(isint(%q<set_value>),gte(%q<set_value>,0),lte(%q<set_value>,%q<set_most>))=@pemit %#=notice(SHEET,An action has a whole number of dots from 0 to %q<set_most>.,warn); @assert cor(%q<viewer_keeper>,lte(%q<set_total>,get(%!/DATA`CONFIG`DOTS)))=@pemit %#=notice(SHEET,That makes %q<set_total> dots%, and you have [get(%!/DATA`CONFIG`DOTS)] to give. Take some from another action first.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,ACTION`%q<trait_key>,value,if(%q<set_value>,%q<set_value>); @pemit %#=notice(SHEET,[u(%!/FUN`LIST`LABEL,ACTION,%q<trait_key>)] has %q<set_value> [if(eq(%q<set_value>,1),dot,dots)] on [name(%q<sheet_who>)]'s sheet.[if(not(%q<viewer_keeper>),%b[u(%!/API`DOTS,%q<sheet_who>)] of [get(%!/DATA`CONFIG`DOTS)] dots given.)][if(not(comp(%q<sheet_who>,%q<viewer_objid>)),u(%!/FUN`HINT,SET))],ok)
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/set <action>=<dots>%, such as +sheet/set [lcstr(first(u(%!/FUN`LIST`ALL,ACTION)))]=2.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_left_side>; @include %!/INC`NEED`EDITABLE; @include/args %!/INC`NEED`ACTION=key,%q<sheet_what>; think u(%!/FUN`BUILD`PREPARE,%q<sheet_who>,1); think setqm(set_value,firstof(%q<cmd_right_side>,0),set_most,if(%q<viewer_keeper>,4,get(%!/DATA`CONFIG`CAP)),set_now,u(%!/FUN`BUILD`RATING,%q<trait_key>),set_advanced,u(%!/FUN`BUILD`ADVANCES,%q<trait_key>),set_total,add(sub(u(%!/FUN`BUILD`DOTS),u(%!/FUN`BUILD`RATING,%q<trait_key>)),firstof(%q<cmd_right_side>,0))); @assert cand(isint(%q<set_value>),gte(%q<set_value>,0),lte(%q<set_value>,%q<set_most>))=@pemit %#=notice(SHEET,An action has a whole number of dots from 0 to %q<set_most>.,warn); @assert gte(%q<set_value>,%q<set_advanced>)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] spent %q<set_advanced> [if(eq(%q<set_advanced>,1),milestone,milestones)] on [u(%!/FUN`LIST`LABEL,ACTION,%q<trait_key>)]. Revoke those advances first: +sheet/ledger [name(%q<sheet_who>)] lists them.,warn); @assert cor(%q<viewer_keeper>,lte(%q<set_total>,get(%!/DATA`CONFIG`DOTS)))=@pemit %#=notice(SHEET,That makes %q<set_total> dots%, and you have [get(%!/DATA`CONFIG`DOTS)] to give. Take some from another action first.,warn); @assert neq(%q<set_value>,%q<set_now>)=@pemit %#=notice(SHEET,[u(%!/FUN`LIST`LABEL,ACTION,%q<trait_key>)] has %q<set_value> [if(eq(%q<set_value>,1),dot,dots)] already.,warn); think u(%!/API`RECORD,%q<sheet_who>,json(object,kind,"dots",action,json(string,%q<trait_key>),dots,sub(%q<set_value>,%q<set_advanced>))); @pemit %#=notice(SHEET,[u(%!/FUN`LIST`LABEL,ACTION,%q<trait_key>)] has %q<set_value> [if(eq(%q<set_value>,1),dot,dots)] on [name(%q<sheet_who>)]'s sheet.[if(not(%q<viewer_keeper>),%b%q<set_total> of [get(%!/DATA`CONFIG`DOTS)] dots given.)][if(not(comp(%q<sheet_who>,%q<viewer_objid>)),u(%!/FUN`HINT,SET))],ok)
         flags: [cmdsyntax]
       # +sheet/detail [<name>/]<detail>=<text>: details change at any time, as a character grows. Empty clears it.
       INC`SHEET`DETAIL:
@@ -447,32 +477,48 @@ objects:
       # +sheet/momentum [<name>=]<n>|+<n>|-<n>|session. Session sets it back to the start of a session.
       INC`SHEET`MOMENTUM:
         value: |-
-          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/momentum +<n> gains momentum%, -<n> spends it%, <n> sets it%, session sets it to [get(%!/DATA`CONFIG`MOMENTUM)] for a new session.,warn); @include %!/INC`NEED`COUNTWHO; think setqm(count_now,u(%!/API`CHARGES,%q<sheet_who>),count_to,cond(strmatch(%q<count_typed>,session),get(%!/DATA`CONFIG`MOMENTUM),strmatch(%q<count_typed>,+*),add(%q<count_now>,rest(%q<count_typed>,+)),strmatch(%q<count_typed>,-*),add(%q<count_now>,%q<count_typed>),%q<count_typed>)); @assert cand(isint(%q<count_to>),gte(%q<count_to>,0))=@pemit %#=notice(SHEET,'%q<count_typed>' is not momentum [name(%q<sheet_who>)] can have. Give +<n>%, -<n>%, <n> or session; [name(%q<sheet_who>)] has %q<count_now>.,warn); think u(%!/API`MOMENTUM,%q<sheet_who>,sub(%q<count_to>,%q<count_now>)); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<count_to> momentum.,ok)
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/momentum +<n> gains momentum%, -<n> spends it%, <n> sets it%, session sets it to [get(%!/DATA`CONFIG`MOMENTUM)] for a new session.,warn); @include %!/INC`NEED`COUNTWHO; think setqm(count_now,u(%!/API`CHARGES,%q<sheet_who>),count_to,cond(strmatch(%q<count_typed>,session),get(%!/DATA`CONFIG`MOMENTUM),strmatch(%q<count_typed>,+*),add(%q<count_now>,rest(%q<count_typed>,+)),strmatch(%q<count_typed>,-*),add(%q<count_now>,%q<count_typed>),%q<count_typed>)); @assert cand(isint(%q<count_to>),gte(%q<count_to>,0))=@pemit %#=notice(SHEET,'%q<count_typed>' is not momentum [name(%q<sheet_who>)] can have. Give +<n>%, -<n>%, <n> or session; [name(%q<sheet_who>)] has %q<count_now>.,warn); think u(%!/API`MOMENTUM,%q<sheet_who>,sub(%q<count_to>,%q<count_now>)); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<count_to> momentum.[u(%!/FUN`DISPLAY`WHERE,%q<sheet_who>)],ok)
         flags: [cmdsyntax]
       # +sheet/stress [<name>=]<n>|+<n>|-<n>|clear. When the clock fills, the character is taken out and it clears.
       INC`SHEET`STRESS:
         value: |-
-          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/stress +<n> takes stress%, -<n> recovers some%, <n> sets it%, clear empties the clock.,warn); @include %!/INC`NEED`COUNTWHO; think setqm(count_now,u(%!/API`STRESSED,%q<sheet_who>),count_to,cond(strmatch(%q<count_typed>,clear),0,strmatch(%q<count_typed>,+*),add(%q<count_now>,rest(%q<count_typed>,+)),strmatch(%q<count_typed>,-*),add(%q<count_now>,%q<count_typed>),%q<count_typed>)); @assert isint(%q<count_to>)=@pemit %#=notice(SHEET,'%q<count_typed>' is not stress. Give +<n>%, -<n>%, <n> or clear.,warn); think setq(stress_result,u(%!/API`STRESS,%q<sheet_who>,sub(%q<count_to>,%q<count_now>))); @pemit %#=notice(SHEET,u(%!/FUN`DISPLAY`STRESSED,%q<sheet_who>,%q<stress_result>),ok)
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/stress +<n> takes stress%, -<n> recovers some%, <n> sets it%, clear empties the clock.,warn); @include %!/INC`NEED`COUNTWHO; think setqm(count_now,u(%!/API`STRESSED,%q<sheet_who>),count_to,cond(strmatch(%q<count_typed>,clear),0,strmatch(%q<count_typed>,+*),add(%q<count_now>,rest(%q<count_typed>,+)),strmatch(%q<count_typed>,-*),add(%q<count_now>,%q<count_typed>),%q<count_typed>)); @assert isint(%q<count_to>)=@pemit %#=notice(SHEET,'%q<count_typed>' is not stress. Give +<n>%, -<n>%, <n> or clear.,warn); think setq(stress_result,u(%!/API`STRESS,%q<sheet_who>,sub(%q<count_to>,%q<count_now>))); @pemit %#=notice(SHEET,[u(%!/FUN`DISPLAY`STRESSED,%q<sheet_who>,%q<stress_result>)][u(%!/FUN`DISPLAY`WHERE,%q<sheet_who>)],ok)
         flags: [cmdsyntax]
       # +sheet/condition [<name>=]<condition>: what the stress has done to the character. Empty clears it.
       INC`SHEET`CONDITION:
         value: |-
-          @include %!/INC`NEED`COUNTWHO; @assert lte(strlen(%q<count_typed>),100)=@pemit %#=notice(SHEET,Describe a condition in 100 characters or fewer.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,CONDITION,value,%q<count_typed>; @pemit %#=notice(SHEET,if(strlen(%q<count_typed>),[name(%q<sheet_who>)]'s condition: %q<count_typed>,[name(%q<sheet_who>)] has no condition now.),ok)
+          @include %!/INC`NEED`COUNTWHO; @assert lte(strlen(%q<count_typed>),100)=@pemit %#=notice(SHEET,Describe a condition in 100 characters or fewer.,warn); think u(%!/FUN`STATE`WRITE,%q<sheet_who>,CONDITION,%q<count_typed>); @pemit %#=notice(SHEET,[if(strlen(%q<count_typed>),[name(%q<sheet_who>)]'s condition: %q<count_typed>,[name(%q<sheet_who>)] has no condition now.)][u(%!/FUN`DISPLAY`WHERE,%q<sheet_who>)],ok)
         flags: [cmdsyntax]
       # +sheet/milestone <name>=<n>: a keeper gives milestones (or takes them, below 0).
       INC`SHEET`MILESTONE:
         value: |-
-          @include %!/INC`NEED`KEEPER; @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>))=@pemit %#=notice(SHEET,+sheet/milestone <name>=<n> gives milestones%, or takes them with a number below 0.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; think setq(milestone_by,edit(%q<cmd_right_side>,+,)); @assert cand(isint(%q<milestone_by>),neq(%q<milestone_by>,0))=@pemit %#=notice(SHEET,Give a whole number of milestones%, not 0.,warn); think setq(milestone_total,u(%!/API`MILESTONE,%q<sheet_who>,%q<milestone_by>)); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<milestone_total> [if(eq(%q<milestone_total>,1),milestone,milestones)] to spend.,ok); @if comp(%q<sheet_who>,%q<viewer_objid>)={@pemit %q<sheet_who>=notice(SHEET,[name(%#)] [if(gt(%q<milestone_by>,0),gives you %q<milestone_by>,takes [abs(%q<milestone_by>)] of your)] [if(eq(abs(%q<milestone_by>),1),milestone,milestones)]. You have %q<milestone_total> to spend: +sheet/advance <action> or +sheet/talent <talent>.)}
+          @include %!/INC`NEED`KEEPER; @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>))=@pemit %#=notice(SHEET,+sheet/milestone <name>=<n> gives milestones%, or takes unspent ones with a number below 0.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; think setq(milestone_by,edit(%q<cmd_right_side>,+,)); @assert cand(isint(%q<milestone_by>),neq(%q<milestone_by>,0))=@pemit %#=notice(SHEET,Give a whole number of milestones%, not 0.,warn); think setq(milestone_have,u(%!/API`MILESTONES,%q<sheet_who>)); @assert gte(add(%q<milestone_have>,%q<milestone_by>),0)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<milestone_have> unspent. To undo a spent one%, revoke the advance or talent: +sheet/ledger [name(%q<sheet_who>)].,warn); think u(%!/API`RECORD,%q<sheet_who>,json(object,kind,"milestone",count,%q<milestone_by>)); think setq(milestone_total,add(%q<milestone_have>,%q<milestone_by>)); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<milestone_total> [if(eq(%q<milestone_total>,1),milestone,milestones)] to spend.,ok); @if comp(%q<sheet_who>,%q<viewer_objid>)={@pemit %q<sheet_who>=notice(SHEET,[name(%#)] [if(gt(%q<milestone_by>,0),gives you %q<milestone_by>,takes [abs(%q<milestone_by>)] of your)] [if(eq(abs(%q<milestone_by>),1),milestone,milestones)]. You have %q<milestone_total> to spend: +sheet/advance <action> or +sheet/talent <talent>.)}
         flags: [cmdsyntax]
       # +sheet/advance [<name>/]<action>: spends a milestone on one more dot, up to 4.
       INC`SHEET`ADVANCE:
         value: |-
-          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/advance <action> spends a milestone on one more dot.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_argument>; @include/args %!/INC`NEED`ACTION=key,%q<sheet_what>; @assert u(%!/API`MILESTONES,%q<sheet_who>)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has no milestone to spend.,warn); think setq(advance_to,inc(u(%!/API`RATING,%q<sheet_who>,%q<trait_key>))); @assert lte(%q<advance_to>,4)=@pemit %#=notice(SHEET,[u(%!/FUN`LIST`LABEL,ACTION,%q<trait_key>)] has 4 dots already.,warn); think u(%!/API`MILESTONE,%q<sheet_who>,-1); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,ACTION`%q<trait_key>,value,%q<advance_to>; @pemit %#=notice(SHEET,[name(%q<sheet_who>)] spends a milestone: [u(%!/FUN`LIST`LABEL,ACTION,%q<trait_key>)] has %q<advance_to> [if(eq(%q<advance_to>,1),dot,dots)]. [u(%!/API`MILESTONES,%q<sheet_who>)] left to spend.,ok)
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/advance <action> spends a milestone on one more dot.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_argument>; @include/args %!/INC`NEED`ACTION=key,%q<sheet_what>; think u(%!/FUN`BUILD`PREPARE,%q<sheet_who>,1); @assert %q<build_milestones>=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has no milestone to spend.,warn); think setq(advance_to,inc(u(%!/FUN`BUILD`RATING,%q<trait_key>))); @assert lte(%q<advance_to>,4)=@pemit %#=notice(SHEET,[u(%!/FUN`LIST`LABEL,ACTION,%q<trait_key>)] has 4 dots already.,warn); think u(%!/API`RECORD,%q<sheet_who>,json(object,kind,"advance",action,json(string,%q<trait_key>))); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] spends a milestone: [u(%!/FUN`LIST`LABEL,ACTION,%q<trait_key>)] has %q<advance_to> [if(eq(%q<advance_to>,1),dot,dots)]. [dec(%q<build_milestones>)] left to spend.,ok)
         flags: [cmdsyntax]
       # +sheet/talent [<name>/]<talent> spends a milestone on a situational talent; =remove takes one off (keepers).
       INC`SHEET`TALENT:
         value: |-
-          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(SHEET,+sheet/talent <talent> spends a milestone on a situational talent%, such as +sheet/talent +1d6 when I fight in the dark.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_left_side>; @assert cand(strlen(%q<sheet_what>),lte(strlen(%q<sheet_what>),80),not(strmatch(%q<sheet_what>,*|*)))=@pemit %#=notice(SHEET,Write a talent in 80 characters or fewer%, without |.,warn); think setq(talent_list,get(%q<sheet_who>/CHARGE`TALENT)); @break %q<cmd_has_equals>={@assert strmatch(%q<cmd_right_side>,remove)=@pemit %#=notice(SHEET,+sheet/talent <name>/<talent>=remove takes a talent off.,warn); @include %!/INC`NEED`KEEPER; @assert member(lcstr(%q<talent_list>),lcstr(%q<sheet_what>),|)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has no talent '%q<sheet_what>'.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,TALENT,value,ldelete(%q<talent_list>,member(lcstr(%q<talent_list>),lcstr(%q<sheet_what>),|),|); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] no longer has the talent '%q<sheet_what>'.,ok)}; @assert not(member(lcstr(%q<talent_list>),lcstr(%q<sheet_what>),|))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has that talent already.,warn); @assert u(%!/API`MILESTONES,%q<sheet_who>)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has no milestone to spend.,warn); think u(%!/API`MILESTONE,%q<sheet_who>,-1); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,TALENT,value,trim(%q<talent_list>|%q<sheet_what>,|); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] spends a milestone on a talent: %q<sheet_what>. [u(%!/API`MILESTONES,%q<sheet_who>)] left to spend.,ok)
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(SHEET,+sheet/talent <talent> spends a milestone on a situational talent%, such as +sheet/talent +1d6 when I fight in the dark.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_left_side>; @assert cand(strlen(%q<sheet_what>),lte(strlen(%q<sheet_what>),80),not(regmatch(%q<sheet_what>,\[|~\])))=@pemit %#=notice(SHEET,Write a talent in 80 characters or fewer%, without | or ~.,warn); think u(%!/FUN`BUILD`PREPARE,%q<sheet_who>,1); think setq(talent_entry,u(%!/FUN`BUILD`TALENTENTRY,%q<sheet_what>)); @break %q<cmd_has_equals>={@assert strmatch(%q<cmd_right_side>,remove)=@pemit %#=notice(SHEET,+sheet/talent <name>/<talent>=remove takes a talent off.,warn); @include %!/INC`NEED`KEEPER; @assert strlen(%q<talent_entry>)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has no talent '%q<sheet_what>'.,warn); think u(%!/API`RECORD,%q<sheet_who>,json(object,kind,"revoke",entry,%q<talent_entry>)); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] no longer has the talent '%q<sheet_what>'%, and has the milestone back.,ok)}; @assert not(strlen(%q<talent_entry>))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has that talent already.,warn); @assert %q<build_milestones>=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has no milestone to spend.,warn); think u(%!/API`RECORD,%q<sheet_who>,json(object,kind,"talent",text,json(string,%q<sheet_what>))); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] spends a milestone on a talent: %q<sheet_what>. [dec(%q<build_milestones>)] left to spend.,ok)
+        flags: [cmdsyntax]
+      # +sheet/ledger [<name>]: every entry that builds the sheet, oldest first.
+      INC`SHEET`LEDGER:
+        value: |-
+          @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert strlen(%q<sheet_who>); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`LEDGER,%q<sheet_who>)
+        flags: [cmdsyntax]
+      # +sheet/revoke <name>/<entry>: a keeper undoes a ledger entry by adding one that revokes it.
+      INC`SHEET`REVOKE:
+        value: |-
+          @include %!/INC`NEED`KEEPER; @assert strmatch(%q<cmd_argument>,*/*)=@pemit %#=notice(SHEET,+sheet/revoke <name>/<entry> undoes a ledger entry. +sheet/ledger <name> numbers them.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_argument>; think setqm(revoke_n,%q<sheet_what>,revoke_rows,u(%!/FUN`LEDGER`ENTRIES,%q<sheet_who>),revoke_row,grab(%q<revoke_rows>,%q<sheet_what>~*,|)); @assert cand(isint(%q<revoke_n>),strlen(%q<revoke_row>))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has no entry '%q<sheet_what>'. +sheet/ledger [name(%q<sheet_who>)] numbers them.,warn); @assert comp(elements(%q<revoke_row>,2,~),revoke)=@pemit %#=notice(SHEET,Entry %q<revoke_n> is itself a revoke. Make the entry again instead.,warn); @assert not(member(u(%!/FUN`LEDGER`REVOKED,%q<revoke_rows>),%q<revoke_n>))=@pemit %#=notice(SHEET,Entry %q<revoke_n> is revoked already.,warn); think setq(revoke_spent,sub(u(%!/API`MILESTONES,%q<sheet_who>),if(strmatch(elements(%q<revoke_row>,2,~),milestone),elements(%q<revoke_row>,4,~),0))); @assert gte(%q<revoke_spent>,0)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] spent that milestone already. Revoke the advance or talent first.,warn); think u(%!/API`RECORD,%q<sheet_who>,json(object,kind,"revoke",entry,%q<revoke_n>)); @pemit %#=notice(SHEET,Entry %q<revoke_n> on [name(%q<sheet_who>)]'s ledger is revoked: [u(%!/FUN`DISPLAY`ENTRY,%q<revoke_row>)].,ok)
+        flags: [cmdsyntax]
+      # +sheet/clear <name>=confirm: a keeper starts a sheet over. The build is cleared by one ledger entry, so the history stays;
+      # the details and play state are wiped.
+      INC`SHEET`CLEAR:
+        value: |-
+          @include %!/INC`NEED`KEEPER; @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(SHEET,+sheet/clear <name> starts a character's sheet over.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; @assert strmatch(%q<cmd_right_side>,confirm)=@pemit %#=notice(SHEET,This clears [name(%q<sheet_who>)]'s whole build on the ledger%, and [poss(%q<sheet_who>)] details%, momentum%, stress and condition%, and takes [obj(%q<sheet_who>)] out of every encounter. The ledger keeps the history. +sheet/clear [name(%q<sheet_who>)]=confirm does it.,warn); @include/args %!/INC`ENCOUNTER`DROPALL=who,%q<sheet_who>; think u(%!/API`RECORD,%q<sheet_who>,json(object,kind,"clear")); @dolist/inline DETAIL MOMENTUM STRESS CONDITION ASSIST={@wipe %q<sheet_who>/CHARGE`##}; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s sheet is cleared. [if(isapproved(%q<sheet_who>),[capstr(subj(%q<sheet_who>))] [if(strmatch(subj(%q<sheet_who>),they),are,is)] still approved%, so only keepers set [poss(%q<sheet_who>)] dots until staff unapprove [obj(%q<sheet_who>)].,[capstr(subj(%q<sheet_who>))] can give out [poss(%q<sheet_who>)] dots again.)],ok); @if comp(%q<sheet_who>,%q<viewer_objid>)={@pemit %q<sheet_who>=notice(SHEET,[name(%#)] clears your sheet. +sheet shows it.)}
         flags: [cmdsyntax]
       INC`SHEET`TRAITS:
         value: |-
@@ -568,10 +614,235 @@ objects:
         value: |-
           @if not(hasattr(%<who>,CHARGE))={&CHARGE %<who>=This character's Charge sheet. +sheet shows it.; @set %<who>/CHARGE=wizard; @set %<who>/CHARGE=no_command}; @if strlen(%<value>)={&CHARGE`%<leaf> %<who>=%<value>},{&CHARGE`%<leaf> %<who>}
         flags: [cmdsyntax]
+      # %0 a character, %1 an entry's JSON ({"kind",...}): writes it on their ledger, numbered after the last, stamped with who
+      # made it and the phase (chargen before approval, staff for a keeper, else play), and returns its number. A chargen dots
+      # entry for an action rewrites the one before it, so the ledger keeps one per action from chargen.
+      API`RECORD:
+        value: |-
+          setqm(record_kind,json_query(%1,extract,$.kind),
+          record_key,ucstr(json_query(%1,extract,$.action)),
+          record_phase,cond(not(isapproved(%0)),chargen,u(%!/FUN`PERM`KEEPER,%#),staff,play),
+          record_reuse,if(cand(strmatch(%q<record_phase>,chargen),strmatch(%q<record_kind>,dots)),first(iter(u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ENTRIES,%0)),if(cand(strmatch(elements(%i0,2,~),dots),strmatch(elements(%i0,3,~),%q<record_key>),strmatch(elements(%i0,5,~),chargen)),first(%i0,~)),|,%b))),
+          record_n,firstof(%q<record_reuse>,inc(lmax(0 [iter(lattr(%0/CHARGE`LEDGER`*),last(%i0,`))]))))[u(%!/FUN`DO`ROOT,%0)][null(attrib_set(%0/CHARGE`LEDGER`%q<record_n>,json_mod(%1,patch,json(object,n,%q<record_n>,by,json(string,objid(%#)),phase,json(string,%q<record_phase>)))))][null(set(%0/CHARGE`LEDGER`%q<record_n>,wizard))]%q<record_n>
+        flags: [VISUAL]
+      # %0 a character: their ledger's entry numbers, oldest first. An entry without the wizard flag is not read.
+      FUN`LEDGER`NUMBERS:
+        value: |-
+          sort(iter(lattr(%0/CHARGE`LEDGER`*),if(hasflag(%0/%i0,wizard),last(%i0,`))),n)
+        flags: [funsyntax]
+      # %0 a character: every entry in one pass, a |-list of n~kind~key~value~phase~by.
+      FUN`LEDGER`ENTRIES:
+        value: |-
+          iter(u(%!/FUN`LEDGER`NUMBERS,%0),u(%!/FUN`LEDGER`ROW,%i0,get(%0/CHARGE`LEDGER`%i0)),%b,|)
+        flags: [funsyntax]
+      FUN`LEDGER`ROW:
+        value: |-
+          %0~[json_query(%1,extract,$.kind)]~[ucstr(firstof(json_query(%1,extract,$.action),json_query(%1,extract,$.entry)))]~[firstof(json_query(%1,extract,$.dots),json_query(%1,extract,$.count),json_query(%1,extract,$.text))]~[json_query(%1,extract,$.phase)]~[json_query(%1,extract,$.by)]
+        flags: [funsyntax]
+      # %0 rows: the numbers of the entries revoked.
+      FUN`LEDGER`REVOKED:
+        value: |-
+          squish(iter(%0,if(strmatch(elements(%i0,2,~),revoke),elements(%i0,3,~)),|,%b))
+        flags: [funsyntax]
+      # %0 rows: the ones that build the sheet, without revokes, what they revoked, and anything before the last clear.
+      FUN`LEDGER`LIVE:
+        value: |-
+          setqm(ledger_revoked,u(%!/FUN`LEDGER`REVOKED,%0),
+          ledger_cleared,firstof(last(iter(%0,if(strmatch(elements(%i0,2,~),clear),first(%i0,~)),|,%b)),0))[trim(squish(iter(%0,if(cor(match(revoke clear,elements(%i0,2,~)),member(%q<ledger_revoked>,first(%i0,~)),lte(first(%i0,~),%q<ledger_cleared>)),,%i0),|,|),|),|)]
+        flags: [funsyntax]
+      # %0 a character, %1 1 for their sheet even in an encounter. Sets build_rows (the live ledger), build_copy (their encounter
+      # copy, or nothing), build_ratings (KEY:dots for every action), build_talents (a |-list) and build_milestones (unspent).
+      # The ratings and talents come from the encounter's copy while they are in one.
+      FUN`BUILD`PREPARE:
+        value: |-
+          setqm(build_who,%0,
+          build_rows,u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ENTRIES,%0)),
+          build_copy,if(%1,,u(%!/FUN`ENCOUNTER`COPY,%0)),
+          build_ratings,if(strlen(%q<build_copy>),get(%q<build_copy>`DOTS),u(%!/FUN`BUILD`RATINGS)),
+          build_talents,if(strlen(%q<build_copy>),get(%q<build_copy>`TALENTS),u(%!/FUN`BUILD`TALENTS)),
+          build_milestones,u(%!/FUN`BUILD`MILESTONES))
+        flags: [funsyntax]
+      FUN`BUILD`RATINGS:
+        value: |-
+          iter(u(%!/FUN`LIST`ALL,ACTION),%i0:[u(%!/FUN`BUILD`LEDGERRATING,%i0)])
+        flags: [funsyntax]
+      # %0 an action key: its starting dots (the last dots entry) and one for each advance.
+      FUN`BUILD`LEDGERRATING:
+        value: |-
+          add(firstof(last(iter(%q<build_rows>,if(cand(strmatch(elements(%i0,2,~),dots),strmatch(elements(%i0,3,~),%0)),firstof(elements(%i0,4,~),0)),|,%b)),0),u(%!/FUN`BUILD`ADVANCES,%0))
+        flags: [funsyntax]
+      FUN`BUILD`ADVANCES:
+        value: |-
+          words(iter(%q<build_rows>,if(cand(strmatch(elements(%i0,2,~),advance),strmatch(elements(%i0,3,~),%0)),x),|,%b))
+        flags: [funsyntax]
+      FUN`BUILD`RATING:
+        value: |-
+          firstof(after(grab(%q<build_ratings>,ucstr(%0):*),:),0)
+        flags: [funsyntax]
+      FUN`BUILD`DOTS:
+        value: |-
+          ladd(0 [iter(%q<build_ratings>,after(%i0,:))])
+        flags: [funsyntax]
+      FUN`BUILD`TALENTS:
+        value: |-
+          trim(squish(iter(%q<build_rows>,if(strmatch(elements(%i0,2,~),talent),elements(%i0,4,~)),|,|),|),|)
+        flags: [funsyntax]
+      # %0 a talent's text: the entry that gave it, or nothing.
+      FUN`BUILD`TALENTENTRY:
+        value: |-
+          first(iter(%q<build_rows>,if(cand(strmatch(elements(%i0,2,~),talent),not(comp(lcstr(elements(%i0,4,~)),lcstr(%0)))),first(%i0,~)),|,%b))
+        flags: [funsyntax]
+      # Milestones given, less one for each advance and talent.
+      FUN`BUILD`MILESTONES:
+        value: |-
+          sub(ladd(0 [iter(%q<build_rows>,if(strmatch(elements(%i0,2,~),milestone),elements(%i0,4,~)),|,%b)]),words(iter(%q<build_rows>,if(match(advance talent,elements(%i0,2,~)),x),|,%b)))
+        flags: [funsyntax]
+      # %0 a character, %1 1 for their sheet even in an encounter: where their momentum, stress and condition are kept now,
+      # as obj/path` to put a leaf after. Their encounter's copy while they are in one, else their sheet.
+      FUN`STATE`AT:
+        value: |-
+          setq(state_copy,if(%1,,u(%!/FUN`ENCOUNTER`COPY,%0)))[if(strlen(%q<state_copy>),%q<state_copy>`,%0/CHARGE`)]
+        flags: [funsyntax]
+      # %0 a character, %1 a leaf (MOMENTUM, STRESS, CONDITION), %2 its value (empty clears it), %3 1 for the sheet.
+      FUN`STATE`WRITE:
+        value: |-
+          setq(state_at,u(%!/FUN`STATE`AT,%0,%3))[u(%!/FUN`DO`ROOT,%0)][null(if(strlen(%2),attrib_set(%q<state_at>%1,%2),attrib_set(%q<state_at>%1)))]
+        flags: [funsyntax]
       # The same root, from a function: %0 a character.
       FUN`DO`ROOT:
         value: |-
           if(hasattr(%0,CHARGE),,attrib_set(%0/CHARGE,This character's Charge sheet. +sheet shows it.)[set(%0/CHARGE,wizard)][set(%0/CHARGE,no_command)])
+        flags: [funsyntax]
+
+      # # ---- +encounter --------------------------------------------------------------
+      # +encounter [<n>]: the encounter you are in here, or one by number; with neither, every open encounter.
+      INC`ENCOUNTER`SHOW:
+        value: |-
+          @if isint(%q<cmd_argument>)={think setq(enc_n,%q<cmd_argument>)},{think setq(enc_n,u(%!/FUN`ENCOUNTER`MINE,%#))}; @break cand(strlen(%q<enc_n>),hasattr({{store}},ENC`%q<enc_n>))=@pemit %#=u(%!/FUN`SCREEN`ENCOUNTER,%q<enc_n>,%#); @assert not(strlen(%q<cmd_argument>))=@pemit %#=notice(ENCOUNTER,There is no encounter '%q<cmd_argument>'. +encounter lists them.,warn); @pemit %#=u(%!/FUN`SCREEN`ENCOUNTERS)
+        flags: [cmdsyntax]
+      # +encounter/start [<title>]: starts an encounter here, run by whoever starts it. A room may hold several.
+      INC`ENCOUNTER`START:
+        value: |-
+          @assert lte(strlen(%q<cmd_argument>),60)=@pemit %#=notice(ENCOUNTER,Name an encounter in 60 characters or fewer.,warn); think setq(enc_n,inc(default({{store}}/ENCOUNTER`NEXT,0))); think setq(enc_title,firstof(%q<cmd_argument>,Encounter %q<enc_n>)); &ENCOUNTER`NEXT {{store}}=%q<enc_n>; &ENC`%q<enc_n> {{store}}=%q<enc_title>; &ENC`%q<enc_n>`ROOM {{store}}=[objid(%l)]; &ENC`%q<enc_n>`GM {{store}}=%q<viewer_objid>; &ENC`%q<enc_n>`COPY {{store}}=Each member's copy of their sheet.; &ENCOUNTER`OPEN {{store}}=[setunion(get({{store}}/ENCOUNTER`OPEN),%q<enc_n>)]; @remit %l=notice(ENCOUNTER,tone(strong,name(%#)) starts encounter %q<enc_n>: %q<enc_title>. [name(%#)] runs it as GM. +encounter/join %q<enc_n> takes part with a copy of your sheet.)
+        flags: [cmdsyntax]
+      # +encounter/join [<n>]: joins an encounter with a copy of your sheet: the one here, or by number when there are several.
+      # A character may be in several encounters, each with its own copy.
+      INC`ENCOUNTER`JOIN:
+        value: |-
+          @if isint(%q<cmd_argument>)={think setq(enc_n,%q<cmd_argument>)},{think setq(enc_n,if(eq(words(setr(enc_here,u(%!/FUN`ENCOUNTER`HERE,%l))),1),%q<enc_here>))}; @assert cor(strlen(%q<enc_n>),strlen(%q<cmd_argument>),not(words(%q<enc_here>)))=@pemit %#=notice(ENCOUNTER,Encounters [itemize(%q<enc_here>)] are running here. +encounter/join <n> joins one.,warn); @assert cand(strlen(%q<enc_n>),hasattr({{store}},ENC`%q<enc_n>))=@pemit %#=notice(ENCOUNTER,[if(strlen(%q<cmd_argument>),There is no encounter '%q<cmd_argument>'.,There is no encounter here. +encounter/start starts one.)],warn); @assert not(member(u(%!/FUN`ENCOUNTER`JOINED,%#),%q<enc_n>))=@pemit %#=notice(ENCOUNTER,You are in encounter %q<enc_n> already.,warn); @include/args %!/INC`ENCOUNTER`COPYIN=who,%q<viewer_objid>; @remit get({{store}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,tone(strong,name(%#)) joins encounter %q<enc_n>: [get({{store}}/ENC`%q<enc_n>)]. [tone(muted,Rolls and changes there use a copy of [poss(%#)] sheet.)]); @if comp(%l,get({{store}}/ENC`%q<enc_n>`ROOM))={@pemit %#=notice(ENCOUNTER,You join encounter %q<enc_n>. Your copy is used where it runs%, in [name(get({{store}}/ENC`%q<enc_n>`ROOM))].,ok)}
+        flags: [cmdsyntax]
+      # +encounter/use <n>: when a room holds several of your encounters, picks the one your rolls and changes go to.
+      INC`ENCOUNTER`USE:
+        value: |-
+          @assert isint(%q<cmd_argument>)=@pemit %#=notice(ENCOUNTER,+encounter/use <n> picks which of your encounters here your rolls and changes go to.,warn); @assert member(u(%!/FUN`ENCOUNTER`JOINED,%#),%q<cmd_argument>)=@pemit %#=notice(ENCOUNTER,You are not in encounter %q<cmd_argument>.,warn); @include/args %!/INC`DO`SET=who,%q<viewer_objid>,leaf,USING,value,%q<cmd_argument>; @pemit %#=notice(ENCOUNTER,Your rolls and changes go to your copy in encounter %q<cmd_argument> while you are in [name(get({{store}}/ENC`%q<cmd_argument>`ROOM))].,ok)
+        flags: [cmdsyntax]
+      # +encounter/add <name>[=<n>]: the GM or a keeper brings a character in.
+      INC`ENCOUNTER`ADD:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(ENCOUNTER,+encounter/add <name>[=<n>] brings a character into your encounter.,warn); @include/args %!/INC`NEED`ENCOUNTER=number,%q<cmd_right_side>; @include %!/INC`NEED`RUNS; @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; @assert not(member(u(%!/FUN`ENCOUNTER`JOINED,%q<sheet_who>),%q<enc_n>))=@pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)] is in encounter %q<enc_n> already.,warn); @include/args %!/INC`ENCOUNTER`COPYIN=who,%q<sheet_who>; @remit get({{store}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,tone(strong,name(%#)) brings [name(%q<sheet_who>)] into encounter %q<enc_n>: [get({{store}}/ENC`%q<enc_n>)]. [tone(muted,Rolls and changes there use a copy of [poss(%q<sheet_who>)] sheet.)]); @if comp(loc(%q<sheet_who>),get({{store}}/ENC`%q<enc_n>`ROOM))={@pemit %q<sheet_who>=notice(ENCOUNTER,[name(%#)] brings you into encounter %q<enc_n>: [get({{store}}/ENC`%q<enc_n>)].)}; @if comp(%l,get({{store}}/ENC`%q<enc_n>`ROOM))={@pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)] is in encounter %q<enc_n>.,ok)}
+        flags: [cmdsyntax]
+      # +encounter/leave [<n>]: drops your copy. Nothing goes back to your sheet.
+      INC`ENCOUNTER`LEAVE:
+        value: |-
+          think setq(enc_n,if(isint(%q<cmd_argument>),%q<cmd_argument>,u(%!/FUN`ENCOUNTER`OF,%#))); @assert member(u(%!/FUN`ENCOUNTER`JOINED,%#),%q<enc_n>)=@pemit %#=notice(ENCOUNTER,[if(strlen(%q<cmd_argument>),You are not in encounter '%q<cmd_argument>'.,You are not in an encounter here. +encounter/leave <n> leaves one elsewhere.)],warn); @include/args %!/INC`ENCOUNTER`DROP=who,%q<viewer_objid>,number,%q<enc_n>; @remit get({{store}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,tone(strong,name(%#)) leaves encounter %q<enc_n>. [tone(muted,Nothing from the encounter's copy goes back to [poss(%#)] sheet.)]); @if comp(%l,get({{store}}/ENC`%q<enc_n>`ROOM))={@pemit %#=notice(ENCOUNTER,You leave encounter %q<enc_n>.,ok)}
+        flags: [cmdsyntax]
+      # +encounter/remove <name>[=<n>]: the GM or a keeper drops a member's copy.
+      INC`ENCOUNTER`REMOVE:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(ENCOUNTER,+encounter/remove <name>[=<n>] takes a character out of your encounter.,warn); @include/args %!/INC`NEED`ENCOUNTER=number,%q<cmd_right_side>; @include %!/INC`NEED`RUNS; @include/args %!/INC`NEED`MEMBER=name,%q<cmd_left_side>; @include/args %!/INC`ENCOUNTER`DROP=who,%q<sheet_who>,number,%q<enc_n>; @pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)] is out of encounter %q<enc_n>. Nothing from [poss(%q<sheet_who>)] copy goes back to [poss(%q<sheet_who>)] sheet.,ok); @if comp(%q<sheet_who>,%q<viewer_objid>)={@pemit %q<sheet_who>=notice(ENCOUNTER,[name(%#)] takes you out of encounter %q<enc_n>.)}
+        flags: [cmdsyntax]
+      # +encounter/keep <name>[=<n>]: the GM or a keeper writes a member's stress and condition back to their sheet.
+      # The copy stays, so play goes on; the build and momentum never come back.
+      INC`ENCOUNTER`KEEP:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(ENCOUNTER,+encounter/keep <name>[=<n>] writes a member's stress and condition back to their sheet.,warn); @include/args %!/INC`NEED`ENCOUNTER=number,%q<cmd_right_side>; @include %!/INC`NEED`RUNS; @include/args %!/INC`NEED`MEMBER=name,%q<cmd_left_side>; think setq(keep_copy,{{store}}/ENC`%q<enc_n>`COPY`[u(%!/FUN`ENCOUNTER`KEY,%q<sheet_who>)]); think u(%!/FUN`STATE`WRITE,%q<sheet_who>,STRESS,if(get(%q<keep_copy>`STRESS),get(%q<keep_copy>`STRESS)),1); think u(%!/FUN`STATE`WRITE,%q<sheet_who>,CONDITION,get(%q<keep_copy>`CONDITION),1); @pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)]'s sheet keeps the stress and condition from encounter %q<enc_n>: [u(%!/API`STRESSED,%q<sheet_who>,1)] of [get(%!/DATA`CONFIG`STRESS)] stress%, [firstof(get(%q<sheet_who>/CHARGE`CONDITION),no condition)].,ok); @if comp(%q<sheet_who>,%q<viewer_objid>)={@pemit %q<sheet_who>=notice(ENCOUNTER,[name(%#)] writes your stress and condition from encounter %q<enc_n> back to your sheet.)}
+        flags: [cmdsyntax]
+      # +encounter/end [<n>]: the GM or a keeper ends an encounter and drops every copy.
+      INC`ENCOUNTER`END:
+        value: |-
+          @include/args %!/INC`NEED`ENCOUNTER=number,%q<cmd_argument>; @include %!/INC`NEED`RUNS; think setqm(enc_members,u(%!/FUN`ENCOUNTER`MEMBERS,%q<enc_n>),enc_room,get({{store}}/ENC`%q<enc_n>`ROOM),enc_title,get({{store}}/ENC`%q<enc_n>)); @dolist/inline %q<enc_members>={think u(%!/FUN`ENCOUNTER`FORGET,##,%q<enc_n>)}; @wipe {{store}}/ENC`%q<enc_n>; &ENCOUNTER`OPEN {{store}}=[setdiff(get({{store}}/ENCOUNTER`OPEN),%q<enc_n>)]; @remit %q<enc_room>=notice(ENCOUNTER,tone(strong,name(%#)) ends encounter %q<enc_n>: %q<enc_title>. [tone(muted,Its copies are gone%, and only what the GM kept is on anyone's sheet.)]); @if comp(%l,%q<enc_room>)={@pemit %#=notice(ENCOUNTER,Encounter %q<enc_n> is over: %q<enc_title>.,ok)}; @dolist/inline %q<enc_members>={@if comp(loc(##),%q<enc_room>)={@pemit ##=notice(ENCOUNTER,[name(%#)] ends encounter %q<enc_n>: %q<enc_title>.)}}
+        flags: [cmdsyntax]
+      # %<who> a character, enc_n an encounter: copies their dots, talents, momentum, stress and condition into it and
+      # adds it to the encounters on their sheet, last joined last.
+      INC`ENCOUNTER`COPYIN:
+        value: |-
+          think u(%!/FUN`BUILD`PREPARE,%<who>,1); think setqm(copy_at,ENC`%q<enc_n>`COPY`[u(%!/FUN`ENCOUNTER`KEY,%<who>)],copy_momentum,u(%!/API`CHARGES,%<who>,1),copy_stress,u(%!/API`STRESSED,%<who>,1),copy_condition,get(%<who>/CHARGE`CONDITION)); &%q<copy_at> {{store}}=%<who>; &%q<copy_at>`DOTS {{store}}=%q<build_ratings>; &%q<copy_at>`TALENTS {{store}}=%q<build_talents>; &%q<copy_at>`MOMENTUM {{store}}=%q<copy_momentum>; &%q<copy_at>`STRESS {{store}}=%q<copy_stress>; &%q<copy_at>`CONDITION {{store}}=%q<copy_condition>; @include/args %!/INC`DO`SET=who,%<who>,leaf,ENCOUNTERS,value,[squish([u(%!/FUN`ENCOUNTER`JOINED,%<who>)] %q<enc_n>)]; @include/args %!/INC`DO`SET=who,%<who>,leaf,USING,value,
+        flags: [cmdsyntax]
+      # %<who> a character, %<number> an encounter they are in: drops their copy.
+      INC`ENCOUNTER`DROP:
+        value: |-
+          @wipe {{store}}/ENC`%<number>`COPY`[u(%!/FUN`ENCOUNTER`KEY,%<who>)]; think u(%!/FUN`ENCOUNTER`FORGET,%<who>,%<number>)
+        flags: [cmdsyntax]
+      # %<who> a character: drops every copy they have.
+      INC`ENCOUNTER`DROPALL:
+        value: |-
+          @dolist/inline u(%!/FUN`ENCOUNTER`JOINED,%<who>)={@include/args %!/INC`ENCOUNTER`DROP=who,%<who>,number,##}; think null(attrib_set(%<who>/CHARGE`ENCOUNTERS))
+        flags: [cmdsyntax]
+      # %<number> an encounter's number or nothing: enc_n, that one, else the one you are in here, the only one here, or the
+      # last one you started.
+      INC`NEED`ENCOUNTER:
+        value: |-
+          @if isint(%<number>)={think setq(enc_n,%<number>)},{think setq(enc_n,u(%!/FUN`ENCOUNTER`MINE,%#))}; @assert cand(strlen(%q<enc_n>),hasattr({{store}},ENC`%q<enc_n>))=@pemit %#=notice(ENCOUNTER,There is no encounter [if(strlen(%<number>),'%<number>',here that you run. Give its number)]. +encounter lists them.,warn)
+        flags: [cmdsyntax]
+      INC`NEED`RUNS:
+        value: |-
+          @assert u(%!/FUN`ENCOUNTER`RUNS,%#,%q<enc_n>)=@pemit %#=notice(ENCOUNTER,Only encounter %q<enc_n>'s GM%, [name(get({{store}}/ENC`%q<enc_n>`GM))]%, and sheet keepers do that.,error)
+        flags: [cmdsyntax]
+      # %<name> a player in encounter enc_n: sheet_who.
+      INC`NEED`MEMBER:
+        value: |-
+          @include/args %!/INC`NEED`TARGET=name,%<name>; @assert member(u(%!/FUN`ENCOUNTER`JOINED,%q<sheet_who>),%q<enc_n>)=@pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)] is not in encounter %q<enc_n>.,warn)
+        flags: [cmdsyntax]
+      # Encounters are on the store: ENC`<n> the title, with ROOM, GM, and COPY`<key> each member's copy (their objid) with
+      # DOTS, TALENTS, MOMENTUM, STRESS and CONDITION beneath. ENCOUNTER`OPEN lists them and ENCOUNTER`NEXT counts them.
+      # A member's CHARGE`ENCOUNTERS lists theirs, last joined last, and CHARGE`USING the one they picked. Nothing in one
+      # touches another encounter, or any sheet, until the GM keeps it.
+      # %0 an objid: the key of its copy, #31:1700000000 as 31-1700000000.
+      FUN`ENCOUNTER`KEY:
+        value: |-
+          [after(before(%0,:),#)]-[after(%0,:)]
+        flags: [funsyntax]
+      # %0 a character: the encounters they have a copy in, last joined last.
+      FUN`ENCOUNTER`JOINED:
+        value: |-
+          setq(joined_key,u(%!/FUN`ENCOUNTER`KEY,objid(%0)))[squish(iter(get(%0/CHARGE`ENCOUNTERS),if(hasattr({{store}},ENC`%i0`COPY`%q<joined_key>),%i0)))]
+        flags: [funsyntax]
+      # %0 a character: the encounter their rolls and changes go to. One of theirs that runs where they are: the one they
+      # picked with /use, else the last they joined. Nothing anywhere else, where their sheet is used.
+      FUN`ENCOUNTER`OF:
+        value: |-
+          setqm(enc_cands,squish(iter(u(%!/FUN`ENCOUNTER`JOINED,%0),if(not(comp(get({{store}}/ENC`%i0`ROOM),objid(loc(%0)))),%i0))),
+          enc_using,get(%0/CHARGE`USING))[if(member(%q<enc_cands>,%q<enc_using>),%q<enc_using>,last(%q<enc_cands>))]
+        flags: [funsyntax]
+      # %0 a character: the copy in use, as store/path, or nothing.
+      FUN`ENCOUNTER`COPY:
+        value: |-
+          setq(enc_at,u(%!/FUN`ENCOUNTER`OF,%0))[if(strlen(%q<enc_at>),{{store}}/ENC`%q<enc_at>`COPY`[u(%!/FUN`ENCOUNTER`KEY,objid(%0))])]
+        flags: [funsyntax]
+      # %0 a room: the encounters running there.
+      FUN`ENCOUNTER`HERE:
+        value: |-
+          squish(iter(get({{store}}/ENCOUNTER`OPEN),if(not(comp(get({{store}}/ENC`%i0`ROOM),objid(%0))),%i0)))
+        flags: [funsyntax]
+      # %0 someone: the encounter they are in here, else the only one here, else the last one they started.
+      FUN`ENCOUNTER`MINE:
+        value: |-
+          setq(mine_here,u(%!/FUN`ENCOUNTER`HERE,loc(%0)))[firstof(u(%!/FUN`ENCOUNTER`OF,%0),if(eq(words(%q<mine_here>),1),%q<mine_here>),last(iter(sort(get({{store}}/ENCOUNTER`OPEN),n),if(not(comp(get({{store}}/ENC`%i0`GM),objid(%0))),%i0))))]
+        flags: [funsyntax]
+      # %0 an encounter: its members' objids.
+      FUN`ENCOUNTER`MEMBERS:
+        value: |-
+          squish(iter(lattr({{store}}/ENC`%0`COPY`*),if(eq(words(%i0,`),4),get({{store}}/%i0))))
+        flags: [funsyntax]
+      # %0 a character, %1 an encounter: takes it off their list.
+      FUN`ENCOUNTER`FORGET:
+        value: |-
+          setq(forget_left,squish(iter(get(%0/CHARGE`ENCOUNTERS),if(comp(%i0,%1),%i0))))[null(if(strlen(%q<forget_left>),attrib_set(%0/CHARGE`ENCOUNTERS,%q<forget_left>),attrib_set(%0/CHARGE`ENCOUNTERS)))][if(not(comp(get(%0/CHARGE`USING),%1)),null(attrib_set(%0/CHARGE`USING)))]
+        flags: [funsyntax]
+      # %0 someone, %1 an encounter: 1 when they run it, as its GM or a sheet keeper.
+      FUN`ENCOUNTER`RUNS:
+        value: |-
+          cor(u(%!/FUN`PERM`KEEPER,%0),not(comp(get({{store}}/ENC`%1`GM),objid(%0))))
         flags: [funsyntax]
 
       # ---- lists ------------------------------------------------------------------
@@ -595,11 +866,6 @@ objects:
           find_all,u(%!/FUN`LIST`ALL,%0),
           find_exact,iter(%q<find_all>,if(cor(not(comp(%i0,ucstr(%q<find_typed>))),not(comp(lcstr(get({{store}}/%0`%i0)),lcstr(%q<find_typed>)))),%i0)),
           find_start,iter(%q<find_all>,if(cor(not(comp(left(%i0,strlen(%q<find_typed>)),ucstr(%q<find_typed>))),not(comp(lcstr(left(get({{store}}/%0`%i0),strlen(%q<find_typed>))),lcstr(%q<find_typed>)))),%i0)))[if(strlen(%q<find_typed>),first(firstof(%q<find_exact>,if(eq(words(%q<find_start>),1),%q<find_start>))))]
-        flags: [funsyntax]
-      # %0 a character, %1 an action key: the dots in every other action.
-      FUN`DOTS`OTHERS:
-        value: |-
-          setq(dots_who,%0)[ladd(0 [iter(setdiff(u(%!/FUN`LIST`ALL,ACTION),%1),u(%!/API`RATING,%q<dots_who>,%i0))])]
         flags: [funsyntax]
 
       # ---- dice -------------------------------------------------------------------
@@ -679,6 +945,11 @@ objects:
         value: |-
           if(json_query(%1,extract,$.out),[name(%0)]'s stress clock fills: [subj(%0)] [if(strmatch(subj(%0),they),are,is)] taken out for the scene%, and it clears. +sheet/condition <condition> says how [subj(%0)] [if(strmatch(subj(%0),they),are,is)] now.,[name(%0)] has [json_query(%1,extract,$.stress)] of [get(%!/DATA`CONFIG`STRESS)] stress.)
         flags: [funsyntax]
+      # %0 a character: a note when what changed is their encounter copy, not their sheet.
+      FUN`DISPLAY`WHERE:
+        value: |-
+          setq(where_n,u(%!/FUN`ENCOUNTER`OF,%0))[if(cand(strlen(%q<where_n>),strlen(u(%!/FUN`ENCOUNTER`COPY,%0))),%b[tone(muted,%(On [poss(%0)] copy in encounter %q<where_n>.%))])]
+        flags: [funsyntax]
       # %0 a number filled, %1 out of: [##..].
       FUN`DISPLAY`TRACK:
         value: |-
@@ -693,11 +964,29 @@ objects:
         value: |-
           setq(screen_clocks,u(%!/FUN`LIST`ALL,CLOCK))[box(if(words(%q<screen_clocks>),ldatatable(lit({"nowrap":"2|3|4","rule":""}),Clock|Filled|>Segments|Started by,iter(%q<screen_clocks>,get({{store}}/CLOCK`%i0)|[u(%!/FUN`DISPLAY`TRACK,get({{store}}/CLOCK`%i0`FILLED),get({{store}}/CLOCK`%i0`SIZE))]|[get({{store}}/CLOCK`%i0`FILLED)]/[get({{store}}/CLOCK`%i0`SIZE)]|[name(get({{store}}/CLOCK`%i0`OWNER))],,%*<^>),%*<^>),tone(muted,There are no clocks.))%r[rule()]%r[tone(muted,+clock/new <name>=<segments> starts one%, +clock/tick <name> fills a segment.)],Clocks)]
         flags: [funsyntax]
+      # %0 an encounter: its members and their copies.
+      FUN`SCREEN`ENCOUNTER:
+        value: |-
+          setq(enc_members,u(%!/FUN`ENCOUNTER`MEMBERS,%0))[box(tone(muted,Run by [name(get({{store}}/ENC`%0`GM))] in [name(get({{store}}/ENC`%0`ROOM))].)%r[if(words(%q<enc_members>),ldatatable(lit({"nowrap":"1|2|3","rule":""}),Member|>Momentum|Stress|Condition,iter(%q<enc_members>,u(%!/FUN`SCREEN`MEMBER,%0,%i0),%b,%*<^>),%*<^>),tone(muted,Nobody has joined. +encounter/join joins.))]%r[rule()]%r[tone(muted,The GM writes a member's stress and condition back with +encounter/keep <name>%, and ends it with +encounter/end. Nothing else goes back to a sheet.)],Encounter %0: [get({{store}}/ENC`%0)])]
+        flags: [funsyntax]
+      # %0 an encounter, %1 a member: Name|momentum|stress|condition.
+      FUN`SCREEN`MEMBER:
+        value: |-
+          setqm(member_at,{{store}}/ENC`%0`COPY`[u(%!/FUN`ENCOUNTER`KEY,%1)],
+          member_stress,default(%q<member_at>`STRESS,0))[name(%1)]|[default(%q<member_at>`MOMENTUM,0)]|[u(%!/FUN`DISPLAY`TRACK,%q<member_stress>,get(%!/DATA`CONFIG`STRESS))] %q<member_stress>/[get(%!/DATA`CONFIG`STRESS)]|[firstof(get(%q<member_at>`CONDITION),tone(muted,none))]
+        flags: [funsyntax]
+      # Every open encounter.
+      FUN`SCREEN`ENCOUNTERS:
+        value: |-
+          setq(enc_open,sort(get({{store}}/ENCOUNTER`OPEN),n))[box(if(words(%q<enc_open>),ldatatable(lit({"nowrap":"1|3|4|5","rule":""}),>#|Encounter|Where|GM|>Members,iter(%q<enc_open>,%i0|[get({{store}}/ENC`%i0)]|[name(get({{store}}/ENC`%i0`ROOM))]|[name(get({{store}}/ENC`%i0`GM))]|[words(u(%!/FUN`ENCOUNTER`MEMBERS,%i0))],,%*<^>),%*<^>),tone(muted,There are no encounters.))%r[rule()]%r[tone(muted,+encounter/start <title> starts one here%, +encounter/join joins the one here%, +encounter <n> shows one.)],Encounters)]
+        flags: [funsyntax]
       # %0 the character, %1 who reads it.
       FUN`SCREEN`SHEET:
         value: |-
-          setqm(screen_stress,u(%!/API`STRESSED,%0),
-          screen_talents,get(%0/CHARGE`TALENT))[box(lfields(lit({"cols":2}),Momentum%*<|>Stress%*<|>Milestones%*<|>Condition,[u(%!/API`CHARGES,%0)]%*<|>[u(%!/FUN`DISPLAY`TRACK,%q<screen_stress>,get(%!/DATA`CONFIG`STRESS))] %q<screen_stress>/[get(%!/DATA`CONFIG`STRESS)]%*<|>[u(%!/API`MILESTONES,%0)]%*<|>[firstof(get(%0/CHARGE`CONDITION),tone(muted,none))],%*<|>)%r[rule(Details)]%r[u(%!/FUN`SCREEN`DETAILS,%0)]%r[rule(Actions)]%r[u(%!/FUN`SCREEN`ACTIONS,%0)][if(strlen(%q<screen_talents>),%r[rule(Talents)]%r[iter(%q<screen_talents>,- %i0,|,%r)])]%r[rule()]%r[tone(muted,u(%!/FUN`DISPLAY`FOOTER,%0,%1))],name(%0))]
+          setqm(screen_built,u(%!/FUN`BUILD`PREPARE,%0),
+          screen_at,u(%!/FUN`STATE`AT,%0),
+          screen_stress,default(%q<screen_at>STRESS,0),
+          screen_enc,if(strlen(%q<build_copy>),u(%!/FUN`ENCOUNTER`OF,%0)))[box(lfields(lit({"cols":2}),Momentum%*<|>Stress%*<|>Milestones%*<|>Condition,[default(%q<screen_at>MOMENTUM,get(%!/DATA`CONFIG`MOMENTUM))]%*<|>[u(%!/FUN`DISPLAY`TRACK,%q<screen_stress>,get(%!/DATA`CONFIG`STRESS))] %q<screen_stress>/[get(%!/DATA`CONFIG`STRESS)]%*<|>%q<build_milestones>%*<|>[firstof(get(%q<screen_at>CONDITION),tone(muted,none))],%*<|>)[if(strlen(%q<screen_enc>),%r[tone(muted,In encounter %q<screen_enc>%, [get({{store}}/ENC`%q<screen_enc>)]: these are [poss(%0)] copy there.)])]%r[rule(Details)]%r[u(%!/FUN`SCREEN`DETAILS,%0)]%r[rule(Actions)]%r[u(%!/FUN`SCREEN`ACTIONS,%0)][if(strlen(%q<build_talents>),%r[rule(Talents)]%r[iter(%q<build_talents>,- %i0,|,%r)])]%r[rule()]%r[tone(muted,u(%!/FUN`DISPLAY`FOOTER,%0,%1))],name(%0))]
         flags: [funsyntax]
       FUN`SCREEN`DETAILS:
         value: |-
@@ -712,11 +1001,29 @@ objects:
       # %0 the character, %1 an action key or nothing: "Muscle|[##..]".
       FUN`SCREEN`ACTION:
         value: |-
-          if(strlen(%1),[u(%!/FUN`LIST`LABEL,ACTION,%1)]|[u(%!/FUN`DISPLAY`TRACK,u(%!/API`RATING,%0,%1),4)],|)
+          if(strlen(%1),[u(%!/FUN`LIST`LABEL,ACTION,%1)]|[u(%!/FUN`DISPLAY`TRACK,u(%!/FUN`BUILD`RATING,%1),4)],|)
         flags: [funsyntax]
       FUN`DISPLAY`FOOTER:
         value: |-
-          cond(cand(not(comp(objid(%1),%0)),not(isapproved(%1)),not(u(%!/FUN`PERM`KEEPER,%1))),[u(%!/API`DOTS,%0)] of [get(%!/DATA`CONFIG`DOTS)] dots given. +sheet/set <action>=<dots> gives them%, +sheet/detail <detail>=<text> writes a detail.[u(%!/FUN`HINT,FOOTER)],not(comp(objid(%1),%0)),+check <action>=<risk> rolls. +sheet/momentum and +sheet/stress keep count%, +sheet/advance and +sheet/talent spend milestones.,+check <action> rolls a die for each dot.)
+          cond(cand(not(comp(objid(%1),%0)),not(isapproved(%1)),not(u(%!/FUN`PERM`KEEPER,%1))),[u(%!/API`DOTS,%0,1)] of [get(%!/DATA`CONFIG`DOTS)] dots given. +sheet/set <action>=<dots> gives them%, +sheet/detail <detail>=<text> writes a detail.[u(%!/FUN`HINT,FOOTER)],not(comp(objid(%1),%0)),+check <action>=<risk> rolls. +sheet/momentum and +sheet/stress keep count%, +sheet/advance and +sheet/talent spend milestones%, +sheet/ledger shows how the sheet was built.,+check <action> rolls a die for each dot.)
+        flags: [funsyntax]
+      # %0 a character: their ledger, oldest first, with what is revoked or cleared marked.
+      FUN`SCREEN`LEDGER:
+        value: |-
+          setqm(ledger_rows,u(%!/FUN`LEDGER`ENTRIES,%0),
+          ledger_live,u(%!/FUN`LEDGER`LIVE,%q<ledger_rows>),
+          ledger_built,u(%!/FUN`BUILD`PREPARE,%0,1))[box(if(strlen(%q<ledger_rows>),ldatatable(lit({"nowrap":"1|3|4","rule":""}),>#|Entry|Phase|By,iter(%q<ledger_rows>,u(%!/FUN`LEDGER`LINE,%i0),|,%*<^>),%*<^>),tone(muted,Nothing is on the ledger yet.))%r[rule()]%r[tone(muted,%q<build_milestones> [if(eq(%q<build_milestones>,1),milestone,milestones)] to spend. A keeper undoes an entry with +sheet/revoke [name(%0)]/<entry>.)],[name(%0)]'s ledger)]
+        flags: [funsyntax]
+      FUN`LEDGER`LINE:
+        value: |-
+          setq(line_n,first(%0,~))%q<line_n>|[u(%!/FUN`DISPLAY`ENTRY,%0)][cond(member(%q<ledger_revoked>,%q<line_n>),%b[tone(muted,%(revoked%))],lt(%q<line_n>,%q<ledger_cleared>),%b[tone(muted,%(cleared%))])]|[elements(%0,5,~)]|[name(elements(%0,6,~))]
+        flags: [funsyntax]
+      # %0 a ledger row: what the entry does, "Muscle at 2 dots".
+      FUN`DISPLAY`ENTRY:
+        value: |-
+          setqm(entry_kind,elements(%0,2,~),
+          entry_key,elements(%0,3,~),
+          entry_value,elements(%0,4,~))[switch(%q<entry_kind>,dots,[u(%!/FUN`LIST`LABEL,ACTION,%q<entry_key>)] at [firstof(%q<entry_value>,0)] [if(eq(firstof(%q<entry_value>,0),1),dot,dots)],advance,[u(%!/FUN`LIST`LABEL,ACTION,%q<entry_key>)] +1 dot for a milestone,milestone,[if(gt(%q<entry_value>,0),+)]%q<entry_value> [if(eq(abs(%q<entry_value>),1),milestone,milestones)],talent,Talent for a milestone: %q<entry_value>,revoke,Revokes entry %q<entry_key>,clear,Clears the sheet,%q<entry_kind>)]
         flags: [funsyntax]
       FUN`SCREEN`TRAITS:
         value: |-
@@ -725,7 +1032,8 @@ objects:
 
       # ---- the sheet API ------------------------------------------------------------
       # What other packages call: u({{sheet-charge/sheet}}/API`<NAME>,...). Every sheet package has these names.
-      # They read and roll; API`MOMENTUM, API`STRESS and API`MILESTONE are the ones that write.
+      # They read and roll; API`RECORD, API`MOMENTUM, API`STRESS and API`MILESTONE are the ones that write. In an
+      # encounter the ratings, talents, momentum and stress are the member's copy unless the call asks for their sheet.
       API:
         value: |-
           The Charge sheet's functions for other packages. See the package README.
@@ -748,15 +1056,15 @@ objects:
         value: |-
           u(%!/FUN`LIST`LABEL,ACTION,ucstr(%0))
         flags: [VISUAL]
-      # %0 a character, %1 an action: its dots, 0 when not set.
+      # %0 a character, %1 an action, %2 1 for their sheet even in an encounter: its dots.
       API`RATING:
         value: |-
-          default(%0/CHARGE`ACTION`[ucstr(%1)],0)
+          [u(%!/FUN`BUILD`PREPARE,%0,%2)][u(%!/FUN`BUILD`RATING,%1)]
         flags: [VISUAL]
-      # %0 a character: their dots in every action together.
+      # %0 a character, %1 1 for their sheet even in an encounter: their dots in every action together.
       API`DOTS:
         value: |-
-          setq(dots_who,%0)[ladd(0 [iter(u(%!/FUN`LIST`ALL,ACTION),u(%!/API`RATING,%q<dots_who>,%i0))])]
+          [u(%!/FUN`BUILD`PREPARE,%0,%1)][u(%!/FUN`BUILD`DOTS)]
         flags: [VISUAL]
       API`HAS:
         value: |-
@@ -778,45 +1086,48 @@ objects:
         value: |-
           firstof(switch(%0,partial,extract(get(%!/DATA`CONFIG`GAIN),1,1),success,extract(get(%!/DATA`CONFIG`GAIN),2,1),crit-success,extract(get(%!/DATA`CONFIG`GAIN),3,1),0),0)
         flags: [VISUAL]
-      # %0 a character: the momentum they hold. A character who never had any holds the session's start.
+      # %0 a character, %1 1 for their sheet even in an encounter: the momentum they hold. A character who never had
+      # any holds the session's start.
       API`CHARGES:
         value: |-
-          default(%0/CHARGE`MOMENTUM,get(%!/DATA`CONFIG`MOMENTUM))
+          default([u(%!/FUN`STATE`AT,%0,%1)]MOMENTUM,get(%!/DATA`CONFIG`MOMENTUM))
         flags: [VISUAL]
-      # %0 a character, %1 momentum to gain (or spend, below 0): writes it, never below 0, and returns the new count.
+      # %0 a character, %1 momentum to gain (or spend, below 0), %2 1 for their sheet even in an encounter: writes it,
+      # never below 0, and returns the new count.
       API`MOMENTUM:
         value: |-
-          setq(momentum_new,max(0,add(u(%!/API`CHARGES,%0),%1)))[u(%!/FUN`DO`ROOT,%0)][attrib_set(%0/CHARGE`MOMENTUM,%q<momentum_new>)]%q<momentum_new>
+          setq(momentum_new,max(0,add(u(%!/API`CHARGES,%0,%2),%1)))[u(%!/FUN`STATE`WRITE,%0,MOMENTUM,%q<momentum_new>,%2)]%q<momentum_new>
         flags: [VISUAL]
-      # %0 a character: the segments of their stress clock filled.
+      # %0 a character, %1 1 for their sheet even in an encounter: the segments of their stress clock filled.
       API`STRESSED:
         value: |-
-          default(%0/CHARGE`STRESS,0)
+          default([u(%!/FUN`STATE`AT,%0,%1)]STRESS,0)
         flags: [VISUAL]
-      # %0 a character, %1 stress to take (or recover, below 0). When the clock fills, the character is taken out
-      # and it clears. Writes it and returns {"stress","out"}, out 1 when they are taken out.
+      # %0 a character, %1 stress to take (or recover, below 0), %2 1 for their sheet even in an encounter. When the
+      # clock fills, the character is taken out and it clears. Writes it and returns {"stress","out"}, out 1 when they
+      # are taken out.
       API`STRESS:
         value: |-
-          setqm(stress_new,max(0,add(u(%!/API`STRESSED,%0),%1)),
-          stress_out,gte(%q<stress_new>,get(%!/DATA`CONFIG`STRESS)))[u(%!/FUN`DO`ROOT,%0)][if(cand(not(%q<stress_out>),%q<stress_new>),attrib_set(%0/CHARGE`STRESS,%q<stress_new>),if(hasattr(%0,CHARGE`STRESS),attrib_set(%0/CHARGE`STRESS)))][json(object,stress,if(%q<stress_out>,0,%q<stress_new>),out,%q<stress_out>)]
+          setqm(stress_new,max(0,add(u(%!/API`STRESSED,%0,%2),%1)),
+          stress_out,gte(%q<stress_new>,get(%!/DATA`CONFIG`STRESS)))[u(%!/FUN`STATE`WRITE,%0,STRESS,if(cand(not(%q<stress_out>),%q<stress_new>),%q<stress_new>),%2)][json(object,stress,if(%q<stress_out>,0,%q<stress_new>),out,%q<stress_out>)]
         flags: [VISUAL]
-      # %0 a character: the milestones they have not spent.
+      # %0 a character: the milestones they have not spent. Milestones are always the sheet's.
       API`MILESTONES:
         value: |-
-          default(%0/CHARGE`MILESTONES,0)
+          [u(%!/FUN`BUILD`PREPARE,%0,1)]%q<build_milestones>
         flags: [VISUAL]
-      # %0 a character, %1 milestones to give (or take, below 0): writes it, never below 0, and returns the new count.
+      # %0 a character, %1 milestones to give (or take, below 0): records it on the ledger and returns the new count.
       API`MILESTONE:
         value: |-
-          setq(milestone_new,max(0,add(u(%!/API`MILESTONES,%0),%1)))[u(%!/FUN`DO`ROOT,%0)][if(%q<milestone_new>,attrib_set(%0/CHARGE`MILESTONES,%q<milestone_new>),if(hasattr(%0,CHARGE`MILESTONES),attrib_set(%0/CHARGE`MILESTONES)))]%q<milestone_new>
+          [null(u(%!/API`RECORD,%0,json(object,kind,"milestone",count,%1)))][u(%!/API`MILESTONES,%0)]
         flags: [VISUAL]
       # Named: %<roller> an objid, %<trait> an action key, %<modifier> dice to add (or take), %<target> the risk,
-      # %<effect> the effect (standard when empty). Rolls the pool and keeps the roll (roll() record), and returns
+      # %<effect> the effect (standard when empty), %<live> 1 to roll the sheet even in an encounter. Rolls the pool and keeps the roll (roll() record), and returns
       # {"tier","total","sixes","dice","target","effect","label","text","roll","formula"}. #-1 and why when the
       # action or roller is wrong. It never touches momentum: the caller decides what the roll gains.
       API`CHECK:
         value: |-
-          cond(not(hastype(%<roller>,player)),#-1 There is no character to roll for.,not(strlen(u(%!/FUN`LIST`FIND,ACTION,%<trait>))),#-1 There is no action '%<trait>'.,u(%!/FUN`CHECK`ROLLED,u(%!/FUN`LIST`FIND,ACTION,%<trait>),max(0,add(u(%!/API`RATING,%<roller>,u(%!/FUN`LIST`FIND,ACTION,%<trait>)),firstof(%<modifier>,0))),firstof(%<target>,moderate),firstof(%<effect>,standard)))
+          cond(not(hastype(%<roller>,player)),#-1 There is no character to roll for.,not(strlen(setr(check_found,u(%!/FUN`LIST`FIND,ACTION,%<trait>)))),#-1 There is no action '%<trait>'.,u(%!/FUN`CHECK`ROLLED,%q<check_found>,max(0,add(u(%!/API`RATING,%<roller>,%q<check_found>,%<live>),firstof(%<modifier>,0))),firstof(%<target>,moderate),firstof(%<effect>,standard)))
         flags: [VISUAL]
       # %0 the key, %1 the pool, %2 the risk, %3 the effect.
       FUN`CHECK`ROLLED:
@@ -830,7 +1141,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add/noparse/rsnoparse +sheet; @hook/override/inline +sheet=%!,CMD`SHEET; @command/add/noparse/rsnoparse +check; @hook/override/inline +check=%!,CMD`CHECK; @command/add/noparse/rsnoparse +clock; @hook/override/inline +clock=%!,CMD`CLOCK
+          @command/add/noparse/rsnoparse +sheet; @hook/override/inline +sheet=%!,CMD`SHEET; @command/add/noparse/rsnoparse +check; @hook/override/inline +check=%!,CMD`CHECK; @command/add/noparse/rsnoparse +clock; @hook/override/inline +clock=%!,CMD`CLOCK; @command/add/noparse/rsnoparse +encounter; @hook/override/inline +encounter=%!,CMD`ENCOUNTER
         flags: [cmdsyntax]
       AINSTALL:
         value: |-
@@ -941,6 +1252,10 @@ objects:
         12
       CLOCK: |-
         The game's progress and danger clocks, one branch each, with SIZE, FILLED and OWNER beneath.
+      ENCOUNTER: |-
+        OPEN lists the encounters running, NEXT counts them.
+      ENC: |-
+        The encounters, one branch each: the title, with ROOM, GM and COPY, each member's copy of their sheet.
 
   # The +help topics, on an object of their own. sheet-charge-help registers it with +help; without that bridge
   # nothing reads it. HELP`<TOPIC> is a topic, its subtopics the leaves beneath, LOCK`<TOPIC> who may read it.
@@ -950,14 +1265,16 @@ objects:
     location: "{{sheet}}"
     attributes:
       HELP: |-
-        Your character's Charge sheet, rolling against it, and clocks: +sheet, +check and +clock.
+        Your character's Charge sheet, rolling against it, encounters and clocks: +sheet, +check, +encounter and +clock.
       SEE: |-
         Cross-references. One leaf per topic; subtopics come from the tree, not from here.
       SEE`SHEET: |-
-        check clock
+        check encounter clock
       SEE`CHECK: |-
-        sheet clock
+        sheet encounter clock
       SEE`CLOCK: |-
+        sheet check
+      SEE`ENCOUNTER: |-
         sheet check
       HELP`SHEET: |-
         `+sheet` shows your character's sheet: details, momentum, stress, condition, milestones, talents, and twelve actions with 0 to 4 dots each.
@@ -975,7 +1292,7 @@ objects:
 
         Output: `\[SHEET\] Done: Alice's concept: A retired courier who still knows every back road`
 
-        See `+help sheet play` for momentum, stress and condition, and `+help check` for rolling.
+        See `+help sheet play` for momentum, stress and condition, `+help sheet ledger` for how the sheet is built, and `+help check` for rolling.
       HELP`SHEET`PLAY: |-
         In play you keep your own momentum, stress and condition:
 
@@ -1003,6 +1320,51 @@ objects:
         `+sheet/advance shoot`
 
         Output: `\[SHEET\] Done: Alice spends a milestone: Shoot has 3 dots. 0 left to spend.`
+      HELP`SHEET`LEDGER: |-
+        Your dots, talents and milestones are not stored as totals. Each change is an entry on your sheet's ledger, and the sheet adds them up: the dots you gave out, each milestone given, each advance and talent it bought.
+
+        - `+sheet/ledger` lists the entries, oldest first, with the phase each was made in \(chargen, play or staff\) and who made it. `+sheet/ledger <name>` shows another character's, when you may read their sheet.
+        - Changing an action's dots during chargen rewrites that action's chargen entry, so the ledger keeps one per action.
+        - Only a sheet keeper undoes an entry, by adding one that revokes it. A revoked entry stays on the list, marked.
+
+        For example:
+
+        `+sheet/ledger`
+
+        Output: the ledger in a box, one line per entry, such as `6 Shoot +1 dot for a milestone play Alice`.
+      HELP`ENCOUNTER: |-
+        An encounter is a fight, chase or other scene that keeps its own copy of each member's sheet. Rolls and changes made in it touch only that copy, so a fight that runs for days never changes your sheet or another scene.
+
+        - `+encounter` shows the encounter you are in here, or lists every open one. `+encounter <n>` shows one.
+        - `+encounter/start \[<title>\]` starts one in this room. You run it as its GM.
+        - `+encounter/join \[<n>\]` joins with a copy of your dots, talents, momentum, stress and condition, taken now. Give the number when the room holds more than one.
+        - `+encounter/leave \[<n>\]` drops your copy. Nothing from it goes back to your sheet.
+        - `+encounter/use <n>` picks which of your encounters here your rolls and changes go to.
+
+        A room may hold several encounters, and you may be in several. Your copy is used while you are in the room where its encounter runs: the one you picked with `/use`, else the one you joined last. Anywhere else, your sheet is used. Milestones, the ledger and Duties always use your sheet.
+
+        For example:
+
+        `+encounter/join`
+
+        Output: `\[ENCOUNTER\] Alice joins encounter 4: Docks fight. Rolls and changes there use a copy of their sheet.`
+
+        See `+help encounter gm` for running one.
+      HELP`ENCOUNTER`GM: |-
+        Whoever starts an encounter is its GM. The GM and sheet keepers run it:
+
+        - `+encounter/add <name>\[=<n>\]` brings a character in with a copy of their sheet.
+        - `+encounter/remove <name>\[=<n>\]` drops a member's copy.
+        - `+encounter/keep <name>\[=<n>\]` writes a member's stress and condition from the encounter back to their sheet. The copy stays, so play goes on.
+        - `+encounter/end \[<n>\]` ends it and drops every copy.
+
+        When an encounter ends, nothing carries back to a sheet unless the GM kept it. Momentum and the build never carry back. Leave out the number to act on the encounter you are in here, the only one here, or the last one you started.
+
+        For example:
+
+        `+encounter/keep Alice`
+
+        Output: `\[ENCOUNTER\] Done: Alice's sheet keeps the stress and condition from encounter 1: 3 of 4 stress, Bruised ribs.`
       HELP`CHECK: |-
         `+check <action>` is an action roll: one six-sided die per dot, reading the highest, where the room sees it. An action with no dots rolls two dice and reads the lower, and can't be a critical.
 
@@ -1072,8 +1434,10 @@ objects:
         - `/set`, `/detail`, `/advance` and `/talent` take `<name>/` first: `+sheet/set Alice/muscle=3`. A keeper may put up to 4 dots in an action, past the starting dots.
         - `+sheet/momentum <name>=<n>`, `+sheet/stress <name>=<n>` and `+sheet/condition <name>=<condition>` change those.
         - `+sheet/milestone <name>=<n>` gives milestones, or takes them with a number below 0.
-        - `+sheet/talent <name>/<talent>=remove` takes a talent off.
-        - Keepers tick and remove anyone's clocks.
+        - `+sheet/talent <name>/<talent>=remove` takes a talent off and gives the milestone back.
+        - `+sheet/revoke <name>/<entry>` undoes an entry on a character's ledger: `+sheet/revoke Alice/3`. `+sheet/ledger <name>` numbers them.
+        - `+sheet/clear <name>=confirm` starts a sheet over: one ledger entry clears the build, and the details, momentum, stress and condition are wiped. It takes the character out of every encounter.
+        - Keepers run any encounter as its GM, and tick and remove anyone's clocks.
 
         `@role/assign <player>=charge-sheet-keeper` makes someone a keeper.
       LOCK`SHEET`SETTINGS: |-
