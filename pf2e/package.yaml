@@ -2638,7 +2638,7 @@ objects:
       FUN`ACT`HARM:
         value: |-
           @@(%0 a combatant's index, %1 damage, %2 1 when a critical hit)[
-          setqm(harm_temp,u(FUN`ENC`C,%0,temp),harm_hp,u(FUN`ENC`C,%0,hp))][
+          setqm(harm_temp,u(FUN`ENC`C,%0,temp),harm_hp,u(FUN`ENC`C,%0,hp),harm_dying,)][
           setq(harm_left,max(0,sub(%1,%q<harm_temp>)))][
           u(FUN`ENC`SET,%0,temp,max(0,sub(%q<harm_temp>,%1)))][
           u(FUN`ENC`SET,%0,hp,max(0,sub(%q<harm_hp>,%q<harm_left>)))][
