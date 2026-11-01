@@ -1,7 +1,7 @@
 format: "1.16"
 package: sheet-pbta-chargen
 title: "PbtA sheet: character applications"
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
 description: "Joins the PbtA sheet to character applications: a player changes their sheet only while their +app application is theirs to change, reviewers read the sheets of the characters they review, and the sheet's messages point at +app."
 license: MIT
@@ -15,7 +15,7 @@ requires_server: ">=0.1"
 # Chargen Store. Uninstalling it brings the plain rule back; neither package changes.
 depends:
   - package: sheet-pbta
-    version: ">=1.0 <2.0"
+    version: ">=2.0 <3.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH.Packages
       path: sheet-pbta/
@@ -46,4 +46,6 @@ objects:
       HINT`SET: |-
         +app/submit sends your application to staff when your sheet is done.
       HINT`FOOTER: |-
+        +app/submit sends it to staff with your application.
+      HINT`CHARGEN: |-
         +app/submit sends it to staff with your application.

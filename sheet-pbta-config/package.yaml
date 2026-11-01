@@ -1,7 +1,7 @@
 format: "1.16"
 package: sheet-pbta-config
 title: "PbtA sheet: +config settings"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Puts the PbtA sheet settings and its stats, moves and playbooks tables into +config: registers them with the +config registry, so staff see and change them with +config pbta."
 license: MIT
@@ -15,7 +15,7 @@ requires_server: ">=0.1"
 # installed. This package is the one leaf that tells the +config registry where they are.
 depends:
   - package: sheet-pbta
-    version: ">=1.0 <2.0"
+    version: ">=2.0 <3.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH.Packages
       path: sheet-pbta/
