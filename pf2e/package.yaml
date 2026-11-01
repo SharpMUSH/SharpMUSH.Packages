@@ -2843,14 +2843,14 @@ objects:
       # PF2E`EXPLORE on a character: the exploration activity they are doing. Avoid Notice rolls
       # Stealth for initiative and Scout gives every character +1; Search lets the GM roll secret
       # Perception checks for them.
-      DATA`EXPLORE: avoid-notice~Avoid Notice~Stealth for initiative defend~Defend~Shield raised when the fight starts detect-magic~Detect Magic~Senses magic nearby follow-the-expert~Follow the Expert~An ally's proficiency on checks investigate~Investigate~Recall Knowledge as you go repeat-a-spell~Repeat a Spell~A spell kept up search~Search~Secret Perception checks for hidden things scout~Scout~+1 to everyone's initiative hustle~Hustle~Double Speed for a while track~Track~Survival to follow tracks
+      DATA`EXPLORE: "avoid-notice~Avoid Notice~Stealth for initiative|defend~Defend~Shield raised when the fight starts|detect-magic~Detect Magic~Senses magic nearby|follow-the-expert~Follow the Expert~An ally's proficiency on checks|investigate~Investigate~Recall Knowledge as you go|repeat-a-spell~Repeat a Spell~A spell kept up|search~Search~Secret Perception checks for hidden things|scout~Scout~+1 to everyone's initiative|hustle~Hustle~Double Speed for a while|track~Track~Survival to follow tracks"
       INC`EXPLORE`SHOW:
         value: |-
           @pemit %#=u(%!/FUN`SHOW`EXPLORE)
         flags: [cmdsyntax]
       INC`EXPLORE`SET:
         value: |-
-          think setq(explore_slug,first(iter(get(%!/DATA`EXPLORE),if(strmatch(lcstr(elements(%i0,2,~)),lcstr(%q<cmd_args>)*),first(%i0,~))))); @assert strlen(%q<explore_slug>)=@pemit %#=notice(PF2E,The activities are [itemize(iter(get(%!/DATA`EXPLORE),elements(%i0,2,~),%b,|),|)].,warn); &PF2E`EXPLORE %#=%q<explore_slug>; @remit %l=notice(PF2E,%N is now [u(%!/FUN`EXPLORE`NAME,%q<explore_slug>)]: [elements(grab(get(%!/DATA`EXPLORE),%q<explore_slug>~*),3,~)].,ok)
+          think setq(explore_slug,first(squish(iter(get(%!/DATA`EXPLORE),if(strmatch(lcstr(elements(%i0,2,~)),lcstr(%q<cmd_args>)*),first(%i0,~)),|,%b)))); @assert strlen(%q<explore_slug>)=@pemit %#=notice(PF2E,The activities are [itemize(iter(get(%!/DATA`EXPLORE),elements(%i0,2,~),|,|),|)].,warn); &PF2E`EXPLORE %#=%q<explore_slug>; @remit %l=notice(PF2E,%N is now [u(%!/FUN`EXPLORE`NAME,%q<explore_slug>)]: [elements(grab(get(%!/DATA`EXPLORE),%q<explore_slug>~*),3,~)].,ok)
         flags: [cmdsyntax]
       INC`EXPLORE`STOP:
         value: |-
@@ -2859,11 +2859,11 @@ objects:
       # +explore/search <DC>: the GM's secret Perception check for everyone here who is Searching; only the GM sees the rolls.
       INC`EXPLORE`SEARCH:
         value: |-
-          @assert cand(isint(%q<cmd_args>),gt(%q<cmd_args>,0))=@pemit %#=notice(PF2E,+explore/search <DC> rolls a secret Perception check for each character here who is Searching.,warn); think setq(search_who,iter(lcon(%l,player),if(strmatch(get(%i0/PF2E`EXPLORE),search),%i0))); @assert words(%q<search_who>)=@pemit %#=notice(PF2E,No one here is Searching.,warn); @pemit %#=notice(PF2E,Secret Perception checks against DC %q<cmd_args>:%r[iter(%q<search_who>,u(%!/FUN`EXPLORE`SECRET,%i0,perception,%q<cmd_args>),%b,%r)])
+          @assert cand(isint(%q<cmd_args>),gt(%q<cmd_args>,0))=@pemit %#=notice(PF2E,+explore/search <DC> rolls a secret Perception check for each character here who is Searching.,warn); think setq(search_who,iter(lcon(%l,connect),if(strmatch(get(%i0/PF2E`EXPLORE),search),%i0))); @assert words(%q<search_who>)=@pemit %#=notice(PF2E,No one here is Searching.,warn); @pemit %#=notice(PF2E,Secret Perception checks against DC %q<cmd_args>:%r[iter(%q<search_who>,u(%!/FUN`EXPLORE`SECRET,%i0,perception,%q<cmd_args>),%b,%r)])
         flags: [cmdsyntax]
       FUN`EXPLORE`NAME:
         value: |-
-          lcstr(elements(grab(get(%!/DATA`EXPLORE),%0~*),2,~))
+          lcstr(elements(grab(get(%!/DATA`EXPLORE),%0~*,|),2,~))
         flags: [funsyntax]
       FUN`EXPLORE`SECRET:
         value: |-
@@ -3042,9 +3042,9 @@ objects:
         value: |-
           @@(what everyone here is doing while exploring)[
           box(
-            [ldatatable(,Name|Activity,iter(lcon(%l,player),[name(%i0)]|[firstof(capstr(u(FUN`EXPLORE`NAME,get(%i0/PF2E`EXPLORE))),tone(muted,none))],%b,%r),%r)]%r[
+            [ldatatable(,Name|Activity,iter(lcon(%l,connect),[name(%i0)]|[firstof(capstr(u(FUN`EXPLORE`NAME,get(%i0/PF2E`EXPLORE))),tone(muted,none))],%b,%r),%r)]%r[
             rule()]%r[
-            tone(muted,+explore/set <activity> to choose one: [itemize(iter(get(%!/DATA`EXPLORE),elements(%i0,2,~),%b,|),|)].)],
+            tone(muted,+explore/set <activity> to choose one: [itemize(iter(get(%!/DATA`EXPLORE),elements(%i0,2,~),|,|),|)].)],
             Exploration)]
         flags: [funsyntax]
       FUN`SHOW`CHALLENGE:
