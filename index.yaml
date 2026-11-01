@@ -199,3 +199,24 @@ packages:
     package: salvage-union-wiki
     version: 1.0.1
     description: Salvage Union rules as wiki pages (core rules, Pilot Bay, Mech Workshop, chassis, Union Crawler, salvaging, denizens, and every ability, system, module, equipment and table); Salvage Union Open Game Licence 1.0b, unofficial
+  - path: sheet-charge/
+    name: Charge Sheet
+    package: sheet-charge
+    version: 1.0.0
+    description: Charge character sheet (details, action dots, momentum, stress clock, milestones and talents) with +check action rolls, assists, determination and fortune rolls, and clocks; Charge SRD under CC BY 4.0
+  - path: sheet-charge-help/
+    package: sheet-charge-help
+    version: 1.0.0
+    description: Puts the Charge sheet topics into +help
+  - path: sheet-charge-config/
+    package: sheet-charge-config
+    version: 1.0.0
+    description: Puts the Charge sheet settings and action and detail tables into +config
+  - path: sheet-charge-chargen/
+    package: sheet-charge-chargen
+    version: 1.0.0
+    description: Joins the Charge sheet to +app character applications
+  - path: duties-charge/
+    package: duties-charge
+    version: 1.0.0
+    description: Duties roll provider "charge" on the Charge sheet

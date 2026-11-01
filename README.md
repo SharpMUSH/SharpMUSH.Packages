@@ -83,6 +83,11 @@ constraints checked before anything is planned.
 | [`sheet-salvage-union-chargen/`](sheet-salvage-union-chargen/) | 1.0.0 | Bridge: sheet and mech edits follow the player's `+app` application; reviewers read the sheets they review |
 | [`duties-salvage-union/`](duties-salvage-union/) | 1.0.1 | Duties roll provider `salvage` on the Salvage Union sheet: abilities and mech parts as traits, Training Points and crawler scrap as rewards |
 | [`salvage-union-wiki/`](salvage-union-wiki/) | 1.0.1 | Salvage Union rules as wiki pages: the core rules, Pilot Bay, Mech Workshop, every chassis blueprint, the Union Crawler, salvaging, the denizens of the wasteland, and a page for every ability, system, module, piece of equipment and table. Unofficial, under the Salvage Union Open Game Licence 1.0b (see its NOTICE) |
+| [`sheet-charge/`](sheet-charge/) | 1.0.0 | Charge character sheet: details, twelve actions in dots, momentum, a stress clock and condition, milestones and talents, and clocks; `+check` on a d6 pool against a risk, with assists, pushes, determination and fortune rolls. Charge SRD under CC BY 4.0 (see its NOTICE) |
+| [`sheet-charge-help/`](sheet-charge-help/) | 1.0.0 | Bridge: the Charge sheet's topics in `+help` |
+| [`sheet-charge-config/`](sheet-charge-config/) | 1.0.0 | Bridge: the Charge sheet's settings and lists in `+config` |
+| [`sheet-charge-chargen/`](sheet-charge-chargen/) | 1.0.0 | Bridge: giving out action dots follows the player's `+app` application; reviewers read the sheets they review |
+| [`duties-charge/`](duties-charge/) | 1.0.0 | Duties roll provider `charge` on the Charge sheet: assists and pushes paid in momentum, momentum, milestones and stress recovery as rewards |
 
 These currently double as the reference implementations for package authors —
 each README explains which manifest features it demonstrates. The curated
