@@ -3,7 +3,7 @@ package: sheet-fate
 title: "Fate sheet"
 version: 1.1.0
 authors: [SharpMUSH]
-description: "A Fate character sheet: skills or the six approaches on the ladder, aspects, stunts, stress tracks, consequences and fate points. +sheet shows and fills it in, and +check rolls four Fate dice plus a rating against an opposition for the room. Fate Core and Fate Accelerated SRD material under CC BY 3.0."
+description: "A Fate character sheet: skills or the six approaches on the ladder, aspects, stunts, stress tracks, consequences and fate points. +sheet shows and fills it in, +chargen walks a player through it, and +check rolls four Fate dice plus a rating against an opposition for the room. The build is a ledger of grants, and +encounter gives each encounter its own copy of fate points, stress and consequences. Fate Core and Fate Accelerated SRD material under CC BY 3.0."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, fate, dice, checks, aspects]
@@ -43,10 +43,12 @@ objects:
   # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook),
   # writes the sheet attributes on characters, and reads them for other packages.
   #
-  # A character's sheet is their own attributes under FATE`: FATE`RATING`<KEY> a skill's or approach's rating,
-  # FATE`ASPECT`<SLOT> an aspect (CONCEPT, TROUBLE, then 1, 2, ...), FATE`STUNT`<n> a stunt, FATE`STRESS`<TRACK>
-  # the marked boxes, FATE`BOXES`<TRACK> a track length of their own,
-  # FATE`CONSEQUENCE`<SLOT> a consequence, FATE`POINTS the fate points and FATE`REFRESH a refresh of their own.
+  # A character's sheet is their own attributes under FATE`. The build is a ledger, FATE`GRANT`<SOURCE>`<TARGET>`<KEY>
+  # (see FUN`LEDGER`), and FATE`RATING`<KEY> a skill's or approach's rating, FATE`BOXES`<TRACK> a track's length
+  # and FATE`REFRESH the refresh are rebuilt from it. FATE`ASPECT`<SLOT> an aspect (CONCEPT, TROUBLE, then 1, 2,
+  # ...), FATE`STUNT`<n> a stunt. In play: FATE`STRESS`<TRACK> the marked boxes, FATE`CONSEQUENCE`<SLOT> a
+  # consequence, FATE`POINTS the fate points. FATE`ENCOUNTERS the encounters they take part in, in the order
+  # they joined, and FATE`USING the one they picked with +encounter/use.
   # The FATE root is wizard-flagged, so only this object writes them.
   #
   # +sheet and +check are added with /noparse/rsnoparse and hooked to CMD`<word>, so what a player types
@@ -402,12 +404,102 @@ objects:
         SHEET`REFRESH
       DATA`ROUTE`SHEET`TRAITS: |-
         SHEET`TRAITS
+      DATA`ROUTE`SHEET`GRANT: |-
+        SHEET`GRANT
+      DATA`ROUTE`SHEET`LEDGER: |-
+        SHEET`LEDGER
+      DATA`ROUTE`SHEET`REVOKE: |-
+        SHEET`REVOKE
+      DATA`ROUTE`SHEET`CLEAR: |-
+        SHEET`CLEAR
       DATA`ROUTE`CHECK`BARE: |-
         CHECK`USAGE
       DATA`ROUTE`CHECK`ARG: |-
         CHECK`ROLL
       DATA`ROUTE`CHECK`PRIVATE: |-
         CHECK`ROLL
+      DATA`ROUTE`ENCOUNTER`BARE: |-
+        ENCOUNTER`SHOW
+      DATA`ROUTE`ENCOUNTER`ARG: |-
+        ENCOUNTER`SHOW
+      DATA`ROUTE`ENCOUNTER`START: |-
+        ENCOUNTER`START
+      DATA`ROUTE`ENCOUNTER`JOIN: |-
+        ENCOUNTER`JOIN
+      DATA`ROUTE`ENCOUNTER`ADD: |-
+        ENCOUNTER`ADD
+      DATA`ROUTE`ENCOUNTER`REMOVE: |-
+        ENCOUNTER`REMOVE
+      DATA`ROUTE`ENCOUNTER`LEAVE: |-
+        ENCOUNTER`LEAVE
+      DATA`ROUTE`ENCOUNTER`KEEP: |-
+        ENCOUNTER`KEEP
+      DATA`ROUTE`ENCOUNTER`END: |-
+        ENCOUNTER`END
+      DATA`ROUTE`ENCOUNTER`USE: |-
+        ENCOUNTER`USE
+      DATA`ROUTE`CHARGEN`BARE: |-
+        CHARGEN`SHOW
+      DATA`ROUTE`CHARGEN`ARG: |-
+        CHARGEN`SHOW
+      # What a character's encounter copy holds: PLAY`<NAME>, a leaf under FATE`, * for every one beneath it.
+      # Packages add their own, such as a machine's stress.
+      PLAY`STRESS: |-
+        STRESS`*
+      PLAY`CONSEQUENCE: |-
+        CONSEQUENCE`*
+      PLAY`POINTS: |-
+        POINTS
+      # The steps +chargen walks a player through: CHARGEN`<KEY> holds the step's name, with ORDER (lowest
+      # first), DONE (1 when the character %0 has done it), TEXT (what to do next), SKIP (1 when the step does not
+      # apply to this game) and OPTIONAL (1 when the character is complete without it) beneath. Packages add
+      # their own steps.
+      CHARGEN`ASPECTS: |-
+        Aspects
+      CHARGEN`ASPECTS`ORDER: |-
+        10
+      CHARGEN`ASPECTS`DONE:
+        value: |-
+          not(words(u(%!/FUN`CHARGEN`EMPTYASPECTS,%0)))
+        flags: [funsyntax]
+      CHARGEN`ASPECTS`TEXT:
+        value: |-
+          A high concept says who your character is, a trouble what keeps getting them into it[if(gt(get(%!/DATA`CONFIG`ASPECTS),2),%, and [sub(get(%!/DATA`CONFIG`ASPECTS),2)] more aspects anything else true about them)]. +sheet/aspect concept=<text>%, +sheet/aspect trouble=<text>[if(gt(get(%!/DATA`CONFIG`ASPECTS),2),%, and +sheet/aspect <number>=<text>)] write them.%r%rStill empty: [itemize(iter(u(%!/FUN`CHARGEN`EMPTYASPECTS,%0),lcstr(u(%!/FUN`ASPECT`LABEL,%i0)),%b,|),|)].
+        flags: [funsyntax]
+      CHARGEN`SKILLS: |-
+        Ratings
+      CHARGEN`SKILLS`ORDER: |-
+        20
+      CHARGEN`SKILLS`SKIP:
+        value: |-
+          hasattr(%!,GATE`SET)
+        flags: [funsyntax]
+      CHARGEN`SKILLS`DONE:
+        value: |-
+          cand(words(u(%!/FUN`CHARGEN`RATED,%0)),not(strlen(u(%!/FUN`SHEET`PROBLEMS,%0))))
+        flags: [funsyntax]
+      CHARGEN`SKILLS`TEXT:
+        value: |-
+          [if(strmatch(u(%!/FUN`TRAIT`PATH),SKILL),Rate your skills up to [u(%!/FUN`LADDER`SHOW,get(%!/DATA`CONFIG`CAP))]. A usual start is one skill at Great %(+4%)%, two at Good %(+3%)%, three at Fair %(+2%) and four at Average %(+1%); every other skill stays Mediocre %(+0%).,Rate your six approaches up to [u(%!/FUN`LADDER`SHOW,get(%!/DATA`CONFIG`CAP))]. A usual start is one at Good %(+3%)%, two at Fair %(+2%)%, two at Average %(+1%) and one at Mediocre %(+0%).)] +sheet/set <[u(%!/FUN`TRAIT`NOUN)]>=<rating> rates one%, and +sheet/traits lists them.%r%r[if(words(u(%!/FUN`CHARGEN`RATED,%0)),Rated so far: [itemize(iter(u(%!/FUN`CHARGEN`RATED,%0),u(%!/FUN`TRAIT`LABEL,%i0) [u(%!/FUN`DISPLAY`SIGNED,get(%0/FATE`RATING`%i0))],%b,|),|)].,Nothing is rated yet.)][if(strlen(setr(chargen_problems,u(%!/FUN`SHEET`PROBLEMS,%0))),%r[tone(warning,%q<chargen_problems>)])]
+        flags: [funsyntax]
+      CHARGEN`STUNTS: |-
+        Stunts
+      CHARGEN`STUNTS`ORDER: |-
+        30
+      CHARGEN`STUNTS`OPTIONAL: |-
+        1
+      CHARGEN`STUNTS`SKIP:
+        value: |-
+          not(gt(get(%!/DATA`CONFIG`STUNTS),0))
+        flags: [funsyntax]
+      CHARGEN`STUNTS`DONE:
+        value: |-
+          not(words(u(%!/FUN`CHARGEN`EMPTYSTUNTS,%0)))
+        flags: [funsyntax]
+      CHARGEN`STUNTS`TEXT:
+        value: |-
+          A stunt is one thing your character does better than anyone else: a +2 to a skill in a narrow case%, or a rule they get to bend. You have [get(%!/DATA`CONFIG`STUNTS)] slots%, and may leave some empty. +sheet/stunt <slot>=<text> writes one.%r%rStill empty: [itemize(iter(u(%!/FUN`CHARGEN`EMPTYSTUNTS,%0),slot %i0,%b,|),|)].
+        flags: [funsyntax]
       # The ladder: DATA`LADDER`<n>, N1 and N2 for -1 and -2.
       DATA`LADDER`8: |-
         Legendary
@@ -443,6 +535,14 @@ objects:
       CMD`CHECK:
         value: |-
           $(?is)^\+check(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,check,table,CHECK,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`ENCOUNTER:
+        value: |-
+          $(?is)^\+encounter(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,encounter,table,ENCOUNTER,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`CHARGEN:
+        value: |-
+          $(?is)^\+chargen(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,chargen,table,CHARGEN,switches,%1,argument,%2
         flags: [regexp, cmdsyntax]
       # A line a bridge adds to one of this object's messages: HINT`<message>, set here by a bridge such as
       # sheet-fate-help. %1 on are passed to it. Nothing when no bridge set one, so the message stands without it.
@@ -497,11 +597,12 @@ objects:
         value: |-
           @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert strlen(%q<sheet_who>); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`SHEET,%q<sheet_who>,%#)
         flags: [cmdsyntax]
-      # +sheet/set [<name>/]<skill>=<rating>: a number or a ladder word. Empty clears it back to Mediocre.
+      # +sheet/set [<name>/]<skill>=<rating>: a number or a ladder word, the ledger's SHEET grant for it. Empty takes
+      # that grant away.
       # A GATE`SET a bridge adds stops it for everyone, keepers too, when the ratings come from elsewhere.
       INC`SHEET`SET:
         value: |-
-          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/set <[u(%!/FUN`TRAIT`NOUN)]>=<rating>%, such as +sheet/set [lcstr(first(u(%!/FUN`TRAIT`ALL)))]=3 or =good.,warn); @assert not(strlen(setr(set_gate,u(%!/FUN`GATE`SET,%#))))=@pemit %#=notice(SHEET,%q<set_gate>,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @assert strlen(setr(trait_key,u(%!/FUN`TRAIT`FIND,%q<sheet_what>)))=@pemit %#=notice(SHEET,There is no [u(%!/FUN`TRAIT`NOUN)] '%q<sheet_what>'. +sheet/traits lists them.,warn); @break not(strlen(%q<cmd_right_side>))={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,RATING`%q<trait_key>,value,; @pemit %#=notice(SHEET,u(%!/FUN`TRAIT`LABEL,%q<trait_key>) is cleared on [name(%q<sheet_who>)]'s sheet.,ok)}; think setq(set_value,u(%!/FUN`LADDER`READ,%q<cmd_right_side>)); @assert isint(%q<set_value>)=@pemit %#=notice(SHEET,'%q<cmd_right_side>' is not a rating. Give a number from -2 to 8 or a ladder word such as Good.,warn); @assert cand(gte(%q<set_value>,-2),lte(%q<set_value>,if(%q<viewer_keeper>,8,get(%!/DATA`CONFIG`CAP))))=@pemit %#=notice(SHEET,A rating goes from -2 to [u(%!/FUN`LADDER`SHOW,if(%q<viewer_keeper>,8,get(%!/DATA`CONFIG`CAP)))].,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,RATING`%q<trait_key>,value,%q<set_value>; @pemit %#=notice(SHEET,u(%!/FUN`TRAIT`LABEL,%q<trait_key>) is [u(%!/FUN`LADDER`SHOW,%q<set_value>)] on [name(%q<sheet_who>)]'s sheet.[if(not(comp(%q<sheet_who>,%q<viewer_objid>)),u(%!/FUN`HINT,SET))],ok)
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/set <[u(%!/FUN`TRAIT`NOUN)]>=<rating>%, such as +sheet/set [lcstr(first(u(%!/FUN`TRAIT`ALL)))]=3 or =good.,warn); @assert not(strlen(setr(set_gate,u(%!/FUN`GATE`SET,%#))))=@pemit %#=notice(SHEET,%q<set_gate>,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @assert strlen(setr(trait_key,u(%!/FUN`TRAIT`FIND,%q<sheet_what>)))=@pemit %#=notice(SHEET,There is no [u(%!/FUN`TRAIT`NOUN)] '%q<sheet_what>'. +sheet/traits lists them.,warn); @break not(strlen(%q<cmd_right_side>))={@include/args %!/INC`DO`GRANT=who,%q<sheet_who>,source,SHEET,target,RATING,key,%q<trait_key>,kind,base,value,; @pemit %#=notice(SHEET,u(%!/FUN`TRAIT`LABEL,%q<trait_key>) is cleared on [name(%q<sheet_who>)]'s sheet.,ok)}; think setq(set_value,u(%!/FUN`LADDER`READ,%q<cmd_right_side>)); @assert isint(%q<set_value>)=@pemit %#=notice(SHEET,'%q<cmd_right_side>' is not a rating. Give a number from -2 to 8 or a ladder word such as Good.,warn); @assert cand(gte(%q<set_value>,-2),lte(%q<set_value>,if(%q<viewer_keeper>,8,get(%!/DATA`CONFIG`CAP))))=@pemit %#=notice(SHEET,A rating goes from -2 to [u(%!/FUN`LADDER`SHOW,if(%q<viewer_keeper>,8,get(%!/DATA`CONFIG`CAP)))].,warn); @include/args %!/INC`DO`GRANT=who,%q<sheet_who>,source,SHEET,target,RATING,key,%q<trait_key>,kind,base,value,%q<set_value>; @pemit %#=notice(SHEET,u(%!/FUN`TRAIT`LABEL,%q<trait_key>) is [u(%!/FUN`LADDER`SHOW,%q<set_value>)] on [name(%q<sheet_who>)]'s sheet.[if(not(comp(%q<sheet_who>,%q<viewer_objid>)),u(%!/FUN`HINT,SET))],ok)
         flags: [cmdsyntax]
       # +sheet/aspect [<name>/]<slot>=<text>: concept, trouble, or a number. Empty clears it.
       INC`SHEET`ASPECT:
@@ -516,28 +617,28 @@ objects:
       # +sheet/stress [<name>/]<track>=<box> marks a box; =clear empties the track. Any time, on your own sheet.
       INC`SHEET`STRESS:
         value: |-
-          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/stress <track>=<box> marks a box%, =clear empties the track.,warn); @include %!/INC`NEED`WHO; @assert strlen(setr(track_key,u(%!/FUN`LIST`FIND,TRACK,%q<sheet_what>)))=@pemit %#=notice(SHEET,There is no stress track '%q<sheet_what>'. The tracks are [itemize(lcstr(u(%!/FUN`LIST`ALL,TRACK)))].,warn); think setq(track_boxes,u(%!/FUN`TRACK`BOXES,%q<sheet_who>,%q<track_key>)); @break strmatch(%q<cmd_right_side>,clear)={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,STRESS`%q<track_key>,value,; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s [lcstr(get({{store}}/TRACK`%q<track_key>))] stress is clear.,ok)}; @assert cand(isint(%q<cmd_right_side>),gte(%q<cmd_right_side>,1),lte(%q<cmd_right_side>,%q<track_boxes>))=@pemit %#=notice(SHEET,The [lcstr(get({{store}}/TRACK`%q<track_key>))] track has boxes 1 to %q<track_boxes>.,warn); think setq(track_marked,get(%q<sheet_who>/FATE`STRESS`%q<track_key>)); @assert not(member(%q<track_marked>,%q<cmd_right_side>))=@pemit %#=notice(SHEET,Box %q<cmd_right_side> is marked already.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,STRESS`%q<track_key>,value,sort(%q<track_marked> %q<cmd_right_side>,n); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] marks [lcstr(get({{store}}/TRACK`%q<track_key>))] stress box %q<cmd_right_side>.,ok)
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/stress <track>=<box> marks a box%, =clear empties the track.,warn); @include %!/INC`NEED`WHO; @assert strlen(setr(track_key,u(%!/FUN`LIST`FIND,TRACK,%q<sheet_what>)))=@pemit %#=notice(SHEET,There is no stress track '%q<sheet_what>'. The tracks are [itemize(lcstr(u(%!/FUN`LIST`ALL,TRACK)))].,warn); think setq(track_boxes,u(%!/FUN`TRACK`BOXES,%q<sheet_who>,%q<track_key>)); @break strmatch(%q<cmd_right_side>,clear)={think u(%!/FUN`PLAY`SET,%q<sheet_who>,STRESS`%q<track_key>,); @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s [lcstr(get({{store}}/TRACK`%q<track_key>))] stress is clear[u(%!/FUN`PLAY`IN,%q<sheet_who>)].,ok)}; @assert cand(isint(%q<cmd_right_side>),gte(%q<cmd_right_side>,1),lte(%q<cmd_right_side>,%q<track_boxes>))=@pemit %#=notice(SHEET,The [lcstr(get({{store}}/TRACK`%q<track_key>))] track has boxes 1 to %q<track_boxes>.,warn); think setq(track_marked,u(%!/FUN`PLAY`GET,%q<sheet_who>,STRESS`%q<track_key>)); @assert not(member(%q<track_marked>,%q<cmd_right_side>))=@pemit %#=notice(SHEET,Box %q<cmd_right_side> is marked already.,warn); think u(%!/FUN`PLAY`SET,%q<sheet_who>,STRESS`%q<track_key>,sort(%q<track_marked> %q<cmd_right_side>,n)); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] marks [lcstr(get({{store}}/TRACK`%q<track_key>))] stress box %q<cmd_right_side>[u(%!/FUN`PLAY`IN,%q<sheet_who>)].,ok)
         flags: [cmdsyntax]
       # +sheet/recover [<name>]: clears every stress track.
       INC`SHEET`RECOVER:
         value: |-
-          @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert strlen(%q<sheet_who>); @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error); @dolist/inline u(%!/FUN`LIST`ALL,TRACK)={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,STRESS`##,value,}; @pemit %#=notice(SHEET,Every stress box on [name(%q<sheet_who>)]'s sheet is clear.,ok)
+          @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert strlen(%q<sheet_who>); @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error); think iter(u(%!/FUN`LIST`ALL,TRACK),u(%!/FUN`PLAY`SET,%q<sheet_who>,STRESS`%i0,)); @pemit %#=notice(SHEET,Every stress box on [name(%q<sheet_who>)]'s sheet is clear[u(%!/FUN`PLAY`IN,%q<sheet_who>)].,ok)
         flags: [cmdsyntax]
       # +sheet/boxes <name>/<track>=<n>: a keeper gives one character a track of their own length; =default
       # takes them back to the game's.
       INC`SHEET`BOXES:
         value: |-
-          @include %!/INC`NEED`KEEPER; @assert cand(%q<cmd_has_equals>,strmatch(%q<cmd_left_side>,*/*))=@pemit %#=notice(SHEET,+sheet/boxes <name>/<track>=<boxes>%, or =default for the game's.,warn); @include %!/INC`NEED`WHO; @assert strlen(setr(track_key,u(%!/FUN`LIST`FIND,TRACK,%q<sheet_what>)))=@pemit %#=notice(SHEET,There is no stress track '%q<sheet_what>'. The tracks are [itemize(lcstr(u(%!/FUN`LIST`ALL,TRACK)))].,warn); @break strmatch(%q<cmd_right_side>,default)={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,BOXES`%q<track_key>,value,; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s [lcstr(get({{store}}/TRACK`%q<track_key>))] track has the game's [u(%!/FUN`TRACK`BOXES,%q<sheet_who>,%q<track_key>)] boxes again.,ok)}; @assert cand(isint(%q<cmd_right_side>),gte(%q<cmd_right_side>,1),lte(%q<cmd_right_side>,10))=@pemit %#=notice(SHEET,A track has 1 to 10 boxes.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,BOXES`%q<track_key>,value,%q<cmd_right_side>; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s [lcstr(get({{store}}/TRACK`%q<track_key>))] track has %q<cmd_right_side> boxes.,ok)
+          @include %!/INC`NEED`KEEPER; @assert cand(%q<cmd_has_equals>,strmatch(%q<cmd_left_side>,*/*))=@pemit %#=notice(SHEET,+sheet/boxes <name>/<track>=<boxes>%, or =default for the game's.,warn); @include %!/INC`NEED`WHO; @assert strlen(setr(track_key,u(%!/FUN`LIST`FIND,TRACK,%q<sheet_what>)))=@pemit %#=notice(SHEET,There is no stress track '%q<sheet_what>'. The tracks are [itemize(lcstr(u(%!/FUN`LIST`ALL,TRACK)))].,warn); @break strmatch(%q<cmd_right_side>,default)={@include/args %!/INC`DO`GRANT=who,%q<sheet_who>,source,STAFF,target,BOXES,key,%q<track_key>,kind,base,value,; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s [lcstr(get({{store}}/TRACK`%q<track_key>))] track has [u(%!/FUN`TRACK`BOXES,%q<sheet_who>,%q<track_key>)] boxes again.,ok)}; @assert cand(isint(%q<cmd_right_side>),gte(%q<cmd_right_side>,1),lte(%q<cmd_right_side>,10))=@pemit %#=notice(SHEET,A track has 1 to 10 boxes.,warn); @include/args %!/INC`DO`GRANT=who,%q<sheet_who>,source,STAFF,target,BOXES,key,%q<track_key>,kind,base,value,%q<cmd_right_side>; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s [lcstr(get({{store}}/TRACK`%q<track_key>))] track has [u(%!/FUN`TRACK`BOXES,%q<sheet_who>,%q<track_key>)] boxes.,ok)
         flags: [cmdsyntax]
       # +sheet/consequence [<name>/]<slot>=<aspect>: takes one; empty clears it.
       INC`SHEET`CONSEQUENCE:
         value: |-
-          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/consequence <slot>=<aspect> takes one%, an empty one clears it. The slots are [itemize(lcstr(u(%!/FUN`LIST`ALL,CONSEQUENCE)))].,warn); @include %!/INC`NEED`WHO; @assert strlen(setr(consequence_key,u(%!/FUN`LIST`FIND,CONSEQUENCE,%q<sheet_what>)))=@pemit %#=notice(SHEET,There is no consequence '%q<sheet_what>'. The slots are [itemize(lcstr(u(%!/FUN`LIST`ALL,CONSEQUENCE)))].,warn); @assert lte(strlen(%q<cmd_right_side>),200)=@pemit %#=notice(SHEET,Keep a consequence to 200 characters.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,CONSEQUENCE`%q<consequence_key>,value,%q<cmd_right_side>; @pemit %#=notice(SHEET,if(strlen(%q<cmd_right_side>),[name(%q<sheet_who>)] takes a [lcstr(get({{store}}/CONSEQUENCE`%q<consequence_key>))] consequence: %q<cmd_right_side>,[name(%q<sheet_who>)]'s [lcstr(get({{store}}/CONSEQUENCE`%q<consequence_key>))] consequence is cleared.),ok)
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/consequence <slot>=<aspect> takes one%, an empty one clears it. The slots are [itemize(lcstr(u(%!/FUN`LIST`ALL,CONSEQUENCE)))].,warn); @include %!/INC`NEED`WHO; @assert strlen(setr(consequence_key,u(%!/FUN`LIST`FIND,CONSEQUENCE,%q<sheet_what>)))=@pemit %#=notice(SHEET,There is no consequence '%q<sheet_what>'. The slots are [itemize(lcstr(u(%!/FUN`LIST`ALL,CONSEQUENCE)))].,warn); @assert lte(strlen(%q<cmd_right_side>),200)=@pemit %#=notice(SHEET,Keep a consequence to 200 characters.,warn); think u(%!/FUN`PLAY`SET,%q<sheet_who>,CONSEQUENCE`%q<consequence_key>,%q<cmd_right_side>); @pemit %#=notice(SHEET,if(strlen(%q<cmd_right_side>),[name(%q<sheet_who>)] takes a [lcstr(get({{store}}/CONSEQUENCE`%q<consequence_key>))] consequence[u(%!/FUN`PLAY`IN,%q<sheet_who>)]: %q<cmd_right_side>,[name(%q<sheet_who>)]'s [lcstr(get({{store}}/CONSEQUENCE`%q<consequence_key>))] consequence is cleared[u(%!/FUN`PLAY`IN,%q<sheet_who>)].),ok)
         flags: [cmdsyntax]
       # +sheet/spend[ <what for>]: spends a fate point where the room sees it.
       INC`SHEET`SPEND:
         value: |-
-          think setq(spend_points,u(%!/API`POINTS,%q<viewer_objid>)); @assert gt(%q<spend_points>,0)=@pemit %#=notice(SHEET,You have no fate points to spend.,warn); @assert lte(strlen(%q<cmd_argument>),200)=@pemit %#=notice(SHEET,Keep what it is for to 200 characters.,warn); @include/args %!/INC`DO`SET=who,%q<viewer_objid>,leaf,POINTS,value,dec(%q<spend_points>); @remit %l=notice(SHEET,tone(strong,name(%#)) spends a fate point[if(strlen(%q<cmd_argument>),: %q<cmd_argument>)]. [dec(%q<spend_points>)] left.)
+          think setq(spend_points,u(%!/FUN`PLAY`POINTS,%q<viewer_objid>)); @assert gt(%q<spend_points>,0)=@pemit %#=notice(SHEET,You have no fate points to spend.,warn); @assert lte(strlen(%q<cmd_argument>),200)=@pemit %#=notice(SHEET,Keep what it is for to 200 characters.,warn); think u(%!/FUN`PLAY`SET,%q<viewer_objid>,POINTS,dec(%q<spend_points>)); @remit %l=notice(SHEET,tone(strong,name(%#)) spends a fate point[u(%!/FUN`PLAY`IN,%q<viewer_objid>)][if(strlen(%q<cmd_argument>),: %q<cmd_argument>)]. [dec(%q<spend_points>)] left.)
         flags: [cmdsyntax]
       # +sheet/award <name>[=<n>]: gives fate points, 1 unless a number from -10 to 10 is given.
       INC`SHEET`AWARD:
@@ -552,12 +653,246 @@ objects:
         flags: [cmdsyntax]
       INC`SHEET`REFRESH`SET:
         value: |-
-          @break strmatch(%q<cmd_right_side>,default)={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,REFRESH,value,; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s refresh is the game's again: [get(%!/DATA`CONFIG`REFRESH)].,ok)}; @assert cand(isint(%q<cmd_right_side>),gte(%q<cmd_right_side>,0),lte(%q<cmd_right_side>,20))=@pemit %#=notice(SHEET,A refresh is a whole number from 0 to 20%, or default.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,REFRESH,value,%q<cmd_right_side>; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s refresh is %q<cmd_right_side>.,ok)
+          @break strmatch(%q<cmd_right_side>,default)={@include/args %!/INC`DO`GRANT=who,%q<sheet_who>,source,STAFF,target,REFRESH,key,ALL,kind,base,value,; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s refresh is [u(%!/FUN`POINTS`REFRESH,%q<sheet_who>)] again.,ok)}; @assert cand(isint(%q<cmd_right_side>),gte(%q<cmd_right_side>,0),lte(%q<cmd_right_side>,20))=@pemit %#=notice(SHEET,A refresh is a whole number from 0 to 20%, or default.,warn); @include/args %!/INC`DO`GRANT=who,%q<sheet_who>,source,STAFF,target,REFRESH,key,ALL,kind,base,value,%q<cmd_right_side>; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s refresh is [u(%!/FUN`POINTS`REFRESH,%q<sheet_who>)].,ok)
         flags: [cmdsyntax]
       INC`SHEET`TRAITS:
         value: |-
           @pemit %#=u(%!/FUN`SCREEN`TRAITS)
         flags: [cmdsyntax]
+      # +sheet/grant <name>/<what>=<n>|+<n>|-<n>: a keeper adds a grant to the ledger for a skill or approach, a
+      # stress track or refresh, under a source of its own (STAFF_<n>), so each change stays on the ledger. A plain
+      # number sets the value, +/- adds to it.
+      INC`SHEET`GRANT:
+        value: |-
+          @include %!/INC`NEED`KEEPER; @assert cand(%q<cmd_has_equals>,strmatch(%q<cmd_left_side>,*/*),strlen(%q<cmd_right_side>))=@pemit %#=notice(SHEET,+sheet/grant <name>/<[u(%!/FUN`TRAIT`NOUN)]%, track or refresh>=<n>%, +<n> or -<n>.,warn); @include %!/INC`NEED`WHO; think setqm(grant_typed,lcstr(%q<sheet_what>),grant_trait,u(%!/FUN`TRAIT`FIND,%q<sheet_what>),grant_track,if(not(strlen(%q<grant_trait>)),u(%!/FUN`LIST`FIND,TRACK,%q<sheet_what>)),grant_target,cond(strlen(%q<grant_trait>),RATING,strlen(%q<grant_track>),BOXES,strmatch(%q<grant_typed>,refresh),REFRESH),grant_key,firstof(%q<grant_trait>,%q<grant_track>,ALL)); @assert strlen(%q<grant_target>)=@pemit %#=notice(SHEET,'%q<sheet_what>' is not a [u(%!/FUN`TRAIT`NOUN)]%, a stress track or refresh.,warn); think setqm(grant_value,edit(%q<cmd_right_side>,+,),grant_kind,if(cor(strmatch(%q<cmd_right_side>,+*),strmatch(%q<cmd_right_side>,-*)),add,base),grant_from,STAFF_[inc(lmath(max,0 [iter(u(%!/FUN`LEDGER`ALL,%q<sheet_who>),if(strmatch(setr(grant_seen,extract(%i0,3,1,`)),STAFF_*),after(%q<grant_seen>,STAFF_)))]))]); @assert cand(isint(%q<grant_value>),lte(abs(%q<grant_value>),20))=@pemit %#=notice(SHEET,A grant is a whole number from -20 to 20.,warn); @include/args %!/INC`DO`GRANT=who,%q<sheet_who>,source,%q<grant_from>,target,%q<grant_target>,key,%q<grant_key>,kind,%q<grant_kind>,value,%q<grant_value>; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s [u(%!/FUN`LEDGER`WHAT,%q<grant_target>,%q<grant_key>)] has a staff grant of [u(%!/FUN`LEDGER`GRANTSHOW,%q<grant_target>,%q<grant_kind> %q<grant_value>)]: [u(%!/FUN`LEDGER`NOW,%q<sheet_who>,%q<grant_target>,%q<grant_key>)] now.,ok)
+        flags: [cmdsyntax]
+      # +sheet/revoke <name>/<n>: a keeper takes away grant <n> of +sheet/ledger.
+      INC`SHEET`REVOKE:
+        value: |-
+          @include %!/INC`NEED`KEEPER; @assert cand(strmatch(%q<cmd_argument>,*/*),isint(after(%q<cmd_argument>,/)))=@pemit %#=notice(SHEET,+sheet/revoke <name>/<number>%, a number from +sheet/ledger <name>.,warn); @include/args %!/INC`NEED`TARGET=name,trim(before(%q<cmd_argument>,/)); @assert strlen(%q<sheet_who>); think setq(revoke_attr,extract(u(%!/FUN`LEDGER`ALL,%q<sheet_who>),trim(after(%q<cmd_argument>,/)),1)); @assert strlen(%q<revoke_attr>)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s ledger has no grant [trim(after(%q<cmd_argument>,/))].,warn); think setqm(revoke_target,extract(%q<revoke_attr>,4,1,`),revoke_key,extract(%q<revoke_attr>,5,1,`),revoke_from,extract(%q<revoke_attr>,3,1,`)); @include/args %!/INC`DO`GRANT=who,%q<sheet_who>,source,%q<revoke_from>,target,%q<revoke_target>,key,%q<revoke_key>,kind,,value,; @pemit %#=notice(SHEET,The [u(%!/FUN`LEDGER`SOURCE,%q<revoke_from>)] grant on [name(%q<sheet_who>)]'s [u(%!/FUN`LEDGER`WHAT,%q<revoke_target>,%q<revoke_key>)] is gone: [u(%!/FUN`LEDGER`NOW,%q<sheet_who>,%q<revoke_target>,%q<revoke_key>)] now.[if(not(cor(strmatch(%q<revoke_from>,SHEET),strmatch(%q<revoke_from>,STAFF_*))),%bThe package that granted it may grant it again when it next works the sheet out.)],ok)
+        flags: [cmdsyntax]
+      # +sheet/clear <name>: a keeper takes away the whole build, every grant, aspect and stunt and what each
+      # BUILD`<name> hook names, so character creation starts again. Play (stress, consequences, fate points) stays.
+      INC`SHEET`CLEAR:
+        value: |-
+          @include %!/INC`NEED`KEEPER; @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/clear <name> takes away their whole build so they make the character again.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>; @assert strlen(%q<sheet_who>); @dolist/inline GRANT ASPECT STUNT [iter(lattr(%!/BUILD`*),get(%!/%i0))]={@include/args %!/INC`DO`WIPE=who,%q<sheet_who>,leaf,##}; think u(%!/API`REBUILD,%q<sheet_who>); @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s build is cleared: +chargen starts it again.,ok); @pemit %q<sheet_who>=notice(SHEET,[name(%#)] cleared your character's build. +chargen walks you through making it again.)
+        flags: [cmdsyntax]
+      # %<who>, %<leaf>: removes FATE`<leaf> and everything beneath it.
+      INC`DO`WIPE:
+        value: |-
+          @dolist/inline revwords(lattr(%<who>/FATE`%<leaf>`**))={&## %<who>}; &FATE`%<leaf> %<who>
+        flags: [cmdsyntax]
+      # +sheet/ledger [<name>]: every grant the sheet is built from, with where it came from.
+      INC`SHEET`LEDGER:
+        value: |-
+          @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert strlen(%q<sheet_who>); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`LEDGER,%q<sheet_who>)
+        flags: [cmdsyntax]
+
+      # ---- +encounter ---------------------------------------------------------------
+      # Encounters on Fate Encounters, ENC`<number> each: the room it is in, TITLE, LEAD the GM who started it,
+      # PEOPLE, and C`<character key>` each one's copy of what PLAY` names. A room holds any number, and a character
+      # may be in several (FATE`ENCOUNTERS). +sheet's play commands read and write the copy of the encounter that is
+      # active for them: one they joined that runs in the room they are in, the one they picked with
+      # +encounter/use if it is one of those, else the last they joined. Everywhere else they play on the sheet
+      # itself, which changes only when the GM keeps a copy. An encounter lasts until the GM ends it, across any
+      # number of days. Sheet keepers act as GM in every encounter. The sheet API (API`POINTS, API`AWARD, used by
+      # Duties) always reads the sheet itself.
+      # %<typed> a number or nothing, %<mode> join or nothing: enc_id. Without a number: the one active for you
+      # (not for join), else the only one here.
+      INC`NEED`ENCOUNTER:
+        value: |-
+          think setqm(enc_here,u(%!/FUN`ENC`HERE,%l),enc_id,cond(strlen(%<typed>),%<typed>,cand(comp(%<mode>,join),strlen(setr(enc_active,u(%!/FUN`ENC`ACTIVE,%#)))),%q<enc_active>,eq(words(%q<enc_here>),1),%q<enc_here>)); @assert strlen(%q<enc_id>)=@pemit %#=notice(SHEET,if(words(%q<enc_here>),There are [words(%q<enc_here>)] encounters here: name one by its number. +encounter lists them.,There is no encounter here. +encounter/start begins one.),warn); @assert cand(isint(%q<enc_id>),hasattr({{encounters}},ENC`%q<enc_id>))=@pemit %#=notice(SHEET,There is no encounter %q<enc_id>. +encounter lists the ones here.,warn)
+        flags: [cmdsyntax]
+      INC`NEED`HERE:
+        value: |-
+          @assert not(comp(get({{encounters}}/ENC`%q<enc_id>),objid(%l)))=@pemit %#=notice(SHEET,capstr(u(%!/FUN`ENC`TITLE,%q<enc_id>)) runs in [name(get({{encounters}}/ENC`%q<enc_id>))]%, not here.,warn)
+        flags: [cmdsyntax]
+      INC`NEED`GM:
+        value: |-
+          @assert cor(%q<viewer_keeper>,not(comp(get({{encounters}}/ENC`%q<enc_id>`LEAD),%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only [name(get({{encounters}}/ENC`%q<enc_id>`LEAD))]%, who runs it%, and sheet keepers do that.,error)
+        flags: [cmdsyntax]
+      # %<name> a player in the encounter: sheet_who.
+      INC`NEED`MEMBER:
+        value: |-
+          @include/args %!/INC`NEED`TARGET=name,%<name>; @assert strlen(%q<sheet_who>); @assert member(get({{encounters}}/ENC`%q<enc_id>`PEOPLE),%q<sheet_who>)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] is not in [u(%!/FUN`ENC`TITLE,%q<enc_id>)].,warn)
+        flags: [cmdsyntax]
+      # +encounter: the encounters here, or the one, if there is only one. +encounter <number>: that one.
+      INC`ENCOUNTER`SHOW:
+        value: |-
+          @break cand(not(strlen(%q<cmd_argument>)),neq(words(u(%!/FUN`ENC`HERE,%l)),1))={@pemit %#=u(%!/FUN`SCREEN`ENCOUNTERS,%l,%#)}; @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>; @pemit %#=u(%!/FUN`SCREEN`ENCOUNTER,%q<enc_id>,%#)
+        flags: [cmdsyntax]
+      # +encounter/start [<title>]: a new encounter here; whoever starts it runs it.
+      INC`ENCOUNTER`START:
+        value: |-
+          @assert lte(strlen(%q<cmd_argument>),100)=@pemit %#=notice(SHEET,Keep a title to 100 characters.,warn); think setq(enc_id,inc(get({{encounters}}/NEXT))); &NEXT {{encounters}}=%q<enc_id>; &ENC`%q<enc_id> {{encounters}}=objid(%l); &ENC`%q<enc_id>`TITLE {{encounters}}=%q<cmd_argument>; &ENC`%q<enc_id>`LEAD {{encounters}}=%q<viewer_objid>; @remit %l=notice(SHEET,tone(strong,name(%#)) starts [u(%!/FUN`ENC`TITLE,%q<enc_id>)]. +encounter/join %q<enc_id> takes part with a copy of your fate points%, stress and consequences.)
+        flags: [cmdsyntax]
+      # +encounter/join [<number>]
+      INC`ENCOUNTER`JOIN:
+        value: |-
+          @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>,mode,join; @include %!/INC`NEED`HERE; think setq(sheet_who,%q<viewer_objid>); @include %!/INC`ENCOUNTER`ENTER; @remit %l=notice(SHEET,tone(strong,name(%#)) joins [u(%!/FUN`ENC`TITLE,%q<enc_id>)].)
+        flags: [cmdsyntax]
+      # +encounter/add <name>[=<number>]: the GM brings in someone here.
+      INC`ENCOUNTER`ADD:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(SHEET,+encounter/add <name>%[=<number>%].,warn); @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_right_side>; @include %!/INC`NEED`GM; @include %!/INC`NEED`HERE; @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; @assert strlen(%q<sheet_who>); @assert not(comp(objid(loc(%q<sheet_who>)),objid(%l)))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] is not here.,warn); @include %!/INC`ENCOUNTER`ENTER; @remit %l=notice(SHEET,tone(strong,name(%#)) brings [name(%q<sheet_who>)] into [u(%!/FUN`ENC`TITLE,%q<enc_id>)].)
+        flags: [cmdsyntax]
+      # sheet_who joins the encounter enc_id: a copy is taken now, and it becomes the one they play in.
+      INC`ENCOUNTER`ENTER:
+        value: |-
+          @assert not(member(get({{encounters}}/ENC`%q<enc_id>`PEOPLE),%q<sheet_who>))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] is in [u(%!/FUN`ENC`TITLE,%q<enc_id>)] already.,warn); think u(%!/FUN`ENC`COPYIN,%q<sheet_who>,%q<enc_id>); &ENC`%q<enc_id>`PEOPLE {{encounters}}=trim(get({{encounters}}/ENC`%q<enc_id>`PEOPLE) %q<sheet_who>); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,ENCOUNTERS,value,trim(u(%!/FUN`ENC`MINE,%q<sheet_who>) %q<enc_id>); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,USING,value,%q<enc_id>
+        flags: [cmdsyntax]
+      # +encounter/use <number>: which of your encounters your play goes to while you are in its room.
+      INC`ENCOUNTER`USE:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,if(strlen(setr(enc_active,u(%!/FUN`ENC`ACTIVE,%#))),Your play here goes to [u(%!/FUN`ENC`TITLE,%q<enc_active>)].,Your play here goes to your sheet.) +encounter/use <number> picks another of yours.); @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>; @assert member(get({{encounters}}/ENC`%q<enc_id>`PEOPLE),%q<viewer_objid>)=@pemit %#=notice(SHEET,You are not in [u(%!/FUN`ENC`TITLE,%q<enc_id>)]. +encounter/join %q<enc_id> takes part.,warn); @include/args %!/INC`DO`SET=who,%q<viewer_objid>,leaf,USING,value,%q<enc_id>; @pemit %#=notice(SHEET,Your play goes to [u(%!/FUN`ENC`TITLE,%q<enc_id>)] while you are in [name(get({{encounters}}/ENC`%q<enc_id>))].,ok)
+        flags: [cmdsyntax]
+      # +encounter/remove <name>[=<number>]: the GM takes someone out; their copy is dropped.
+      INC`ENCOUNTER`REMOVE:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(SHEET,+encounter/remove <name>%[=<number>%].,warn); @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_right_side>; @include %!/INC`NEED`GM; @include/args %!/INC`NEED`MEMBER=name,%q<cmd_left_side>; think u(%!/FUN`ENC`DROP,%q<sheet_who>,%q<enc_id>); @pemit %#=notice(SHEET,You take [name(%q<sheet_who>)] out of [u(%!/FUN`ENC`TITLE,%q<enc_id>)]. Their sheet is as it was.,ok); @pemit %q<sheet_who>=notice(SHEET,tone(strong,name(%#)) takes you out of [u(%!/FUN`ENC`TITLE,%q<enc_id>)]. Your sheet is as it was.)
+        flags: [cmdsyntax]
+      # +encounter/leave [<number>]
+      INC`ENCOUNTER`LEAVE:
+        value: |-
+          @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>; @assert member(get({{encounters}}/ENC`%q<enc_id>`PEOPLE),%q<viewer_objid>)=@pemit %#=notice(SHEET,You are not in [u(%!/FUN`ENC`TITLE,%q<enc_id>)].,warn); think u(%!/FUN`ENC`DROP,%q<viewer_objid>,%q<enc_id>); @pemit %#=notice(SHEET,You leave [u(%!/FUN`ENC`TITLE,%q<enc_id>)]. Your sheet is as it was.,ok); @oemit %#=notice(SHEET,tone(strong,name(%#)) leaves [u(%!/FUN`ENC`TITLE,%q<enc_id>)].)
+        flags: [cmdsyntax]
+      # +encounter/keep <name>[=<number>]: the GM writes that character's copy back onto their sheet.
+      INC`ENCOUNTER`KEEP:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(SHEET,+encounter/keep <name>%[=<number>%] writes their copy back to their sheet.,warn); @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_right_side>; @include %!/INC`NEED`GM; @include/args %!/INC`NEED`MEMBER=name,%q<cmd_left_side>; think u(%!/FUN`ENC`COPYOUT,%q<sheet_who>,%q<enc_id>); @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s sheet keeps what happened in [u(%!/FUN`ENC`TITLE,%q<enc_id>)]: [u(%!/FUN`ENC`SUMMARY,%q<sheet_who>)].,ok); @pemit %q<sheet_who>=notice(SHEET,tone(strong,name(%#)) keeps what happened to you in [u(%!/FUN`ENC`TITLE,%q<enc_id>)]: your sheet has [u(%!/FUN`ENC`SUMMARY,%q<sheet_who>)].)
+        flags: [cmdsyntax]
+      # +encounter/end [<number>]: the GM ends it; every copy not kept is dropped.
+      INC`ENCOUNTER`END:
+        value: |-
+          @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>; @include %!/INC`NEED`GM; think setqm(enc_title,u(%!/FUN`ENC`TITLE,%q<enc_id>),enc_room,get({{encounters}}/ENC`%q<enc_id>),enc_people,get({{encounters}}/ENC`%q<enc_id>`PEOPLE))[iter(%q<enc_people>,u(%!/FUN`ENC`DROP,%i0,%q<enc_id>))]; @dolist/inline revwords(lattr({{encounters}}/ENC`%q<enc_id>`**))={&## {{encounters}}}; &ENC`%q<enc_id> {{encounters}}; @pemit/list setunion(%q<enc_people>,%#)=notice(SHEET,tone(strong,name(%#)) ends [capstr(%q<enc_title>)]. Every sheet keeps only what the GM kept.)
+        flags: [cmdsyntax]
+      # %0 a room or character: its key, the objid without # and with _ for :.
+      FUN`ENC`KEY:
+        value: |-
+          edit(after(objid(%0),#),:,_)
+        flags: [funsyntax]
+      # %0 an encounter: "Warehouse brawl (encounter 3)", or "encounter 3" with no title.
+      FUN`ENC`TITLE:
+        value: |-
+          if(strlen(setr(enc_titled,get({{encounters}}/ENC`%0`TITLE))),%q<enc_titled> %(encounter %0%),encounter %0)
+        flags: [funsyntax]
+      # %0 a room: the encounters running in it, oldest first.
+      FUN`ENC`HERE:
+        value: |-
+          setq(enc_room_id,objid(%0))[sort(iter(lattr({{encounters}}/ENC`*),if(not(comp(get({{encounters}}/%i0),%q<enc_room_id>)),after(%i0,ENC`))),n)]
+        flags: [funsyntax]
+      # %0 a character: the encounters they are in, in the order they joined.
+      FUN`ENC`MINE:
+        value: |-
+          iter(get(%0/FATE`ENCOUNTERS),if(member(get({{encounters}}/ENC`%i0`PEOPLE),objid(%0)),%i0))
+        flags: [funsyntax]
+      # %0 a character: the encounter their play goes to, or nothing for the sheet itself.
+      FUN`ENC`ACTIVE:
+        value: |-
+          setqm(enc_active_room,objid(loc(%0)),enc_active_list,iter(u(%!/FUN`ENC`MINE,%0),if(not(comp(get({{encounters}}/ENC`%i0),%q<enc_active_room>)),%i0)))[if(member(%q<enc_active_list>,get(%0/FATE`USING)),get(%0/FATE`USING),last(%q<enc_active_list>))]
+        flags: [funsyntax]
+      # %0 a character, %1 an encounter: copies every leaf PLAY` names into the encounter, and the fate points.
+      FUN`ENC`COPYIN:
+        value: |-
+          setq(copy_at,ENC`%1`C`[u(%!/FUN`ENC`KEY,%0)])[attrib_set({{encounters}}/%q<copy_at>,name(%0))][null(iter(u(%!/FUN`PLAY`LEAVES,%0),attrib_set({{encounters}}/%q<copy_at>`%i0,get(%0/FATE`%i0))))][attrib_set({{encounters}}/%q<copy_at>`POINTS,u(%!/API`POINTS,%0))]
+        flags: [funsyntax]
+      # %0 a character, %1 an encounter: writes the copy back onto the sheet, leaf by leaf, clearing what the copy cleared.
+      FUN`ENC`COPYOUT:
+        value: |-
+          setq(copy_at,ENC`%1`C`[u(%!/FUN`ENC`KEY,%0)])[null(iter(setunion(u(%!/FUN`PLAY`LEAVES,%0),iter(lattr({{encounters}}/%q<copy_at>`**),after(%i0,%q<copy_at>`))),u(%!/FUN`DO`WRITE,%0,%i0,get({{encounters}}/%q<copy_at>`%i0))))]
+        flags: [funsyntax]
+      # %0 a character, %1 an encounter: drops their copy and takes them out.
+      FUN`ENC`DROP:
+        value: |-
+          setq(copy_at,ENC`%1`C`[u(%!/FUN`ENC`KEY,%0)])[null(iter(revwords(lattr({{encounters}}/%q<copy_at>`**)),attrib_set({{encounters}}/%i0)))][attrib_set({{encounters}}/%q<copy_at>)][attrib_set({{encounters}}/ENC`%1`PEOPLE,remove(get({{encounters}}/ENC`%1`PEOPLE),objid(%0)))][u(%!/FUN`DO`WRITE,%0,ENCOUNTERS,remove(get(%0/FATE`ENCOUNTERS),%1))][if(not(comp(get(%0/FATE`USING),%1)),u(%!/FUN`DO`WRITE,%0,USING,))]
+        flags: [funsyntax]
+      # %0 a character: their fate points, stress and consequences on the sheet itself.
+      FUN`ENC`SUMMARY:
+        value: |-
+          setq(summary_taken,iter(u(%!/FUN`LIST`ALL,CONSEQUENCE),if(strlen(get(%0/FATE`CONSEQUENCE`%i0)),[lcstr(get({{store}}/CONSEQUENCE`%i0))]: [get(%0/FATE`CONSEQUENCE`%i0)]),%b,|))[firstof(get(%0/FATE`POINTS),u(%!/FUN`POINTS`REFRESH,%0))] fate points%, [itemize(iter(u(%!/FUN`LIST`ALL,TRACK),[lcstr(get({{store}}/TRACK`%i0))] stress [firstof(itemize(get(%0/FATE`STRESS`%i0)),none)],%b,|),|)]%, [if(words(squish(%q<summary_taken>,|),|),consequences [itemize(squish(%q<summary_taken>,|),|)],no consequences)]
+        flags: [funsyntax]
+      # %0 a room, %1 who reads it: the encounters running there.
+      FUN`SCREEN`ENCOUNTERS:
+        value: |-
+          setqm(encs_here,u(%!/FUN`ENC`HERE,%0),encs_active,u(%!/FUN`ENC`ACTIVE,%1))[box([if(words(%q<encs_here>),ldatatable(lit({"nowrap":"1"}),#|Title|Run by|Taking part,iter(%q<encs_here>,%i0[if(not(comp(%i0,%q<encs_active>)),*)]|[firstof(get({{encounters}}/ENC`%i0`TITLE),tone(muted,-))]|[name(get({{encounters}}/ENC`%i0`LEAD))]|[words(get({{encounters}}/ENC`%i0`PEOPLE))],%b,%*<^>),%*<^>)%r[rule()]%r[tone(muted,+encounter <number> shows one%, and +encounter/join <number> takes part.[if(strlen(%q<encs_active>),%b* marks the one your play goes to.)])],tone(muted,No encounter is running here. +encounter/start %[<title>%] begins one.))],Encounters in [name(%0)])]
+        flags: [funsyntax]
+      # %0 the encounter, %1 who reads it: each one taking part with their copy.
+      FUN`SCREEN`ENCOUNTER:
+        value: |-
+          setqm(enc_people,get({{encounters}}/ENC`%0`PEOPLE),enc_tracks,u(%!/FUN`LIST`ALL,TRACK))[box(lfields(,Run by%*<|>In,name(get({{encounters}}/ENC`%0`LEAD))%*<|>[name(get({{encounters}}/ENC`%0))],%*<|>)%r[if(words(%q<enc_people>),ldatatable(lit({"nowrap":"1"}),Name|Fate points|[iter(%q<enc_tracks>,get({{store}}/TRACK`%i0),%b,|)]|Consequences,iter(%q<enc_people>,[name(%i0)]|[firstof(get({{encounters}}/ENC`%0`C`[u(%!/FUN`ENC`KEY,%i0)]`POINTS),0)]|[iter(%q<enc_tracks>,u(%!/FUN`DISPLAY`MARKED,%i1,%i0,get({{encounters}}/ENC`%0`C`[u(%!/FUN`ENC`KEY,%i1)]`STRESS`%i0)),%b,|)]|[firstof(itemize(squish(iter(u(%!/FUN`LIST`ALL,CONSEQUENCE),if(strlen(get({{encounters}}/ENC`%0`C`[u(%!/FUN`ENC`KEY,%i1)]`CONSEQUENCE`%i0)),lcstr(get({{store}}/CONSEQUENCE`%i0))),%b,|),|),|),-)],,%*<^>),%*<^>),tone(muted,Nobody has joined yet.))]%r[rule()]%r[tone(muted,+encounter/join %0 takes part with a copy of your sheet's fate points%, stress and consequences. The GM keeps a copy with +encounter/keep <name>=%0%, and +encounter/end %0 drops the rest.)],capstr(u(%!/FUN`ENC`TITLE,%0)))]
+        flags: [funsyntax]
+
+      # ---- +chargen -------------------------------------------------------------------
+      # +chargen [<name>]: the steps of making a character, which are done, and what to do next. Keepers and
+      # those who may read a sheet name someone else.
+      INC`CHARGEN`SHOW:
+        value: |-
+          think setq(sheet_who,if(strlen(%q<cmd_argument>),u(%!/FUN`PLAYER`MATCH,%q<cmd_argument>),%q<viewer_objid>)); @assert strlen(%q<sheet_who>)=@pemit %#=notice(SHEET,There is no player called '%q<cmd_argument>'.,warn); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only sheet keepers read another character's sheet.,error); @pemit %#=u(%!/FUN`SCREEN`CHARGEN,%q<sheet_who>,%#)
+        flags: [cmdsyntax]
+      # %0 the character: the keys of the steps that apply to this game, lowest ORDER first.
+      FUN`CHARGEN`STEPS:
+        value: |-
+          iter(sort(iter(lattr(%!/CHARGEN`*),if(not(u(%!/%i0`SKIP,%0)),[rjust(default(%!/%i0`ORDER,50),4,0)]~[after(%i0,`)]))),after(%i0,~))
+        flags: [funsyntax]
+      # %0 the character, %1 a step: 1 when done.
+      FUN`CHARGEN`DONE:
+        value: |-
+          t(u(%!/CHARGEN`%1`DONE,%0))
+        flags: [funsyntax]
+      # %0 the character, %1 the steps, %2 1 for the optional ones, 0 for the rest: the first that is not done.
+      FUN`CHARGEN`NEXT:
+        value: |-
+          first(iter(%1,if(cand(not(u(%!/FUN`CHARGEN`DONE,%0,%i0)),eq(t(get(%!/CHARGEN`%i0`OPTIONAL)),%2)),%i0)))
+        flags: [funsyntax]
+      FUN`CHARGEN`EMPTYASPECTS:
+        value: |-
+          iter(u(%!/FUN`ASPECT`SLOTS),if(not(strlen(get(%0/FATE`ASPECT`%i0))),%i0))
+        flags: [funsyntax]
+      FUN`CHARGEN`EMPTYSTUNTS:
+        value: |-
+          iter(lnum(1,get(%!/DATA`CONFIG`STUNTS)),if(not(strlen(get(%0/FATE`STUNT`%i0))),%i0))
+        flags: [funsyntax]
+      # %0 the character: the skills or approaches rated above Mediocre.
+      FUN`CHARGEN`RATED:
+        value: |-
+          iter(u(%!/FUN`TRAIT`ALL),if(gt(default(%0/FATE`RATING`%i0,0),0),%i0))
+        flags: [funsyntax]
+      # %0 the character, %1 who reads it.
+      FUN`SCREEN`CHARGEN:
+        value: |-
+          setqm(chargen_steps,u(%!/FUN`CHARGEN`STEPS,%0),chargen_next,u(%!/FUN`CHARGEN`NEXT,%0,%q<chargen_steps>,0),chargen_maybe,u(%!/FUN`CHARGEN`NEXT,%0,%q<chargen_steps>,1),chargen_own,not(comp(objid(%1),%0)))[box(iter(%q<chargen_steps>,[if(u(%!/FUN`CHARGEN`DONE,%0,%i0),tone(success,\[x\]),\[ \])] [get(%!/CHARGEN`%i0)][if(get(%!/CHARGEN`%i0`OPTIONAL),%b[tone(muted,%(optional%))])],%b,%r)%r[cond(isapproved(%0),[rule()]%r[if(%q<chargen_own>,Your character is approved%, so staff change your sheet now. +sheet shows it.,[name(%0)] is approved.)],strlen(%q<chargen_next>),[rule(Next: [get(%!/CHARGEN`%q<chargen_next>)])]%r[u(%!/CHARGEN`%q<chargen_next>`TEXT,%0)],1,[rule(Ready)]%r[if(%q<chargen_own>,Your sheet has everything it needs.[u(%!/FUN`HINT,CHARGEN)],[name(%0)]'s sheet has everything it needs.)][if(strlen(%q<chargen_maybe>),%r[rule(If you like: [get(%!/CHARGEN`%q<chargen_maybe>)])]%r[u(%!/CHARGEN`%q<chargen_maybe>`TEXT,%0)])])]%r[rule()]%r[tone(muted,+chargen shows this again as you go. +sheet shows the whole sheet.)],Making [name(%0)])]
+        flags: [funsyntax]
+
+      # ---- play ---------------------------------------------------------------------
+      # %0 a character: where their play is written, the encounter copy's path, or nothing for the sheet itself.
+      FUN`PLAY`AT:
+        value: |-
+          setq(play_enc,u(%!/FUN`ENC`ACTIVE,%0))[if(cand(strlen(%q<play_enc>),hasattr({{encounters}},ENC`%q<play_enc>`C`[u(%!/FUN`ENC`KEY,%0)])),ENC`%q<play_enc>`C`[u(%!/FUN`ENC`KEY,%0)])]
+        flags: [funsyntax]
+      # %0 a character, %1 a leaf under FATE`: its value, from the encounter copy while they are in one.
+      FUN`PLAY`GET:
+        value: |-
+          if(strlen(setr(play_at,u(%!/FUN`PLAY`AT,%0))),get({{encounters}}/%q<play_at>`%1),get(%0/FATE`%1))
+        flags: [funsyntax]
+      # %0 a character, %1 a leaf, %2 what to store; empty clears it. The encounter copy while they are in one.
+      FUN`PLAY`SET:
+        value: |-
+          if(strlen(setr(play_at,u(%!/FUN`PLAY`AT,%0))),if(strlen(%2),attrib_set({{encounters}}/%q<play_at>`%1,%2),attrib_set({{encounters}}/%q<play_at>`%1)),u(%!/FUN`DO`WRITE,%0,%1,%2))
+        flags: [funsyntax]
+      FUN`PLAY`POINTS:
+        value: |-
+          firstof(u(%!/FUN`PLAY`GET,%0,POINTS),u(%!/FUN`POINTS`REFRESH,%0))
+        flags: [funsyntax]
+      # %0 a character: " in <encounter>" while they are in one.
+      FUN`PLAY`IN:
+        value: |-
+          if(strlen(u(%!/FUN`PLAY`AT,%0)),%bin [u(%!/FUN`ENC`TITLE,u(%!/FUN`ENC`ACTIVE,%0))])
+        flags: [funsyntax]
+      # %0 a character: the leaves under FATE` that PLAY` names and they hold.
+      FUN`PLAY`LEAVES:
+        value: |-
+          squish(iter(lattr(%!/PLAY`*),if(strmatch(setr(play_leaf,get(%!/%i0)),*`*),iter(lattr(%0/FATE`%q<play_leaf>),after(%i0,FATE`)),if(hasattr(%0,FATE`%q<play_leaf>),%q<play_leaf>))))
+        flags: [funsyntax]
 
       # ---- +check -----------------------------------------------------------------
       INC`CHECK`USAGE:
@@ -585,6 +920,68 @@ objects:
         value: |-
           @if not(hasattr(%<who>,FATE))={&FATE %<who>=This character's Fate sheet. +sheet shows it.; @set %<who>/FATE=wizard; @set %<who>/FATE=no_command}; @if strlen(%<value>)={&FATE`%<leaf> %<who>=%<value>},{&FATE`%<leaf> %<who>}
         flags: [cmdsyntax]
+      # %<who>, %<source>, %<target>, %<key>, %<kind> and %<value> as API`GRANT takes them: writes the grant, then
+      # rebuilds the sheet from the ledger.
+      INC`DO`GRANT:
+        value: |-
+          think uargs(%!/API`GRANT,who,%<who>,source,%<source>,target,%<target>,key,%<key>,kind,%<kind>,value,%<value>)[u(%!/API`REBUILD,%<who>)]
+        flags: [cmdsyntax]
+      # %0 a character, %1 a leaf under FATE`, %2 what to store; empty clears it. The function form of INC`DO`SET, for
+      # the API and the ledger.
+      FUN`DO`WRITE:
+        value: |-
+          if(hasattr(%0,FATE),,attrib_set(%0/FATE,This character's Fate sheet. +sheet shows it.)[set(%0/FATE,wizard)][set(%0/FATE,no_command)])[if(strlen(%2),attrib_set(%0/FATE`%1,%2),attrib_set(%0/FATE`%1))]
+        flags: [funsyntax]
+
+      # ---- the ledger -----------------------------------------------------------------
+      # A character's build is a ledger of grants, FATE`GRANT`<SOURCE>`<TARGET>`<KEY>, each "base <n>" or "add <n>".
+      # TARGET is RATING (KEY a skill or approach), BOXES (KEY a stress track) or REFRESH (KEY ALL). A value is the
+      # highest base, or the game's default when no grant sets one, plus every add. SHEET is +sheet/set's source and
+      # STAFF a keeper's; other packages name their own. FATE`RATING, FATE`BOXES and FATE`REFRESH are rebuilt from it.
+      # %0 a character: the grants, as attribute names.
+      FUN`LEDGER`ALL:
+        value: |-
+          filterbool(%!/FUN`LEDGER`ISGRANT,lattr(%0/FATE`GRANT`**))
+        flags: [funsyntax]
+      FUN`LEDGER`ISGRANT:
+        value: |-
+          eq(words(%0,`),5)
+        flags: [funsyntax]
+      # %0 a grant's attribute name, %1 a source pattern: 1 when it comes from a matching source.
+      FUN`LEDGER`FROM:
+        value: |-
+          strmatch(extract(%0,3,1,`),%1)
+        flags: [funsyntax]
+      # %0 a character, %1 a target, %2 a key, %3 the game's value: what the grants make it.
+      FUN`LEDGER`VALUE:
+        value: |-
+          setq(ledger_grants,iter(lattr(%0/FATE`GRANT`*`%1`%2),get(%0/%i0),%b,|))[setqm(ledger_bases,squish(iter(%q<ledger_grants>,if(strmatch(%i0,base *),last(%i0)),|,%b)),ledger_adds,squish(iter(%q<ledger_grants>,if(strmatch(%i0,add *),last(%i0)),|,%b)))][add(if(words(%q<ledger_bases>),lmath(max,%q<ledger_bases>),%3),ladd(%q<ledger_adds>))]
+        flags: [funsyntax]
+      # %0 a character, %1 a target: the keys something is granted for.
+      FUN`LEDGER`KEYS:
+        value: |-
+          setunion(iter(u(%!/FUN`LEDGER`ALL,%0),if(strmatch(extract(%i0,4,1,`),%1),extract(%i0,5,1,`))),)
+        flags: [funsyntax]
+      # %0 a target, %1 a key: what it is, "Fight", "physical stress track", "refresh".
+      FUN`LEDGER`WHAT:
+        value: |-
+          switch(%0,RATING,u(%!/FUN`TRAIT`LABEL,%1),BOXES,[lcstr(get({{store}}/TRACK`%1))] stress track,refresh)
+        flags: [funsyntax]
+      # %0 a target, %1 a grant's value: "Good (+3)", "+1", "4".
+      FUN`LEDGER`GRANTSHOW:
+        value: |-
+          if(strmatch(first(%1),add),u(%!/FUN`DISPLAY`SIGNED,last(%1)),if(strmatch(%0,RATING),u(%!/FUN`LADDER`SHOW,last(%1)),last(%1)))
+        flags: [funsyntax]
+      # %0 a character, %1 a target, %2 a key: its value on the sheet now.
+      FUN`LEDGER`NOW:
+        value: |-
+          switch(%1,RATING,u(%!/FUN`LADDER`SHOW,u(%!/API`RATING,%0,%2)),BOXES,[u(%!/FUN`TRACK`BOXES,%0,%2)] boxes,u(%!/FUN`POINTS`REFRESH,%0))
+        flags: [funsyntax]
+      # %0 a source: how the ledger names it, "robo mode science" for ROBO_MODE_SCIENCE.
+      FUN`LEDGER`SOURCE:
+        value: |-
+          lcstr(edit(%0,_,%b))
+        flags: [funsyntax]
 
       # ---- skills or approaches ------------------------------------------------------
       # The list the game rates: SKILL or APPROACH.
@@ -728,7 +1125,7 @@ objects:
           screen_aspects,u(%!/FUN`ASPECT`SLOTS),
           screen_tracks,u(%!/FUN`LIST`ALL,TRACK),
           screen_consequences,u(%!/FUN`LIST`ALL,CONSEQUENCE),
-          screen_problems,u(%!/FUN`SHEET`PROBLEMS,%0))[box(lfields(lit({"cols":2}),Fate points%*<|>Refresh,u(%!/API`POINTS,%0)%*<|>[u(%!/FUN`POINTS`REFRESH,%0)],%*<|>)%r[rule(Aspects)]%r[lfields(,iter(%q<screen_aspects>,u(%!/FUN`ASPECT`LABEL,%i0),%b,%*<|>),iter(%q<screen_aspects>,firstof(get(%0/FATE`ASPECT`%i0),tone(muted,-)),%b,%*<|>),%*<|>)]%r[rule(capstr(u(%!/FUN`TRAIT`NOUN))s)]%r[u(%!/FUN`SCREEN`RATINGS,%0,%q<screen_traits>)][u(%!/FUN`SCREEN`STUNTS,%0)]%r[rule(Stress)]%r[lfields(,iter(%q<screen_tracks>,get({{store}}/TRACK`%i0),%b,%*<|>),iter(%q<screen_tracks>,u(%!/FUN`DISPLAY`BOXES,%0,%i0),%b,%*<|>),%*<|>)]%r[rule(Consequences)]%r[lfields(,iter(%q<screen_consequences>,get({{store}}/CONSEQUENCE`%i0) %([default({{store}}/CONSEQUENCE`%i0`SHIFTS,2)]%),%b,%*<|>),iter(%q<screen_consequences>,firstof(get(%0/FATE`CONSEQUENCE`%i0),tone(muted,-)),%b,%*<|>),%*<|>)][u(%!/FUN`SCREEN`SECTIONS,%0,%1)]%r[rule()]%r[if(strlen(%q<screen_problems>),tone(warning,%q<screen_problems>)%r)][tone(muted,u(%!/FUN`DISPLAY`FOOTER,%0,%1))],name(%0))]
+          screen_problems,u(%!/FUN`SHEET`PROBLEMS,%0))[box(lfields(lit({"cols":2}),Fate points%*<|>Refresh,u(%!/FUN`PLAY`POINTS,%0)%*<|>[u(%!/FUN`POINTS`REFRESH,%0)],%*<|>)%r[rule(Aspects)]%r[lfields(,iter(%q<screen_aspects>,u(%!/FUN`ASPECT`LABEL,%i0),%b,%*<|>),iter(%q<screen_aspects>,firstof(get(%0/FATE`ASPECT`%i0),tone(muted,-)),%b,%*<|>),%*<|>)]%r[rule(capstr(u(%!/FUN`TRAIT`NOUN))s)]%r[u(%!/FUN`SCREEN`RATINGS,%0,%q<screen_traits>)][u(%!/FUN`SCREEN`STUNTS,%0)]%r[rule(Stress)]%r[lfields(,iter(%q<screen_tracks>,get({{store}}/TRACK`%i0),%b,%*<|>),iter(%q<screen_tracks>,u(%!/FUN`DISPLAY`BOXES,%0,%i0),%b,%*<|>),%*<|>)]%r[rule(Consequences)]%r[lfields(,iter(%q<screen_consequences>,get({{store}}/CONSEQUENCE`%i0) %([default({{store}}/CONSEQUENCE`%i0`SHIFTS,2)]%),%b,%*<|>),iter(%q<screen_consequences>,firstof(u(%!/FUN`PLAY`GET,%0,CONSEQUENCE`%i0),tone(muted,-)),%b,%*<|>),%*<|>)][u(%!/FUN`SCREEN`SECTIONS,%0,%1)]%r[rule()]%r[if(strlen(%q<screen_problems>),tone(warning,%q<screen_problems>)%r)][if(strlen(u(%!/FUN`PLAY`AT,%0)),tone(warning,In [u(%!/FUN`ENC`TITLE,u(%!/FUN`ENC`ACTIVE,%0))]: these fate points%, stress and consequences are the encounter's copy.)%r)][tone(muted,u(%!/FUN`DISPLAY`FOOTER,%0,%1))],name(%0))]
         flags: [funsyntax]
       # %0 the character: the stunt slots, a line each, after a rule. Nothing when the game has none.
       FUN`SCREEN`STUNTS:
@@ -759,7 +1156,12 @@ objects:
       # %0 the character, %1 a track: [X] [ ] [ ].
       FUN`DISPLAY`BOXES:
         value: |-
-          setq(boxes_marked,get(%0/FATE`STRESS`%1))[iter(lnum(1,u(%!/FUN`TRACK`BOXES,%0,%1)),if(member(%q<boxes_marked>,%i0),%[X%],%[%b%]))]
+          u(%!/FUN`DISPLAY`MARKED,%0,%1,u(%!/FUN`PLAY`GET,%0,STRESS`%1))
+        flags: [funsyntax]
+      # %0 the character, %1 a track, %2 the boxes marked.
+      FUN`DISPLAY`MARKED:
+        value: |-
+          iter(lnum(1,u(%!/FUN`TRACK`BOXES,%0,%1)),if(member(%2,%i0),%[X%],%[%b%]))
         flags: [funsyntax]
       # %0 the character: what a skills sheet breaks, or nothing. More skills at a rating than at the one below,
       # unless a GATE`SET says another package works the ratings out.
@@ -769,11 +1171,16 @@ objects:
         flags: [funsyntax]
       FUN`DISPLAY`FOOTER:
         value: |-
-          cond(cand(not(comp(objid(%1),%0)),not(isapproved(%1)),not(u(%!/FUN`PERM`KEEPER,%1))),[if(strlen(setr(footer_gate,u(%!/FUN`GATE`SET,%1))),%q<footer_gate> +sheet/aspect <slot>=<text> fills in an aspect.,+sheet/set <[u(%!/FUN`TRAIT`NOUN)]>=<rating> and +sheet/aspect <slot>=<text> fill it in.)] +check <[u(%!/FUN`TRAIT`NOUN)]> rolls.[u(%!/FUN`HINT,FOOTER)],not(comp(objid(%1),%0)),+check <[u(%!/FUN`TRAIT`NOUN)]> rolls. +sheet/spend spends a fate point%, +sheet/stress <track>=<box> marks stress.,+check <[u(%!/FUN`TRAIT`NOUN)]> rolls four Fate dice plus a rating.)
+          cond(cand(not(comp(objid(%1),%0)),not(isapproved(%1)),not(u(%!/FUN`PERM`KEEPER,%1))),[if(strlen(setr(footer_gate,u(%!/FUN`GATE`SET,%1))),%q<footer_gate> +sheet/aspect <slot>=<text> fills in an aspect.,+sheet/set <[u(%!/FUN`TRAIT`NOUN)]>=<rating> and +sheet/aspect <slot>=<text> fill it in.)] +chargen shows what is left to do. +check <[u(%!/FUN`TRAIT`NOUN)]> rolls.[u(%!/FUN`HINT,FOOTER)],not(comp(objid(%1),%0)),+check <[u(%!/FUN`TRAIT`NOUN)]> rolls. +sheet/spend spends a fate point%, +sheet/stress <track>=<box> marks stress.,+check <[u(%!/FUN`TRAIT`NOUN)]> rolls four Fate dice plus a rating.)
         flags: [funsyntax]
       FUN`SCREEN`TRAITS:
         value: |-
           setq(screen_all,u(%!/FUN`TRAIT`ALL))[box(ldatatable(lit({"nowrap":"1"}),Key|[capstr(u(%!/FUN`TRAIT`NOUN))],iter(%q<screen_all>,lcstr(%i0)|[u(%!/FUN`TRAIT`LABEL,%i0)],,%*<^>),%*<^>)%r[rule()]%r[tone(muted,The ladder: [iter(revwords(lnum(-2,8)),u(%!/FUN`LADDER`SHOW,%i0),%b,%,%b)].)],Fate [u(%!/FUN`TRAIT`NOUN)]s)]
+        flags: [funsyntax]
+      # %0 the character: each grant with its source, what it is for and what it gives.
+      FUN`SCREEN`LEDGER:
+        value: |-
+          setq(ledger_rows,u(%!/FUN`LEDGER`ALL,%0))[box([if(words(%q<ledger_rows>),ldatatable(lit({"nowrap":"1"}),#|From|For|Grant,iter(%q<ledger_rows>,[inum(0)]|[u(%!/FUN`LEDGER`SOURCE,extract(%i0,3,1,`))]|[u(%!/FUN`LEDGER`WHAT,extract(%i0,4,1,`),extract(%i0,5,1,`))]|[if(strmatch(first(get(%0/%i0)),base),set to%b)][u(%!/FUN`LEDGER`GRANTSHOW,extract(%i0,4,1,`),get(%0/%i0))],,%*<^>),%*<^>),tone(muted,Nothing is granted yet.))]%r[rule()]%r[tone(muted,The highest grant that sets a value wins%, or the game's own when none does%, and every grant that adds goes on top. Keepers add one with +sheet/grant and take one away with +sheet/revoke.)],Ledger: [name(%0)])]
         flags: [funsyntax]
 
       # ---- the sheet API ------------------------------------------------------------
@@ -838,6 +1245,34 @@ objects:
         value: |-
           setq(award_new,max(0,add(u(%!/API`POINTS,%0),%1)))[if(hasattr(%0,FATE),,attrib_set(%0/FATE,This character's Fate sheet. +sheet shows it.)[set(%0/FATE,wizard)][set(%0/FATE,no_command)])][attrib_set(%0/FATE`POINTS,%q<award_new>)]%q<award_new>
         flags: [VISUAL]
+      # Named: %<who> an objid, %<source> who grants it (letters, digits, _ and -), %<target> RATING, BOXES or REFRESH,
+      # %<key> the skill, approach or track (ALL for REFRESH), %<kind> base or add, %<value> a whole number; no value
+      # takes the grant away. Writes only the ledger: call API`REBUILD once the grants are written. #-1 and why when
+      # something is wrong.
+      API`GRANT:
+        value: |-
+          setqm(grant_source,ucstr(%<source>),grant_target,ucstr(%<target>),grant_key,ucstr(%<key>))[cond(not(hastype(%<who>,player)),#-1 There is no character to grant to.,not(regmatch(%q<grant_source>,^\[A-Z0-9_-\]+$)),#-1 A source is letters%, digits%, _ and -.,not(member(RATING BOXES REFRESH,%q<grant_target>)),#-1 A grant is for RATING%, BOXES or REFRESH.,not(regmatch(%q<grant_key>,^\[A-Z0-9_-\]+$)),#-1 There is no key '%<key>'.,not(strlen(%<value>)),u(%!/FUN`DO`WRITE,%<who>,GRANT`%q<grant_source>`%q<grant_target>`%q<grant_key>,),cor(not(member(base add,lcstr(%<kind>))),not(isint(%<value>))),#-1 A grant is base or add and a whole number.,u(%!/FUN`DO`WRITE,%<who>,GRANT`%q<grant_source>`%q<grant_target>`%q<grant_key>,lcstr(%<kind>) %<value>))]
+        flags: [VISUAL]
+      # Named: %<who>, %<source> a source or a pattern such as ROBO_*: takes away every grant from it, branches too.
+      API`REVOKE:
+        value: |-
+          null(iter(revwords(filterbool(%!/FUN`LEDGER`FROM,lattr(%<who>/FATE`GRANT`**),,,ucstr(%<source>))),attrib_set(%<who>/%i0)))
+        flags: [VISUAL]
+      # %0 a character, %1 a leaf under FATE`: what play reads, the encounter copy while they are in one. API`PLAYSET
+      # (%0, %1, %2 the value; empty clears it) writes there. For a package's own PLAY` leaves, such as machine stress.
+      API`PLAY:
+        value: |-
+          u(%!/FUN`PLAY`GET,%0,%1)
+        flags: [VISUAL]
+      API`PLAYSET:
+        value: |-
+          u(%!/FUN`PLAY`SET,%0,%1,%2)
+        flags: [VISUAL]
+      # %0 a character: works FATE`RATING, FATE`BOXES and FATE`REFRESH out from the ledger again.
+      API`REBUILD:
+        value: |-
+          null(iter(setunion(u(%!/FUN`TRAIT`ALL),u(%!/FUN`LEDGER`KEYS,%0,RATING)),u(%!/FUN`DO`WRITE,%0,RATING`%i0,if(setr(rebuild_value,u(%!/FUN`LEDGER`VALUE,%0,RATING,%i0,0)),%q<rebuild_value>))))[null(iter(u(%!/FUN`LIST`ALL,TRACK),u(%!/FUN`DO`WRITE,%0,BOXES`%i0,if(words(lattr(%0/FATE`GRANT`*`BOXES`%i0)),u(%!/FUN`LEDGER`VALUE,%0,BOXES,%i0,default({{store}}/TRACK`%i0`BOXES,3))))))][u(%!/FUN`DO`WRITE,%0,REFRESH,if(words(lattr(%0/FATE`GRANT`*`REFRESH`ALL)),u(%!/FUN`LEDGER`VALUE,%0,REFRESH,ALL,get(%!/DATA`CONFIG`REFRESH))))]
+        flags: [VISUAL]
       # Named: %<roller> an objid, %<trait> a key, %<modifier> a number to add, %<target> the opposition or
       # nothing. Rolls 4dF plus the rating and keeps the roll (roll() record), and returns
       # {"tier","total","shifts","target","margin","label","text","roll","formula"}; tier, shifts and margin are
@@ -859,7 +1294,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add/noparse/rsnoparse +sheet; @hook/override/inline +sheet=%!,CMD`SHEET; @command/add/noparse/rsnoparse +check; @hook/override/inline +check=%!,CMD`CHECK
+          @command/add/noparse/rsnoparse +sheet; @hook/override/inline +sheet=%!,CMD`SHEET; @command/add/noparse/rsnoparse +check; @hook/override/inline +check=%!,CMD`CHECK; @command/add/noparse/rsnoparse +encounter; @hook/override/inline +encounter=%!,CMD`ENCOUNTER; @command/add/noparse/rsnoparse +chargen; @hook/override/inline +chargen=%!,CMD`CHARGEN
         flags: [cmdsyntax]
       AINSTALL:
         value: |-
@@ -966,6 +1401,18 @@ objects:
         6
       CONSEQUENCE`SEVERE`ORDER: |-
         3
+  # Live encounters, one per room: ENC`<room key>. Inside the Fate Sheet; no_command.
+  - ref: encounters
+    type: thing
+    name: Fate Encounters
+    location: "{{sheet}}"
+    flags: [no_command]
+    attributes:
+      ENC: |-
+        The encounters going on now, ENC`<number> each. +encounter/end ends one.
+      NEXT: |-
+        0
+
   # The +help topics, on an object of their own. sheet-fate-help registers it with +help; without that bridge
   # nothing reads it. HELP`<TOPIC> is a topic, its subtopics the leaves beneath, LOCK`<TOPIC> who may read it.
   - ref: sheet_help
@@ -974,13 +1421,17 @@ objects:
     location: "{{sheet}}"
     attributes:
       HELP: |-
-        Your character's Fate sheet, and rolling against it: +sheet and +check.
+        Your character's Fate sheet, making it, rolling against it and encounters: +sheet, +chargen, +check and +encounter.
       SEE: |-
         Cross-references. One leaf per topic; subtopics come from the tree, not from here.
       SEE`SHEET: |-
-        check
+        chargen check encounter
       SEE`CHECK: |-
         sheet
+      SEE`CHARGEN: |-
+        sheet
+      SEE`ENCOUNTER: |-
+        sheet check
       HELP`SHEET: |-
         `+sheet` shows your character's sheet: fate points, aspects, skills on the ladder, stress and consequences.
 
@@ -998,7 +1449,7 @@ objects:
 
         Output: `\[SHEET\] Done: Trouble on Alice's sheet: Owes the Duke a favour`
 
-        See `+help sheet play` for stress and fate points, and `+help check` for rolling.
+        See `+help chargen` for making a character step by step, `+help sheet play` for stress and fate points, `+help sheet ledger` for where each rating comes from, and `+help check` for rolling.
       HELP`SHEET`PLAY: |-
         In play you keep your own stress, consequences and fate points:
 
@@ -1013,7 +1464,70 @@ objects:
 
         Output: `\[SHEET\] Alice spends a fate point: Invoking Never leaves a friend. 2 left.`
 
-        Staff give fate points back at the start of a session, up to your refresh.
+        Staff give fate points back at the start of a session, up to your refresh. While you are in an encounter in the room you are in, these commands change the encounter's copy instead of your sheet: see `+help encounter`.
+      HELP`SHEET`LEDGER: |-
+        Your ratings, stress boxes and refresh are built from a ledger of grants. Each grant comes from somewhere: your own `+sheet/set`, a staff member, or a package such as a mode. A grant either sets a value or adds to it.
+
+        - `+sheet/ledger` lists your grants, numbered. `+sheet/ledger <name>` lists another character's, when you may read their sheet.
+
+        A value is the highest grant that sets it, or the game's own when none does, with every grant that adds on top. Taking one grant away leaves the rest, so a staff bonus outlasts a change you make yourself.
+
+        For example:
+
+        `+sheet/ledger`
+
+        Output: a table with the columns `#`, `From`, `For` and `Grant`, such as `1  sheet  Fight  set to Good \(+3\)`.
+      HELP`CHARGEN: |-
+        `+chargen` walks you through making your character. It lists the steps, ticks the ones you have done, and explains the next one.
+
+        - `+chargen` shows your own steps. Staff and anyone who may read a sheet use `+chargen <name>`.
+        - A step marked optional can stay undone. Your character is complete when every other step is ticked.
+        - The steps are done with the usual commands, such as `+sheet/aspect` and `+sheet/set`. Run `+chargen` again to see what is left.
+
+        Packages add steps of their own, such as picking modes. Once your character is approved, staff change your sheet.
+
+        For example:
+
+        `+chargen`
+
+        Output:
+        ```
+        \[x\] Aspects
+        \[ \] Ratings
+        \[ \] Stunts \(optional\)
+        Next: Ratings
+        ```
+      HELP`ENCOUNTER: |-
+        An encounter keeps its own copy of each player's fate points, stress and consequences, so a fight or a chase does not change your sheet unless the GM says so. A room can hold several encounters, and one can run for days.
+
+        - `+encounter` lists the encounters in the room, or shows the one there is. `+encounter <number>` shows one.
+        - `+encounter/start \[<title>\]` begins one. You run it as its GM.
+        - `+encounter/join \[<number>\]` takes part. The copy is taken from your sheet now.
+        - `+encounter/use <number>` picks which of your encounters your play goes to when you are in several in one room. Without it, the last one you joined is used.
+        - `+encounter/leave \[<number>\]` takes you out. Your copy is dropped and your sheet is as it was.
+
+        While you are in the room of an encounter you joined, `+sheet/stress`, `/consequence`, `/spend` and `/recover` change its copy, and `+sheet` shows it. Anywhere else you play on your sheet itself.
+
+        For example:
+
+        `+encounter/start Warehouse brawl`
+
+        Output: `\[SHEET\] Alice starts Warehouse brawl \(encounter 1\). +encounter/join 1 takes part with a copy of your fate points, stress and consequences.`
+
+        See `+help encounter gm` for running one.
+      HELP`ENCOUNTER`GM: |-
+        Whoever starts an encounter runs it, and sheet keepers run every encounter. Without a number, these act on the only encounter in the room:
+
+        - `+encounter/add <name>\[=<number>\]` brings in someone in the room.
+        - `+encounter/remove <name>\[=<number>\]` takes someone out and drops their copy.
+        - `+encounter/keep <name>\[=<number>\]` writes their copy back onto their sheet: fate points, stress, consequences and anything a package copies. They stay in the encounter.
+        - `+encounter/end \[<number>\]` ends it. Every copy not kept is dropped.
+
+        For example:
+
+        `+encounter/keep Bob=1`
+
+        Output: `\[SHEET\] Done: Bob's sheet keeps what happened in Warehouse brawl \(encounter 1\): 2 fate points, physical stress 1 and mental stress none, consequences mild: Bruised.`
       HELP`CHECK: |-
         `+check <skill>` rolls four Fate dice, each -1, 0 or +1, and adds the skill's rating, where the room sees it.
 
@@ -1044,6 +1558,9 @@ objects:
         - `+sheet/boxes <name>/<track>=<boxes>` gives one character a stress track of their own length, `=default` the game's again.
         - `+sheet/award <name>\[=<points>\]` gives fate points, 1 unless you say, or takes them with a number below 0.
         - `+sheet/refresh <name>` brings their fate points up to their refresh. `+sheet/refresh <name>=<n>` gives them a refresh of their own, `=default` the game's again.
+        - `+sheet/grant <name>/<what>=<n>` adds a grant to their ledger for a skill, a stress track or `refresh`: a plain number sets the value, `+<n>` or `-<n>` adds to it. `+sheet/grant Alice/fight=+1`.
+        - `+sheet/revoke <name>/<n>` takes away grant `<n>` of `+sheet/ledger <name>`.
+        - `+sheet/clear <name>` takes away their whole build: every grant, aspect and stunt, and what packages build, such as modes. They make the character again with `+chargen`.
 
         `@role/assign <player>=fate-sheet-keeper` makes someone a keeper.
       LOCK`SHEET`SETTINGS: |-
