@@ -1965,7 +1965,22 @@ objects:
           setqm(items_filter,u({{core}}/FUN`FORMULA`INJECT,json_query(%0,extract,$.choices.filter),json(object,actor,%q<check_actor>)),items_slugs,t(json_query(%0,extract,$.choices.slugsAsValues)))][
           setq(items_packs,switch(json_query(%0,extract,$.choices.itemType),spell,spells,feats class-features))][
           setq(items_keys,u({{core}}/FUN`ITEM`INDEXED,json_map({{core}}/FUN`RULE`SELECTOR,%q<items_filter>,%b)))][
-          trim(squish(iter(%q<items_packs>,u(%!/FUN`BUILD`CHOICE`ITEMS`OF,%i0),%b,|),|),|)]
+          setqm(items_actor,u(%!/FUN`BUILD`CHOICE`PART,0),items_own,u(%!/FUN`BUILD`CHOICE`PART,1))][
+          setq(items_mixed,regmatch(regeditall(%q<items_own>,"item:\[^"\]*",),"\[a-z\]\[a-z0-9-\]*:))][
+          if(u({{core}}/FUN`PREDICATE`TEST,%q<items_actor>,%q<check_options>),
+            trim(squish(iter(%q<items_packs>,u(%!/FUN`BUILD`CHOICE`ITEMS`OF,%i0),%b,|),|),|))]
+        flags: [funsyntax]
+      # A filter is tested in two parts: the statements that name no item: option once against the
+      # actor, the others against each item, with the actor's options only when they name others too.
+      FUN`BUILD`CHOICE`PART:
+        value: |-
+          @@(%0 0 for the statements about the actor, 1 for those about the item; items_filter: them as a JSON array)[
+          \[[edit(trim(squish(json_map(%!/FUN`BUILD`CHOICE`PART`ONE,%q<items_filter>,~,%0),~),~),~,\,)]\]]
+        flags: [funsyntax]
+      FUN`BUILD`CHOICE`PART`ONE:
+        value: |-
+          @@(%0 a statement's type, %1 the statement, %3 0 or 1)[
+          if(eq(t(strmatch(%1,*item:*)),%3),if(strmatch(%0,string),json(string,%1),%1))]
         flags: [funsyntax]
       FUN`BUILD`CHOICE`ITEMS`OF:
         value: |-
@@ -1974,7 +1989,7 @@ objects:
           setq(items_ids,get(%q<items_store>/OPT`[first(%q<items_keys>)]))][
           null(iter(rest(%q<items_keys>),setq(items_ids,setinter(%q<items_ids>,get(%q<items_store>/OPT`%i0)))))][
           iter(%q<items_ids>,
-            if(cand(member(u({{core}}/DATA`CONFIG`BOOKS),get(%q<items_store>/ITEM`%i0`BOOK)),not(words(graball(%q<check_grants>,*~%0~%i0~*))),u({{core}}/FUN`PREDICATE`TEST,%q<items_filter>,%q<check_options> [json_query(setr(items_prep,get(%q<items_store>/ITEM`%i0`PREP)),extract,$.opts)] item:[json_query(%q<items_prep>,extract,$.slug)])),
+            if(cand(member(u({{core}}/DATA`CONFIG`BOOKS),get(%q<items_store>/ITEM`%i0`BOOK)),not(words(graball(%q<check_grants>,*~%0~%i0~*))),u({{core}}/FUN`PREDICATE`TEST,%q<items_own>,[if(%q<items_mixed>,%q<check_options>)] [json_query(setr(items_prep,get(%q<items_store>/ITEM`%i0`PREP)),extract,$.opts)] item:[json_query(%q<items_prep>,extract,$.slug)])),
               [if(%q<items_slugs>,json(string,json_query(%q<items_prep>,extract,$.slug)),json(string,Compendium.pf2e.[before(grab(u({{core}}/DATA`UUID),*~%0),~)].Item.[json_query(%q<items_prep>,extract,$.name)]))]^[json_query(%q<items_prep>,extract,$.name)]),
             %b,|)]
         flags: [funsyntax]
