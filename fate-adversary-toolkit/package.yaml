@@ -1,0 +1,1565 @@
+format: "1.16"
+package: fate-adversary-toolkit
+title: "Fate Adversary Toolkit (unofficial)"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Opposition for the Fate sheet, after the Fate Adversary Toolkit: a library of ready adversaries (threats, hitters, bosses and fillers) that +adversary/make copies into +npc at your game's power level, +adversary/build to make one by type from its skills, filler mobs that thin as they take stress, hazards, blocks and distractions in an encounter with +obstacle, countdowns with +countdown, and resistances and limitations on any NPC. Based on the Fate Adversary Toolkit SRD under CC BY 3.0. An unofficial fan package, not affiliated with or endorsed by Evil Hat Productions."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [sheet, fate, npc, encounters, adversaries]
+category: Characters
+requires_server: ">=0.1"
+
+# It builds opposition in the Fate sheet's +npc store, runs obstacles inside the sheet's encounters, and thins a
+# filler mob through the sheet's AFTER`NPC` hooks (sheet-fate 1.4). Sheet keepers (softcode.fate.admin) keep
+# this too; there is no permission of its own.
+depends:
+  - package: sheet-fate
+    version: ">=1.4 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH.Packages
+      path: sheet-fate/
+      branch: main
+
+objects:
+  # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook), writes the
+  # Fate sheet's opposition (NPC`<n> on Fate Opposition) and encounters (ENC`<n>`OBS`<k> on Fate Encounters), and
+  # calls the sheet's functions.
+  #
+  # +adversary, +obstacle and +countdown are added with /noparse/rsnoparse and hooked to CMD`<word>, so what a
+  # player types reaches the code exactly as typed and nothing a player wrote is ever evaluated.
+  #
+  # Trees: CMD` the hooked commands, INC`COMMAND` the parse and dispatch, INC`ADV`, INC`OBS` and INC`CD` one
+  # routine per switch, INC`NEED` the guards. FUN`TPL` the library, FUN`BUILD` the recipes, FUN`MOB` filler
+  # mobs, FUN`OBS` obstacles, FUN`CD` countdowns, FUN`SCREEN` the screens.
+  - ref: adversary
+    type: thing
+    name: Fate Adversary Toolkit
+    location: "{{$master_room}}"
+    flags: [WIZARD]
+    attributes:
+      # ---- settings ---------------------------------------------------------------
+      # +config adversary shows and changes them (fate-adversary-toolkit-config).
+      DATA`CONFIG: |-
+        Settings for adversaries, obstacles and countdowns on the Fate sheet. One leaf per setting.
+      DATA`CONFIG`LABEL: |-
+        Fate adversaries
+      DATA`CONFIG`PEAK: |-
+        0
+      DATA`CONFIG`PEAK`TYPE: |-
+        integer
+      DATA`CONFIG`PEAK`DEFAULT: |-
+        0
+      DATA`CONFIG`PEAK`MIN: |-
+        0
+      DATA`CONFIG`PEAK`MAX: |-
+        8
+      DATA`CONFIG`PEAK`LABEL: |-
+        PCs' best skill
+      DATA`CONFIG`PEAK`DESCRIPTION: |-
+        The rating of the PCs' highest skill, which adversaries are built against. 0 takes the Fate sheet's skill cap.
+      DATA`CONFIG`PEAK`EXAMPLE: |-
+        4
+      DATA`CONFIG`MOB_CAP: |-
+        4
+      DATA`CONFIG`MOB_CAP`TYPE: |-
+        integer
+      DATA`CONFIG`MOB_CAP`DEFAULT: |-
+        4
+      DATA`CONFIG`MOB_CAP`MIN: |-
+        1
+      DATA`CONFIG`MOB_CAP`MAX: |-
+        8
+      DATA`CONFIG`MOB_CAP`LABEL: |-
+        Mob skill cap
+      DATA`CONFIG`MOB_CAP`DESCRIPTION: |-
+        The highest a filler mob's skills go with its numbers.
+      DATA`CONFIG`MOB_CAP`EXAMPLE: |-
+        4
+      DATA`CONFIG`TRACK_SKILLS: |-
+        physical:physique mental:will
+      DATA`CONFIG`TRACK_SKILLS`TYPE: |-
+        list
+      DATA`CONFIG`TRACK_SKILLS`DEFAULT: |-
+        physical:physique mental:will
+      DATA`CONFIG`TRACK_SKILLS`PATTERN: |-
+        ^[A-Za-z0-9_-]+:[A-Za-z0-9_-]+$
+      DATA`CONFIG`TRACK_SKILLS`LABEL: |-
+        Track skills
+      DATA`CONFIG`TRACK_SKILLS`DESCRIPTION: |-
+        Which skill lengthens which stress track for a built threat or boss: track:skill, one pair each.
+      DATA`CONFIG`TRACK_SKILLS`EXAMPLE: |-
+        physical:physique mental:will
+      DATA`CONFIG`APPROACHES: |-
+        athletics:quick burglary:sneaky contacts:clever crafts:clever deceive:sneaky drive:quick empathy:careful fight:forceful investigate:careful lore:clever notice:careful physique:forceful provoke:flashy rapport:flashy resources:clever shoot:careful stealth:sneaky will:careful
+      DATA`CONFIG`APPROACHES`TYPE: |-
+        list
+      DATA`CONFIG`APPROACHES`DEFAULT: |-
+        athletics:quick burglary:sneaky contacts:clever crafts:clever deceive:sneaky drive:quick empathy:careful fight:forceful investigate:careful lore:clever notice:careful physique:forceful provoke:flashy rapport:flashy resources:clever shoot:careful stealth:sneaky will:careful
+      DATA`CONFIG`APPROACHES`PATTERN: |-
+        ^[A-Za-z0-9_-]+:[A-Za-z0-9_-]+$
+      DATA`CONFIG`APPROACHES`LABEL: |-
+        Skills as approaches
+      DATA`CONFIG`APPROACHES`DESCRIPTION: |-
+        On a game of approaches, which approach takes each skill an adversary was written with: skill:approach.
+      DATA`CONFIG`APPROACHES`EXAMPLE: |-
+        fight:forceful shoot:careful
+      DATA`CONFIG`ADVERSARIES`TYPE: |-
+        table
+      DATA`CONFIG`ADVERSARIES`LABEL: |-
+        Adversaries
+      DATA`CONFIG`ADVERSARIES`DESCRIPTION: |-
+        The library +adversary/make copies from: threats, hitters, bosses and fillers, written for PCs whose best skill is their peak.
+      DATA`CONFIG`ADVERSARIES`STORE: |-
+        {{store}}
+      DATA`CONFIG`ADVERSARIES`PATH: |-
+        TPL
+      DATA`CONFIG`ADVERSARIES`ENTRY: |-
+        label
+      DATA`CONFIG`ADVERSARIES`FIELDS: |-
+        label type peak aspects skills rest stunts boxes slots lock key limit countdown triggers outcome order
+      DATA`CONFIG`ADVERSARIES`KEYPATTERN: |-
+        ^[A-Za-z0-9-]{1,30}$
+      DATA`CONFIG`ADVERSARIES`FIELD`LABEL`TYPE: |-
+        text
+      DATA`CONFIG`ADVERSARIES`FIELD`LABEL`MIN: |-
+        1
+      DATA`CONFIG`ADVERSARIES`FIELD`LABEL`MAX: |-
+        40
+      DATA`CONFIG`ADVERSARIES`FIELD`LABEL`PATTERN: |-
+        ^[A-Za-z][A-Za-z0-9 '.-]*$
+      DATA`CONFIG`ADVERSARIES`FIELD`LABEL`LABEL: |-
+        Name
+      DATA`CONFIG`ADVERSARIES`FIELD`LABEL`DESCRIPTION: |-
+        The name an NPC made from it takes unless you give another.
+      DATA`CONFIG`ADVERSARIES`FIELD`TYPE`TYPE: |-
+        choice
+      DATA`CONFIG`ADVERSARIES`FIELD`TYPE`CHOICES: |-
+        threat hitter boss filler
+      DATA`CONFIG`ADVERSARIES`FIELD`TYPE`DEFAULT: |-
+        threat
+      DATA`CONFIG`ADVERSARIES`FIELD`TYPE`LABEL: |-
+        Type
+      DATA`CONFIG`ADVERSARIES`FIELD`TYPE`DESCRIPTION: |-
+        Threat, hitter, boss or filler.
+      DATA`CONFIG`ADVERSARIES`FIELD`PEAK`TYPE: |-
+        integer
+      DATA`CONFIG`ADVERSARIES`FIELD`PEAK`DEFAULT: |-
+        4
+      DATA`CONFIG`ADVERSARIES`FIELD`PEAK`MIN: |-
+        0
+      DATA`CONFIG`ADVERSARIES`FIELD`PEAK`MAX: |-
+        8
+      DATA`CONFIG`ADVERSARIES`FIELD`PEAK`LABEL: |-
+        Written for
+      DATA`CONFIG`ADVERSARIES`FIELD`PEAK`DESCRIPTION: |-
+        The PCs' best skill its ratings were written against; a game with a higher peak raises them to match.
+      DATA`CONFIG`ADVERSARIES`FIELD`ASPECTS`TYPE: |-
+        list
+      DATA`CONFIG`ADVERSARIES`FIELD`ASPECTS`DELIMITER: |-
+        |
+      DATA`CONFIG`ADVERSARIES`FIELD`ASPECTS`MAX: |-
+        5
+      DATA`CONFIG`ADVERSARIES`FIELD`ASPECTS`LABEL: |-
+        Aspects
+      DATA`CONFIG`ADVERSARIES`FIELD`ASPECTS`DESCRIPTION: |-
+        Its aspects, | between them, high concept first.
+      DATA`CONFIG`ADVERSARIES`FIELD`SKILLS`TYPE: |-
+        list
+      DATA`CONFIG`ADVERSARIES`FIELD`SKILLS`PATTERN: |-
+        ^[A-Za-z0-9_-]+:-?[0-9]+$
+      DATA`CONFIG`ADVERSARIES`FIELD`SKILLS`LABEL: |-
+        Skills
+      DATA`CONFIG`ADVERSARIES`FIELD`SKILLS`DESCRIPTION: |-
+        Its rated skills as skill:rating, such as fight:4.
+      DATA`CONFIG`ADVERSARIES`FIELD`REST`TYPE: |-
+        text
+      DATA`CONFIG`ADVERSARIES`FIELD`REST`PATTERN: |-
+        ^(-?[0-9])?$
+      DATA`CONFIG`ADVERSARIES`FIELD`REST`LABEL: |-
+        Every other skill
+      DATA`CONFIG`ADVERSARIES`FIELD`REST`DESCRIPTION: |-
+        A rating for every skill it does not list, such as 1 for a boss's Average (+1). Empty leaves them Mediocre.
+      DATA`CONFIG`ADVERSARIES`FIELD`STUNTS`TYPE: |-
+        list
+      DATA`CONFIG`ADVERSARIES`FIELD`STUNTS`DELIMITER: |-
+        |
+      DATA`CONFIG`ADVERSARIES`FIELD`STUNTS`MAX: |-
+        5
+      DATA`CONFIG`ADVERSARIES`FIELD`STUNTS`LABEL: |-
+        Stunts
+      DATA`CONFIG`ADVERSARIES`FIELD`STUNTS`DESCRIPTION: |-
+        Its stunts, | between them.
+      DATA`CONFIG`ADVERSARIES`FIELD`BOXES`TYPE: |-
+        list
+      DATA`CONFIG`ADVERSARIES`FIELD`BOXES`PATTERN: |-
+        ^[A-Za-z0-9_-]+:[0-9]+$
+      DATA`CONFIG`ADVERSARIES`FIELD`BOXES`LABEL: |-
+        Stress boxes
+      DATA`CONFIG`ADVERSARIES`FIELD`BOXES`DESCRIPTION: |-
+        Its stress boxes as track:boxes, such as physical:3 mental:2.
+      DATA`CONFIG`ADVERSARIES`FIELD`SLOTS`TYPE: |-
+        list
+      DATA`CONFIG`ADVERSARIES`FIELD`SLOTS`LABEL: |-
+        Consequences
+      DATA`CONFIG`ADVERSARIES`FIELD`SLOTS`DESCRIPTION: |-
+        The consequence slots it has, such as mild moderate.
+      DATA`CONFIG`ADVERSARIES`FIELD`LOCK`TYPE: |-
+        text
+      DATA`CONFIG`ADVERSARIES`FIELD`LOCK`MAX: |-
+        200
+      DATA`CONFIG`ADVERSARIES`FIELD`LOCK`LABEL: |-
+        Resistance
+      DATA`CONFIG`ADVERSARIES`FIELD`LOCK`DESCRIPTION: |-
+        A resistance's lock: the aspect saying what it is immune to.
+      DATA`CONFIG`ADVERSARIES`FIELD`KEY`TYPE: |-
+        text
+      DATA`CONFIG`ADVERSARIES`FIELD`KEY`MAX: |-
+        300
+      DATA`CONFIG`ADVERSARIES`FIELD`KEY`LABEL: |-
+        Key
+      DATA`CONFIG`ADVERSARIES`FIELD`KEY`DESCRIPTION: |-
+        The one thing that gets past its resistance.
+      DATA`CONFIG`ADVERSARIES`FIELD`LIMIT`TYPE: |-
+        text
+      DATA`CONFIG`ADVERSARIES`FIELD`LIMIT`MAX: |-
+        300
+      DATA`CONFIG`ADVERSARIES`FIELD`LIMIT`LABEL: |-
+        Limitation
+      DATA`CONFIG`ADVERSARIES`FIELD`LIMIT`DESCRIPTION: |-
+        A limitation: a fact or aspect that changes how the PCs must deal with it.
+      DATA`CONFIG`ADVERSARIES`FIELD`COUNTDOWN`TYPE: |-
+        integer
+      DATA`CONFIG`ADVERSARIES`FIELD`COUNTDOWN`DEFAULT: |-
+        0
+      DATA`CONFIG`ADVERSARIES`FIELD`COUNTDOWN`MIN: |-
+        0
+      DATA`CONFIG`ADVERSARIES`FIELD`COUNTDOWN`MAX: |-
+        20
+      DATA`CONFIG`ADVERSARIES`FIELD`COUNTDOWN`LABEL: |-
+        Countdown
+      DATA`CONFIG`ADVERSARIES`FIELD`COUNTDOWN`DESCRIPTION: |-
+        The boxes of the countdown it brings, 0 for none.
+      DATA`CONFIG`ADVERSARIES`FIELD`TRIGGERS`TYPE: |-
+        list
+      DATA`CONFIG`ADVERSARIES`FIELD`TRIGGERS`DELIMITER: |-
+        |
+      DATA`CONFIG`ADVERSARIES`FIELD`TRIGGERS`MAX: |-
+        10
+      DATA`CONFIG`ADVERSARIES`FIELD`TRIGGERS`LABEL: |-
+        Triggers
+      DATA`CONFIG`ADVERSARIES`FIELD`TRIGGERS`DESCRIPTION: |-
+        What marks a box of its countdown, | between them.
+      DATA`CONFIG`ADVERSARIES`FIELD`OUTCOME`TYPE: |-
+        text
+      DATA`CONFIG`ADVERSARIES`FIELD`OUTCOME`MAX: |-
+        300
+      DATA`CONFIG`ADVERSARIES`FIELD`OUTCOME`LABEL: |-
+        Outcome
+      DATA`CONFIG`ADVERSARIES`FIELD`OUTCOME`DESCRIPTION: |-
+        What happens when its countdown's last box is marked.
+      DATA`CONFIG`ADVERSARIES`FIELD`ORDER`TYPE: |-
+        integer
+      DATA`CONFIG`ADVERSARIES`FIELD`ORDER`DEFAULT: |-
+        50
+      DATA`CONFIG`ADVERSARIES`FIELD`ORDER`MIN: |-
+        0
+      DATA`CONFIG`ADVERSARIES`FIELD`ORDER`MAX: |-
+        999
+      DATA`CONFIG`ADVERSARIES`FIELD`ORDER`LABEL: |-
+        Order
+      DATA`CONFIG`ADVERSARIES`FIELD`ORDER`DESCRIPTION: |-
+        Where it comes in its type's list: lower first, then by name.
+      DATA`CONFIG`OBSTACLES`TYPE: |-
+        table
+      DATA`CONFIG`OBSTACLES`LABEL: |-
+        Obstacles
+      DATA`CONFIG`OBSTACLES`DESCRIPTION: |-
+        The library +obstacle/add copies from: hazards, blocks and distractions.
+      DATA`CONFIG`OBSTACLES`STORE: |-
+        {{store}}
+      DATA`CONFIG`OBSTACLES`PATH: |-
+        OBS
+      DATA`CONFIG`OBSTACLES`ENTRY: |-
+        label
+      DATA`CONFIG`OBSTACLES`FIELDS: |-
+        label type rating weapon choice repercussions lock key countdown triggers outcome order
+      DATA`CONFIG`OBSTACLES`KEYPATTERN: |-
+        ^[A-Za-z0-9-]{1,30}$
+      DATA`CONFIG`OBSTACLES`FIELD`LABEL`TYPE: |-
+        text
+      DATA`CONFIG`OBSTACLES`FIELD`LABEL`MIN: |-
+        1
+      DATA`CONFIG`OBSTACLES`FIELD`LABEL`MAX: |-
+        40
+      DATA`CONFIG`OBSTACLES`FIELD`LABEL`PATTERN: |-
+        ^[A-Za-z][A-Za-z0-9 '.-]*$
+      DATA`CONFIG`OBSTACLES`FIELD`LABEL`LABEL: |-
+        Name
+      DATA`CONFIG`OBSTACLES`FIELD`LABEL`DESCRIPTION: |-
+        Its name, which is also an aspect.
+      DATA`CONFIG`OBSTACLES`FIELD`TYPE`TYPE: |-
+        choice
+      DATA`CONFIG`OBSTACLES`FIELD`TYPE`CHOICES: |-
+        hazard block distraction
+      DATA`CONFIG`OBSTACLES`FIELD`TYPE`DEFAULT: |-
+        hazard
+      DATA`CONFIG`OBSTACLES`FIELD`TYPE`LABEL: |-
+        Type
+      DATA`CONFIG`OBSTACLES`FIELD`TYPE`DESCRIPTION: |-
+        Hazard, block or distraction.
+      DATA`CONFIG`OBSTACLES`FIELD`RATING`TYPE: |-
+        integer
+      DATA`CONFIG`OBSTACLES`FIELD`RATING`DEFAULT: |-
+        0
+      DATA`CONFIG`OBSTACLES`FIELD`RATING`MIN: |-
+        0
+      DATA`CONFIG`OBSTACLES`FIELD`RATING`MAX: |-
+        10
+      DATA`CONFIG`OBSTACLES`FIELD`RATING`LABEL: |-
+        Rating
+      DATA`CONFIG`OBSTACLES`FIELD`RATING`DESCRIPTION: |-
+        What it rolls or opposes with, written for PCs whose best skill is Great (+4). 0 for a distraction with no opposition.
+      DATA`CONFIG`OBSTACLES`FIELD`WEAPON`TYPE: |-
+        integer
+      DATA`CONFIG`OBSTACLES`FIELD`WEAPON`DEFAULT: |-
+        0
+      DATA`CONFIG`OBSTACLES`FIELD`WEAPON`MIN: |-
+        0
+      DATA`CONFIG`OBSTACLES`FIELD`WEAPON`MAX: |-
+        4
+      DATA`CONFIG`OBSTACLES`FIELD`WEAPON`LABEL: |-
+        Weapon
+      DATA`CONFIG`OBSTACLES`FIELD`WEAPON`DESCRIPTION: |-
+        Shifts it adds to a hit, 0 to 4.
+      DATA`CONFIG`OBSTACLES`FIELD`CHOICE`TYPE: |-
+        text
+      DATA`CONFIG`OBSTACLES`FIELD`CHOICE`MAX: |-
+        300
+      DATA`CONFIG`OBSTACLES`FIELD`CHOICE`LABEL: |-
+        Choice
+      DATA`CONFIG`OBSTACLES`FIELD`CHOICE`DESCRIPTION: |-
+        A distraction's question for the PCs.
+      DATA`CONFIG`OBSTACLES`FIELD`REPERCUSSIONS`TYPE: |-
+        list
+      DATA`CONFIG`OBSTACLES`FIELD`REPERCUSSIONS`DELIMITER: |-
+        |
+      DATA`CONFIG`OBSTACLES`FIELD`REPERCUSSIONS`MAX: |-
+        5
+      DATA`CONFIG`OBSTACLES`FIELD`REPERCUSSIONS`LABEL: |-
+        Repercussions
+      DATA`CONFIG`OBSTACLES`FIELD`REPERCUSSIONS`DESCRIPTION: |-
+        What happens if the PCs don't deal with a distraction, or for each way they choose, | between them.
+      DATA`CONFIG`OBSTACLES`FIELD`LOCK`TYPE: |-
+        text
+      DATA`CONFIG`OBSTACLES`FIELD`LOCK`MAX: |-
+        200
+      DATA`CONFIG`OBSTACLES`FIELD`LOCK`LABEL: |-
+        Resistance
+      DATA`CONFIG`OBSTACLES`FIELD`LOCK`DESCRIPTION: |-
+        A resistance's lock: the aspect saying what it is immune to. Nobody overcomes or disables it without the key.
+      DATA`CONFIG`OBSTACLES`FIELD`KEY`TYPE: |-
+        text
+      DATA`CONFIG`OBSTACLES`FIELD`KEY`MAX: |-
+        300
+      DATA`CONFIG`OBSTACLES`FIELD`KEY`LABEL: |-
+        Key
+      DATA`CONFIG`OBSTACLES`FIELD`KEY`DESCRIPTION: |-
+        The one thing that gets past its resistance.
+      DATA`CONFIG`OBSTACLES`FIELD`COUNTDOWN`TYPE: |-
+        integer
+      DATA`CONFIG`OBSTACLES`FIELD`COUNTDOWN`DEFAULT: |-
+        0
+      DATA`CONFIG`OBSTACLES`FIELD`COUNTDOWN`MIN: |-
+        0
+      DATA`CONFIG`OBSTACLES`FIELD`COUNTDOWN`MAX: |-
+        20
+      DATA`CONFIG`OBSTACLES`FIELD`COUNTDOWN`LABEL: |-
+        Countdown
+      DATA`CONFIG`OBSTACLES`FIELD`COUNTDOWN`DESCRIPTION: |-
+        The boxes of the countdown it starts when it is added, 0 for none.
+      DATA`CONFIG`OBSTACLES`FIELD`TRIGGERS`TYPE: |-
+        list
+      DATA`CONFIG`OBSTACLES`FIELD`TRIGGERS`DELIMITER: |-
+        |
+      DATA`CONFIG`OBSTACLES`FIELD`TRIGGERS`MAX: |-
+        10
+      DATA`CONFIG`OBSTACLES`FIELD`TRIGGERS`LABEL: |-
+        Triggers
+      DATA`CONFIG`OBSTACLES`FIELD`TRIGGERS`DESCRIPTION: |-
+        What marks a box of its countdown, | between them.
+      DATA`CONFIG`OBSTACLES`FIELD`OUTCOME`TYPE: |-
+        text
+      DATA`CONFIG`OBSTACLES`FIELD`OUTCOME`MAX: |-
+        300
+      DATA`CONFIG`OBSTACLES`FIELD`OUTCOME`LABEL: |-
+        Outcome
+      DATA`CONFIG`OBSTACLES`FIELD`OUTCOME`DESCRIPTION: |-
+        What happens when its countdown's last box is marked.
+      DATA`CONFIG`OBSTACLES`FIELD`ORDER`TYPE: |-
+        integer
+      DATA`CONFIG`OBSTACLES`FIELD`ORDER`DEFAULT: |-
+        50
+      DATA`CONFIG`OBSTACLES`FIELD`ORDER`MIN: |-
+        0
+      DATA`CONFIG`OBSTACLES`FIELD`ORDER`MAX: |-
+        999
+      DATA`CONFIG`OBSTACLES`FIELD`ORDER`LABEL: |-
+        Order
+      DATA`CONFIG`OBSTACLES`FIELD`ORDER`DESCRIPTION: |-
+        Where it comes in its type's list: lower first, then by name.
+
+      # Which INC` routine each switch runs: DATA`ROUTE`<table>`<switch>. BARE is the command alone, ARG the
+      # command with something after it and no switch.
+      DATA`ROUTE: |-
+        Which routine each switch runs. One leaf per switch.
+      DATA`ROUTE`ADVERSARY`BARE: |-
+        ADV`LIST
+      DATA`ROUTE`ADVERSARY`ARG: |-
+        ADV`SHOW
+      DATA`ROUTE`ADVERSARY`LIST: |-
+        ADV`LIST
+      DATA`ROUTE`ADVERSARY`MAKE: |-
+        ADV`MAKE
+      DATA`ROUTE`ADVERSARY`BUILD: |-
+        ADV`BUILD
+      DATA`ROUTE`ADVERSARY`MOB: |-
+        ADV`MOB
+      DATA`ROUTE`ADVERSARY`STUNTS: |-
+        ADV`STUNTS
+      DATA`ROUTE`OBSTACLE`BARE: |-
+        OBS`HERE
+      DATA`ROUTE`OBSTACLE`ARG: |-
+        OBS`SHOW
+      DATA`ROUTE`OBSTACLE`LIST: |-
+        OBS`LIBRARY
+      DATA`ROUTE`OBSTACLE`ADD: |-
+        OBS`ADD
+      DATA`ROUTE`OBSTACLE`HAZARD: |-
+        OBS`NEW
+      DATA`ROUTE`OBSTACLE`BLOCK: |-
+        OBS`NEW
+      DATA`ROUTE`OBSTACLE`DISTRACTION: |-
+        OBS`DISTRACTION
+      DATA`ROUTE`OBSTACLE`REPERCUSSION: |-
+        OBS`REPERCUSSION
+      DATA`ROUTE`OBSTACLE`LOCK: |-
+        OBS`LOCK
+      DATA`ROUTE`OBSTACLE`ROLL: |-
+        OBS`ROLL
+      DATA`ROUTE`OBSTACLE`OVERCOME: |-
+        OBS`OVERCOME
+      DATA`ROUTE`OBSTACLE`DISABLE: |-
+        OBS`OVERCOME
+      DATA`ROUTE`OBSTACLE`REMOVE: |-
+        OBS`REMOVE
+      DATA`ROUTE`COUNTDOWN`BARE: |-
+        CD`LIST
+      DATA`ROUTE`COUNTDOWN`ARG: |-
+        CD`SHOW
+      DATA`ROUTE`COUNTDOWN`START: |-
+        CD`START
+      DATA`ROUTE`COUNTDOWN`TRIGGER: |-
+        CD`TRIGGER
+      DATA`ROUTE`COUNTDOWN`OUTCOME: |-
+        CD`OUTCOME
+      DATA`ROUTE`COUNTDOWN`TICK: |-
+        CD`TICK
+      DATA`ROUTE`COUNTDOWN`UNTICK: |-
+        CD`UNTICK
+      DATA`ROUTE`COUNTDOWN`HIDE: |-
+        CD`HIDE
+      DATA`ROUTE`COUNTDOWN`STOP: |-
+        CD`STOP
+
+      # ---- commands ---------------------------------------------------------------
+      # %1 the switches and %2 what follows, exactly as typed.
+      CMD`ADVERSARY:
+        value: |-
+          $(?is)^\+adversary(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,adversary,table,ADVERSARY,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`OBSTACLE:
+        value: |-
+          $(?is)^\+obstacle(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,obstacle,table,OBSTACLE,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`COUNTDOWN:
+        value: |-
+          $(?is)^\+countdown(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,countdown,table,COUNTDOWN,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      # A line a bridge adds to one of this object's messages: HINT`<message>, set by a bridge such as
+      # fate-adversary-toolkit-help. Nothing when no bridge set one.
+      FUN`HINT:
+        value: |-
+          if(hasattr(%!,HINT`%0),%b[u(%!/HINT`%0,%1,%2)])
+        flags: [funsyntax]
+      INC`COMMAND`RUN:
+        value: |-
+          @assert hastype(%#,player)=@pemit %#=notice(ucstr(%<word>),Only players use +%<word>.,warn); think u(%!/FUN`COMMAND`PARSE,%<word>,%<table>,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(%q<cmd_tag>,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(%q<cmd_tag>,+%q<cmd_word> has no /%q<cmd_switch> switch.[u(%!/FUN`HINT,SWITCHES,%q<cmd_word>)],warn); @include %!/INC`%q<cmd_route>
+        flags: [cmdsyntax]
+      # %0 the word, %1 its route table, %2 the switches and %3 the argument, as typed. Sets cmd_word, cmd_tag,
+      # cmd_switch_list, cmd_switch, cmd_argument, cmd_has_equals, cmd_left_side and cmd_right_side around the
+      # first =, cmd_route (the INC` routine to run), viewer_objid and viewer_keeper.
+      FUN`COMMAND`PARSE:
+        value: |-
+          setqm(cmd_word,lcstr(%0),
+          cmd_tag,ucstr(%0),
+          cmd_switch_list,lcstr(trim(edit(%2,/,%b))),
+          cmd_switch,first(%q<cmd_switch_list>),
+          cmd_argument,trim(%3),
+          cmd_has_equals,strmatch(%3,*=*),
+          cmd_left_side,trim(before(%3,=)),
+          cmd_right_side,trim(after(%3,=)),
+          cmd_route,get(%!/DATA`ROUTE`%1`[if(strlen(%q<cmd_switch>),ucstr(%q<cmd_switch>),if(strlen(%q<cmd_argument>),ARG,BARE))]),
+          viewer_objid,objid(%#),
+          viewer_keeper,u({{sheet-fate/sheet}}/FUN`PERM`KEEPER,%#))
+        flags: [funsyntax]
+
+      # ---- guards -----------------------------------------------------------------
+      # %<path> TPL or OBS, %<typed> a name: tpl_key, the library entry.
+      INC`NEED`TPL:
+        value: |-
+          @assert strlen(setr(tpl_key,u(%!/FUN`TPL`FIND,%<path>,%<typed>)))=@pemit %#=notice(%q<cmd_tag>,There is no [if(strmatch(%<path>,TPL),adversary,obstacle)] called '[trim(%<typed>)]' in the library. +[if(strmatch(%<path>,TPL),adversary,obstacle/list)] lists them.,warn)
+        flags: [cmdsyntax]
+      # A name for a new NPC: up to 40 letters, digits, spaces, dots, dashes and apostrophes, and nobody's yet.
+      INC`NEED`NPCNAME:
+        value: |-
+          @assert cand(lte(strlen(%<typed>),40),regmatch(%<typed>,^\[A-Za-z\]\[A-Za-z0-9 '.-\]*$))=@pemit %#=notice(%q<cmd_tag>,A name is up to 40 letters%, digits%, spaces%, dots%, dashes and apostrophes%, starting with a letter.,warn); @assert not(strlen(u({{sheet-fate/sheet}}/FUN`NPC`NAMED,%<typed>)))=@pemit %#=notice(%q<cmd_tag>,There is opposition called '%<typed>' already. +npc/destroy %<typed> clears the name%, or give another after =.,warn); @assert cor(%q<viewer_keeper>,lt(words(u({{sheet-fate/sheet}}/FUN`NPC`OWNED,%q<viewer_objid>)),get({{sheet-fate/sheet}}/DATA`CONFIG`NPCS)))=@pemit %#=notice(%q<cmd_tag>,You have made [get({{sheet-fate/sheet}}/DATA`CONFIG`NPCS)] NPCs already. +npc/destroy <name> makes room.,warn)
+        flags: [cmdsyntax]
+      # %<peak> typed or nothing: tpl_peak, the PCs' best skill to build against.
+      INC`NEED`PEAK:
+        value: |-
+          think setq(tpl_peak,if(strlen(%<peak>),u({{sheet-fate/sheet}}/FUN`LADDER`READ,%<peak>),u(%!/FUN`PEAK))); @assert cand(isint(%q<tpl_peak>),gte(%q<tpl_peak>,0),lte(%q<tpl_peak>,8))=@pemit %#=notice(%q<cmd_tag>,The PCs' best skill is a rating from 0 to 8%, or a ladder word such as great.,warn)
+        flags: [cmdsyntax]
+      # The encounter your commands go to here, which you run: enc_id and enc_room (the sheet's own guards).
+      # The encounter here that the player's play goes to, as the sheet picks it: enc_id and enc_room.
+      INC`NEED`ENC:
+        value: |-
+          think setqm(enc_here,u({{sheet-fate/sheet}}/FUN`ENC`HERE,%l),enc_id,firstof(u({{sheet-fate/sheet}}/FUN`ENC`PICK,%#),if(eq(words(%q<enc_here>),1),%q<enc_here>))); @assert strlen(%q<enc_id>)=@pemit %#=notice(%q<cmd_tag>,if(words(%q<enc_here>),There are [words(%q<enc_here>)] encounters here: +encounter/use <number> picks yours.,There is no encounter here. +encounter/start begins one.),warn); think setq(enc_room,get({{sheet-fate/encounters}}/ENC`%q<enc_id>))
+        flags: [cmdsyntax]
+      INC`NEED`GM:
+        value: |-
+          @include %!/INC`NEED`ENC; @assert cor(%q<viewer_keeper>,not(comp(get({{sheet-fate/encounters}}/ENC`%q<enc_id>`LEAD),%q<viewer_objid>)))=@pemit %#=notice(%q<cmd_tag>,Only [name(get({{sheet-fate/encounters}}/ENC`%q<enc_id>`LEAD))]%, who runs it%, and sheet keepers do that.,error)
+        flags: [cmdsyntax]
+      # The encounter your commands go to here, which you take part in or run: enc_id and enc_room.
+      INC`NEED`TAKING:
+        value: |-
+          @include %!/INC`NEED`ENC; @assert cor(member(get({{sheet-fate/encounters}}/ENC`%q<enc_id>`PEOPLE),%q<viewer_objid>),u({{sheet-fate/sheet}}/FUN`ENC`ISGM,%q<enc_id>,%#))=@pemit %#=notice(%q<cmd_tag>,You are not in [u({{sheet-fate/sheet}}/FUN`ENC`TITLE,%q<enc_id>)]. +encounter/join takes part.,warn)
+        flags: [cmdsyntax]
+      # %<typed> an obstacle's name in enc_id: obs_k and obs_at.
+      INC`NEED`OBS:
+        value: |-
+          @assert strlen(setr(obs_k,u(%!/FUN`OBS`FIND,%q<enc_id>,%<typed>)))=@pemit %#=notice(OBSTACLE,There is no obstacle called '[trim(%<typed>)]' in [u({{sheet-fate/sheet}}/FUN`ENC`TITLE,%q<enc_id>)]. +obstacle lists them.,warn); think setq(obs_at,{{sheet-fate/encounters}}/ENC`%q<enc_id>`OBS`%q<obs_k>)
+        flags: [cmdsyntax]
+      # %<typed> a countdown's name: cd_id, one the player may see.
+      INC`NEED`CD:
+        value: |-
+          @assert strlen(setr(cd_id,u(%!/FUN`CD`FIND,%<typed>,%#)))=@pemit %#=notice(COUNTDOWN,There is no countdown called '[trim(%<typed>)]' that you can see. +countdown lists them.,warn)
+        flags: [cmdsyntax]
+      # cd_id: the one who started it, or a sheet keeper.
+      INC`NEED`CDOWNER:
+        value: |-
+          @assert cor(%q<viewer_keeper>,not(comp(get({{countdowns}}/CD`%q<cd_id>`OWNER),%q<viewer_objid>)))=@pemit %#=notice(COUNTDOWN,Only [name(get({{countdowns}}/CD`%q<cd_id>`OWNER))]%, who started it%, and sheet keepers change [get({{countdowns}}/CD`%q<cd_id>)].,error)
+        flags: [cmdsyntax]
+
+      # ---- +adversary ---------------------------------------------------------------
+      # The library: TPL`<KEY> on Fate Adversary Store, its name, with TYPE, PEAK (the PCs' best skill it was written
+      # against), ASPECTS and STUNTS (|-separated), SKILLS (skill:rating ...), REST (a rating for every other skill),
+      # BOXES (track:boxes ...), SLOTS (consequence slots), LOCK, KEY and LIMIT, COUNTDOWN (boxes), TRIGGERS and
+      # OUTCOME beneath. Staff change it with +config adversary/adversaries.
+      INC`ADV`LIST:
+        value: |-
+          @pemit %#=u(%!/FUN`SCREEN`LIBRARY)
+        flags: [cmdsyntax]
+      INC`ADV`SHOW:
+        value: |-
+          @include/args %!/INC`NEED`TPL=path,TPL,typed,%q<cmd_argument>; @assert strlen(%q<tpl_key>); @pemit %#=u(%!/FUN`SCREEN`TEMPLATE,%q<tpl_key>)
+        flags: [cmdsyntax]
+      # +adversary/make <template>[/<peak>][=<name>]: a copy in +npc, its ratings moved by the steps between the peak
+      # it was written for and this game's (or the one given).
+      INC`ADV`MAKE:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(ADVERSARY,+adversary/make <adversary>%[/<PCs' best skill>%]%[=<name>%] copies one from the library into +npc. +adversary lists them.,warn); @include/args %!/INC`NEED`TPL=path,TPL,typed,before(%q<cmd_left_side>,/); @assert strlen(%q<tpl_key>); @include/args %!/INC`NEED`PEAK=peak,if(strmatch(%q<cmd_left_side>,*/*),trim(after(%q<cmd_left_side>,/))); @assert isint(%q<tpl_peak>); think setq(make_name,firstof(%q<cmd_right_side>,get({{store}}/TPL`%q<tpl_key>))); @include/args %!/INC`NEED`NPCNAME=typed,%q<make_name>; think setqm(make_shift,sub(%q<tpl_peak>,default({{store}}/TPL`%q<tpl_key>`PEAK,4)),make_id,inc(get({{sheet-fate/npcs}}/NEXT))); &NEXT {{sheet-fate/npcs}}=%q<make_id>; think setq(make_dropped,u(%!/FUN`TPL`MAKE,%q<make_id>,%q<tpl_key>,%q<make_name>,%q<make_shift>,%q<viewer_objid>)); @pemit %#=notice(ADVERSARY,You make %q<make_name>%, a [get({{store}}/TPL`%q<tpl_key>`TYPE)][if(%q<make_shift>,%, its ratings [if(gt(%q<make_shift>,0),raised,lowered)] [abs(%q<make_shift>)] step[if(neq(abs(%q<make_shift>),1),s)] for PCs whose best skill is [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,%q<tpl_peak>)])]. +npc %q<make_name> shows it%, and +encounter/npc %q<make_name> brings it into an encounter.[if(words(%q<make_dropped>),%bThis game has no [itemize(lcstr(%q<make_dropped>))]%, so [if(eq(words(%q<make_dropped>),1),that is,those are)] left off.)][if(get({{store}}/TPL`%q<tpl_key>`COUNTDOWN),%b+countdown/start [get({{store}}/TPL`%q<tpl_key>)] starts its countdown.)],ok)
+        flags: [cmdsyntax]
+      # +adversary/build <name>=<type>[ tough] [<quality>] <skill> <skill>...[/<peak>]: made from the toolkit's recipe
+      # for its type, against the PCs' best skill.
+      INC`ADV`BUILD:
+        value: |-
+          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>),strlen(%q<cmd_right_side>))=@pemit %#=notice(ADVERSARY,+adversary/build <name>=<type> <skills>%, best first: +adversary/build Bruiser=threat physique fight athletics. The types are threat%, hitter and boss%, with tough for a nastier one%, and filler average%, fair or good.,warn); @include/args %!/INC`NEED`NPCNAME=typed,%q<cmd_left_side>; @include/args %!/INC`NEED`PEAK=peak,if(strmatch(%q<cmd_right_side>,*/*),trim(after(%q<cmd_right_side>,/))); @assert isint(%q<tpl_peak>); think u(%!/FUN`BUILD`READ,trim(before(%q<cmd_right_side>,/))); @assert member(threat hitter boss filler,%q<build_type>)=@pemit %#=notice(ADVERSARY,An adversary is a threat%, a hitter%, a boss or a filler.,warn); @assert cor(comp(%q<build_type>,filler),member(average fair good,%q<build_quality>))=@pemit %#=notice(ADVERSARY,A filler is average%, fair or good: +adversary/build Mob Enforcer=filler fair shoot.,warn); @assert words(%q<build_typed>)=@pemit %#=notice(ADVERSARY,Name its skills after the type%, best first.,warn); @assert not(words(%q<build_unknown>))=@pemit %#=notice(ADVERSARY,There is no [u({{sheet-fate/sheet}}/FUN`TRAIT`NOUN)] [itemize(iter(%q<build_unknown>,'%i0',%b,|),|,or)]. +sheet/traits lists them.,warn); @assert eq(words(%q<build_keys>),words(setunion(%q<build_keys>,)))=@pemit %#=notice(ADVERSARY,Name each skill once.,warn); @assert lte(words(%q<build_keys>),setr(build_room,u(%!/FUN`BUILD`ROOM,%q<build_type>,%q<build_quality>,%q<build_tough>,%q<tpl_peak>)))=@pemit %#=notice(ADVERSARY,A [trim(%q<build_quality> %q<build_type>)] has room for %q<build_room> rated skill[if(neq(%q<build_room>,1),s)].,warn); think setq(make_id,inc(get({{sheet-fate/npcs}}/NEXT))); &NEXT {{sheet-fate/npcs}}=%q<make_id>; think u(%!/FUN`BUILD`MAKE,%q<make_id>,%q<cmd_left_side>,%q<viewer_objid>,%q<tpl_peak>); @pemit %#=notice(ADVERSARY,You build %q<cmd_left_side>%, [art(if(%q<build_tough>,tough,firstof(%q<build_quality>,%q<build_type>)))] [squish(trim([if(%q<build_tough>,tough)] %q<build_quality> %q<build_type>))] against PCs whose best skill is [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,%q<tpl_peak>)]: [u(%!/FUN`BUILD`SUMMARY,{{sheet-fate/npcs}}/NPC`%q<make_id>)]. +npc/aspect and +npc/stunt finish it%, and +npc %q<cmd_left_side> shows it.,ok)
+        flags: [cmdsyntax]
+      # +adversary/mob <filler>[=<how many>]: a group of them in the encounter you run, as one NPC.
+      INC`ADV`MOB:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(ADVERSARY,+adversary/mob <filler>%[=<how many>%] brings a group of fillers from +npc into the encounter you run%, as one.,warn); @include %!/INC`NEED`GM; @assert strlen(setr(npc_id,u({{sheet-fate/sheet}}/FUN`NPC`FIND,%q<cmd_left_side>,%#)))=@pemit %#=notice(ADVERSARY,There is no opposition called '%q<cmd_left_side>' that you can use. +npc lists them.,warn); think setq(mob_count,firstof(%q<cmd_right_side>,3)); @assert cand(isint(%q<mob_count>),gte(%q<mob_count>,2),lte(%q<mob_count>,12))=@pemit %#=notice(ADVERSARY,A mob is 2 to 12 fillers.,warn); @assert not(words(get({{sheet-fate/npcs}}/NPC`%q<npc_id>`SLOTS)))=@pemit %#=notice(ADVERSARY,[get({{sheet-fate/npcs}}/NPC`%q<npc_id>)] has consequences: only fillers%, which have none%, group into a mob.,warn); @assert lte(words(u({{sheet-fate/sheet}}/FUN`ENC`NPCS,%q<enc_id>)),29)=@pemit %#=notice(ADVERSARY,An encounter holds up to 30 NPCs.,warn); think setq(mob_name,u({{sheet-fate/sheet}}/FUN`ENC`SPAWN,%q<enc_id>,%q<npc_id>,1)); think setq(mob_at,{{sheet-fate/encounters}}/ENC`%q<enc_id>`N`[get({{sheet-fate/encounters}}/ENC`%q<enc_id>`NEXTN)]); think u(%!/FUN`MOB`MAKE,%q<mob_at>,%q<mob_count>); @remit %q<enc_room>=notice(ADVERSARY,tone(strong,name(%#)) brings in [get(%q<mob_at>)]: [u(%!/FUN`MOB`SUMMARY,%q<mob_at>)].)
+        flags: [cmdsyntax]
+      INC`ADV`STUNTS:
+        value: |-
+          @pemit %#=u(%!/FUN`SCREEN`STUNTS)
+        flags: [cmdsyntax]
+
+      # ---- the library -----------------------------------------------------------------
+      # %0 TPL or OBS, %1 typed text: the key whose key or name it is, else the only one whose name it starts.
+      FUN`TPL`FIND:
+        value: |-
+          setqm(tf_typed,lcstr(trim(%1)),tf_all,iter(lattr({{store}}/%0`*),last(%i0,`)))[setqm(tf_exact,first(iter(%q<tf_all>,if(cor(not(comp(lcstr(%i0),%q<tf_typed>)),not(comp(lcstr(get({{store}}/%0`%i0)),%q<tf_typed>))),%i0))),tf_start,squish(iter(%q<tf_all>,if(not(comp(left(lcstr(get({{store}}/%0`%i0)),strlen(%q<tf_typed>)),%q<tf_typed>)),%i0))))][setq(tf_word,squish(iter(%q<tf_all>,if(strmatch(%b[lcstr(get({{store}}/%0`%i0))],*%b%q<tf_typed>*),%i0))))][if(strlen(%q<tf_typed>),firstof(%q<tf_exact>,if(eq(words(%q<tf_start>),1),%q<tf_start>),if(eq(words(%q<tf_word>),1),%q<tf_word>)))]
+        flags: [funsyntax]
+      # %0 TPL or OBS, %1 a type: its entries, by ORDER and then name.
+      FUN`TPL`OFTYPE:
+        value: |-
+          iter(sort(iter(lattr({{store}}/%0`*),if(strmatch(get({{store}}/%i0`TYPE),%1),[rjust(default({{store}}/%i0`ORDER,50),3,0)][edit(lcstr(get({{store}}/%i0)),%b,_)]~[last(%i0,`)]))),after(%i0,~))
+        flags: [funsyntax]
+      # %0 the PCs' best skill to build against: the setting, else the Fate sheet's cap.
+      FUN`PEAK:
+        value: |-
+          if(gt(get(%!/DATA`CONFIG`PEAK),0),get(%!/DATA`CONFIG`PEAK),get({{sheet-fate/sheet}}/DATA`CONFIG`CAP))
+        flags: [funsyntax]
+      FUN`CLAMP:
+        value: |-
+          max(-2,min(8,%0))
+        flags: [funsyntax]
+      # %0 a skill as written: this game's key for it, its approach on a game of approaches, or nothing.
+      FUN`SKILL`KEY:
+        value: |-
+          firstof(u({{sheet-fate/sheet}}/FUN`TRAIT`FIND,%0),if(strmatch(get({{sheet-fate/sheet}}/DATA`CONFIG`MODE),approaches),u({{sheet-fate/sheet}}/FUN`TRAIT`FIND,after(first(graball(get(%!/DATA`CONFIG`APPROACHES),[lcstr(%0)]:*)),:))))
+        flags: [funsyntax]
+      # %0 the NPC's number, %1 a library key, %2 the name, %3 the steps to move its ratings, %4 who makes it.
+      # Writes it into +npc and returns the skills this game has no key for.
+      FUN`TPL`MAKE:
+        value: |-
+          setqm(tm_at,{{sheet-fate/npcs}}/NPC`%0,tm_tpl,{{store}}/TPL`%1,tm_dropped,,tm_type,get({{store}}/TPL`%1`TYPE))[attrib_set(%q<tm_at>,%2)][attrib_set(%q<tm_at>`KIND,if(member(threat boss,%q<tm_type>),major,minor))][attrib_set(%q<tm_at>`OWNER,%4)][attrib_set(%q<tm_at>`FIELD`TYPE,%q<tm_type>)][if(strlen(get(%q<tm_tpl>`REST)),null(iter(u({{sheet-fate/sheet}}/FUN`TRAIT`ALL),attrib_set(%q<tm_at>`SKILL`%i0,get(%q<tm_tpl>`REST)))))][null(iter(get(%q<tm_tpl>`SKILLS),if(strlen(setr(tm_key,u(%!/FUN`SKILL`KEY,before(%i0,:)))),attrib_set(%q<tm_at>`SKILL`%q<tm_key>,max(u(%!/FUN`CLAMP,add(after(%i0,:),%3)),if(strlen(get(%q<tm_at>`SKILL`%q<tm_key>)),if(strmatch(get(%q<tm_tpl>`REST),get(%q<tm_at>`SKILL`%q<tm_key>)),-2,get(%q<tm_at>`SKILL`%q<tm_key>)),-2))),setq(tm_dropped,%q<tm_dropped> [before(%i0,:)]))))][null(iter(get(%q<tm_tpl>`ASPECTS),attrib_set(%q<tm_at>`ASPECT`#@,%i0),|,|))][null(iter(get(%q<tm_tpl>`STUNTS),attrib_set(%q<tm_at>`STUNT`#@,%i0),|,|))][null(iter(get(%q<tm_tpl>`BOXES),if(strlen(setr(tm_track,u({{sheet-fate/sheet}}/FUN`LIST`FIND,TRACK,before(%i0,:)))),attrib_set(%q<tm_at>`BOXES`%q<tm_track>,after(%i0,:)))))][attrib_set(%q<tm_at>`SLOTS,squish(iter(u({{sheet-fate/sheet}}/FUN`LIST`ALL,CONSEQUENCE),if(member(ucstr(get(%q<tm_tpl>`SLOTS)),%i0),%i0))))][null(iter(LOCK KEY LIMIT,if(strlen(get(%q<tm_tpl>`%i0)),attrib_set(%q<tm_at>`FIELD`%i0,get(%q<tm_tpl>`%i0)))))]%q<tm_dropped>
+        flags: [funsyntax]
+
+      # ---- the recipes -----------------------------------------------------------------
+      # %0 what follows = in +adversary/build, without the peak. Sets build_type, build_tough, build_quality,
+      # build_typed (the skills as typed), build_keys (this game's keys for them) and build_unknown.
+      FUN`BUILD`READ:
+        value: |-
+          setqm(build_words,lcstr(%0),build_type,first(%q<build_words>),build_rest,rest(%q<build_words>))[setq(build_tough,t(member(tough nasty dangerous,first(%q<build_rest>))))][if(%q<build_tough>,setq(build_rest,rest(%q<build_rest>)))][setq(build_quality,if(strmatch(%q<build_type>,filler),first(%q<build_rest>)))][if(strlen(%q<build_quality>),setq(build_rest,rest(%q<build_rest>)))][setqm(build_typed,%q<build_rest>,build_keys,squish(iter(%q<build_rest>,u(%!/FUN`SKILL`KEY,%i0))),build_unknown,squish(iter(%q<build_rest>,if(strlen(u(%!/FUN`SKILL`KEY,%i0)),,%i0))))]
+        flags: [funsyntax]
+      # %0 type, %1 quality, %2 tough, %3 peak: the ratings it gives, best first, one per skill it has room for.
+      # Threats and hitters: the apex one step over the peak (two when tough), two a step below, three below that.
+      # Bosses: the apex two steps over, then two, three, four... a step lower each, down to Fair (+2). Fillers:
+      # Average (+1), Fair (+2), or Good (+3) and Average.
+      FUN`BUILD`RATINGS:
+        value: |-
+          switch(%0,filler,switch(%1,average,1,fair,2,good,3 1),boss,setq(br_top,add(%3,2,%2))[squish(iter(lnum(0,sub(%q<br_top>,2)),iter(lnum(1,inc(%i0)),sub(%q<br_top>,%i1))))],setq(br_top,add(%3,1,%2))[%q<br_top> [dec(%q<br_top>)] [dec(%q<br_top>)] [sub(%q<br_top>,2)] [sub(%q<br_top>,2)] [sub(%q<br_top>,2)]])
+        flags: [funsyntax]
+      FUN`BUILD`ROOM:
+        value: |-
+          words(u(%!/FUN`BUILD`RATINGS,%0,%1,%2,%3))
+        flags: [funsyntax]
+      # %0 the NPC's number, %1 its name, %2 who makes it, %3 the peak; build_ registers from FUN`BUILD`READ.
+      FUN`BUILD`MAKE:
+        value: |-
+          setqm(bm_at,{{sheet-fate/npcs}}/NPC`%0,bm_ratings,u(%!/FUN`BUILD`RATINGS,%q<build_type>,%q<build_quality>,%q<build_tough>,%3),bm_tracks,u({{sheet-fate/sheet}}/FUN`LIST`ALL,TRACK),bm_slots,u({{sheet-fate/sheet}}/FUN`LIST`ALL,CONSEQUENCE),bm_apex,first(%q<build_keys>))[attrib_set(%q<bm_at>,%1)][attrib_set(%q<bm_at>`KIND,if(member(threat boss,%q<build_type>),major,minor))][attrib_set(%q<bm_at>`OWNER,%2)][attrib_set(%q<bm_at>`FIELD`TYPE,%q<build_type>)][if(strmatch(%q<build_type>,boss),null(iter(u({{sheet-fate/sheet}}/FUN`TRAIT`ALL),attrib_set(%q<bm_at>`SKILL`%i0,1))))][null(iter(%q<build_keys>,attrib_set(%q<bm_at>`SKILL`%i0,u(%!/FUN`CLAMP,extract(%q<bm_ratings>,#@,1)))))][switch(%q<build_type>,filler,[attrib_set(%q<bm_at>`ASPECT`1,%1)][attrib_set(%q<bm_at>`BOXES`[first(%q<bm_tracks>)],first(u(%!/FUN`BUILD`RATINGS,filler,%q<build_quality>)))][attrib_set(%q<bm_at>`SLOTS,)],hitter,[null(iter(%q<bm_tracks>,attrib_set(%q<bm_at>`BOXES`%i0,u(%!/FUN`BUILD`BOXES,%q<bm_at>,%i0,0))))][attrib_set(%q<bm_at>`SLOTS,if(%q<build_tough>,first(%q<bm_slots>)))][attrib_set(%q<bm_at>`STUNT`1,Weapon:2 when you attack with [u({{sheet-fate/sheet}}/FUN`TRAIT`LABEL,%q<bm_apex>)].)],threat,[null(iter(%q<bm_tracks>,attrib_set(%q<bm_at>`BOXES`%i0,u(%!/FUN`BUILD`BOXES,%q<bm_at>,%i0,1))))][attrib_set(%q<bm_at>`SLOTS,extract(%q<bm_slots>,1,if(%q<build_tough>,2,1)))][attrib_set(%q<bm_at>`STUNT`1,When you defend with [u({{sheet-fate/sheet}}/FUN`TRAIT`LABEL,%q<bm_apex>)]%, you get Armor:2.)],boss,[null(iter(%q<bm_tracks>,attrib_set(%q<bm_at>`BOXES`%i0,u(%!/FUN`BUILD`BOXES,%q<bm_at>,%i0,1))))][attrib_set(%q<bm_at>`SLOTS,extract(%q<bm_slots>,1,if(%q<build_tough>,3,2)))][attrib_set(%q<bm_at>`STUNT`1,Twice per session%, you can use [u({{sheet-fate/sheet}}/FUN`TRAIT`LABEL,%q<bm_apex>)] in place of any other skill.)])]
+        flags: [funsyntax]
+      # %0 the NPC, %1 a track, %2 1 when the skill that goes with the track lengthens it: the track's starting
+      # boxes, one more for an Average or Fair rating in that skill and two for Good or better.
+      FUN`BUILD`BOXES:
+        value: |-
+          setqm(bb_base,default({{sheet-fate/store}}/TRACK`%1`BOXES,3),bb_skill,u(%!/FUN`SKILL`KEY,after(first(graball(get(%!/DATA`CONFIG`TRACK_SKILLS),[lcstr(%1)]:*)),:)))[if(cand(%2,strlen(%q<bb_skill>)),add(%q<bb_base>,switch(1,gte(setr(bb_rating,default(%0`SKILL`%q<bb_skill>,0)),3),2,gte(%q<bb_rating>,1),1,0)),%q<bb_base>)]
+        flags: [funsyntax]
+      # %0 an NPC (object/attribute): "Fight Great (+4), Athletics Good (+3); physical [ ] [ ], mild".
+      FUN`BUILD`SUMMARY:
+        value: |-
+          setq(bs_skills,u({{sheet-fate/sheet}}/FUN`NPC`SKILLORDER,%0))[if(strmatch(%q<build_type>,boss),setq(bs_skills,squish(iter(%q<bs_skills>,if(gt(get(%0`SKILL`%i0),1),%i0)))))][itemize(iter(%q<bs_skills>,[u({{sheet-fate/sheet}}/FUN`TRAIT`LABEL,%i0)] [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,get(%0`SKILL`%i0))],%b,|),|)][if(strmatch(%q<build_type>,boss),%, every other skill Average %(+1%))]; stress [u({{sheet-fate/sheet}}/FUN`NPC`STRESS,%0)]; consequences [u({{sheet-fate/sheet}}/FUN`NPC`SLOTS,%0)]
+        flags: [funsyntax]
+
+      # ---- filler mobs -----------------------------------------------------------------
+      # A mob is one NPC copy in an encounter, with MOB`SIZE fillers, MOB`EACH stress boxes each on MOB`TRACK, and
+      # MOB`BASE`<SKILL> one filler's ratings. For every two fillers left with a skill, the mob has +1 to it, up to
+      # the mob_cap setting. Its boxes are every filler's in a row, weakest first: each MOB`EACH marked takes one
+      # filler out, and the skills drop as they go.
+      # %0 the copy, %1 how many.
+      FUN`MOB`MAKE:
+        value: |-
+          setqm(mm_track,first(squish(iter(u({{sheet-fate/sheet}}/FUN`LIST`ALL,TRACK),if(gt(default(%0`BOXES`%i0,0),0),%i0)))),mm_name,get(%0))[setq(mm_each,max(1,default(%0`BOXES`%q<mm_track>,1)))][if(strlen(%q<mm_track>),,setq(mm_track,first(u({{sheet-fate/sheet}}/FUN`LIST`ALL,TRACK))))][null(iter(lattr(%0`BOXES`*),attrib_set([before(%0,/)]/%i0)))][attrib_set(%0,%q<mm_name> x%1)][attrib_set(%0`KIND,minor)][attrib_set(%0`MOB`SIZE,%1)][attrib_set(%0`MOB`EACH,%q<mm_each>)][attrib_set(%0`MOB`TRACK,%q<mm_track>)][null(iter(lattr(%0`SKILL`*),attrib_set(%0`MOB`BASE`[last(%i0,`)],get([before(%0,/)]/%i0))))][attrib_set(%0`BOXES`%q<mm_track>,mul(%1,%q<mm_each>))][attrib_set(%0`SLOTS,)][u(%!/FUN`MOB`SET,%0,%1)]
+        flags: [funsyntax]
+      # %0 the copy, %1 fillers left: their skills, and MOB`LEFT.
+      FUN`MOB`SET:
+        value: |-
+          [attrib_set(%0`MOB`LEFT,%1)][null(iter(lattr(%0`MOB`BASE`*),attrib_set(%0`SKILL`[last(%i0,`)],if(gte(setr(ms_base,get([before(%0,/)]/%i0)),get(%!/DATA`CONFIG`MOB_CAP)),%q<ms_base>,min(get(%!/DATA`CONFIG`MOB_CAP),add(%q<ms_base>,div(max(%1,1),2)))))))]
+        flags: [funsyntax]
+      # %0 the copy: how many fillers are still up.
+      FUN`MOB`LEFT:
+        value: |-
+          max(0,sub(get(%0`MOB`SIZE),div(words(get(%0`STRESS`[get(%0`MOB`TRACK)])),get(%0`MOB`EACH))))
+        flags: [funsyntax]
+      # %0 the copy: "3 of 3 up, Shoot Good (+3); [ ] [ ] | [ ] [ ] | [ ] [ ]".
+      FUN`MOB`SUMMARY:
+        value: |-
+          setqm(msum_marked,get(%0`STRESS`[get(%0`MOB`TRACK)]),msum_each,get(%0`MOB`EACH))[get(%0`MOB`LEFT)] of [get(%0`MOB`SIZE)] up%, [itemize(iter(u({{sheet-fate/sheet}}/FUN`NPC`SKILLORDER,%0),[u({{sheet-fate/sheet}}/FUN`TRAIT`LABEL,%i0)] [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,get(%0`SKILL`%i0))],%b,|),|)]; [iter(lnum(1,get(%0`MOB`SIZE)),iter(lnum(1,%q<msum_each>),if(member(%q<msum_marked>,add(mul(dec(%i1),%q<msum_each>),%i0)),%[X%],%[%b%])),%b,%b|%b)]
+        flags: [funsyntax]
+
+      # ---- obstacles -----------------------------------------------------------------
+      # Obstacles in an encounter, on Fate Encounters under ENC`<n>`OBS`<k>: its name, with TYPE (hazard, block or
+      # distraction), RATING, WEAPON, CHOICE, REP`<i> (repercussions), LOCK, KEY and DISABLED beneath. They go when
+      # the encounter ends, with the rest of it.
+      INC`OBS`HERE:
+        value: |-
+          @include %!/INC`NEED`TAKING; @pemit %#=u(%!/FUN`SCREEN`OBSTACLES,%q<enc_id>)
+        flags: [cmdsyntax]
+      INC`OBS`SHOW:
+        value: |-
+          @include %!/INC`NEED`TAKING; @include/args %!/INC`NEED`OBS=typed,%q<cmd_argument>; @assert strlen(%q<obs_k>); @pemit %#=u(%!/FUN`SCREEN`OBSTACLE,%q<obs_at>)
+        flags: [cmdsyntax]
+      INC`OBS`LIBRARY:
+        value: |-
+          @break strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TPL=path,OBS,typed,%q<cmd_argument>; @assert strlen(%q<tpl_key>); @pemit %#=u(%!/FUN`SCREEN`OBSTEMPLATE,%q<tpl_key>)}; @pemit %#=u(%!/FUN`SCREEN`OBSLIBRARY)
+        flags: [cmdsyntax]
+      # +obstacle/add <obstacle>[/<peak>][=<name>]: one from the library, its rating moved as +adversary/make does.
+      INC`OBS`ADD:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(OBSTACLE,+obstacle/add <obstacle>%[/<PCs' best skill>%]%[=<name>%] puts one from the library into the encounter you run. +obstacle/list lists them.,warn); @include %!/INC`NEED`GM; @include/args %!/INC`NEED`TPL=path,OBS,typed,before(%q<cmd_left_side>,/); @assert strlen(%q<tpl_key>); @include/args %!/INC`NEED`PEAK=peak,if(strmatch(%q<cmd_left_side>,*/*),trim(after(%q<cmd_left_side>,/))); @assert isint(%q<tpl_peak>); think setqm(obs_tpl,{{store}}/OBS`%q<tpl_key>,obs_name,firstof(%q<cmd_right_side>,get({{store}}/OBS`%q<tpl_key>))); @include/args %!/INC`OBS`NAMEOK=typed,%q<obs_name>; think setq(obs_at,u(%!/FUN`OBS`NEW,%q<enc_id>,%q<obs_name>,get(%q<obs_tpl>`TYPE),if(gt(get(%q<obs_tpl>`RATING),0),max(0,add(get(%q<obs_tpl>`RATING),sub(%q<tpl_peak>,4))),0),default(%q<obs_tpl>`WEAPON,0))); think [attrib_set(%q<obs_at>`CHOICE,get(%q<obs_tpl>`CHOICE))][null(iter(get(%q<obs_tpl>`REPERCUSSIONS),attrib_set(%q<obs_at>`REP`#@,%i0),|,|))][attrib_set(%q<obs_at>`LOCK,get(%q<obs_tpl>`LOCK))][attrib_set(%q<obs_at>`KEY,get(%q<obs_tpl>`KEY))]; @remit %q<enc_room>=notice(OBSTACLE,tone(strong,name(%#)) puts [u(%!/FUN`OBS`LINE,%q<obs_at>)] into [u({{sheet-fate/sheet}}/FUN`ENC`TITLE,%q<enc_id>)].); @break not(get(%q<obs_tpl>`COUNTDOWN)); think setq(cd_id,u(%!/FUN`CD`NEW,%q<obs_name>,get(%q<obs_tpl>`COUNTDOWN),get(%q<obs_tpl>`OUTCOME),%q<viewer_objid>,%q<enc_room>,%q<enc_id>,get(%q<obs_tpl>`TRIGGERS))); @remit %q<enc_room>=notice(COUNTDOWN,u(%!/FUN`CD`LINE,%q<cd_id>))
+        flags: [cmdsyntax]
+      # %<typed> a new obstacle's name in enc_id.
+      INC`OBS`NAMEOK:
+        value: |-
+          @assert cand(lte(strlen(%<typed>),40),regmatch(%<typed>,^\[A-Za-z\]\[A-Za-z0-9 '.-\]*$))=@pemit %#=notice(OBSTACLE,A name is up to 40 letters%, digits%, spaces%, dots%, dashes and apostrophes%, starting with a letter.,warn); @assert not(strlen(u(%!/FUN`OBS`NAMED,%q<enc_id>,%<typed>)))=@pemit %#=notice(OBSTACLE,There is an obstacle called '%<typed>' here already.,warn); @assert lt(words(u(%!/FUN`OBS`ALL,%q<enc_id>)),20)=@pemit %#=notice(OBSTACLE,An encounter holds up to 20 obstacles.,warn)
+        flags: [cmdsyntax]
+      # +obstacle/hazard <name>=<rating>[/<weapon>] and +obstacle/block <name>=<rating>[/<weapon>].
+      INC`OBS`NEW:
+        value: |-
+          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>))=@pemit %#=notice(OBSTACLE,+obstacle/%q<cmd_switch> <name>=<rating>%[/<weapon>%]%, such as +obstacle/%q<cmd_switch> [if(strmatch(%q<cmd_switch>,hazard),Distant Sniper=superb/4,Vat of Acid=good/4)].,warn); @include %!/INC`NEED`GM; @include/args %!/INC`OBS`NAMEOK=typed,%q<cmd_left_side>; think setqm(obs_rating,u({{sheet-fate/sheet}}/FUN`LADDER`READ,before(%q<cmd_right_side>,/)),obs_weapon,firstof(trim(after(%q<cmd_right_side>,/)),0)); @assert cand(isint(%q<obs_rating>),gte(%q<obs_rating>,0),lte(%q<obs_rating>,10))=@pemit %#=notice(OBSTACLE,A rating is a number from 0 to 10%, or a ladder word such as great.,warn); @assert cand(isint(%q<obs_weapon>),gte(%q<obs_weapon>,0),lte(%q<obs_weapon>,4))=@pemit %#=notice(OBSTACLE,Weapon is a whole number from 0 to 4.,warn); think setq(obs_at,u(%!/FUN`OBS`NEW,%q<enc_id>,%q<cmd_left_side>,%q<cmd_switch>,%q<obs_rating>,%q<obs_weapon>)); @remit %q<enc_room>=notice(OBSTACLE,tone(strong,name(%#)) puts [u(%!/FUN`OBS`LINE,%q<obs_at>)] into [u({{sheet-fate/sheet}}/FUN`ENC`TITLE,%q<enc_id>)].)
+        flags: [cmdsyntax]
+      # +obstacle/distraction <name>=<choice>[/<opposition>]
+      INC`OBS`DISTRACTION:
+        value: |-
+          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>),strlen(%q<cmd_right_side>))=@pemit %#=notice(OBSTACLE,+obstacle/distraction <name>=<choice>%[/<opposition>%]%, such as +obstacle/distraction Bus Full of Civilians=Will the bus plunge off the bridge?/good.,warn); @include %!/INC`NEED`GM; @include/args %!/INC`OBS`NAMEOK=typed,%q<cmd_left_side>; think setqm(obs_choice,trim(if(strmatch(%q<cmd_right_side>,*/*),before(%q<cmd_right_side>,/),%q<cmd_right_side>)),obs_rating,if(strmatch(%q<cmd_right_side>,*/*),u({{sheet-fate/sheet}}/FUN`LADDER`READ,last(%q<cmd_right_side>,/)),0)); @assert cand(isint(%q<obs_rating>),gte(%q<obs_rating>,0),lte(%q<obs_rating>,10))=@pemit %#=notice(OBSTACLE,An opposition is a number from 0 to 10%, or a ladder word such as good.,warn); @assert lte(strlen(%q<obs_choice>),300)=@pemit %#=notice(OBSTACLE,Keep the choice to 300 characters.,warn); think setq(obs_at,u(%!/FUN`OBS`NEW,%q<enc_id>,%q<cmd_left_side>,distraction,%q<obs_rating>,0)); think attrib_set(%q<obs_at>`CHOICE,%q<obs_choice>); @remit %q<enc_room>=notice(OBSTACLE,tone(strong,name(%#)) puts [u(%!/FUN`OBS`LINE,%q<obs_at>)] into [u({{sheet-fate/sheet}}/FUN`ENC`TITLE,%q<enc_id>)]. [get(%q<obs_at>`CHOICE)]); @pemit %#=notice(OBSTACLE,+obstacle/repercussion [get(%q<obs_at>)]=<what happens> says what it costs the PCs.)
+        flags: [cmdsyntax]
+      # +obstacle/repercussion <obstacle>=<what happens>: adds one; empty clears them.
+      INC`OBS`REPERCUSSION:
+        value: |-
+          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>))=@pemit %#=notice(OBSTACLE,+obstacle/repercussion <obstacle>=<what happens> adds one. Empty clears them.,warn); @include %!/INC`NEED`GM; @include/args %!/INC`NEED`OBS=typed,%q<cmd_left_side>; @assert strlen(%q<obs_k>); @assert lte(strlen(%q<cmd_right_side>),300)=@pemit %#=notice(OBSTACLE,Keep a repercussion to 300 characters.,warn); @break not(strlen(%q<cmd_right_side>))={think null(iter(lattr(%q<obs_at>`REP`*),attrib_set({{sheet-fate/encounters}}/%i0))); @pemit %#=notice(OBSTACLE,[get(%q<obs_at>)] has no repercussions now.,ok)}; @assert lt(words(lattr(%q<obs_at>`REP`*)),5)=@pemit %#=notice(OBSTACLE,An obstacle has up to 5 repercussions.,warn); think attrib_set(%q<obs_at>`REP`[inc(words(lattr(%q<obs_at>`REP`*)))],%q<cmd_right_side>); @pemit %#=notice(OBSTACLE,[get(%q<obs_at>)]: if the PCs don't deal with it%, %q<cmd_right_side>,ok)
+        flags: [cmdsyntax]
+      # +obstacle/lock <obstacle>=<lock>[/<key>]: a resistance. Empty clears it.
+      INC`OBS`LOCK:
+        value: |-
+          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>))=@pemit %#=notice(OBSTACLE,+obstacle/lock <obstacle>=<what it is immune to>%[/<the key that gets past it>%]. Empty clears it.,warn); @include %!/INC`NEED`GM; @include/args %!/INC`NEED`OBS=typed,%q<cmd_left_side>; @assert strlen(%q<obs_k>); think setqm(obs_lock,trim(before(%q<cmd_right_side>,/)),obs_key,trim(after(%q<cmd_right_side>,/))); @assert cand(lte(strlen(%q<obs_lock>),200),lte(strlen(%q<obs_key>),300))=@pemit %#=notice(OBSTACLE,Keep the lock to 200 characters and the key to 300.,warn); think [attrib_set(%q<obs_at>`LOCK,%q<obs_lock>)][attrib_set(%q<obs_at>`KEY,%q<obs_key>)]; @pemit %#=notice(OBSTACLE,if(strlen(%q<obs_lock>),[get(%q<obs_at>)] is %q<obs_lock>: nobody overcomes or disables it without the key[if(strlen(%q<obs_key>),: %q<obs_key>,.)],[get(%q<obs_at>)] has no resistance now.),ok)
+        flags: [cmdsyntax]
+      # +obstacle/roll <hazard>[+<n>|-<n>][=<opposition>]: the GM rolls a hazard's turn, for the room.
+      INC`OBS`ROLL:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(OBSTACLE,+obstacle/roll <hazard>%[+<n>%]%[=<opposition>%] rolls its turn: an attack or creating an advantage.,warn); @include %!/INC`NEED`GM; think u({{sheet-fate/sheet}}/FUN`CHECK`READ,%q<cmd_left_side>); @assert isint(%q<check_modifier>)=@pemit %#=notice(OBSTACLE,'%q<cmd_left_side>' ends in something that is not a number to add.,warn); @include/args %!/INC`NEED`OBS=typed,%q<check_typed>; @assert strlen(%q<obs_k>); @assert strmatch(get(%q<obs_at>`TYPE),hazard)=@pemit %#=notice(OBSTACLE,Only a hazard takes a turn. Players roll against a [get(%q<obs_at>`TYPE)] with +obstacle/overcome.,warn); @assert not(get(%q<obs_at>`DISABLED))=@pemit %#=notice(OBSTACLE,[get(%q<obs_at>)] is disabled.,warn); think setq(roll_target,u({{sheet-fate/sheet}}/API`TARGET,%q<cmd_right_side>)); @assert cor(not(strlen(%q<cmd_right_side>)),isint(%q<roll_target>))=@pemit %#=notice(OBSTACLE,'%q<cmd_right_side>' is not an opposition. Give a number%, a ladder word such as fair%, or a difficulty such as hard.,warn); think setq(roll_result,u(%!/FUN`OBS`ROLLED,%q<obs_at>,add(get(%q<obs_at>`RATING),%q<check_modifier>),%q<roll_target>)); @remit %q<enc_room>=notice(OBSTACLE,tone(strong,get(%q<obs_at>)) acts: [u({{sheet-fate/sheet}}/FUN`DISPLAY`CHECK,%q<roll_result>)][u(%!/FUN`OBS`HIT,%q<obs_at>,%q<roll_result>)])
+        flags: [cmdsyntax]
+      # +obstacle/overcome <obstacle>=<skill>[+<n>|-<n>] and +obstacle/disable: a player rolls against it. Overcoming
+      # it, or getting past a block, is against its rating; disabling a block is against two more. A harmful block
+      # you fail against hits you by the margin, plus its Weapon.
+      INC`OBS`OVERCOME:
+        value: |-
+          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>),strlen(%q<cmd_right_side>))=@pemit %#=notice(OBSTACLE,+obstacle/%q<cmd_switch> <obstacle>=<[u({{sheet-fate/sheet}}/FUN`TRAIT`NOUN)]>%[+<n>%]%, such as +obstacle/%q<cmd_switch> vat=athletics.,warn); @include %!/INC`NEED`TAKING; @include/args %!/INC`NEED`OBS=typed,%q<cmd_left_side>; @assert strlen(%q<obs_k>); @assert not(get(%q<obs_at>`DISABLED))=@pemit %#=notice(OBSTACLE,[get(%q<obs_at>)] is disabled already.,warn); @assert not(strlen(get(%q<obs_at>`LOCK)))=@pemit %#=notice(OBSTACLE,[get(%q<obs_at>)] is [get(%q<obs_at>`LOCK)]: no roll gets past it without the key[if(strlen(get(%q<obs_at>`KEY)),: [get(%q<obs_at>`KEY)],.)],warn); @assert cor(gt(get(%q<obs_at>`RATING),0),comp(get(%q<obs_at>`TYPE),distraction))=@pemit %#=notice(OBSTACLE,[get(%q<obs_at>)] has no opposition: it is a choice%, not a roll.,warn); think u({{sheet-fate/sheet}}/FUN`CHECK`READ,%q<cmd_right_side>); @assert isint(%q<check_modifier>)=@pemit %#=notice(OBSTACLE,'%q<cmd_right_side>' ends in something that is not a number to add.,warn); @assert strlen(u({{sheet-fate/sheet}}/FUN`TRAIT`FIND,%q<check_typed>))=@pemit %#=notice(OBSTACLE,There is no [u({{sheet-fate/sheet}}/FUN`TRAIT`NOUN)] '%q<check_typed>'. +sheet/traits lists them.,warn); think setq(ov_target,add(get(%q<obs_at>`RATING),if(cand(strmatch(%q<cmd_switch>,disable),strmatch(get(%q<obs_at>`TYPE),block)),2,0))); think setq(ov_result,uargs({{sheet-fate/sheet}}/API`CHECK,roller,%q<viewer_objid>,trait,%q<check_typed>,modifier,%q<check_modifier>,target,%q<ov_target>)); @assert not(strmatch(%q<ov_result>,#-*))=@pemit %#=notice(OBSTACLE,trim(after(%q<ov_result>,#-1)),warn); think setq(ov_shifts,json_query(%q<ov_result>,extract,$.shifts)); think if(cand(strmatch(%q<cmd_switch>,disable),gte(%q<ov_shifts>,1)),attrib_set(%q<obs_at>`DISABLED,1)); @remit %q<enc_room>=notice(OBSTACLE,tone(strong,name(%#)) tries to [switch(%q<cmd_switch>:[get(%q<obs_at>`TYPE)],disable:*,disable,*:distraction,deal with,get past)] [get(%q<obs_at>)]: [u({{sheet-fate/sheet}}/FUN`DISPLAY`CHECK,%q<ov_result>)][cond(cand(strmatch(%q<cmd_switch>,disable),gte(%q<ov_shifts>,1)),%b[get(%q<obs_at>)] is disabled.,cand(lt(%q<ov_shifts>,0),strmatch(get(%q<obs_at>`TYPE),block),gt(get(%q<obs_at>`WEAPON),0)),%b[get(%q<obs_at>)] hits [obj(%#)] for [u({{sheet-fate/sheet}}/FUN`DISPLAY`SHIFTS,add(abs(%q<ov_shifts>),get(%q<obs_at>`WEAPON)))]: the margin and its Weapon:[get(%q<obs_at>`WEAPON)].)])
+        flags: [cmdsyntax]
+      INC`OBS`REMOVE:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(OBSTACLE,+obstacle/remove <obstacle> takes it out of the encounter you run.,warn); @include %!/INC`NEED`GM; @include/args %!/INC`NEED`OBS=typed,%q<cmd_argument>; @assert strlen(%q<obs_k>); think setq(obs_name,get(%q<obs_at>)); think u({{sheet-fate/sheet}}/FUN`NPC`WIPE,{{sheet-fate/encounters}},ENC`%q<enc_id>`OBS`%q<obs_k>); @remit %q<enc_room>=notice(OBSTACLE,tone(strong,name(%#)) takes %q<obs_name> out of [u({{sheet-fate/sheet}}/FUN`ENC`TITLE,%q<enc_id>)].)
+        flags: [cmdsyntax]
+      # %0 an encounter: its obstacles' numbers.
+      FUN`OBS`ALL:
+        value: |-
+          sort(iter(lattr({{sheet-fate/encounters}}/ENC`%0`OBS`*),last(%i0,`)),n)
+        flags: [funsyntax]
+      FUN`OBS`NAMED:
+        value: |-
+          first(iter(u(%!/FUN`OBS`ALL,%0),if(not(comp(lcstr(get({{sheet-fate/encounters}}/ENC`%0`OBS`%i0)),lcstr(trim(%1)))),%i0)))
+        flags: [funsyntax]
+      # %0 an encounter, %1 typed text: the obstacle with that name, else the only one whose name starts with it.
+      FUN`OBS`FIND:
+        value: |-
+          setqm(of_typed,lcstr(trim(%1)),of_all,u(%!/FUN`OBS`ALL,%0))[setq(of_start,squish(iter(%q<of_all>,if(not(comp(left(lcstr(get({{sheet-fate/encounters}}/ENC`%0`OBS`%i0)),strlen(%q<of_typed>)),%q<of_typed>)),%i0))))][setq(of_word,squish(iter(%q<of_all>,if(strmatch(%b[lcstr(get({{sheet-fate/encounters}}/ENC`%0`OBS`%i0))],*%b%q<of_typed>*),%i0))))][if(strlen(%q<of_typed>),firstof(u(%!/FUN`OBS`NAMED,%0,%1),if(eq(words(%q<of_start>),1),%q<of_start>),if(eq(words(%q<of_word>),1),%q<of_word>)))]
+        flags: [funsyntax]
+      # %0 an encounter, %1 the name, %2 type, %3 rating, %4 weapon: writes it and returns where it is.
+      FUN`OBS`NEW:
+        value: |-
+          setq(on_k,inc(default({{sheet-fate/encounters}}/ENC`%0`NEXTOBS,0)))[attrib_set({{sheet-fate/encounters}}/ENC`%0`NEXTOBS,%q<on_k>)][setq(on_at,{{sheet-fate/encounters}}/ENC`%0`OBS`%q<on_k>)][attrib_set(%q<on_at>,%1)][attrib_set(%q<on_at>`TYPE,lcstr(%2))][attrib_set(%q<on_at>`RATING,%3)][attrib_set(%q<on_at>`WEAPON,%4)]%q<on_at>
+        flags: [funsyntax]
+      # %0 an obstacle: "a Superb (+5) Distant Sniper hazard, Weapon:4".
+      FUN`OBS`LINE:
+        value: |-
+          [if(gt(get(%0`RATING),0),[art(u({{sheet-fate/sheet}}/FUN`LADDER`WORD,get(%0`RATING)))] [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,get(%0`RATING))] [get(%0)] [get(%0`TYPE)],a [get(%0`TYPE)]%, [get(%0)])][if(gt(get(%0`WEAPON),0),%, Weapon:[get(%0`WEAPON)])]
+        flags: [funsyntax]
+      # %0 the obstacle, %1 the rating plus what is added, %2 the opposition: the sheet's check, under its name.
+      FUN`OBS`ROLLED:
+        value: |-
+          json_mod(u({{sheet-fate/sheet}}/FUN`CHECK`ROLLED,,%1,%2),set,$.label,json(string,get(%0)))
+        flags: [funsyntax]
+      # %0 the hazard, %1 the check: what a hit does with its Weapon.
+      FUN`OBS`HIT:
+        value: |-
+          setq(oh_shifts,json_query(%1,extract,$.shifts))[if(cand(isint(%q<oh_shifts>),gte(%q<oh_shifts>,1)),%bAs an attack it hits for [u({{sheet-fate/sheet}}/FUN`DISPLAY`SHIFTS,add(%q<oh_shifts>,get(%0`WEAPON)))][if(gt(get(%0`WEAPON),0),%, with its Weapon:[get(%0`WEAPON)])].)]
+        flags: [funsyntax]
+
+      # ---- countdowns -----------------------------------------------------------------
+      # Countdowns on Fate Countdowns, CD`<n> each: its name, with BOXES, MARKED (how many are marked), OUTCOME,
+      # TRIG`<i> (its triggers), OWNER, ROOM (where its news goes), ENC (the encounter it belongs to, if any) and
+      # HIDDEN beneath. One that belongs to an encounter goes when the encounter ends.
+      INC`CD`LIST:
+        value: |-
+          @pemit %#=u(%!/FUN`SCREEN`COUNTDOWNS,%#)
+        flags: [cmdsyntax]
+      INC`CD`SHOW:
+        value: |-
+          @include/args %!/INC`NEED`CD=typed,%q<cmd_argument>; @assert strlen(%q<cd_id>); @pemit %#=u(%!/FUN`SCREEN`COUNTDOWN,%q<cd_id>)
+        flags: [cmdsyntax]
+      # +countdown/start <name>=<boxes>[/<outcome>], or +countdown/start <adversary or obstacle> with a countdown.
+      INC`CD`START:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(COUNTDOWN,+countdown/start <name>=<boxes>%[/<outcome>%] starts one%, such as +countdown/start Reinforcements=5/Reinforcements arrive. An adversary or obstacle with a countdown starts its own: +countdown/start Ticking Time Bomb.,warn); think setq(cd_tplpath,if(%q<cmd_has_equals>,,if(strlen(setr(cd_tpl,u(%!/FUN`TPL`FIND,TPL,%q<cmd_left_side>))),TPL,if(strlen(setr(cd_tpl,u(%!/FUN`TPL`FIND,OBS,%q<cmd_left_side>))),OBS)))); @assert cor(%q<cmd_has_equals>,cand(strlen(%q<cd_tplpath>),get({{store}}/%q<cd_tplpath>`%q<cd_tpl>`COUNTDOWN)))=@pemit %#=notice(COUNTDOWN,There is no adversary or obstacle called '%q<cmd_left_side>' with a countdown. +countdown/start <name>=<boxes> starts one of your own.,warn); think setqm(cd_name,if(%q<cmd_has_equals>,%q<cmd_left_side>,get({{store}}/%q<cd_tplpath>`%q<cd_tpl>)),cd_boxes,if(%q<cmd_has_equals>,trim(before(%q<cmd_right_side>,/)),get({{store}}/%q<cd_tplpath>`%q<cd_tpl>`COUNTDOWN)),cd_outcome,if(%q<cmd_has_equals>,trim(after(%q<cmd_right_side>,/)),get({{store}}/%q<cd_tplpath>`%q<cd_tpl>`OUTCOME))); @assert cand(lte(strlen(%q<cd_name>),40),regmatch(%q<cd_name>,^\[A-Za-z\]\[A-Za-z0-9 '.-\]*$))=@pemit %#=notice(COUNTDOWN,A name is up to 40 letters%, digits%, spaces%, dots%, dashes and apostrophes%, starting with a letter.,warn); @assert cand(isint(%q<cd_boxes>),gte(%q<cd_boxes>,1),lte(%q<cd_boxes>,20))=@pemit %#=notice(COUNTDOWN,A countdown has 1 to 20 boxes.,warn); @assert lte(strlen(%q<cd_outcome>),300)=@pemit %#=notice(COUNTDOWN,Keep the outcome to 300 characters.,warn); @assert not(strlen(u(%!/FUN`CD`OWNNAMED,%q<cd_name>,%q<viewer_objid>)))=@pemit %#=notice(COUNTDOWN,You have a countdown called '%q<cd_name>' already.,warn); @assert lt(words(u(%!/FUN`CD`OWNED,%q<viewer_objid>)),20)=@pemit %#=notice(COUNTDOWN,You have 20 countdowns going: +countdown/stop <name> ends one.,warn); think setq(cd_enc,u({{sheet-fate/sheet}}/FUN`ENC`PICK,%#)); think setq(cd_enc,if(cand(strlen(%q<cd_enc>),u({{sheet-fate/sheet}}/FUN`ENC`ISGM,%q<cd_enc>,%#)),%q<cd_enc>)); think setq(cd_id,u(%!/FUN`CD`NEW,%q<cd_name>,%q<cd_boxes>,%q<cd_outcome>,%q<viewer_objid>,objid(%l),%q<cd_enc>,if(strlen(%q<cd_tplpath>),get({{store}}/%q<cd_tplpath>`%q<cd_tpl>`TRIGGERS)))); @remit %l=notice(COUNTDOWN,tone(strong,name(%#)) starts a countdown: [u(%!/FUN`CD`LINE,%q<cd_id>)]); @pemit %#=notice(COUNTDOWN,if(strlen(%q<cd_enc>),It belongs to [u({{sheet-fate/sheet}}/FUN`ENC`TITLE,%q<cd_enc>)] and ends with it.,It lasts until +countdown/stop %q<cd_name>.) +countdown/trigger %q<cd_name>=<what marks a box> notes what moves it%, and +countdown/tick %q<cd_name> marks a box.,ok)
+        flags: [cmdsyntax]
+      INC`CD`TRIGGER:
+        value: |-
+          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>))=@pemit %#=notice(COUNTDOWN,+countdown/trigger <countdown>=<what marks a box> adds a trigger. Empty clears them.,warn); @include/args %!/INC`NEED`CD=typed,%q<cmd_left_side>; @assert strlen(%q<cd_id>); @include %!/INC`NEED`CDOWNER; @assert lte(strlen(%q<cmd_right_side>),200)=@pemit %#=notice(COUNTDOWN,Keep a trigger to 200 characters.,warn); @break not(strlen(%q<cmd_right_side>))={think null(iter(lattr({{countdowns}}/CD`%q<cd_id>`TRIG`*),attrib_set({{countdowns}}/%i0))); @pemit %#=notice(COUNTDOWN,[get({{countdowns}}/CD`%q<cd_id>)] has no triggers now.,ok)}; @assert lt(words(lattr({{countdowns}}/CD`%q<cd_id>`TRIG`*)),10)=@pemit %#=notice(COUNTDOWN,A countdown has up to 10 triggers.,warn); think attrib_set({{countdowns}}/CD`%q<cd_id>`TRIG`[inc(words(lattr({{countdowns}}/CD`%q<cd_id>`TRIG`*)))],%q<cmd_right_side>); @pemit %#=notice(COUNTDOWN,[get({{countdowns}}/CD`%q<cd_id>)] moves when: %q<cmd_right_side>,ok)
+        flags: [cmdsyntax]
+      INC`CD`OUTCOME:
+        value: |-
+          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>))=@pemit %#=notice(COUNTDOWN,+countdown/outcome <countdown>=<what happens when it runs out>.,warn); @include/args %!/INC`NEED`CD=typed,%q<cmd_left_side>; @assert strlen(%q<cd_id>); @include %!/INC`NEED`CDOWNER; @assert lte(strlen(%q<cmd_right_side>),300)=@pemit %#=notice(COUNTDOWN,Keep the outcome to 300 characters.,warn); think attrib_set({{countdowns}}/CD`%q<cd_id>`OUTCOME,%q<cmd_right_side>); @pemit %#=notice(COUNTDOWN,When [get({{countdowns}}/CD`%q<cd_id>)] runs out: [firstof(%q<cmd_right_side>,nothing is written yet.)],ok)
+        flags: [cmdsyntax]
+      # +countdown/tick <countdown>[=<why>]: marks the next box, and the outcome comes with the last.
+      INC`CD`TICK:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(COUNTDOWN,+countdown/tick <countdown>%[=<why>%] marks its next box.,warn); @include/args %!/INC`NEED`CD=typed,%q<cmd_left_side>; @assert strlen(%q<cd_id>); @include %!/INC`NEED`CDOWNER; think setqm(cd_at,{{countdowns}}/CD`%q<cd_id>,cd_marked,default({{countdowns}}/CD`%q<cd_id>`MARKED,0)); @assert lt(%q<cd_marked>,get(%q<cd_at>`BOXES))=@pemit %#=notice(COUNTDOWN,[get(%q<cd_at>)] has run out already. +countdown/untick takes a box back%, +countdown/stop ends it.,warn); @assert lte(strlen(%q<cmd_right_side>),200)=@pemit %#=notice(COUNTDOWN,Keep the reason to 200 characters.,warn); think attrib_set(%q<cd_at>`MARKED,inc(%q<cd_marked>)); think setq(cd_news,[tone(strong,get(%q<cd_at>))] moves on[if(strlen(%q<cmd_right_side>),%b%(%q<cmd_right_side>%))]: [u(%!/FUN`CD`TRACK,%q<cd_id>)][if(gte(inc(%q<cd_marked>),get(%q<cd_at>`BOXES)),%b[tone(warning,It runs out)][if(strlen(get(%q<cd_at>`OUTCOME)),: [get(%q<cd_at>`OUTCOME)],.)])]); @break get(%q<cd_at>`HIDDEN)={@pemit %#=notice(COUNTDOWN,%q<cd_news>)}; @remit get(%q<cd_at>`ROOM)=notice(COUNTDOWN,%q<cd_news>); @break not(comp(objid(%l),get(%q<cd_at>`ROOM))); @pemit %#=notice(COUNTDOWN,%q<cd_news>)
+        flags: [cmdsyntax]
+      INC`CD`UNTICK:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(COUNTDOWN,+countdown/untick <countdown> takes back its last marked box.,warn); @include/args %!/INC`NEED`CD=typed,%q<cmd_argument>; @assert strlen(%q<cd_id>); @include %!/INC`NEED`CDOWNER; think setq(cd_at,{{countdowns}}/CD`%q<cd_id>); @assert gt(default(%q<cd_at>`MARKED,0),0)=@pemit %#=notice(COUNTDOWN,[get(%q<cd_at>)] has no box marked.,warn); think attrib_set(%q<cd_at>`MARKED,dec(get(%q<cd_at>`MARKED))); @pemit %#=notice(COUNTDOWN,[get(%q<cd_at>)] goes back a box: [u(%!/FUN`CD`TRACK,%q<cd_id>)],ok)
+        flags: [cmdsyntax]
+      INC`CD`HIDE:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(COUNTDOWN,+countdown/hide <countdown> keeps it to you and sheet keepers%, or shows it again.,warn); @include/args %!/INC`NEED`CD=typed,%q<cmd_argument>; @assert strlen(%q<cd_id>); @include %!/INC`NEED`CDOWNER; think attrib_set({{countdowns}}/CD`%q<cd_id>`HIDDEN,if(get({{countdowns}}/CD`%q<cd_id>`HIDDEN),,1)); @pemit %#=notice(COUNTDOWN,if(get({{countdowns}}/CD`%q<cd_id>`HIDDEN),[get({{countdowns}}/CD`%q<cd_id>)] is hidden: only you and sheet keepers see it%, and its ticks come to you alone.,Everyone in [name(get({{countdowns}}/CD`%q<cd_id>`ROOM))] sees [get({{countdowns}}/CD`%q<cd_id>)] again%, and hears its ticks.),ok)
+        flags: [cmdsyntax]
+      INC`CD`STOP:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(COUNTDOWN,+countdown/stop <countdown> ends it.,warn); @include/args %!/INC`NEED`CD=typed,%q<cmd_argument>; @assert strlen(%q<cd_id>); @include %!/INC`NEED`CDOWNER; think setq(cd_name,get({{countdowns}}/CD`%q<cd_id>)); think u({{sheet-fate/sheet}}/FUN`NPC`WIPE,{{countdowns}},CD`%q<cd_id>); @pemit %#=notice(COUNTDOWN,%q<cd_name> is over.,ok)
+        flags: [cmdsyntax]
+      # %0 name, %1 boxes, %2 outcome, %3 owner, %4 room, %5 encounter or nothing, %6 triggers (|-separated): the new
+      # countdown's number.
+      FUN`CD`NEW:
+        value: |-
+          setq(cn_id,inc(get({{countdowns}}/NEXT)))[attrib_set({{countdowns}}/NEXT,%q<cn_id>)][setq(cn_at,{{countdowns}}/CD`%q<cn_id>)][attrib_set(%q<cn_at>,%0)][attrib_set(%q<cn_at>`BOXES,%1)][attrib_set(%q<cn_at>`MARKED,0)][attrib_set(%q<cn_at>`OUTCOME,%2)][attrib_set(%q<cn_at>`OWNER,%3)][attrib_set(%q<cn_at>`ROOM,%4)][attrib_set(%q<cn_at>`ENC,%5)][null(iter(%6,attrib_set(%q<cn_at>`TRIG`#@,%i0),|,|))]%q<cn_id>
+        flags: [funsyntax]
+      # Every countdown's number. One whose encounter has ended is wiped as this reads them.
+      FUN`CD`IDS:
+        value: |-
+          sort(iter(lattr({{countdowns}}/CD`*),setq(ci_id,last(%i0,`))[if(cand(strlen(setr(ci_enc,get({{countdowns}}/CD`%q<ci_id>`ENC))),not(hasattr({{sheet-fate/encounters}},ENC`%q<ci_enc>))),u({{sheet-fate/sheet}}/FUN`NPC`WIPE,{{countdowns}},CD`%q<ci_id>),%q<ci_id>)]),n)
+        flags: [funsyntax]
+      # %0 a countdown, %1 who asks: 1 when they may see it. Its owner and keepers always; others when it is not
+      # hidden and they are in its room.
+      FUN`CD`CANSEE:
+        value: |-
+          cor(not(comp(get({{countdowns}}/CD`%0`OWNER),objid(%1))),u({{sheet-fate/sheet}}/FUN`PERM`KEEPER,%1),cand(not(get({{countdowns}}/CD`%0`HIDDEN)),not(comp(get({{countdowns}}/CD`%0`ROOM),objid(loc(%1))))))
+        flags: [funsyntax]
+      FUN`CD`VISIBLE:
+        value: |-
+          squish(iter(u(%!/FUN`CD`IDS),if(u(%!/FUN`CD`CANSEE,%i0,%0),%i0)))
+        flags: [funsyntax]
+      FUN`CD`OWNED:
+        value: |-
+          squish(iter(u(%!/FUN`CD`IDS),if(not(comp(get({{countdowns}}/CD`%i0`OWNER),%0)),%i0)))
+        flags: [funsyntax]
+      FUN`CD`OWNNAMED:
+        value: |-
+          first(iter(u(%!/FUN`CD`OWNED,%1),if(not(comp(lcstr(get({{countdowns}}/CD`%i0)),lcstr(trim(%0)))),%i0)))
+        flags: [funsyntax]
+      # %0 typed text, %1 who asks: one they may see with that name (theirs first), else the only one it starts.
+      FUN`CD`FIND:
+        value: |-
+          setqm(cf_typed,lcstr(trim(%0)),cf_seen,u(%!/FUN`CD`VISIBLE,%1))[setqm(cf_exact,squish(iter(%q<cf_seen>,if(not(comp(lcstr(get({{countdowns}}/CD`%i0)),%q<cf_typed>)),%i0))),cf_start,squish(iter(%q<cf_seen>,if(not(comp(left(lcstr(get({{countdowns}}/CD`%i0)),strlen(%q<cf_typed>)),%q<cf_typed>)),%i0))))][setq(cf_word,squish(iter(%q<cf_seen>,if(strmatch(%b[lcstr(get({{countdowns}}/CD`%i0))],*%b%q<cf_typed>*),%i0))))][if(strlen(%q<cf_typed>),firstof(u(%!/FUN`CD`OWNNAMED,%0,objid(%1)),first(%q<cf_exact>),if(eq(words(%q<cf_start>),1),%q<cf_start>),if(eq(words(%q<cf_word>),1),%q<cf_word>)))]
+        flags: [funsyntax]
+      # %0 a countdown: [X] [X] [ ] [ ]
+      FUN`CD`TRACK:
+        value: |-
+          iter(lnum(1,get({{countdowns}}/CD`%0`BOXES)),if(lte(%i0,default({{countdowns}}/CD`%0`MARKED,0)),%[X%],%[%b%]))
+        flags: [funsyntax]
+      # %0 a countdown: "Ticking Time Bomb [ ] [ ] [ ] [ ]: the bomb explodes."
+      FUN`CD`LINE:
+        value: |-
+          [tone(strong,get({{countdowns}}/CD`%0))] [u(%!/FUN`CD`TRACK,%0)][if(strlen(get({{countdowns}}/CD`%0`OUTCOME)),%bThen: [get({{countdowns}}/CD`%0`OUTCOME)])]
+        flags: [funsyntax]
+
+      # ---- screens ------------------------------------------------------------------
+      FUN`SCREEN`LIBRARY:
+        value: |-
+          box(iter(threat hitter boss filler,rule(switch(%i0,boss,Bosses,capstr(%i0)s))%r[setq(sl_keys,u(%!/FUN`TPL`OFTYPE,TPL,%i0))][if(words(%q<sl_keys>),ldatatable(lit({"nowrap":"1|2","grow":"||1"}),Adversary|Written for|Aspects,iter(%q<sl_keys>,[get({{store}}/TPL`%i0)]|[u({{sheet-fate/sheet}}/FUN`LADDER`WORD,get({{store}}/TPL`%i0`PEAK))]|[first(get({{store}}/TPL`%i0`ASPECTS),|)],%b,%*<^>),%*<^>),tone(muted,None.))],%b,%r)%r[rule()]%r[tone(muted,+adversary <name> shows one. +adversary/make <name>%[=<new name>%] copies it into +npc at your game's power level: PCs whose best skill is [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,u(%!/FUN`PEAK))]. +adversary/build makes one by type. +obstacle/list shows hazards%, blocks and distractions.)],Adversaries)
+        flags: [funsyntax]
+      FUN`SCREEN`TEMPLATE:
+        value: |-
+          setq(st_at,{{store}}/TPL`%0)[box(lfields(,Type%*<|>Written for%*<|>Aspects%*<|>Skills[if(strlen(get(%q<st_at>`STUNTS)),%*<|>Stunts)]%*<|>Stress%*<|>Consequences[if(strlen(get(%q<st_at>`LOCK)),%*<|>Resistance)][if(strlen(get(%q<st_at>`LIMIT)),%*<|>Limitation)][if(get(%q<st_at>`COUNTDOWN),%*<|>Countdown)],[get(%q<st_at>`TYPE)]%*<|>PCs whose best skill is [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,get(%q<st_at>`PEAK))]%*<|>[itemize(get(%q<st_at>`ASPECTS),|)]%*<|>[itemize(iter(revwords(sort(iter(get(%q<st_at>`SKILLS),[rjust(add(after(%i0,:),10),2,0)]~[before(%i0,:)]))),[capstr(after(%i0,~))] [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,sub(before(%i0,~),10))],%b,|),|)][if(strlen(get(%q<st_at>`REST)),%, every other one [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,get(%q<st_at>`REST))])][if(strlen(get(%q<st_at>`STUNTS)),%*<|>[iter(get(%q<st_at>`STUNTS),%i0,|,%r)])]%*<|>[firstof(itemize(iter(get(%q<st_at>`BOXES),[before(%i0,:)] [after(%i0,:)],%b,|),|),none)]%*<|>[firstof(itemize(lcstr(get(%q<st_at>`SLOTS))),none)][if(strlen(get(%q<st_at>`LOCK)),%*<|>[get(%q<st_at>`LOCK)]. Key: [firstof(get(%q<st_at>`KEY),unknown)])][if(strlen(get(%q<st_at>`LIMIT)),%*<|>[get(%q<st_at>`LIMIT)])][if(get(%q<st_at>`COUNTDOWN),%*<|>[get(%q<st_at>`COUNTDOWN)] boxes.[if(strlen(get(%q<st_at>`TRIGGERS)),%bMarked when: [iter(get(%q<st_at>`TRIGGERS),%i0,|,%b·%b)])] Then: [get(%q<st_at>`OUTCOME)])],%*<|>)%r[rule()]%r[tone(muted,+adversary/make [get(%q<st_at>)]%[=<new name>%] copies it into +npc for PCs whose best skill is [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,u(%!/FUN`PEAK))].)],get(%q<st_at>))]
+        flags: [funsyntax]
+      FUN`SCREEN`STUNTS:
+        value: |-
+          box(The toolkit's quick stunts for an enemy who may not last past one fight. Put one on with +npc/stunt <npc>/<n>=<stunt>.%r%r[iter(get(%!/DATA`QUICKSTUNTS),- %i0,|,%r)],Quick enemy stunts)
+        flags: [funsyntax]
+      DATA`QUICKSTUNTS: |-
+        When you attack with your apex skill, you get Weapon:2.|When you defend with your apex skill, you get Armor:2.|Twice per session, you can use your apex skill in place of any other skill.|Once per session, you can attack everyone in a zone with your apex skill.
+      FUN`SCREEN`OBSLIBRARY:
+        value: |-
+          box(iter(hazard block distraction,rule(capstr(%i0)s)%r[setq(sol_keys,u(%!/FUN`TPL`OFTYPE,OBS,%i0))][if(words(%q<sol_keys>),ldatatable(lit({"nowrap":"1|2","grow":"||1"}),Obstacle|Rating|What it does,iter(%q<sol_keys>,[get({{store}}/OBS`%i0)]|[if(gt(get({{store}}/OBS`%i0`RATING),0),u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,get({{store}}/OBS`%i0`RATING)),-)]|[trim([if(gt(get({{store}}/OBS`%i0`WEAPON),0),Weapon:[get({{store}}/OBS`%i0`WEAPON)].)] [get({{store}}/OBS`%i0`CHOICE)] [if(get({{store}}/OBS`%i0`COUNTDOWN),Countdown [get({{store}}/OBS`%i0`COUNTDOWN)].)] [if(strlen(get({{store}}/OBS`%i0`LOCK)),Resistance.)])],%b,%*<^>),%*<^>),tone(muted,None.))],%b,%r)%r[rule()]%r[tone(muted,+obstacle/list <name> shows one. +obstacle/add <name> puts it into the encounter you run%, its rating set for PCs whose best skill is [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,u(%!/FUN`PEAK))].)],Obstacles)
+        flags: [funsyntax]
+      FUN`SCREEN`OBSTEMPLATE:
+        value: |-
+          setq(sot_at,{{store}}/OBS`%0)[box(lfields(,Type%*<|>Rating%*<|>Weapon[if(strlen(get(%q<sot_at>`CHOICE)),%*<|>Choice)][if(strlen(get(%q<sot_at>`REPERCUSSIONS)),repeat(%*<|>Repercussion,words(get(%q<sot_at>`REPERCUSSIONS),|)))][if(strlen(get(%q<sot_at>`LOCK)),%*<|>Resistance)][if(get(%q<sot_at>`COUNTDOWN),%*<|>Countdown)],[get(%q<sot_at>`TYPE)]%*<|>[if(gt(get(%q<sot_at>`RATING),0),u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,get(%q<sot_at>`RATING)),none)]%*<|>[if(gt(get(%q<sot_at>`WEAPON),0),get(%q<sot_at>`WEAPON),none)][if(strlen(get(%q<sot_at>`CHOICE)),%*<|>[get(%q<sot_at>`CHOICE)])][if(strlen(get(%q<sot_at>`REPERCUSSIONS)),%*<|>[edit(get(%q<sot_at>`REPERCUSSIONS),|,%*<|>)])][if(strlen(get(%q<sot_at>`LOCK)),%*<|>[get(%q<sot_at>`LOCK)]. Key: [firstof(get(%q<sot_at>`KEY),unknown)])][if(get(%q<sot_at>`COUNTDOWN),%*<|>[get(%q<sot_at>`COUNTDOWN)] boxes.[if(strlen(get(%q<sot_at>`TRIGGERS)),%bMarked when: [iter(get(%q<sot_at>`TRIGGERS),%i0,|,%b·%b)])] Then: [get(%q<sot_at>`OUTCOME)])],%*<|>)%r[rule()]%r[tone(muted,u(%!/FUN`OBS`HOWTO,get(%q<sot_at>`TYPE)))],get(%q<sot_at>))]
+        flags: [funsyntax]
+      # %0 a type: how it is played.
+      FUN`OBS`HOWTO:
+        value: |-
+          switch(%0,hazard,A hazard acts in each exchange: the GM rolls it with +obstacle/roll. Nobody attacks it; players get past it or disable it with +obstacle/overcome or /disable against its rating.,block,A block takes no turn. A player gets past it with +obstacle/overcome against its rating%, and disables it with /disable against two more. Failing against a harmful one hits by the margin plus its Weapon. Forced into it: Weapon at half its own%, at least 1. As cover: Armor at half its rating%, at least 1.,A distraction asks the PCs to choose. Dealing with it may take a roll against its opposition: +obstacle/overcome.)
+        flags: [funsyntax]
+      FUN`SCREEN`OBSTACLES:
+        value: |-
+          setq(so_all,u(%!/FUN`OBS`ALL,%0))[box(if(words(%q<so_all>),ldatatable(lit({"nowrap":"1|2|3","grow":"|||1"}),Obstacle|Type|Rating|Notes,iter(%q<so_all>,setq(so_at,{{sheet-fate/encounters}}/ENC`%0`OBS`%i0)[get(%q<so_at>)]|[get(%q<so_at>`TYPE)]|[if(gt(get(%q<so_at>`RATING),0),u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,get(%q<so_at>`RATING)),-)]|[firstof(trim([if(get(%q<so_at>`DISABLED),tone(muted,disabled.))] [if(gt(get(%q<so_at>`WEAPON),0),Weapon:[get(%q<so_at>`WEAPON)].)] [if(strlen(get(%q<so_at>`LOCK)),[get(%q<so_at>`LOCK)].)] [get(%q<so_at>`CHOICE)]),-)],%b,%*<^>),%*<^>)%r[rule()]%r[tone(muted,+obstacle <name> shows one. +obstacle/overcome <name>=<[u({{sheet-fate/sheet}}/FUN`TRAIT`NOUN)]> rolls against it.)],tone(muted,No obstacles here. The GM puts them in with +obstacle/add%, /hazard%, /block or /distraction.)),Obstacles: [u({{sheet-fate/sheet}}/FUN`ENC`TITLE,%0)])]
+        flags: [funsyntax]
+      FUN`SCREEN`OBSTACLE:
+        value: |-
+          setqm(so1_reps,sort(iter(lattr(%0`REP`*),last(%i0,`)),n),so1_vals,)[box(lfields(,Type%*<|>Rating%*<|>Weapon[if(strlen(get(%0`CHOICE)),%*<|>Choice)][if(words(%q<so1_reps>),repeat(%*<|>Repercussion,words(%q<so1_reps>)))][if(strlen(get(%0`LOCK)),%*<|>Resistance)]%*<|>Status,[get(%0`TYPE)]%*<|>[if(gt(get(%0`RATING),0),u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,get(%0`RATING)),none)]%*<|>[if(gt(get(%0`WEAPON),0),get(%0`WEAPON),none)][if(strlen(get(%0`CHOICE)),%*<|>[get(%0`CHOICE)])][null(iter(%q<so1_reps>,setq(so1_vals,%q<so1_vals>%*<|>[get(%0`REP`%i0)])))]%q<so1_vals>[if(strlen(get(%0`LOCK)),%*<|>[get(%0`LOCK)]. Key: [firstof(get(%0`KEY),unknown)])]%*<|>[if(get(%0`DISABLED),disabled,in play)],%*<|>)%r[rule()]%r[tone(muted,u(%!/FUN`OBS`HOWTO,get(%0`TYPE)))],get(%0))]
+        flags: [funsyntax]
+      FUN`SCREEN`COUNTDOWNS:
+        value: |-
+          setq(sc_ids,u(%!/FUN`CD`VISIBLE,%0))[box(if(words(%q<sc_ids>),ldatatable(lit({"nowrap":"1|2|3","grow":"|||1"}),Countdown|Boxes|Started by|Then,iter(%q<sc_ids>,[get({{countdowns}}/CD`%i0)][if(get({{countdowns}}/CD`%i0`HIDDEN),%b%(hidden%))]|[u(%!/FUN`CD`TRACK,%i0)]|[name(get({{countdowns}}/CD`%i0`OWNER))]|[firstof(get({{countdowns}}/CD`%i0`OUTCOME),-)],%b,%*<^>),%*<^>)%r[rule()]%r[tone(muted,+countdown <name> shows one with its triggers. +countdown/tick <name> marks a box.)],tone(muted,No countdowns here. +countdown/start <name>=<boxes> starts one.)),Countdowns)]
+        flags: [funsyntax]
+      FUN`SCREEN`COUNTDOWN:
+        value: |-
+          setqm(sc1_at,{{countdowns}}/CD`%0,sc1_trigs,sort(iter(lattr({{countdowns}}/CD`%0`TRIG`*),last(%i0,`)),n))[box(lfields(,Boxes%*<|>Triggers%*<|>Outcome%*<|>Started by%*<|>Where,[u(%!/FUN`CD`TRACK,%0)] [get(%q<sc1_at>`MARKED)] of [get(%q<sc1_at>`BOXES)]%*<|>[firstof(iter(%q<sc1_trigs>,get(%q<sc1_at>`TRIG`%i0),%b,%b·%b),none written)]%*<|>[firstof(get(%q<sc1_at>`OUTCOME),none written)]%*<|>[name(get(%q<sc1_at>`OWNER))]%*<|>[name(get(%q<sc1_at>`ROOM))][if(strlen(get(%q<sc1_at>`ENC)),%, in [u({{sheet-fate/sheet}}/FUN`ENC`TITLE,get(%q<sc1_at>`ENC))])][if(get(%q<sc1_at>`HIDDEN),%, hidden)],%*<|>)%r[rule()]%r[tone(muted,+countdown/tick [get(%q<sc1_at>)]%[=<why>%] marks a box%, /untick takes one back%, /stop ends it.)],get(%q<sc1_at>))]
+        flags: [funsyntax]
+
+      # ---- lifecycle ----------------------------------------------------------------
+      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
+      STARTUP:
+        value: |-
+          @command/add/noparse/rsnoparse +adversary; @hook/override/inline +adversary=%!,CMD`ADVERSARY; @command/add/noparse/rsnoparse +obstacle; @hook/override/inline +obstacle=%!,CMD`OBSTACLE; @command/add/noparse/rsnoparse +countdown; @hook/override/inline +countdown=%!,CMD`COUNTDOWN
+        flags: [cmdsyntax]
+      AINSTALL:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+      AUPDATE:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+
+  # Live countdowns, CD`<n> each. Inside the command object; no_command.
+  - ref: countdowns
+    type: thing
+    name: Fate Countdowns
+    location: "{{adversary}}"
+    flags: [no_command]
+    attributes:
+      CD: |-
+        The countdowns going now, CD`<number> each. +countdown/stop ends one.
+      NEXT: |-
+        0
+
+  # The library: adversaries TPL`<KEY> and obstacles OBS`<KEY>, each entry's own attribute its name and every
+  # field a leaf beneath it. +config adversary/adversaries and adversary/obstacles change them. Entries marked SRD
+  # are from the Fate Adversary Toolkit SRD; the rest are written for this package on its recipes.
+  - ref: store
+    type: thing
+    name: Fate Adversary Store
+    location: "{{adversary}}"
+    flags: [no_command]
+    attributes:
+      TPL: |-
+        The adversary library, TPL`<KEY> each. +config adversary/adversaries changes it.
+      OBS: |-
+        The obstacle library, OBS`<KEY> each. +config adversary/obstacles changes it.
+      TPL`SCOUT: |-
+        Forward Scout
+      TPL`SCOUT`TYPE: |-
+        threat
+      TPL`SCOUT`PEAK: |-
+        2
+      TPL`SCOUT`ASPECTS: |-
+        Loyal Agent of the Empire|Better Part of Valor
+      TPL`SCOUT`SKILLS: |-
+        athletics:3 shoot:2 stealth:2
+      TPL`SCOUT`STUNTS: |-
+        Scout Armor: The scout has Armor:1 against small-arms fire and melee weapons.
+      TPL`SCOUT`BOXES: |-
+        physical:2 mental:2
+      TPL`SCOUT`SLOTS: |-
+        mild
+      TPL`SCOUT`COUNTDOWN: |-
+        5
+      TPL`SCOUT`TRIGGERS: |-
+        The scout is attacked (first box).|One minute elapses (each box after).
+      TPL`SCOUT`OUTCOME: |-
+        Reinforcements arrive.
+      TPL`SCOUT`ORDER: |-
+        10
+      TPL`ENFORCER: |-
+        Cult Enforcer
+      TPL`ENFORCER`TYPE: |-
+        threat
+      TPL`ENFORCER`PEAK: |-
+        4
+      TPL`ENFORCER`ASPECTS: |-
+        Faithful Fist of the Hidden Choir|Feels No Pain While the Hymn Plays
+      TPL`ENFORCER`SKILLS: |-
+        fight:5 physique:4 provoke:4 athletics:3 will:3 notice:3
+      TPL`ENFORCER`STUNTS: |-
+        When you defend with Fight, you get Armor:2.
+      TPL`ENFORCER`BOXES: |-
+        physical:4 mental:3
+      TPL`ENFORCER`SLOTS: |-
+        mild
+      TPL`ENFORCER`ORDER: |-
+        20
+      TPL`SECURITY: |-
+        Station Security Officer
+      TPL`SECURITY`TYPE: |-
+        threat
+      TPL`SECURITY`PEAK: |-
+        4
+      TPL`SECURITY`ASPECTS: |-
+        Corporate Security, Sector Nine|By the Book Until It Costs Me
+      TPL`SECURITY`SKILLS: |-
+        shoot:5 notice:4 athletics:4 fight:3 physique:3 will:3
+      TPL`SECURITY`STUNTS: |-
+        Lockdown Codes: Once per scene, you can seal a zone's doors with a Notice roll to create an advantage, and get +2 to it.
+      TPL`SECURITY`BOXES: |-
+        physical:4 mental:3
+      TPL`SECURITY`SLOTS: |-
+        mild
+      TPL`SECURITY`ORDER: |-
+        30
+      TPL`POISONER: |-
+        Court Poisoner
+      TPL`POISONER`TYPE: |-
+        threat
+      TPL`POISONER`PEAK: |-
+        4
+      TPL`POISONER`ASPECTS: |-
+        Smiling Cupbearer to the Duke|Everyone Owes Me a Favour
+      TPL`POISONER`SKILLS: |-
+        deceive:5 stealth:4 crafts:4 empathy:3 rapport:3 notice:3
+      TPL`POISONER`STUNTS: |-
+        When you attack with Crafts by poisoning food or drink, you get Weapon:2.
+      TPL`POISONER`BOXES: |-
+        physical:3 mental:4
+      TPL`POISONER`SLOTS: |-
+        mild
+      TPL`POISONER`ORDER: |-
+        40
+      TPL`ALIEN: |-
+        The Alien
+      TPL`ALIEN`TYPE: |-
+        threat
+      TPL`ALIEN`PEAK: |-
+        4
+      TPL`ALIEN`ASPECTS: |-
+        Visitor From Beyond the Heliopause|Curious, Not Cruel
+      TPL`ALIEN`SKILLS: |-
+        physique:5 athletics:4 notice:4 stealth:3 will:3 fight:3
+      TPL`ALIEN`STUNTS: |-
+        When you defend with Physique, you get Armor:2.
+      TPL`ALIEN`BOXES: |-
+        physical:4 mental:4
+      TPL`ALIEN`SLOTS: |-
+        mild
+      TPL`ALIEN`LOCK: |-
+        Doesn't Understand Earthly Communication
+      TPL`ALIEN`KEY: |-
+        Emily Jace, the only survivor from a deep-space expedition, is the only human known to have learned the alien language.
+      TPL`ALIEN`ORDER: |-
+        50
+      TPL`SNIPER: |-
+        Mercenary Sniper
+      TPL`SNIPER`TYPE: |-
+        hitter
+      TPL`SNIPER`PEAK: |-
+        4
+      TPL`SNIPER`ASPECTS: |-
+        Paid in Advance, Loyal Until Payday|One Shot, Then Move
+      TPL`SNIPER`SKILLS: |-
+        shoot:5 stealth:4 notice:4 athletics:3 will:3 physique:3
+      TPL`SNIPER`STUNTS: |-
+        When you attack with Shoot from a zone your target can't see into, you get Weapon:2.
+      TPL`SNIPER`BOXES: |-
+        physical:3 mental:3
+      TPL`SNIPER`ORDER: |-
+        10
+      TPL`WEREWOLF: |-
+        Werewolf
+      TPL`WEREWOLF`TYPE: |-
+        hitter
+      TPL`WEREWOLF`PEAK: |-
+        4
+      TPL`WEREWOLF`ASPECTS: |-
+        Moonstruck Hunter of the Pines|Doesn't Know What He Does at Night
+      TPL`WEREWOLF`SKILLS: |-
+        fight:5 athletics:4 physique:4 notice:3 stealth:3 provoke:3
+      TPL`WEREWOLF`STUNTS: |-
+        When you attack with Fight, you get Weapon:2.
+      TPL`WEREWOLF`BOXES: |-
+        physical:4 mental:2
+      TPL`WEREWOLF`LOCK: |-
+        Wounds Close Unless Made by Silver
+      TPL`WEREWOLF`KEY: |-
+        A silver weapon, or a silver bullet from the old priest's chapel.
+      TPL`WEREWOLF`LIMIT: |-
+        He is a PC's son, and wakes each morning remembering nothing.
+      TPL`WEREWOLF`ORDER: |-
+        20
+      TPL`DROID: |-
+        Assassin Droid
+      TPL`DROID`TYPE: |-
+        hitter
+      TPL`DROID`PEAK: |-
+        4
+      TPL`DROID`ASPECTS: |-
+        Unregistered Killing Machine|Mimics Any Voice It Has Heard
+      TPL`DROID`SKILLS: |-
+        shoot:5 fight:4 athletics:4 deceive:3 notice:3 physique:3
+      TPL`DROID`STUNTS: |-
+        When you attack with Shoot, you get Weapon:2.
+      TPL`DROID`BOXES: |-
+        physical:4 mental:1
+      TPL`DROID`ORDER: |-
+        30
+      TPL`BARON: |-
+        Baron von Darkness
+      TPL`BARON`TYPE: |-
+        boss
+      TPL`BARON`PEAK: |-
+        3
+      TPL`BARON`ASPECTS: |-
+        Dark Lord of Crime|“My intellect is unparalleled!”|Fearsome Death Ray|Wanted in Sixteen Countries|“I’ll rule this city one day.”
+      TPL`BARON`SKILLS: |-
+        contacts:5 deceive:4 will:4 provoke:3 rapport:3 shoot:3 crafts:2 fight:2 lore:2 physique:2
+      TPL`BARON`REST: |-
+        1
+      TPL`BARON`STUNTS: |-
+        Contingency Plan: Whenever Baron von Darkness takes a consequence, you can pay a fate point to remove him from the scene (in a puff of smoke), replacing him with two threats.
+      TPL`BARON`BOXES: |-
+        physical:3 mental:4
+      TPL`BARON`SLOTS: |-
+        mild moderate severe
+      TPL`BARON`COUNTDOWN: |-
+        3
+      TPL`BARON`TRIGGERS: |-
+        The pathetic PCs fail to stop me from robbing the First National Bank.|Those fools don’t prevent the assassination of Mayor Roberts.|Those meddlesome heroes don’t stop me at my secret undersea base.
+      TPL`BARON`OUTCOME: |-
+        My glorious mind-control device allows me to secretly control the city from beneath the waves!
+      TPL`BARON`ORDER: |-
+        10
+      TPL`DRAGON: |-
+        The Dragon
+      TPL`DRAGON`TYPE: |-
+        boss
+      TPL`DRAGON`PEAK: |-
+        4
+      TPL`DRAGON`ASPECTS: |-
+        Ancient Wyrm of the Ash Peaks|Hoards Grudges Like Gold|Wings That Darken the Valley
+      TPL`DRAGON`SKILLS: |-
+        fight:6 physique:5 provoke:5 notice:4 will:4 lore:4 athletics:3 deceive:3 empathy:3 resources:3
+      TPL`DRAGON`REST: |-
+        1
+      TPL`DRAGON`STUNTS: |-
+        Twice per session, you can use Fight in place of any other skill.|Once per session, you can attack everyone in a zone with Fight.
+      TPL`DRAGON`BOXES: |-
+        physical:5 mental:4
+      TPL`DRAGON`SLOTS: |-
+        mild moderate
+      TPL`DRAGON`LOCK: |-
+        Immune to Mortal Weaponry
+      TPL`DRAGON`KEY: |-
+        The Sword of Avelah, created by an immortal race long ago, can harm the dragon.
+      TPL`DRAGON`ORDER: |-
+        20
+      TPL`COUNTESS: |-
+        The Grey Countess
+      TPL`COUNTESS`TYPE: |-
+        boss
+      TPL`COUNTESS`PEAK: |-
+        4
+      TPL`COUNTESS`ASPECTS: |-
+        Necromancer Queen of the Drowned Court|The Dead Remember Her Kindness|Bound to the Mirror of Saint Ilse
+      TPL`COUNTESS`SKILLS: |-
+        lore:6 will:5 deceive:5 provoke:4 rapport:4 notice:4 empathy:3 resources:3 contacts:3 stealth:3
+      TPL`COUNTESS`REST: |-
+        1
+      TPL`COUNTESS`STUNTS: |-
+        Once per session, when you take a consequence, you can raise a filler mob of the drowned dead in your zone.
+      TPL`COUNTESS`BOXES: |-
+        physical:3 mental:5
+      TPL`COUNTESS`SLOTS: |-
+        mild moderate
+      TPL`COUNTESS`LIMIT: |-
+        Breaking the Mirror of Saint Ilse ends her, but it also frees everything she has bound.
+      TPL`COUNTESS`COUNTDOWN: |-
+        4
+      TPL`COUNTESS`TRIGGERS: |-
+        A night passes and nobody has broken the mirror.|A PC is taken out in her presence.
+      TPL`COUNTESS`OUTCOME: |-
+        The drowned court rises and the city's dead walk.
+      TPL`COUNTESS`ORDER: |-
+        30
+      TPL`THUG: |-
+        Street Thug
+      TPL`THUG`TYPE: |-
+        filler
+      TPL`THUG`PEAK: |-
+        4
+      TPL`THUG`ASPECTS: |-
+        Street Thug
+      TPL`THUG`SKILLS: |-
+        fight:1
+      TPL`THUG`BOXES: |-
+        physical:1
+      TPL`THUG`ORDER: |-
+        10
+      TPL`GUARD: |-
+        Palace Guard
+      TPL`GUARD`TYPE: |-
+        filler
+      TPL`GUARD`PEAK: |-
+        4
+      TPL`GUARD`ASPECTS: |-
+        Palace Guard
+      TPL`GUARD`SKILLS: |-
+        fight:2
+      TPL`GUARD`BOXES: |-
+        physical:2
+      TPL`GUARD`ORDER: |-
+        20
+      TPL`ZOMBIE: |-
+        Shambling Dead
+      TPL`ZOMBIE`TYPE: |-
+        filler
+      TPL`ZOMBIE`PEAK: |-
+        4
+      TPL`ZOMBIE`ASPECTS: |-
+        Shambling Dead
+      TPL`ZOMBIE`SKILLS: |-
+        fight:2
+      TPL`ZOMBIE`BOXES: |-
+        physical:2
+      TPL`ZOMBIE`ORDER: |-
+        30
+      TPL`DRONE: |-
+        Hive Drone
+      TPL`DRONE`TYPE: |-
+        filler
+      TPL`DRONE`PEAK: |-
+        4
+      TPL`DRONE`ASPECTS: |-
+        Hive Drone
+      TPL`DRONE`SKILLS: |-
+        fight:3 athletics:1
+      TPL`DRONE`BOXES: |-
+        physical:3
+      TPL`DRONE`ORDER: |-
+        40
+      OBS`TURRET: |-
+        Machine-Gun Turret
+      OBS`TURRET`TYPE: |-
+        hazard
+      OBS`TURRET`RATING: |-
+        4
+      OBS`TURRET`WEAPON: |-
+        3
+      OBS`TURRET`ORDER: |-
+        10
+      OBS`SPIKES: |-
+        Whirling Spike Apparatus
+      OBS`SPIKES`TYPE: |-
+        hazard
+      OBS`SPIKES`RATING: |-
+        6
+      OBS`SPIKES`WEAPON: |-
+        2
+      OBS`SPIKES`ORDER: |-
+        20
+      OBS`SNIPER: |-
+        Distant Sniper
+      OBS`SNIPER`TYPE: |-
+        hazard
+      OBS`SNIPER`RATING: |-
+        5
+      OBS`SNIPER`WEAPON: |-
+        4
+      OBS`SNIPER`ORDER: |-
+        30
+      OBS`FENCE: |-
+        Chain Link Fence
+      OBS`FENCE`TYPE: |-
+        block
+      OBS`FENCE`RATING: |-
+        2
+      OBS`FENCE`WEAPON: |-
+        0
+      OBS`FENCE`ORDER: |-
+        10
+      OBS`ACID: |-
+        Vat of Acid
+      OBS`ACID`TYPE: |-
+        block
+      OBS`ACID`RATING: |-
+        3
+      OBS`ACID`WEAPON: |-
+        4
+      OBS`ACID`ORDER: |-
+        20
+      OBS`STATUE: |-
+        Animate Statue
+      OBS`STATUE`TYPE: |-
+        block
+      OBS`STATUE`RATING: |-
+        4
+      OBS`STATUE`WEAPON: |-
+        1
+      OBS`STATUE`ORDER: |-
+        30
+      OBS`BOMB: |-
+        Ticking Time Bomb
+      OBS`BOMB`TYPE: |-
+        block
+      OBS`BOMB`RATING: |-
+        3
+      OBS`BOMB`WEAPON: |-
+        0
+      OBS`BOMB`COUNTDOWN: |-
+        4
+      OBS`BOMB`TRIGGERS: |-
+        An exchange elapses.|Someone tries to disarm the bomb, but fails by 2 or more shifts.
+      OBS`BOMB`OUTCOME: |-
+        The bomb explodes.
+      OBS`BOMB`ORDER: |-
+        40
+      OBS`WALL: |-
+        The Wall
+      OBS`WALL`TYPE: |-
+        block
+      OBS`WALL`RATING: |-
+        4
+      OBS`WALL`WEAPON: |-
+        0
+      OBS`WALL`LOCK: |-
+        Unnaturally Smooth, Can’t Be Climbed
+      OBS`WALL`KEY: |-
+        If you can get a device that’ll vibrate at the right harmonic frequency, you can walk right through the wall.
+      OBS`WALL`ORDER: |-
+        50
+      OBS`RITUAL: |-
+        Sinister Ritual
+      OBS`RITUAL`TYPE: |-
+        distraction
+      OBS`RITUAL`RATING: |-
+        0
+      OBS`RITUAL`WEAPON: |-
+        0
+      OBS`RITUAL`CHOICE: |-
+        Do you deal with the enemies attacking you, or do you stop the ritual?
+      OBS`RITUAL`REPERCUSSIONS: |-
+        The cultists complete the ritual and summon the vile demon.
+      OBS`RITUAL`ORDER: |-
+        10
+      OBS`BUS: |-
+        Bus Full of Civilians
+      OBS`BUS`TYPE: |-
+        distraction
+      OBS`BUS`RATING: |-
+        3
+      OBS`BUS`WEAPON: |-
+        0
+      OBS`BUS`CHOICE: |-
+        Will the bus plunge off the bridge?
+      OBS`BUS`REPERCUSSIONS: |-
+        Leave them: all of the civilians on the bus die.|Save them: the villain gets away!
+      OBS`BUS`ORDER: |-
+        20
+      OBS`GEM: |-
+        The Glittering Gem
+      OBS`GEM`TYPE: |-
+        distraction
+      OBS`GEM`RATING: |-
+        0
+      OBS`GEM`WEAPON: |-
+        0
+      OBS`GEM`CHOICE: |-
+        Will you take the gem from the pedestal?
+      OBS`GEM`REPERCUSSIONS: |-
+        Leave the gem: you don’t get the gem, which is incredibly valuable.|Take the gem: you activate the traps in the temple.
+      OBS`GEM`ORDER: |-
+        30
+
+
+
+  # The +help topics, on an object of their own. fate-adversary-toolkit-help registers it with +help; without
+  # that bridge nothing reads it. HELP`<TOPIC> is a topic, its subtopics the leaves beneath, LOCK`<TOPIC> who
+  # may read it.
+  - ref: adversary_help
+    type: thing
+    name: Fate Adversary Toolkit Help
+    location: "{{adversary}}"
+    attributes:
+      HELP: |-
+        Opposition for the Fate sheet: +adversary, +obstacle and +countdown.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`ADVERSARY: |-
+        obstacle countdown npc encounter
+      SEE`OBSTACLE: |-
+        adversary countdown encounter
+      SEE`COUNTDOWN: |-
+        adversary obstacle encounter
+      HELP`ADVERSARY: |-
+        `+adversary` is a library of ready opposition for the Fate sheet's `+npc`: threats that soak up hits, hitters that deal them, bosses, and fillers that come in groups.
+
+        - `+adversary` lists the library; `+adversary <name>` shows one in full.
+        - `+adversary/make <name>\[/<PCs' best skill>\]\[=<new name>\]` copies one into `+npc` as yours. Its ratings move up or down to match your PCs: the game sets their best skill \(`+help adversary settings`\), and `/<rating>` overrides it for one copy.
+        - `+adversary/build <name>=<type> <skills>` makes one from the toolkit's recipe: `+help adversary build`.
+        - `+adversary/mob <filler>\[=<how many>\]` brings a group of fillers into the encounter you run: `+help adversary mob`.
+        - `+adversary/stunts` lists quick stunts for an enemy who may not last past one fight.
+
+        What you make is an ordinary NPC: `+npc`, `+npc/aspect`, `+npc/stunt` and `+encounter/npc` work on it. `+npc/set <npc>/type=`, `lock=`, `key=` and `limit=` set its type, a resistance and a limitation \(`+help obstacle constraints`\).
+
+        For example:
+
+        `+adversary/make baron/4=Baron`
+
+        Output: `\[ADVERSARY\] Done: You make Baron, a boss, its ratings raised 1 step for PCs whose best skill is Great (+4). +npc Baron shows it, and +encounter/npc Baron brings it into an encounter. +countdown/start Baron von Darkness starts its countdown.`
+
+        `+help adversary credits` names the source this is based on.
+      HELP`ADVERSARY`BUILD: |-
+        `+adversary/build <name>=<type> <skill> <skill>...\[/<PCs' best skill>\]` builds an NPC on the Adversary Toolkit's recipe for its type. Name its skills best first.
+
+        - **threat**: its best skill one above the PCs' best, two a step lower, three two steps lower; long stress tracks and a mild consequence, and a stunt that helps it last.
+        - **hitter**: the same skills, short stress tracks and no consequences, and Weapon:2 with its best skill.
+        - **boss**: its best skill two above the PCs', then two, three, four skills a step lower each, down to Fair; every other skill Average \(+1\); mild and moderate consequences.
+        - **filler** `average`, `fair` or `good`: one skill at Average, Fair or Good \(a good filler also has a second at Average\), one stress box per step, no consequences.
+        - `tough` after threat, hitter or boss \(`threat tough fight will`\) adds one to every skill and a consequence.
+
+        Physique and Will lengthen a threat's or boss's stress tracks, as they do a PC's. On a game of approaches the skills you name are read as approaches \(`+help adversary settings`\).
+
+        For example:
+
+        `+adversary/build Bruiser=threat physique fight athletics`
+
+        Output: `\[ADVERSARY\] Done: You build Bruiser, a threat against PCs whose best skill is Great (+4): Physique Superb (+5), Fight Great (+4), and Athletics Great (+4); stress physical \[ \] \[ \] \[ \] \[ \] \[ \] and mental \[ \] \[ \] \[ \]; consequences mild (2). +npc/aspect and +npc/stunt finish it, and +npc Bruiser shows it.`
+      HELP`ADVERSARY`MOB: |-
+        `+adversary/mob <filler>\[=<how many>\]` brings 2 to 12 copies of a filler into the encounter you run as one NPC, `<name> x<n>`. Three when you leave the number out.
+
+        - The group has the filler's skills, one higher for every two fillers in it, to Great \(+4\) at most.
+        - Its stress track is every filler's boxes in a row. `+encounter/harm` marks them from the left, and a hit can take out several fillers at once.
+        - As fillers go down, its skills drop to match. The harm message says how many are still up.
+
+        Only an NPC with no consequences, a filler, groups into a mob.
+
+        For example:
+
+        `+adversary/mob Grunt=4`
+
+        Output: `\[ADVERSARY\] Gina brings in Grunt x4: 4 of 4 up, Fight Good (+3); \[ \] | \[ \] | \[ \] | \[ \].`
+
+        `+encounter/harm Grunt=2`
+
+        Output: `\[SHEET\] Grunt x4 takes a hit of 2 shifts. Physical stress boxes 1 and 2 take it all. 2 of 4 still up: Fight Fair (+2).`
+      HELP`ADVERSARY`SETTINGS: |-
+        `+config adversary` lists the settings and `+config adversary/<setting>=<value>` changes one \(`config.admin`\):
+
+        - `peak`: the PCs' best skill, which `/make` and `/build` scale to. 0, the default, takes the Fate sheet's skill cap.
+        - `mob_cap`: how high a mob's skills go \(4\).
+        - `track_skills`: which skill lengthens which stress track for a built threat or boss \(`physical:physique mental:will`\).
+        - `approaches`: on a game of approaches, the approach each skill an adversary was written with becomes.
+        - `adversaries` and `obstacles`: the library. `+config adversary/adversaries/<entry>` shows one entry's fields, and `+config/add adversary/adversaries/<key>=<name>` adds one.
+      LOCK`ADVERSARY`SETTINGS: |-
+        perm^config.admin
+      HELP`ADVERSARY`CREDITS: |-
+        Enemies, obstacles, constraints and the recipes for each are based on the Fate Adversary Toolkit SRD. Forward Scout, Baron von Darkness and the library's obstacles, and the dragon's, alien's and wall's resistances, are its examples; the other adversaries are this package's own.
+
+        This work is based on the Fate Adversary Toolkit SRD \(found at http://www.faterpg.com/\), a product of Evil Hat Productions, LLC, developed, authored, and edited by Brian Engard, Lara Turner, Joshua Yearsley, and Anna Meade, and licensed for our use under the Creative Commons Attribution 3.0 Unported license \(http://creativecommons.org/licenses/by/3.0/\).
+
+        Fate is a trademark of Evil Hat Productions, LLC. This is an unofficial package: this game is not affiliated with or endorsed by Evil Hat Productions.
+      HELP`OBSTACLE: |-
+        An obstacle makes a scene harder but cannot be fought: the PCs get past it, put up with it or take it out of play. Obstacles go into an encounter and end with it.
+
+        - **hazard**: acts each exchange, rolling its rating, and adds its Weapon when it hits.
+        - **block**: takes no turn. Getting past it is an overcome against its rating; failing against a harmful one hits by the margin plus its Weapon.
+        - **distraction**: a choice for the PCs, with repercussions if they leave it, and sometimes an opposition to roll against.
+
+        Players in the encounter:
+
+        - `+obstacle` lists the ones there; `+obstacle <name>` shows one.
+        - `+obstacle/overcome <obstacle>=<skill>\[+<n>\]` rolls to get past one or deal with it.
+        - `+obstacle/disable <obstacle>=<skill>\[+<n>\]` takes a risk to take it out of play: against a block's rating plus two, a hazard's rating.
+
+        See `+help obstacle gm` for putting them in, and `+help obstacle constraints` for resistances and limitations.
+
+        For example:
+
+        `+obstacle/overcome acid=athletics`
+
+        Output: `\[OBSTACLE\] Pat tries to get past Acid Vat: Athletics: 4dF\[1, 1, -1, 0\] + 0 = 1 (Average) against Good (+3): fail, 2 shifts short (roll 7) Acid Vat hits them for 6 shifts: the margin and its Weapon:4.`
+      HELP`OBSTACLE`GM: |-
+        The GM of an encounter, and sheet keepers, put obstacles in and run them:
+
+        - `+obstacle/list` lists the library; `+obstacle/list <name>` shows one.
+        - `+obstacle/add <obstacle>\[/<PCs' best skill>\]\[=<name>\]` puts one from the library in, its rating moved to match the PCs. One with a countdown starts it.
+        - `+obstacle/hazard <name>=<rating>\[/<weapon>\]` and `+obstacle/block <name>=<rating>\[/<weapon>\]` make one: `+obstacle/hazard Flame Jets=great/2`.
+        - `+obstacle/distraction <name>=<choice>\[/<opposition>\]` makes a distraction; `+obstacle/repercussion <obstacle>=<what happens>` adds what leaving it costs.
+        - `+obstacle/roll <hazard>\[+<n>\]\[=<opposition>\]` takes a hazard's turn. Against an opposition it says how hard it hits.
+        - `+obstacle/remove <obstacle>` takes one out.
+
+        A hazard's rating is usually at least the PCs' best skill; a block's no more than one above it.
+
+        For example:
+
+        `+obstacle/roll sniper+1=fair`
+
+        Output: `\[OBSTACLE\] Distant Sniper acts: Distant Sniper: 4dF\[0, -1, 0, 1\] + 6 = 6 (Fantastic) against Fair (+2): success with style, 4 shifts (roll 2) As an attack it hits for 8 shifts, with its Weapon:4.`
+      HELP`OBSTACLE`CONSTRAINTS: |-
+        Constraints change how the PCs must deal with an adversary.
+
+        - A **resistance** is a lock, an aspect saying what it is immune to, and a key, the one thing that gets past it. `+obstacle/lock <obstacle>=<lock>\[/<key>\]` sets one on an obstacle, and nobody overcomes or disables it until the GM clears it with `+obstacle/lock <obstacle>=`. On an NPC: `+npc/set <npc>/lock=<lock>` and `+npc/set <npc>/key=<key>`.
+        - A **limitation** is a fact or aspect that makes the obvious approach a bad idea, such as a werewolf who is a PC's son: `+npc/set <npc>/limit=<limitation>`.
+        - A **countdown** makes it urgent: `+help countdown`.
+
+        Use one resistance at a time, and one or two limitations an adventure: they are there to make a foe memorable, not to stop play.
+
+        For example:
+
+        `+obstacle/lock Razor Wire=Electrified/Cut the power at the junction box`
+
+        Output: `\[OBSTACLE\] Done: Razor Wire is Electrified: nobody overcomes or disables it without the key: Cut the power at the junction box`
+      HELP`COUNTDOWN: |-
+        A countdown is a row of boxes: each trigger marks one, and when the last is marked its outcome happens. A countdown started in an encounter you run belongs to it and ends with it; one started anywhere else lasts until it is stopped.
+
+        - `+countdown` lists the countdowns you can see here; `+countdown <name>` shows one with its triggers.
+        - `+countdown/start <name>=<boxes>\[/<outcome>\]` starts one, 1 to 20 boxes. `+countdown/start <adversary or obstacle>` starts the one from the library.
+        - `+countdown/trigger <name>=<trigger>` notes what marks a box; `+countdown/outcome <name>=<outcome>` changes what happens at the end.
+        - `+countdown/tick <name>\[=<why>\]` marks a box for the room to see; `+countdown/untick <name>` takes one back.
+        - `+countdown/hide <name>` keeps it to you and sheet keepers, ticks too; again shows it.
+        - `+countdown/stop <name>` ends it.
+
+        Whoever started a countdown and sheet keepers change it.
+
+        For example:
+
+        `+countdown/tick bomb=An exchange elapses`
+
+        Output: `\[COUNTDOWN\] Ticking Time Bomb moves on (An exchange elapses): \[X\] \[ \] \[ \] \[ \]`
+
+  # The Fate sheet's hooks. Each runs as the Fate Sheet, which is WIZARD and so may call this object.
+  - ref: sheet_hooks
+    target: "{{sheet-fate/sheet}}"
+    attributes:
+      # NPC fields (+npc/set <npc>/<field>=<value>): its type, a resistance's lock and key, and a limitation.
+      NPCFIELD`TYPE:
+        value: |-
+          if(member(threat hitter boss filler,lcstr(%0)),lcstr(%0),#-1 An adversary's type is threat%, hitter%, boss or filler.)
+        flags: [funsyntax]
+      NPCFIELD`LOCK:
+        value: |-
+          if(lte(strlen(%0),200),%0,#-1 Keep a lock to 200 characters.)
+        flags: [funsyntax]
+      NPCFIELD`KEY:
+        value: |-
+          if(lte(strlen(%0),300),%0,#-1 Keep a key to 300 characters.)
+        flags: [funsyntax]
+      NPCFIELD`LIMIT:
+        value: |-
+          if(lte(strlen(%0),300),%0,#-1 Keep a limitation to 300 characters.)
+        flags: [funsyntax]
+      # A filler mob loses members as its boxes are marked, and gets them back as they are cleared.
+      AFTER`NPC`MOB:
+        value: |-
+          if(strlen(get(%0`MOB`SIZE)),setq(am_left,u({{adversary}}/FUN`MOB`LEFT,%0))[if(neq(%q<am_left>,get(%0`MOB`LEFT)),[u({{adversary}}/FUN`MOB`SET,%0,%q<am_left>)][if(%q<am_left>,[%q<am_left>] of [get(%0`MOB`SIZE)] still up: [itemize(iter(u({{sheet-fate/sheet}}/FUN`NPC`SKILLORDER,%0),[u({{sheet-fate/sheet}}/FUN`TRAIT`LABEL,%i0)] [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,get(%0`SKILL`%i0))],%b,|),|)].,Every one of them is down.)])])
+        flags: [funsyntax]

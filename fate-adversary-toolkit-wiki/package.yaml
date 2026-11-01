@@ -1,0 +1,50 @@
+format: "1.16"
+package: fate-adversary-toolkit-wiki
+title: "Fate Adversary Toolkit rules (unofficial)"
+version: 1.0.0
+wiki_landing_page: category:fate_adversary_toolkit_start_here
+wiki_collection_name: Fate Adversary Toolkit (unofficial)
+authors: [SharpMUSH]
+description: "Rules reference for the Fate Adversary Toolkit pack as wiki pages: enemies (threats, hitters, bosses, fillers and their groups), obstacles (hazards, blocks, distractions) and constraints (countdowns, limitations, resistances), with the commands that play them. Based on the Fate Adversary Toolkit SRD under CC BY 3.0. An unofficial fan package, not affiliated with or endorsed by Evil Hat Productions."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [fate, rules, wiki, adversaries]
+category: Characters
+requires_server: ">=0.1"
+
+# A content pack: wiki pages only. Its pages link to the Fate rules pages, so it brings those too.
+depends:
+  - package: sheet-fate-wiki
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH.Packages
+      path: sheet-fate-wiki/
+      branch: main
+
+wiki:
+  - page: category:fate_adversary_toolkit_start_here
+    title: Start here — Fate Adversary Toolkit
+    pin: true
+    file: wiki/category/fate_adversary_toolkit_start_here.md
+
+  - page: help:fate_adversary_toolkit_license_notice
+    title: Fate Adversary Toolkit License Notice
+    requires:
+      edit: [wiki.admin]
+      delete: [wiki.admin]
+    file: wiki/help/fate_adversary_toolkit_license_notice.md
+
+  - page: main:fate_adversary_enemies
+    title: Enemies
+    categories: [fate_adversary_toolkit_start_here]
+    file: wiki/main/fate_adversary_enemies.md
+
+  - page: main:fate_adversary_obstacles
+    title: Obstacles
+    categories: [fate_adversary_toolkit_start_here]
+    file: wiki/main/fate_adversary_obstacles.md
+
+  - page: main:fate_adversary_constraints
+    title: Constraints
+    categories: [fate_adversary_toolkit_start_here]
+    file: wiki/main/fate_adversary_constraints.md

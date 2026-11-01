@@ -50,7 +50,7 @@ constraints checked before anything is planned.
 | [`sheet-d20-help/`](sheet-d20-help/) | 1.0.1 | Bridge: the D20 sheet's topics in `+help` |
 | [`sheet-d20-config/`](sheet-d20-config/) | 1.0.2 | Bridge: the D20 sheet's settings, trait table and bestiary in `+config` |
 | [`sheet-d20-chargen/`](sheet-d20-chargen/) | 1.1.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |
-| [`sheet-fate/`](sheet-fate/) | 1.3.0 | Fate character sheet: skills or approaches on the ladder, aspects, stunts, stress, consequences and fate points; `+check` on four Fate dice; a grant ledger, guided `+chargen`, encounters that keep their own sheet copies with NPCs from `+npc`, exchanges, harm, concessions, scene aspects and the GM's pool, and milestones and breakthroughs from staff on an award ledger of their own, which players spend with `+sheet/advance`. Fate SRD text under CC BY 3.0 (see its NOTICE) |
+| [`sheet-fate/`](sheet-fate/) | 1.4.0 | Fate character sheet: skills or approaches on the ladder, aspects, stunts, stress, consequences and fate points; `+check` on four Fate dice; a grant ledger, guided `+chargen`, encounters that keep their own sheet copies with NPCs from `+npc`, exchanges, harm, concessions, scene aspects and the GM's pool, and milestones and breakthroughs from staff on an award ledger of their own, which players spend with `+sheet/advance`. Fate SRD text under CC BY 3.0 (see its NOTICE) |
 | [`sheet-fate-help/`](sheet-fate-help/) | 1.0.0 | Bridge: the Fate sheet's topics in `+help` |
 | [`sheet-fate-config/`](sheet-fate-config/) | 1.0.0 | Bridge: the Fate sheet's settings and tables in `+config` |
 | [`sheet-fate-chargen/`](sheet-fate-chargen/) | 1.1.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |
@@ -59,6 +59,10 @@ constraints checked before anything is planned.
 | [`atomic-robo-help/`](atomic-robo-help/) | 1.0.0 | Bridge: the Atomic Robo topics in `+help` |
 | [`atomic-robo-config/`](atomic-robo-config/) | 1.0.0 | Bridge: the Atomic Robo settings and tables in `+config` |
 | [`atomic-robo-wiki/`](atomic-robo-wiki/) | 1.1.0 | Unofficial Atomic Robo rules reference as wiki pages: modes, chargen, mega-stunts, invention, brainstorms, scale and machines, advancement |
+| [`fate-adversary-toolkit/`](fate-adversary-toolkit/) | 1.0.0 | Unofficial Fate Adversary Toolkit pack: opposition for the Fate sheet: ready adversaries scaled to the game, adversaries built by type, filler mobs that thin as they fall, hazards, blocks, distractions, countdowns, limitations and resistances. Fate Adversary Toolkit SRD under CC BY 3.0 (see its NOTICE) |
+| [`fate-adversary-toolkit-help/`](fate-adversary-toolkit-help/) | 1.0.0 | Bridge: the Fate Adversary Toolkit topics in `+help` |
+| [`fate-adversary-toolkit-config/`](fate-adversary-toolkit-config/) | 1.0.0 | Bridge: the Fate Adversary Toolkit settings and libraries in `+config` |
+| [`fate-adversary-toolkit-wiki/`](fate-adversary-toolkit-wiki/) | 1.0.0 | Unofficial Fate Adversary Toolkit rules reference as wiki pages: enemies, obstacles, constraints |
 | [`sheet-pbta/`](sheet-pbta/) | 2.3.0 | Powered by the Apocalypse character sheet built from a ledger: playbooks, stats and moves the game edits, guided character creation, advances, forward, ongoing, hold, harm and XP; `+check` on 2d6; `+encounter` plays scenes from copies of the sheets, with foes from a bestiary and GM moves. Dungeon World moves under CC BY 3.0 (see its NOTICE) |
 | [`sheet-pbta-help/`](sheet-pbta-help/) | 1.0.1 | Bridge: the PbtA sheet's topics in `+help` |
 | [`sheet-pbta-config/`](sheet-pbta-config/) | 1.0.2 | Bridge: the PbtA sheet's settings and tables, the bestiary and GM moves among them, in `+config` |
