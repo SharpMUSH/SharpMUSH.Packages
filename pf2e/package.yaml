@@ -1962,7 +1962,7 @@ objects:
           iter(sort(iter(get(%q<list_store>/OPT`TYPE`[ucstr(edit(%0,ies,y,ses,s,es,e))]),
             if(cand(member(u({{core}}/DATA`CONFIG`BOOKS),get(%q<list_store>/ITEM`%i0`BOOK)),cor(not(strlen(%1)),u(%!/%1,%i0)),cor(not(strlen(%2)),strmatch(json_query(get(%q<list_store>/ITEM`%i0`PREP),extract,$.name),*%2*))),
               [json_query(setr(list_prep,get(%q<list_store>/ITEM`%i0`PREP)),extract,$.name)][if(not(member(json_query(%q<list_prep>,extract,$.opts),item:rarity:common)),%b%([after(grab(json_query(%q<list_prep>,extract,$.opts),item:rarity:*),item:rarity:)]%))]),
-            |,|),a,|,|),%i0,|,|)]
+            %b,|),a,|,|),%i0,|,|)]
         flags: [funsyntax]
       FUN`BUILD`LIST`HERITAGE:
         value: |-
@@ -1981,7 +1981,7 @@ objects:
             iter(sort(iter(setunion(%q<list_ids>,),
               if(cand(member(u({{core}}/DATA`CONFIG`BOOKS),get(%q<list_store>/ITEM`%i0`BOOK)),lte(json_query(setr(list_prep,get(%q<list_store>/ITEM`%i0`PREP)),extract,$.level),%q<list_level>),u(%!/FUN`BUILD`FEAT`FITS,%q<list_kind>,%q<list_prep>),cor(not(strlen(%1)),strmatch(json_query(%q<list_prep>,extract,$.name),*%1*))),
                 [rjust(json_query(%q<list_prep>,extract,$.level),2,0)] [json_query(%q<list_prep>,extract,$.name)]),
-              |,|),a,|,|),%i0,|,|)],
+              %b,|),a,|,|),%i0,|,|)],
             #-1)]
         flags: [funsyntax]
       FUN`BUILD`LIST`GEAR:
@@ -1990,7 +1990,7 @@ objects:
           if(lt(strlen(%0),3),Name at least three letters: +build/list gear sword.,
             [setq(list_store,u({{core}}/DATA`PACK`EQUIPMENT))][
             setq(list_ids,iter(lattr(%q<list_store>/NAME`*[u({{core}}/FUN`ITEM`SLUGGIFY,%0)]*),get(%q<list_store>/%i0)))][
-            iter(extract(sort(iter(%q<list_ids>,if(cand(member(u({{core}}/DATA`CONFIG`BOOKS),get(%q<list_store>/ITEM`%i0`BOOK)),lte(json_query(setr(list_prep,get(%q<list_store>/ITEM`%i0`PREP)),extract,$.level),%q<check_level>)),[json_query(%q<list_prep>,extract,$.name)] %([u(%!/FUN`SHOW`MONEY,u(%!/FUN`BUILD`PRICE,u({{core}}/FUN`ITEM`GET,equipment,%i0)))]%)),|,|),a,|,|),1,60,|),%i0,|,|)])]
+            iter(extract(sort(iter(%q<list_ids>,if(cand(member(u({{core}}/DATA`CONFIG`BOOKS),get(%q<list_store>/ITEM`%i0`BOOK)),lte(json_query(setr(list_prep,get(%q<list_store>/ITEM`%i0`PREP)),extract,$.level),%q<check_level>)),[json_query(%q<list_prep>,extract,$.name)] %([u(%!/FUN`SHOW`MONEY,u(%!/FUN`BUILD`PRICE,u({{core}}/FUN`ITEM`GET,equipment,%i0)))]%)),%b,|),a,|,|),1,60,|),%i0,|,|)])]
         flags: [funsyntax]
       FUN`BUILD`GEAR`FIND:
         value: |-
