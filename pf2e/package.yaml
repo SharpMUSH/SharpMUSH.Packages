@@ -1487,7 +1487,7 @@ objects:
       # +build/language <language> ...: the languages chosen beyond the ancestry's own.
       INC`BUILD`LANGUAGE:
         value: |-
-          @assert strlen(%q<check_ancestry>)=@pemit %#=notice(PF2E,Choose an ancestry first.,warn); think setqm(build_step,languages,build_typed,lcstr(squish(%q<cmd_rest>)),build_offer,u(%!/FUN`BUILD`LANGUAGES`OFFER)); @assert not(words(setdiff(%q<build_typed>,%q<build_offer>)))=@pemit %#=notice(PF2E,You can choose from [itemize(%q<build_offer>)].,warn); @assert lte(words(%q<build_typed>),setr(build_need,u(%!/FUN`BUILD`LANGUAGES`NEED)))=@pemit %#=notice(PF2E,You choose %q<build_need> languages.,warn); @include %!/INC`BUILD`GUARD; @include %!/INC`BUILD`BEGIN; @include/nobreak %!/INC`BUILD`CLEAR; @dolist/inplace %q<build_typed>={think setq(entry_json,json(object,kind,"language",name,"##",step,"languages",parent,[elements(u(%!/FUN`BUILD`GRANT`OF,ancestry),1,~)])); @include %!/INC`BUILD`PUT}; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)]Languages: [itemize(iter(u(%!/FUN`BUILD`LANGUAGES`OWN) %q<build_typed>,capstr(%i0),%b,|),|)].,ok); @wait 0={think u(%!/FUN`BUILD`LOAD); @pemit %#=u(%!/FUN`BUILD`NEXT)}
+          @assert strlen(%q<check_ancestry>)=@pemit %#=notice(PF2E,Choose an ancestry first.,warn); think setqm(build_step,languages,build_picked,u(%!/FUN`BUILD`LANGUAGES`PICKED),build_need,u(%!/FUN`BUILD`LANGUAGES`NEED),build_offer,u(%!/FUN`BUILD`LANGUAGES`OFFER)); @assert strlen(trim(%q<cmd_rest>))=@pemit %#=notice(PF2E,[if(words(%q<build_picked>),Chosen: [itemize(iter(%q<build_picked>,capstr(%i0),%b,|),|)].%b)][if(gt(%q<build_need>,words(%q<build_picked>)),[sub(%q<build_need>,words(%q<build_picked>))] more to choose from [itemize(iter(setdiff(%q<build_offer>,%q<build_picked>),capstr(%i0),%b,|),|,or)].,Nothing more to choose. +build/undo languages chooses again.)]); think setq(build_typed,setdiff(lcstr(squish(%q<cmd_rest>)),%q<build_picked>)); @assert words(%q<build_typed>)=@pemit %#=notice(PF2E,Chosen already.,warn); @assert not(words(setdiff(%q<build_typed>,%q<build_offer>)))=@pemit %#=notice(PF2E,You can choose from [itemize(iter(setdiff(%q<build_offer>,%q<build_picked>),capstr(%i0),%b,|),|,or)].,warn); @assert lte(add(words(%q<build_picked>),words(%q<build_typed>)),%q<build_need>)=@pemit %#=notice(PF2E,[if(gt(%q<build_need>,words(%q<build_picked>)),Only [sub(%q<build_need>,words(%q<build_picked>))] more to choose%, not [words(%q<build_typed>)].,All %q<build_need> are chosen.)] +build/undo languages chooses again.,warn); @include %!/INC`BUILD`BEGIN; @dolist/inplace %q<build_typed>={think setq(entry_json,json(object,kind,"language",name,"##",step,"languages",parent,[elements(u(%!/FUN`BUILD`GRANT`OF,ancestry),1,~)])); @include %!/INC`BUILD`PUT}; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)]Languages: [itemize(iter(setunion(u(%!/FUN`BUILD`LANGUAGES`OWN) %q<build_picked> %q<build_typed>,),capstr(%i0),%b,|),|)].,ok); @wait 0={think u(%!/FUN`BUILD`LOAD); @pemit %#=u(%!/FUN`BUILD`NEXT)}
         flags: [cmdsyntax]
       # +build/feat <slot>=<feat>: slots are ancestry-<level>, class-<level>, skill-<level> and general-<level>.
       INC`BUILD`FEAT:
@@ -1793,6 +1793,12 @@ objects:
         value: |-
           json_map({{core}}/FUN`RULE`SELECTOR,firstof(json_query(%q<build_ancestry_item>,extract,$.system.languages.value),json(array)),%b)
         flags: [funsyntax]
+      FUN`BUILD`LANGUAGES`PICKED:
+        value: |-
+          @@(the registers of FUN`BUILD`LOAD: the languages chosen at the languages step)[
+          setq(picked_live,u(%!/FUN`BUILD`STEP,languages))][
+          squish(iter(graball(%q<check_entries>,language~*~languages),if(member(%q<picked_live>,elements(%i0,4,~)),lcstr(elements(%i0,2,~)))))]
+        flags: [funsyntax]
       FUN`BUILD`LANGUAGES`OFFER:
         value: |-
           @@(the languages to choose from: the ancestry's list and the common languages, less those known)[
@@ -2040,7 +2046,7 @@ objects:
             u(%!/FUN`BUILD`TODO`ONE,boost-class,Key attribute,+build/boost class=[first(u(%!/FUN`BUILD`LEVELS,keyAbility))])]|[
             u(%!/FUN`BUILD`TODO`ONE,boost-1,Four free boosts,+build/boost 1=str dex con wis)]|[
             if(strlen(%q<build_class_item>),[if(gte(words(u(%!/FUN`BUILD`STEP,skills)),%q<todo_skills_need>),done,open)]~Skills %([setr(todo_skills_have,words(u(%!/FUN`BUILD`STEP,skills)))] of %q<todo_skills_need>%)~+build/skills <[if(eq(sub(%q<todo_skills_need>,%q<todo_skills_have>),1),a skill,[sub(%q<todo_skills_need>,%q<todo_skills_have>)] skills)]>)]|[
-            if(gt(%q<todo_lang_need>,0),[if(gte(words(u(%!/FUN`BUILD`STEP,languages)),%q<todo_lang_need>),done,open)]~Languages %([words(u(%!/FUN`BUILD`STEP,languages))] of %q<todo_lang_need>%)~+build/language <[if(eq(%q<todo_lang_need>,1),a language,%q<todo_lang_need> languages)]>)]|[
+            if(gt(%q<todo_lang_need>,0),[if(gte(words(u(%!/FUN`BUILD`STEP,languages)),%q<todo_lang_need>),done,open)]~Languages %([setr(todo_lang_have,words(u(%!/FUN`BUILD`STEP,languages)))] of %q<todo_lang_need>%)~+build/language <[if(eq(sub(%q<todo_lang_need>,%q<todo_lang_have>),1),a language,[sub(%q<todo_lang_need>,%q<todo_lang_have>)] languages)]>)]|[
             iter(u(%!/FUN`BUILD`SLOTS),u(%!/FUN`BUILD`TODO`ONE,feat-%i0,[capstr(first(%i0,-))] feat%, level [last(%i0,-)],+build/list feats %i0),%b,|)]|[
             iter(u(%!/FUN`BUILD`LEVELS,skillIncreaseLevels),if(lte(%i0,%q<check_level>),u(%!/FUN`BUILD`TODO`ONE,increase-%i0,Skill increase%, level %i0,+build/increase %i0=<skill>)),%b,|)]|[
             iter(5 10 15 20,if(lte(%i0,%q<check_level>),u(%!/FUN`BUILD`TODO`ONE,boost-%i0,Four boosts%, level %i0,+build/boost %i0=str dex con wis)),%b,|)]|[
