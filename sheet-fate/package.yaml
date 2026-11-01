@@ -1,9 +1,9 @@
 format: "1.16"
 package: sheet-fate
 title: "Fate sheet"
-version: 1.0.1
+version: 1.1.0
 authors: [SharpMUSH]
-description: "A Fate character sheet: skills or the six approaches on the ladder, aspects, stress tracks, consequences and fate points. +sheet shows and fills it in, and +check rolls four Fate dice plus a rating against an opposition for the room. Fate Core and Fate Accelerated SRD material under CC BY 3.0."
+description: "A Fate character sheet: skills or the six approaches on the ladder, aspects, stunts, stress tracks, consequences and fate points. +sheet shows and fills it in, and +check rolls four Fate dice plus a rating against an opposition for the room. Fate Core and Fate Accelerated SRD material under CC BY 3.0."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, fate, dice, checks, aspects]
@@ -44,7 +44,8 @@ objects:
   # writes the sheet attributes on characters, and reads them for other packages.
   #
   # A character's sheet is their own attributes under FATE`: FATE`RATING`<KEY> a skill's or approach's rating,
-  # FATE`ASPECT`<SLOT> an aspect (CONCEPT, TROUBLE, then 1, 2, ...), FATE`STRESS`<TRACK> the marked boxes,
+  # FATE`ASPECT`<SLOT> an aspect (CONCEPT, TROUBLE, then 1, 2, ...), FATE`STUNT`<n> a stunt, FATE`STRESS`<TRACK>
+  # the marked boxes, FATE`BOXES`<TRACK> a track length of their own,
   # FATE`CONSEQUENCE`<SLOT> a consequence, FATE`POINTS the fate points and FATE`REFRESH a refresh of their own.
   # The FATE root is wizard-flagged, so only this object writes them.
   #
@@ -55,8 +56,9 @@ objects:
   # routine per switch, INC`NEED` the guards they share, INC`DO` the writes. FUN`TRAIT` the skills or
   # approaches, FUN`LADDER` the ladder, FUN`PERM` who may do what, FUN`SCREEN` and FUN`DISPLAY` the screens.
   # API` the functions other packages call (VISUAL), the same names in every sheet package.
-  # Bridges add HINT`<message> lines, GATE`EDIT (a reason a player may not change their own sheet now)
-  # and ALLOW`VIEW`<name> (who else may read a sheet).
+  # Bridges add HINT`<message> lines, GATE`EDIT (a reason a player may not change their own sheet now),
+  # GATE`SET (a reason nobody sets ratings by hand, when another package works them out), ALLOW`VIEW`<name>
+  # (who else may read a sheet) and SECTION`<name> (a part of the +sheet screen, with TITLE and ORDER beneath).
   - ref: sheet
     type: thing
     name: Fate Sheet
@@ -143,6 +145,22 @@ objects:
         How many aspects a sheet has: a high concept, a trouble, and the rest free.
       DATA`CONFIG`ASPECTS`EXAMPLE: |-
         3
+      DATA`CONFIG`STUNTS: |-
+        3
+      DATA`CONFIG`STUNTS`TYPE: |-
+        integer
+      DATA`CONFIG`STUNTS`DEFAULT: |-
+        3
+      DATA`CONFIG`STUNTS`MIN: |-
+        0
+      DATA`CONFIG`STUNTS`MAX: |-
+        10
+      DATA`CONFIG`STUNTS`LABEL: |-
+        Stunts
+      DATA`CONFIG`STUNTS`DESCRIPTION: |-
+        How many stunt slots a sheet has. 0 leaves stunts off the sheet.
+      DATA`CONFIG`STUNTS`EXAMPLE: |-
+        5
       DATA`CONFIG`OPPOSITION: |-
         0 1 2 3 4
       DATA`CONFIG`OPPOSITION`TYPE: |-
@@ -366,8 +384,12 @@ objects:
         SHEET`SET
       DATA`ROUTE`SHEET`ASPECT: |-
         SHEET`ASPECT
+      DATA`ROUTE`SHEET`STUNT: |-
+        SHEET`STUNT
       DATA`ROUTE`SHEET`STRESS: |-
         SHEET`STRESS
+      DATA`ROUTE`SHEET`BOXES: |-
+        SHEET`BOXES
       DATA`ROUTE`SHEET`RECOVER: |-
         SHEET`RECOVER
       DATA`ROUTE`SHEET`CONSEQUENCE: |-
@@ -476,24 +498,36 @@ objects:
           @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert strlen(%q<sheet_who>); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`SHEET,%q<sheet_who>,%#)
         flags: [cmdsyntax]
       # +sheet/set [<name>/]<skill>=<rating>: a number or a ladder word. Empty clears it back to Mediocre.
+      # A GATE`SET a bridge adds stops it for everyone, keepers too, when the ratings come from elsewhere.
       INC`SHEET`SET:
         value: |-
-          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/set <[u(%!/FUN`TRAIT`NOUN)]>=<rating>%, such as +sheet/set [lcstr(first(u(%!/FUN`TRAIT`ALL)))]=3 or =good.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @assert strlen(setr(trait_key,u(%!/FUN`TRAIT`FIND,%q<sheet_what>)))=@pemit %#=notice(SHEET,There is no [u(%!/FUN`TRAIT`NOUN)] '%q<sheet_what>'. +sheet/traits lists them.,warn); @break not(strlen(%q<cmd_right_side>))={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,RATING`%q<trait_key>,value,; @pemit %#=notice(SHEET,u(%!/FUN`TRAIT`LABEL,%q<trait_key>) is cleared on [name(%q<sheet_who>)]'s sheet.,ok)}; think setq(set_value,u(%!/FUN`LADDER`READ,%q<cmd_right_side>)); @assert isint(%q<set_value>)=@pemit %#=notice(SHEET,'%q<cmd_right_side>' is not a rating. Give a number from -2 to 8 or a ladder word such as Good.,warn); @assert cand(gte(%q<set_value>,-2),lte(%q<set_value>,if(%q<viewer_keeper>,8,get(%!/DATA`CONFIG`CAP))))=@pemit %#=notice(SHEET,A rating goes from -2 to [u(%!/FUN`LADDER`SHOW,if(%q<viewer_keeper>,8,get(%!/DATA`CONFIG`CAP)))].,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,RATING`%q<trait_key>,value,%q<set_value>; @pemit %#=notice(SHEET,u(%!/FUN`TRAIT`LABEL,%q<trait_key>) is [u(%!/FUN`LADDER`SHOW,%q<set_value>)] on [name(%q<sheet_who>)]'s sheet.[if(not(comp(%q<sheet_who>,%q<viewer_objid>)),u(%!/FUN`HINT,SET))],ok)
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/set <[u(%!/FUN`TRAIT`NOUN)]>=<rating>%, such as +sheet/set [lcstr(first(u(%!/FUN`TRAIT`ALL)))]=3 or =good.,warn); @assert not(strlen(setr(set_gate,u(%!/FUN`GATE`SET,%#))))=@pemit %#=notice(SHEET,%q<set_gate>,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @assert strlen(setr(trait_key,u(%!/FUN`TRAIT`FIND,%q<sheet_what>)))=@pemit %#=notice(SHEET,There is no [u(%!/FUN`TRAIT`NOUN)] '%q<sheet_what>'. +sheet/traits lists them.,warn); @break not(strlen(%q<cmd_right_side>))={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,RATING`%q<trait_key>,value,; @pemit %#=notice(SHEET,u(%!/FUN`TRAIT`LABEL,%q<trait_key>) is cleared on [name(%q<sheet_who>)]'s sheet.,ok)}; think setq(set_value,u(%!/FUN`LADDER`READ,%q<cmd_right_side>)); @assert isint(%q<set_value>)=@pemit %#=notice(SHEET,'%q<cmd_right_side>' is not a rating. Give a number from -2 to 8 or a ladder word such as Good.,warn); @assert cand(gte(%q<set_value>,-2),lte(%q<set_value>,if(%q<viewer_keeper>,8,get(%!/DATA`CONFIG`CAP))))=@pemit %#=notice(SHEET,A rating goes from -2 to [u(%!/FUN`LADDER`SHOW,if(%q<viewer_keeper>,8,get(%!/DATA`CONFIG`CAP)))].,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,RATING`%q<trait_key>,value,%q<set_value>; @pemit %#=notice(SHEET,u(%!/FUN`TRAIT`LABEL,%q<trait_key>) is [u(%!/FUN`LADDER`SHOW,%q<set_value>)] on [name(%q<sheet_who>)]'s sheet.[if(not(comp(%q<sheet_who>,%q<viewer_objid>)),u(%!/FUN`HINT,SET))],ok)
         flags: [cmdsyntax]
       # +sheet/aspect [<name>/]<slot>=<text>: concept, trouble, or a number. Empty clears it.
       INC`SHEET`ASPECT:
         value: |-
           @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/aspect <slot>=<aspect>: concept%, trouble%, or 1 to [sub(get(%!/DATA`CONFIG`ASPECTS),2)].,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @assert strlen(setr(aspect_slot,u(%!/FUN`ASPECT`SLOT,%q<sheet_what>)))=@pemit %#=notice(SHEET,There is no aspect '%q<sheet_what>'. Use concept%, trouble%, or 1 to [sub(get(%!/DATA`CONFIG`ASPECTS),2)].,warn); @assert lte(strlen(%q<cmd_right_side>),200)=@pemit %#=notice(SHEET,Keep an aspect to 200 characters.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,ASPECT`%q<aspect_slot>,value,%q<cmd_right_side>; @pemit %#=notice(SHEET,if(strlen(%q<cmd_right_side>),[u(%!/FUN`ASPECT`LABEL,%q<aspect_slot>)] on [name(%q<sheet_who>)]'s sheet: %q<cmd_right_side>,[u(%!/FUN`ASPECT`LABEL,%q<aspect_slot>)] is cleared on [name(%q<sheet_who>)]'s sheet.),ok)
         flags: [cmdsyntax]
+      # +sheet/stunt [<name>/]<slot>=<text>: a number from 1 to the stunt slots. Empty clears it.
+      INC`SHEET`STUNT:
+        value: |-
+          @assert gt(get(%!/DATA`CONFIG`STUNTS),0)=@pemit %#=notice(SHEET,This game's sheets have no stunts.,warn); @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/stunt <slot>=<stunt>: a slot from 1 to [get(%!/DATA`CONFIG`STUNTS)].,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @assert cand(isint(%q<sheet_what>),gte(%q<sheet_what>,1),lte(%q<sheet_what>,get(%!/DATA`CONFIG`STUNTS)))=@pemit %#=notice(SHEET,There is no stunt slot '%q<sheet_what>'. Use 1 to [get(%!/DATA`CONFIG`STUNTS)].,warn); @assert lte(strlen(%q<cmd_right_side>),300)=@pemit %#=notice(SHEET,Keep a stunt to 300 characters.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,STUNT`%q<sheet_what>,value,%q<cmd_right_side>; @pemit %#=notice(SHEET,if(strlen(%q<cmd_right_side>),Stunt %q<sheet_what> on [name(%q<sheet_who>)]'s sheet: %q<cmd_right_side>,Stunt %q<sheet_what> is cleared on [name(%q<sheet_who>)]'s sheet.),ok)
+        flags: [cmdsyntax]
       # +sheet/stress [<name>/]<track>=<box> marks a box; =clear empties the track. Any time, on your own sheet.
       INC`SHEET`STRESS:
         value: |-
-          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/stress <track>=<box> marks a box%, =clear empties the track.,warn); @include %!/INC`NEED`WHO; @assert strlen(setr(track_key,u(%!/FUN`LIST`FIND,TRACK,%q<sheet_what>)))=@pemit %#=notice(SHEET,There is no stress track '%q<sheet_what>'. The tracks are [itemize(lcstr(u(%!/FUN`LIST`ALL,TRACK)))].,warn); think setq(track_boxes,default({{store}}/TRACK`%q<track_key>`BOXES,3)); @break strmatch(%q<cmd_right_side>,clear)={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,STRESS`%q<track_key>,value,; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s [lcstr(get({{store}}/TRACK`%q<track_key>))] stress is clear.,ok)}; @assert cand(isint(%q<cmd_right_side>),gte(%q<cmd_right_side>,1),lte(%q<cmd_right_side>,%q<track_boxes>))=@pemit %#=notice(SHEET,The [lcstr(get({{store}}/TRACK`%q<track_key>))] track has boxes 1 to %q<track_boxes>.,warn); think setq(track_marked,get(%q<sheet_who>/FATE`STRESS`%q<track_key>)); @assert not(member(%q<track_marked>,%q<cmd_right_side>))=@pemit %#=notice(SHEET,Box %q<cmd_right_side> is marked already.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,STRESS`%q<track_key>,value,sort(%q<track_marked> %q<cmd_right_side>,n); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] marks [lcstr(get({{store}}/TRACK`%q<track_key>))] stress box %q<cmd_right_side>.,ok)
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/stress <track>=<box> marks a box%, =clear empties the track.,warn); @include %!/INC`NEED`WHO; @assert strlen(setr(track_key,u(%!/FUN`LIST`FIND,TRACK,%q<sheet_what>)))=@pemit %#=notice(SHEET,There is no stress track '%q<sheet_what>'. The tracks are [itemize(lcstr(u(%!/FUN`LIST`ALL,TRACK)))].,warn); think setq(track_boxes,u(%!/FUN`TRACK`BOXES,%q<sheet_who>,%q<track_key>)); @break strmatch(%q<cmd_right_side>,clear)={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,STRESS`%q<track_key>,value,; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s [lcstr(get({{store}}/TRACK`%q<track_key>))] stress is clear.,ok)}; @assert cand(isint(%q<cmd_right_side>),gte(%q<cmd_right_side>,1),lte(%q<cmd_right_side>,%q<track_boxes>))=@pemit %#=notice(SHEET,The [lcstr(get({{store}}/TRACK`%q<track_key>))] track has boxes 1 to %q<track_boxes>.,warn); think setq(track_marked,get(%q<sheet_who>/FATE`STRESS`%q<track_key>)); @assert not(member(%q<track_marked>,%q<cmd_right_side>))=@pemit %#=notice(SHEET,Box %q<cmd_right_side> is marked already.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,STRESS`%q<track_key>,value,sort(%q<track_marked> %q<cmd_right_side>,n); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] marks [lcstr(get({{store}}/TRACK`%q<track_key>))] stress box %q<cmd_right_side>.,ok)
         flags: [cmdsyntax]
       # +sheet/recover [<name>]: clears every stress track.
       INC`SHEET`RECOVER:
         value: |-
           @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert strlen(%q<sheet_who>); @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error); @dolist/inline u(%!/FUN`LIST`ALL,TRACK)={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,STRESS`##,value,}; @pemit %#=notice(SHEET,Every stress box on [name(%q<sheet_who>)]'s sheet is clear.,ok)
+        flags: [cmdsyntax]
+      # +sheet/boxes <name>/<track>=<n>: a keeper gives one character a track of their own length; =default
+      # takes them back to the game's.
+      INC`SHEET`BOXES:
+        value: |-
+          @include %!/INC`NEED`KEEPER; @assert cand(%q<cmd_has_equals>,strmatch(%q<cmd_left_side>,*/*))=@pemit %#=notice(SHEET,+sheet/boxes <name>/<track>=<boxes>%, or =default for the game's.,warn); @include %!/INC`NEED`WHO; @assert strlen(setr(track_key,u(%!/FUN`LIST`FIND,TRACK,%q<sheet_what>)))=@pemit %#=notice(SHEET,There is no stress track '%q<sheet_what>'. The tracks are [itemize(lcstr(u(%!/FUN`LIST`ALL,TRACK)))].,warn); @break strmatch(%q<cmd_right_side>,default)={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,BOXES`%q<track_key>,value,; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s [lcstr(get({{store}}/TRACK`%q<track_key>))] track has the game's [u(%!/FUN`TRACK`BOXES,%q<sheet_who>,%q<track_key>)] boxes again.,ok)}; @assert cand(isint(%q<cmd_right_side>),gte(%q<cmd_right_side>,1),lte(%q<cmd_right_side>,10))=@pemit %#=notice(SHEET,A track has 1 to 10 boxes.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,BOXES`%q<track_key>,value,%q<cmd_right_side>; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s [lcstr(get({{store}}/TRACK`%q<track_key>))] track has %q<cmd_right_side> boxes.,ok)
         flags: [cmdsyntax]
       # +sheet/consequence [<name>/]<slot>=<aspect>: takes one; empty clears it.
       INC`SHEET`CONSEQUENCE:
@@ -623,6 +657,12 @@ objects:
           cond(isint(setr(ladder_number,edit(trim(%0),+,))),%q<ladder_number>,1,first(iter(lnum(-2,8),if(not(comp(lcstr(u(%!/FUN`LADDER`WORD,%i0)),lcstr(trim(%0)))),%i0))))
         flags: [funsyntax]
 
+      # %0 the character, %1 a track: its boxes, their own when a keeper or another package gave them some.
+      FUN`TRACK`BOXES:
+        value: |-
+          default(%0/FATE`BOXES`%1,default({{store}}/TRACK`%1`BOXES,3))
+        flags: [funsyntax]
+
       # ---- fate points ----------------------------------------------------------------
       FUN`POINTS`REFRESH:
         value: |-
@@ -647,6 +687,10 @@ objects:
       FUN`GATE`EDIT:
         value: |-
           if(hasattr(%!,GATE`EDIT),u(%!/GATE`EDIT,%0))
+        flags: [funsyntax]
+      FUN`GATE`SET:
+        value: |-
+          if(hasattr(%!,GATE`SET),u(%!/GATE`SET,%0))
         flags: [funsyntax]
       FUN`PLAYER`MATCH:
         value: |-
@@ -684,7 +728,22 @@ objects:
           screen_aspects,u(%!/FUN`ASPECT`SLOTS),
           screen_tracks,u(%!/FUN`LIST`ALL,TRACK),
           screen_consequences,u(%!/FUN`LIST`ALL,CONSEQUENCE),
-          screen_problems,u(%!/FUN`SHEET`PROBLEMS,%0))[box(lfields(lit({"cols":2}),Fate points%*<|>Refresh,u(%!/API`POINTS,%0)%*<|>[u(%!/FUN`POINTS`REFRESH,%0)],%*<|>)%r[rule(Aspects)]%r[lfields(,iter(%q<screen_aspects>,u(%!/FUN`ASPECT`LABEL,%i0),%b,%*<|>),iter(%q<screen_aspects>,firstof(get(%0/FATE`ASPECT`%i0),tone(muted,-)),%b,%*<|>),%*<|>)]%r[rule(capstr(u(%!/FUN`TRAIT`NOUN))s)]%r[u(%!/FUN`SCREEN`RATINGS,%0,%q<screen_traits>)]%r[rule(Stress)]%r[lfields(,iter(%q<screen_tracks>,get({{store}}/TRACK`%i0),%b,%*<|>),iter(%q<screen_tracks>,u(%!/FUN`DISPLAY`BOXES,%0,%i0),%b,%*<|>),%*<|>)]%r[rule(Consequences)]%r[lfields(,iter(%q<screen_consequences>,get({{store}}/CONSEQUENCE`%i0) %([default({{store}}/CONSEQUENCE`%i0`SHIFTS,2)]%),%b,%*<|>),iter(%q<screen_consequences>,firstof(get(%0/FATE`CONSEQUENCE`%i0),tone(muted,-)),%b,%*<|>),%*<|>)]%r[rule()]%r[if(strlen(%q<screen_problems>),tone(warning,%q<screen_problems>)%r)][tone(muted,u(%!/FUN`DISPLAY`FOOTER,%0,%1))],name(%0))]
+          screen_problems,u(%!/FUN`SHEET`PROBLEMS,%0))[box(lfields(lit({"cols":2}),Fate points%*<|>Refresh,u(%!/API`POINTS,%0)%*<|>[u(%!/FUN`POINTS`REFRESH,%0)],%*<|>)%r[rule(Aspects)]%r[lfields(,iter(%q<screen_aspects>,u(%!/FUN`ASPECT`LABEL,%i0),%b,%*<|>),iter(%q<screen_aspects>,firstof(get(%0/FATE`ASPECT`%i0),tone(muted,-)),%b,%*<|>),%*<|>)]%r[rule(capstr(u(%!/FUN`TRAIT`NOUN))s)]%r[u(%!/FUN`SCREEN`RATINGS,%0,%q<screen_traits>)][u(%!/FUN`SCREEN`STUNTS,%0)]%r[rule(Stress)]%r[lfields(,iter(%q<screen_tracks>,get({{store}}/TRACK`%i0),%b,%*<|>),iter(%q<screen_tracks>,u(%!/FUN`DISPLAY`BOXES,%0,%i0),%b,%*<|>),%*<|>)]%r[rule(Consequences)]%r[lfields(,iter(%q<screen_consequences>,get({{store}}/CONSEQUENCE`%i0) %([default({{store}}/CONSEQUENCE`%i0`SHIFTS,2)]%),%b,%*<|>),iter(%q<screen_consequences>,firstof(get(%0/FATE`CONSEQUENCE`%i0),tone(muted,-)),%b,%*<|>),%*<|>)][u(%!/FUN`SCREEN`SECTIONS,%0,%1)]%r[rule()]%r[if(strlen(%q<screen_problems>),tone(warning,%q<screen_problems>)%r)][tone(muted,u(%!/FUN`DISPLAY`FOOTER,%0,%1))],name(%0))]
+        flags: [funsyntax]
+      # %0 the character: the stunt slots, a line each, after a rule. Nothing when the game has none.
+      FUN`SCREEN`STUNTS:
+        value: |-
+          if(gt(setr(stunt_slots,get(%!/DATA`CONFIG`STUNTS)),0),%r[rule(Stunts)]%r[lfields(,iter(lnum(1,%q<stunt_slots>),Stunt %i0,%b,%*<|>),iter(lnum(1,%q<stunt_slots>),firstof(get(%0/FATE`STUNT`%i0),tone(muted,-)),%b,%*<|>),%*<|>)])
+        flags: [funsyntax]
+      # %0 the character, %1 who reads it: each SECTION`<name> a bridge added, by its ORDER, with a rule titled
+      # by its TITLE. A section that gives nothing is left out.
+      FUN`SCREEN`SECTIONS:
+        value: |-
+          setq(section_out,)[null(iter(sortkey(%!/FUN`SECTION`SORTKEY,lattr(%!/SECTION`*)),if(strlen(setr(section_body,u(%!/%i0,%0,%1))),setq(section_out,%q<section_out>%r[rule(get(%!/%i0`TITLE))]%r%q<section_body>))))]%q<section_out>
+        flags: [funsyntax]
+      FUN`SECTION`SORTKEY:
+        value: |-
+          rjust(default(%!/%0`ORDER,50),3,0)%0
         flags: [funsyntax]
       # %0 the character, %1 the keys. Skills rated other than Mediocre, highest first, one line per rating; approaches
       # all, each with its rating.
@@ -700,16 +759,17 @@ objects:
       # %0 the character, %1 a track: [X] [ ] [ ].
       FUN`DISPLAY`BOXES:
         value: |-
-          setq(boxes_marked,get(%0/FATE`STRESS`%1))[iter(lnum(1,default({{store}}/TRACK`%1`BOXES,3)),if(member(%q<boxes_marked>,%i0),%[X%],%[%b%]))]
+          setq(boxes_marked,get(%0/FATE`STRESS`%1))[iter(lnum(1,u(%!/FUN`TRACK`BOXES,%0,%1)),if(member(%q<boxes_marked>,%i0),%[X%],%[%b%]))]
         flags: [funsyntax]
-      # %0 the character: what a skills sheet breaks, or nothing. More skills at a rating than at the one below.
+      # %0 the character: what a skills sheet breaks, or nothing. More skills at a rating than at the one below,
+      # unless a GATE`SET says another package works the ratings out.
       FUN`SHEET`PROBLEMS:
         value: |-
-          if(cand(strmatch(u(%!/FUN`TRAIT`PATH),SKILL),get(%!/DATA`CONFIG`PYRAMID)),setq(problem_counts,iter(lnum(0,8),words(iter(u(%!/FUN`TRAIT`ALL),if(eq(default(%0/FATE`RATING`%i0,0),%i1),%i0)))))[trim(iter(lnum(2,8),if(gt(extract(%q<problem_counts>,inc(%i0),1),extract(%q<problem_counts>,%i0,1)),More skills at [u(%!/FUN`LADDER`SHOW,%i0)] than at [u(%!/FUN`LADDER`SHOW,dec(%i0))].)))])
+          if(cand(strmatch(u(%!/FUN`TRAIT`PATH),SKILL),get(%!/DATA`CONFIG`PYRAMID),not(hasattr(%!,GATE`SET))),setq(problem_counts,iter(lnum(0,8),words(iter(u(%!/FUN`TRAIT`ALL),if(eq(default(%0/FATE`RATING`%i0,0),%i1),%i0)))))[trim(iter(lnum(2,8),if(gt(extract(%q<problem_counts>,inc(%i0),1),extract(%q<problem_counts>,%i0,1)),More skills at [u(%!/FUN`LADDER`SHOW,%i0)] than at [u(%!/FUN`LADDER`SHOW,dec(%i0))].)))])
         flags: [funsyntax]
       FUN`DISPLAY`FOOTER:
         value: |-
-          cond(cand(not(comp(objid(%1),%0)),not(isapproved(%1)),not(u(%!/FUN`PERM`KEEPER,%1))),+sheet/set <[u(%!/FUN`TRAIT`NOUN)]>=<rating> and +sheet/aspect <slot>=<text> fill it in. +check <[u(%!/FUN`TRAIT`NOUN)]> rolls.[u(%!/FUN`HINT,FOOTER)],not(comp(objid(%1),%0)),+check <[u(%!/FUN`TRAIT`NOUN)]> rolls. +sheet/spend spends a fate point%, +sheet/stress <track>=<box> marks stress.,+check <[u(%!/FUN`TRAIT`NOUN)]> rolls four Fate dice plus a rating.)
+          cond(cand(not(comp(objid(%1),%0)),not(isapproved(%1)),not(u(%!/FUN`PERM`KEEPER,%1))),[if(strlen(setr(footer_gate,u(%!/FUN`GATE`SET,%1))),%q<footer_gate> +sheet/aspect <slot>=<text> fills in an aspect.,+sheet/set <[u(%!/FUN`TRAIT`NOUN)]>=<rating> and +sheet/aspect <slot>=<text> fill it in.)] +check <[u(%!/FUN`TRAIT`NOUN)]> rolls.[u(%!/FUN`HINT,FOOTER)],not(comp(objid(%1),%0)),+check <[u(%!/FUN`TRAIT`NOUN)]> rolls. +sheet/spend spends a fate point%, +sheet/stress <track>=<box> marks stress.,+check <[u(%!/FUN`TRAIT`NOUN)]> rolls four Fate dice plus a rating.)
         flags: [funsyntax]
       FUN`SCREEN`TRAITS:
         value: |-
@@ -927,9 +987,10 @@ objects:
         - `+sheet` shows your own; `+sheet <name>` another character's, when the game lets you read it.
         - `+sheet/set <skill>=<rating>` rates a skill, as a number or a ladder word: `+sheet/set fight=3`, `+sheet/set notice=fair`. Leave the rating out to put it back to Mediocre.
         - `+sheet/aspect <slot>=<aspect>` writes an aspect: `concept`, `trouble`, or a number for the others.
+        - `+sheet/stunt <slot>=<stunt>` writes a stunt in a numbered slot: `+sheet/stunt 1=Backstab: use Stealth to attack when they don't see you.`
         - `+sheet/traits` lists the skills and the ladder.
 
-        You rate skills and write aspects until your character is approved; then staff change them. The ladder runs from Terrible \(-2\) through Mediocre \(+0\), Average, Fair, Good and Great \(+4\) to Legendary \(+8\). Your game may rate the six approaches instead of skills.
+        You rate skills and write aspects and stunts until your character is approved; then staff change them. The ladder runs from Terrible \(-2\) through Mediocre \(+0\), Average, Fair, Good and Great \(+4\) to Legendary \(+8\). Your game may rate the six approaches instead of skills.
 
         For example:
 
@@ -979,7 +1040,8 @@ objects:
         Sheet keepers \(`softcode.fate.admin`, or the Fate Sheet Keeper role\) read every sheet and change any character's at any time:
 
         - `+sheet <name>` shows a character's sheet.
-        - `/set`, `/aspect`, `/stress` and `/consequence` take `<name>/` first: `+sheet/set Alice/fight=5`. A keeper may rate a skill up to +8. `+sheet/recover <name>` clears their stress.
+        - `/set`, `/aspect`, `/stunt`, `/stress` and `/consequence` take `<name>/` first: `+sheet/set Alice/fight=5`. A keeper may rate a skill up to +8. `+sheet/recover <name>` clears their stress.
+        - `+sheet/boxes <name>/<track>=<boxes>` gives one character a stress track of their own length, `=default` the game's again.
         - `+sheet/award <name>\[=<points>\]` gives fate points, 1 unless you say, or takes them with a number below 0.
         - `+sheet/refresh <name>` brings their fate points up to their refresh. `+sheet/refresh <name>=<n>` gives them a refresh of their own, `=default` the game's again.
 
@@ -992,7 +1054,7 @@ objects:
         - `mode`: `skills` \(the skill list\) or `approaches` \(Careful, Clever, Flashy, Forceful, Quick and Sneaky\).
         - `cap`: the highest rating a player gives themselves \(4, Great\).
         - `pyramid`: whether the sheet warns when it has more skills at a rating than at the one below \(yes\).
-        - `refresh`: fate points each session \(3\). `aspects`: how many aspects a sheet has \(5\).
+        - `refresh`: fate points each session \(3\). `aspects`: how many aspects a sheet has \(5\). `stunts`: how many stunt slots \(3; 0 for none\).
         - `opposition`: the opposition of trivial, easy, standard, hard and extreme \(`0 1 2 3 4`\).
         - `public`: whether anyone may read anyone's sheet \(no\).
         - `skills`, `approaches`: the two lists. `+config/add fate/skills/sail=Sail` adds a skill.

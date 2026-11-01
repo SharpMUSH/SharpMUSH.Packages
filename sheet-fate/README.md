@@ -1,6 +1,6 @@
 # sheet-fate
 
-A Fate character sheet: skills on the ladder (or the six approaches), aspects, stress tracks,
+A Fate character sheet: skills on the ladder (or the six approaches), aspects, stunts, stress tracks,
 consequences, fate points and refresh. Players fill in their skills and aspects until they are
 approved, keep their own stress, consequences and fate points in play, and roll four Fate dice
 against an opposition with `+check`, which the whole room sees and the game keeps as a recorded roll.
@@ -27,17 +27,19 @@ Depends on nothing. Bridges add the rest:
 | `+sheet [<name>]` | all | Your sheet, or another character's when you may read it |
 | `+sheet/set <skill>=<rating>` | unapproved player | A number from -2 up to `cap`, or a ladder word: `fight=3`, `notice=fair` |
 | `+sheet/aspect <slot>=<aspect>` | unapproved player | `concept`, `trouble`, or a number |
+| `+sheet/stunt <slot>=<stunt>` | unapproved player | A stunt in slot 1 to `stunts`; empty clears it |
 | `+sheet/stress <track>=<box>` | player | Mark a box; `=clear` empties the track |
 | `+sheet/recover` | player | Clear every stress box |
 | `+sheet/consequence <slot>=<aspect>` | player | Take a consequence; empty clears it |
 | `+sheet/spend [<what for>]` | player | Spend a fate point where the room sees it |
 | `+sheet/award <name>[=<n>]` | keeper | Give fate points, or take them with a number below 0 |
 | `+sheet/refresh <name>[=<n>\|default]` | keeper | Bring their points up to their refresh, or set it |
+| `+sheet/boxes <name>/<track>=<n>\|default` | keeper | Give one character a stress track of their own length |
 | `+sheet/traits` | all | The skills or approaches, and the ladder |
 | `+check[/private] <skill>[+<n>\|-<n>][=<opposition>]` | all | Roll 4dF plus the rating: `Bob rolls Fight: 4dF[-1, 0, 1, 0] + 4 = 4 (Great) against Fair (+2): success, 2 shifts (roll 20)` |
 
 Keepers (`softcode.fate.admin`, the **Fate Sheet Keeper** role) put `<name>/` before the slot of
-`/set`, `/aspect`, `/stress` and `/consequence` to change anyone's sheet at any time.
+`/set`, `/aspect`, `/stunt`, `/stress` and `/consequence` to change anyone's sheet at any time.
 
 ## The numbers
 
@@ -54,7 +56,9 @@ Keepers (`softcode.fate.admin`, the **Fate Sheet Keeper** role) put `<name>/` be
 FATE                        the root: wizard, no_command
 FATE`RATING`<KEY>           a skill's or approach's rating; unset is Mediocre (+0)
 FATE`ASPECT`<SLOT>          CONCEPT, TROUBLE, 1, 2, ...
+FATE`STUNT`<n>              a stunt, 1 to the stunts setting
 FATE`STRESS`<TRACK>         the marked boxes, a space list
+FATE`BOXES`<TRACK>          a track length of their own; unset is the track's
 FATE`CONSEQUENCE`<SLOT>     a consequence
 FATE`POINTS                 fate points; unset is the refresh
 FATE`REFRESH                a refresh of their own; unset is the game's
@@ -73,4 +77,11 @@ Fate adds `LADDER` (a rating's word), `POINTS` (a character's fate points) and `
 takes fate points, never below 0, and returns the new count): the one API attribute that writes.
 
 Bridges may set `` HINT`<message> ``, `` GATE`EDIT `` and `` ALLOW`VIEW`<name> `` on the **Fate
-Sheet** object, as on the d20 sheet.
+Sheet** object, as on the d20 sheet, and two more:
+
+- `` GATE`SET `` (`%0` the player): a reason nobody, keepers included, sets ratings with `+sheet/set`,
+  for a package that works them out itself, such as [`fate-action-science`](../fate-action-science/)'s modes.
+  While it is set the sheet gives no `pyramid` warning, since its ratings are not the player's to arrange.
+- `` SECTION`<name> `` (`%0` the character, `%1` the reader): a part of the `+sheet` screen, drawn after
+  the consequences under a rule titled by its `` SECTION`<name>`TITLE `` leaf, in the order of its
+  `` SECTION`<name>`ORDER `` (50 when unset). A section that gives nothing is left out.
