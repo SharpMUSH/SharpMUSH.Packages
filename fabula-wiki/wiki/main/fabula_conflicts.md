@@ -6,7 +6,7 @@ Before the first round one hero rolls Initiative, Dexterity plus Insight with th
 
 ## Turns and rounds
 
-The two sides take turns one creature at a time: a hero acts, then a foe, then a hero. When one side runs out of turns, the other takes the rest, and when everyone has acted the round ends and a new one begins. Most foes are soldiers with one turn a round. An elite foe has two turns, and a champion has as many as its champion number, from 2 to 6.
+The two sides take turns one creature at a time: a hero acts, then a foe, then a hero. When one side runs out of turns, the other takes the rest, and when everyone has acted the round ends and a new one begins. Most foes are soldiers with one turn a round. An elite foe has two turns, and a champion has as many as its champion number, from 1 to 6.
 
 On their turn a hero can attack, guard, use a skill, cast a spell, use an item or do anything else that fits the scene. Guarding makes them resistant to every damage type, and gives them +2 to opposed checks, until their next turn.
 
@@ -42,7 +42,7 @@ This game's bestiary holds foes of its own, from knee-high Bramble Imps at level
 `+help encounter conflict` and `+help encounter attack` cover the players' commands, `+help encounter foes` and `+help encounter villains` the GM's. In short:
 
 - `+encounter/initiative` rolls for the heroes before the conflict starts.
-- `+attack <target>=<attribute>+<attribute>` attacks, and `+attack/damage <n> <type>` deals a hit's damage. `+check/invoke` works on an attack like any other check.
+- `+attack <target>=<attribute>+<attribute>[+<n>]` attacks, and `+attack/damage <n> [<type>]` deals a hit's damage. `+check/invoke` works on an attack like any other check.
 - `+encounter/guard`, `+encounter/turn` and `+encounter/surrender` guard, end a turn and surrender.
 - `+foe` lists the bestiary; the GM brings foes in with `+encounter/foe`, attacks with `+foe/attack` and spends a villain's Ultima Points with `+foe/ultima`.
 

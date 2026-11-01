@@ -117,9 +117,9 @@ that encounter is the one the member uses.
   takes none.
 - A foe's HP is 5 times its Might die plus twice its level, plus its `hp` bonus, times 1 for a soldier,
   2 for an elite and the number for a champion. MP is 5 times Willpower plus the level, plus `mp`,
-  doubled for a champion. Initiative is half of Dexterity plus Insight, plus `init`, plus the soldier
+  doubled for a champion. Initiative is half the sum of Dexterity and Insight, plus `init`, plus the soldier
   count of an elite or champion. Defense is Dexterity plus `def`, Magic Defense Insight plus `mdef`, with
-  status effects shrinking the dice. Its attacks add a tenth of its level to the check and 5 damage for
+  status effects shrinking the dice. Its attacks add 1 to the check for every 10 levels and 5 damage for
   every 20 levels. A role (brute, hunter, mage, saboteur, sentinel, support) sets the four dice for the
   level, changing at 20, 40 and 60.
 - A minor villain starts with 5 Ultima Points, a major one 10 and a supreme one 15. The encounter counts

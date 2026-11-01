@@ -20,7 +20,7 @@ This game keeps your JRPG character sheet for you. `+help sheet`, `+help check` 
 
 A fight, a chase or any scene can be an encounter with its own copy of each member's HP, MP, IP and status effects. `+encounter/start <title>` starts one and makes you its GM; `+encounter/join` takes a copy of your sheet into it. While you are in the room where it runs, damage, healing, spent IP and status effects go to that copy, so an encounter that runs for days never changes your sheet, another scene or another encounter. A room can hold several encounters, and you can be in several; `+encounter/use <n>` picks which one your commands use. When it ends, your sheet has only what the GM kept with `+encounter/keep`.
 
-An encounter can be a conflict against foes from the bestiary, run in turns: `+foe` lists them, `+attack <target>=<attribute>+<attribute>` attacks and `+attack/damage` deals a hit's damage. `+sheet/affinity <type>=<vu|rs|im|ab> <source>` records what your armour or skills make you resistant or vulnerable to. [[Conflicts|main:fabula_conflicts]] has the rules.
+An encounter can be a conflict against foes from the bestiary, run in turns: `+foe` lists them, `+attack <target>=<attribute>+<attribute>` attacks and `+attack/damage` deals a hit's damage. `+sheet/affinity [<name>/]<type>=<vu|rs|im|ab> [<source>]` records what your armour or skills make you resistant or vulnerable to. [[Conflicts|main:fabula_conflicts]] has the rules.
 
 ## Duties
 
