@@ -3098,9 +3098,7 @@ objects:
 
         Your sheet is a ledger: every choice, award and purchase is an entry, and nothing is ever overwritten. Staff read it with `+pf2e/ledger`.
       SEE`PF2E: |-
-        pf2e build
-        pf2e sheet
-        pf2e enc
+        pf2e build|pf2e sheet|pf2e enc
       HELP`PF2E`BUILD: |-
         `+build` makes your character. Type it on its own to see every step, what is done and what to type next.
 
@@ -3128,16 +3126,14 @@ objects:
 
         Output: `\[PF2E\] Done: Class: Fighter.`
       SEE`PF2E`BUILD: |-
-        pf2e sheet
-        pf2e advance
+        pf2e sheet|pf2e advance
       HELP`PF2E`SHEET: |-
         `+sheet` shows your character: level and experience, ancestry, background, class, attributes, hit points, AC, Speed, class DC, spell attack and DC, every skill and save with its rank and modifier, Lores, Strikes, languages, money, gear, spells, feats and features, actions and conditions.
 
         - `+sheet` shows your own; staff add a name: `+sheet Amiri`.
         - Rules the game does not apply yet are listed at the end, so a sheet never looks finished when it is not.
       SEE`PF2E`SHEET: |-
-        pf2e check
-        pf2e build
+        pf2e check|pf2e build
       HELP`PF2E`CHECK: |-
         `+check <statistic>\[=<DC>\]` rolls a d20 with every modifier that counts, and against a DC tells you the degree of success.
 
@@ -3150,8 +3146,7 @@ objects:
 
         Output: `\[PF2E\] Amiri rolls Athletics: 1d20\[12\] + 7 = 19 vs DC 15: Success.`
       SEE`PF2E`CHECK: |-
-        pf2e sheet
-        pf2e dc
+        pf2e sheet|pf2e dc
       HELP`PF2E`ENC: |-
         `+enc` runs a fight in the room. The encounter keeps its own copy of everyone in it: hit points, conditions, dying and the consumables used never touch a sheet, and the encounter stays as it is, across days, until whoever runs it ends it.
 
@@ -3178,8 +3173,7 @@ objects:
 
         Damage to a dying character raises dying by 1, or 2 on a critical hit; at dying 4 they die. Healing wakes them, wounded 1 more.
       SEE`PF2E`ENC: |-
-        pf2e explore
-        pf2e recall
+        pf2e explore|pf2e recall
       HELP`PF2E`EXPLORE: |-
         `+explore` shows what everyone in the room is doing while exploring.
 
@@ -3187,8 +3181,7 @@ objects:
         - `+explore/stop` stops.
         - `+explore/search <DC>`: the GM's secret Perception check for everyone here who is Searching. Only the GM sees the rolls.
       SEE`PF2E`EXPLORE: |-
-        pf2e enc
-        pf2e challenge
+        pf2e enc|pf2e challenge
       HELP`PF2E`CHALLENGE: |-
         `+challenge` runs a skill challenge with victory points, as GM Core describes them.
 
@@ -3197,8 +3190,7 @@ objects:
         - `+challenge/roll <skill>`: one check a round each. A critical success earns 2 points, a success 1, a failure none, and a critical failure loses 1.
         - `+challenge/round` starts the next round; `+challenge/end` ends it.
       SEE`PF2E`CHALLENGE: |-
-        pf2e explore
-        pf2e dc
+        pf2e explore|pf2e dc
       HELP`PF2E`RECALL: |-
         `+recall <creature>\[=<skill>\]` tries to remember what you know about a creature in the encounter or in the books.
 
@@ -3206,8 +3198,7 @@ objects:
         - The DC is the creature's level DC, harder for uncommon, rare and unique creatures.
         - A success tells you what it is, its weakest save and its weaknesses, resistances and immunities; a critical success adds its AC, best save and abilities. On a failure you recall nothing. The GM running the encounter sees every roll.
       SEE`PF2E`RECALL: |-
-        pf2e enc
-        pf2e dc
+        pf2e enc|pf2e dc
       HELP`PF2E`DC: |-
         `+dc <level> \[difficulty\] \[rarity\]` gives a DC from GM Core's table.
 
@@ -3219,8 +3210,7 @@ objects:
 
         Output: `\[PF2E\] DC 24 for a level 5 task, hard.`
       SEE`PF2E`DC: |-
-        pf2e check
-        pf2e challenge
+        pf2e check|pf2e challenge
       HELP`PF2E`ADVANCE: |-
         Experience and money come from staff, and you spend them.
 
@@ -3236,8 +3226,7 @@ objects:
 
         Output: `\[PF2E\] Done: Greataxe has +1 potency now, for 35 gp.`
       SEE`PF2E`ADVANCE: |-
-        pf2e staff
-        pf2e build
+        pf2e staff|pf2e build
       HELP`PF2E`STAFF: |-
         `+pf2e` is for staff: awards, changing a sheet by hand and reading the rules feed.
 
@@ -3246,8 +3235,7 @@ objects:
         - `+pf2e/ledger <player>` lists a ledger's entries.
         - `+pf2e/update` reads Foundry's content again from the feed.
       SEE`PF2E`STAFF: |-
-        pf2e advance
-        pf2e
+        pf2e advance|pf2e
 
   - ref: data_actions
     type: thing
