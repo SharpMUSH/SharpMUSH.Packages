@@ -1828,10 +1828,20 @@ objects:
           setqm(fits_category,json_query(%1,extract,$.category),fits_opts,json_query(%1,extract,$.opts))][
           switch(%0,
             ancestry, cand(strmatch(%q<fits_category>,ancestry),words(setinter(iter(%q<fits_opts>,if(strmatch(%i0,item:trait:*),after(%i0,item:trait:))),u(%!/FUN`BUILD`ANCESTRY`TRAITS)))),
-            class, cand(strmatch(%q<fits_category>,class),cor(member(%q<fits_opts>,item:trait:[u({{core}}/FUN`ITEM`SLUG,%q<build_class_item>)]),member(%q<fits_opts>,item:trait:archetype))),
+            class, cand(strmatch(%q<fits_category>,class),cor(member(%q<fits_opts>,item:trait:[u({{core}}/FUN`ITEM`SLUG,%q<build_class_item>)]),member(%q<fits_opts>,item:trait:archetype)),cor(not(member(%q<fits_opts>,item:trait:dedication)),cand(u(%!/FUN`BUILD`DEDICATION`OPEN),comp(json_query(%1,extract,$.slug),[u({{core}}/FUN`ITEM`SLUG,%q<build_class_item>)]-dedication)))),
             skill, strmatch(%q<fits_category>,skill),
             general, match(general skill,%q<fits_category>),
             0)]
+        flags: [funsyntax]
+      # Player Core: after a dedication feat, another waits until the character has two other feats
+      # from that archetype. Counted over the whole sheet: two archetype feats for each dedication held.
+      FUN`BUILD`DEDICATION`OPEN:
+        value: |-
+          @@(1 when the character can take a dedication feat; kept in build_dedication for the rest of the command)[
+          if(not(strlen(%q<build_dedication>)),
+            [setq(ded_opts,iter(graball(%q<check_grants>,*~feats~*),json_query(get(u({{core}}/DATA`PACK`FEATS)/ITEM`[elements(%i0,3,~)]`PREP),extract,$.opts),%b,|))][
+            setq(build_dedication,gte(words(iter(%q<ded_opts>,if(cand(member(%i0,item:trait:archetype),not(member(%i0,item:trait:dedication))),x),|)),mul(2,words(iter(%q<ded_opts>,if(member(%i0,item:trait:dedication),x),|)))))])][
+          %q<build_dedication>]
         flags: [funsyntax]
       FUN`BUILD`ANCESTRY`TRAITS:
         value: |-
