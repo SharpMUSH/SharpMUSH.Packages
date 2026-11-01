@@ -7,7 +7,8 @@ fate points in play, and roll four Fate dice against an opposition with `+check`
 sees and the game keeps as a recorded roll. Ratings, stress boxes and refresh are built from a ledger
 of grants, so a staff bonus or a package's grant survives the player's own changes. An encounter keeps
 its own copy of each player's fate points, stress and consequences until the GM keeps it or ends the
-encounter. Keepers give milestones, breakthroughs and power-ups, which stay on the character as a log
+encounter. The GM brings in opposition built with `+npc`, from mooks to villains, and runs the
+conflict with exchanges, harm, concessions, aspects on the scene and a pool of fate points. Keepers give milestones, breakthroughs and power-ups, which stay on the character as a log
 of who gave what and why, and players spend them with `+sheet/advance`.
 
 Based on the Fate Core, Fate Accelerated and Fate Condensed SRDs under CC BY 3.0: see
@@ -61,6 +62,32 @@ Depends on nothing. Bridges add the rest:
 | `+encounter/remove <name>[=<n>]` | GM | Take someone out; their copy is dropped |
 | `+encounter/keep <name>[=<n>]` | GM | Write their copy back onto their sheet |
 | `+encounter/end [<n>]` | GM | End it; every copy not kept is dropped |
+| `+encounter/npc <opposition>[=<count>]` | GM | Bring in NPCs from `+npc`, numbered when several |
+| `+encounter/stats <npc>` | GM | One NPC in full |
+| `+encounter/roll <npc>/<skill>[+<n>][=<opposition>]` | GM | Roll for an NPC, for the room |
+| `+encounter/harm <name>[/<track>]=<shifts>` | GM | A hit: an NPC marks its boxes and is taken out past its consequences; a player is told what to mark |
+| `+encounter/stress <npc>/<track>=<box>\|clear` | GM | Mark or clear an NPC's box, or its track |
+| `+encounter/consequence <npc>/<slot>=<aspect>` | GM | An NPC's consequence; empty clears it |
+| `+encounter/out <name>[=<what happens>]` | GM | Take someone out, or say what happened; again bare brings them back |
+| `+encounter/concede [<npc>]` | player, GM | Concede: a fate point and one per consequence taken here; a major NPC banks them |
+| `+encounter/exchange` | GM | The next exchange; the first gives the GM a fate point per player |
+| `+encounter/act [<name>]` | player, GM | Take your turn, or hand it to someone who has not acted |
+| `+encounter/aspect <aspect>[=<free invokes>]` | player, GM | An aspect on the scene |
+| `+encounter/boost <aspect>` | player, GM | A boost: one free invoke, gone once used |
+| `+encounter/invoke <n>[=<why>]` | player, GM | +2 or a reroll: a free invoke, else a fate point from your copy or the GM's pool |
+| `+encounter/unaspect <n>` | GM, whoever placed it | Take an aspect off |
+| `+encounter/pool [<n>\|+<n>\|-<n>][=<why>]` | all, GM | The GM's fate points; the GM changes them |
+| `+encounter/point <name>[=<why>]` | GM | A fate point on a player's copy, such as for a compel |
+| `+encounter/victory <name>[=<n>]` | GM | A victory in a contest, 2 for success with style; three win |
+| `+npc [<name>]` | all | The NPCs you may use, or one in full |
+| `+npc/create <name>[=minor\|major]` | all | A minor NPC has one stress box and no consequences, a major one the full set |
+| `+npc/skill <npc>/<skill>=<rating>` | maker, keeper | A rating; every other skill is Mediocre |
+| `+npc/aspect <npc>/<n>=<aspect>`, `/stunt <npc>/<n>=<stunt>` | maker, keeper | Slots 1 to 5; empty clears one |
+| `+npc/stress <npc>/<track>=<boxes>` | maker, keeper | 0 to 10 boxes |
+| `+npc/consequences <npc>=<slots>\|all\|none` | maker, keeper | Its consequence slots |
+| `+npc/set <npc>/<field>=<value>` | maker, keeper | A field a package adds, such as Atomic Robo's scale |
+| `+npc/share <npc>` | maker, keeper | Let every GM use it, or only its maker again |
+| `+npc/destroy <npc>` | maker, keeper | Remove it; running encounters keep their copies |
 | `+check[/private] <skill>[+<n>\|-<n>][=<opposition>]` | all | Roll 4dF plus the rating: `Bob rolls Fight: 4dF[-1, 0, 1, 0] + 4 = 4 (Great) against Fair (+2): success, 2 shifts (roll 20)` |
 
 Keepers (`softcode.fate.admin`, the **Fate Sheet Keeper** role) put `<name>/` before the slot of
@@ -74,6 +101,17 @@ encounter they joined, `+sheet/stress`, `/consequence`, `/spend`, `/recover` and
 encounter's copy: the one they picked with `+encounter/use`, else the last they joined. Everywhere
 else they use the sheet. An encounter lasts until the GM ends it, across any number of days. Duties
 and every other reader of the sheet API use the sheet itself.
+
+A GM's commands without a number go to the encounter picked with `+encounter/use`, else the one their
+play goes to, else the only one they run in the room.
+
+Opposition is built with `+npc` and kept on **Fate Opposition**, each player's own until they share
+it; a player may keep `npcs` of them (50), a keeper any number. `+encounter/npc` copies one into the
+encounter, so later changes never reach a running one. Harm follows Fate Condensed: each stress box
+takes one shift, each consequence its shifts, and what is left takes the character out. A conflict
+runs in exchanges: `+encounter/act` marks who has acted and who acts now, and whoever acts hands the
+turn on. The GM's pool starts each encounter with a fate point per player at the first exchange,
+plus what a major NPC banked by conceding in an earlier one.
 
 ## The ledger
 
@@ -141,8 +179,34 @@ ENC`<n>`TITLE               the title, if any
 ENC`<n>`LEAD                the GM who started it
 ENC`<n>`PEOPLE              who takes part, objids
 ENC`<n>`C`<char key>`<leaf> their copy of each leaf PLAY` names, and POINTS
+ENC`<n>`S`<char key>        their standing: HAD (consequences they came in with), OUT, VICTORIES
+ENC`<n>`N`<k>               an NPC's name: FROM (its template), a copy of the template's leaves, OUT,
+                            VICTORIES
+ENC`<n>`A`<k>               an aspect on the scene: INVOKES, BOOST, BY
+ENC`<n>`EXCHANGE            the exchange; ACTED who has acted in it, CURRENT who acts now
+ENC`<n>`POOL                the GM's fate points
 NEXT                        the last number given out
 ```
+
+Opposition lives on **Fate Opposition**:
+
+```
+NPC`<n>                     the name
+NPC`<n>`KIND                minor or major
+NPC`<n>`OWNER               who made it; SHARED 1 when every GM may use it
+NPC`<n>`ASPECT`<k>          aspects 1 to 5; STUNT`<k> stunts 1 to 5
+NPC`<n>`SKILL`<KEY>         a rating
+NPC`<n>`BOXES`<TRACK>       stress boxes; SLOTS its consequence slots
+NPC`<n>`FIELD`<NAME>        a field a package adds
+NPC`<n>`POINTS              fate points a major NPC banked by conceding
+NEXT                        the last number given out
+```
+
+A package adds an NPC field with `` NPCFIELD`<NAME> `` on the Fate Sheet (%0 the value typed: the value
+to keep, or `#-1` and why), shown through `` NPCFIELD`<NAME>`SHOW ``. `` NPC`ROLL `` (%0 the NPC's
+object/attribute, %1 what followed ` vs `: what to add to the roll, or `#-1` and why), `` NPC`HIT `` (%0,
+%1, %2 the check: words after the roll) and `` NPC`HARM `` (%0, %1 the shifts: what gets through, then
+why) change how it rolls and takes harm. Atomic Robo uses them for scale, Weapon and Armor.
 
 The lists are `+config` tables on **Fate Sheet Store**: `SKILL`, `APPROACH`, `TRACK` (with `BOXES`)
 and `CONSEQUENCE` (with `SHIFTS`).

@@ -72,6 +72,8 @@ field of `/set`, `/focus`, `/unfocus`, `/stress`, `/mega`, `/weakness`, `+machin
   open the hypothesis roll: free invocations 0 at 3, 1 at 4 or 5, 2 at 6 or more.
 - Each step of scale between a machine and its foe gives the larger +1 on the roll (`roll`), 2
   shifts of harm (`harm`), or both (`both`).
+- An NPC counts scale the same way, from its own `scale` (the smallest when unset). Its `weapon` adds
+  to its hits, and its `armor` takes that many shifts off each hit it takes.
 
 ## Where the data lives
 
@@ -95,7 +97,10 @@ a keeper's `+sheet/grant` stays. `+sheet`, `+check` and Duties read the ratings 
 
 On the **Fate Sheet** it sets `` GATE`SET `` (turns `+sheet/set` off), four `` SECTION` `` hooks (the
 modes, mega-stunts, machine and inventions on `+sheet`), `` PLAY`MACHINE `` (an encounter copies the
-machine's stress, and `+machine/stress` marks the copy), `` BUILD`ROBO `` (`+sheet/clear` takes the
+machine's stress, and `+machine/stress` marks the copy), the NPC fields `scale`, `weapon` and
+`armor` with the `` NPC`ROLL ``, `` NPC`HIT `` and `` NPC`HARM `` hooks (opposition from `+npc` counts
+scale on `+encounter/roll <npc>/<skill> vs <scale>`, adds its Weapon to a hit and takes its Armor off
+the harm it takes), `` BUILD`ROBO `` (`+sheet/clear` takes the
 modes, bought steps and mega-stunts too) and three `+chargen` steps: Modes, Skill points (optional)
 and Mega-stunt (optional, for a weird mode only). The sheet's own Ratings step is skipped.
 

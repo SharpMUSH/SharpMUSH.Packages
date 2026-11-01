@@ -1,9 +1,9 @@
 format: "1.16"
 package: sheet-fate
 title: "Fate sheet"
-version: 1.2.0
+version: 1.3.0
 authors: [SharpMUSH]
-description: "A Fate character sheet: skills or the six approaches on the ladder, aspects, stunts, stress tracks, consequences and fate points. +sheet shows and fills it in, +chargen walks a player through it, and +check rolls four Fate dice plus a rating against an opposition for the room. The build is a ledger of grants; staff give milestones and breakthroughs that stay on a log, and players spend them with +sheet/advance. +encounter gives each encounter its own copy of fate points, stress and consequences. Fate Core and Fate Accelerated SRD material under CC BY 3.0."
+description: "A Fate character sheet: skills or the six approaches on the ladder, aspects, stunts, stress tracks, consequences and fate points. +sheet shows and fills it in, +chargen walks a player through it, and +check rolls four Fate dice plus a rating against an opposition for the room. The build is a ledger of grants; staff give milestones and breakthroughs that stay on a log, and players spend them with +sheet/advance. +encounter gives each encounter its own copy of fate points, stress and consequences, and runs a conflict: NPCs a GM builds with +npc, exchanges, harm, concessions, aspects on the scene and the GM's fate points. Fate Core and Fate Accelerated SRD material under CC BY 3.0."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, fate, dice, checks, aspects]
@@ -193,6 +193,22 @@ objects:
         Whether +sheet <name> shows anyone's sheet to everyone. Otherwise only the character and sheet keepers see it.
       DATA`CONFIG`PUBLIC`EXAMPLE: |-
         yes
+      DATA`CONFIG`NPCS: |-
+        50
+      DATA`CONFIG`NPCS`TYPE: |-
+        integer
+      DATA`CONFIG`NPCS`DEFAULT: |-
+        50
+      DATA`CONFIG`NPCS`MIN: |-
+        0
+      DATA`CONFIG`NPCS`MAX: |-
+        500
+      DATA`CONFIG`NPCS`LABEL: |-
+        Opposition each player may make
+      DATA`CONFIG`NPCS`DESCRIPTION: |-
+        How many NPCs a player may keep with +npc/create. Sheet keepers make as many as they like.
+      DATA`CONFIG`NPCS`EXAMPLE: |-
+        20
       DATA`CONFIG`SKILLS`TYPE: |-
         table
       DATA`CONFIG`SKILLS`LABEL: |-
@@ -450,6 +466,64 @@ objects:
         ENCOUNTER`END
       DATA`ROUTE`ENCOUNTER`USE: |-
         ENCOUNTER`USE
+      DATA`ROUTE`ENCOUNTER`NPC: |-
+        ENCOUNTER`NPC
+      DATA`ROUTE`ENCOUNTER`STATS: |-
+        ENCOUNTER`STATS
+      DATA`ROUTE`ENCOUNTER`ROLL: |-
+        ENCOUNTER`ROLL
+      DATA`ROUTE`ENCOUNTER`HARM: |-
+        ENCOUNTER`HARM
+      DATA`ROUTE`ENCOUNTER`STRESS: |-
+        ENCOUNTER`STRESS
+      DATA`ROUTE`ENCOUNTER`CONSEQUENCE: |-
+        ENCOUNTER`CONSEQUENCE
+      DATA`ROUTE`ENCOUNTER`OUT: |-
+        ENCOUNTER`OUT
+      DATA`ROUTE`ENCOUNTER`CONCEDE: |-
+        ENCOUNTER`CONCEDE
+      DATA`ROUTE`ENCOUNTER`EXCHANGE: |-
+        ENCOUNTER`EXCHANGE
+      DATA`ROUTE`ENCOUNTER`ACT: |-
+        ENCOUNTER`ACT
+      DATA`ROUTE`ENCOUNTER`ASPECT: |-
+        ENCOUNTER`ASPECT
+      DATA`ROUTE`ENCOUNTER`BOOST: |-
+        ENCOUNTER`BOOST
+      DATA`ROUTE`ENCOUNTER`INVOKE: |-
+        ENCOUNTER`INVOKE
+      DATA`ROUTE`ENCOUNTER`UNASPECT: |-
+        ENCOUNTER`UNASPECT
+      DATA`ROUTE`ENCOUNTER`POOL: |-
+        ENCOUNTER`POOL
+      DATA`ROUTE`ENCOUNTER`POINT: |-
+        ENCOUNTER`POINT
+      DATA`ROUTE`ENCOUNTER`VICTORY: |-
+        ENCOUNTER`VICTORY
+      DATA`ROUTE`NPC`BARE: |-
+        NPC`LIST
+      DATA`ROUTE`NPC`LIST: |-
+        NPC`LIST
+      DATA`ROUTE`NPC`ARG: |-
+        NPC`SHOW
+      DATA`ROUTE`NPC`CREATE: |-
+        NPC`CREATE
+      DATA`ROUTE`NPC`ASPECT: |-
+        NPC`ASPECT
+      DATA`ROUTE`NPC`SKILL: |-
+        NPC`SKILL
+      DATA`ROUTE`NPC`STUNT: |-
+        NPC`STUNT
+      DATA`ROUTE`NPC`STRESS: |-
+        NPC`STRESS
+      DATA`ROUTE`NPC`CONSEQUENCES: |-
+        NPC`CONSEQUENCES
+      DATA`ROUTE`NPC`SET: |-
+        NPC`SET
+      DATA`ROUTE`NPC`SHARE: |-
+        NPC`SHARE
+      DATA`ROUTE`NPC`DESTROY: |-
+        NPC`DESTROY
       DATA`ROUTE`CHARGEN`BARE: |-
         CHARGEN`SHOW
       DATA`ROUTE`CHARGEN`ARG: |-
@@ -640,6 +714,10 @@ objects:
       CMD`CHARGEN:
         value: |-
           $(?is)^\+chargen(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,chargen,table,CHARGEN,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`NPC:
+        value: |-
+          $(?is)^\+npc(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,npc,table,NPC,switches,%1,argument,%2
         flags: [regexp, cmdsyntax]
       # A line a bridge adds to one of this object's messages: HINT`<message>, set here by a bridge such as
       # sheet-fate-help. %1 on are passed to it. Nothing when no bridge set one, so the message stands without it.
@@ -896,11 +974,11 @@ objects:
       # itself, which changes only when the GM keeps a copy. An encounter lasts until the GM ends it, across any
       # number of days. Sheet keepers act as GM in every encounter. The sheet API (API`POINTS, API`AWARD, used by
       # Duties) always reads the sheet itself.
-      # %<typed> a number or nothing, %<mode> join or nothing: enc_id. Without a number: the one active for you
-      # (not for join), else the only one here.
+      # %<typed> a number or nothing, %<mode> join or nothing: enc_id and enc_room. Without a number: the one
+      # FUN`ENC`PICK gives you (not for join), else the only one here.
       INC`NEED`ENCOUNTER:
         value: |-
-          think setqm(enc_here,u(%!/FUN`ENC`HERE,%l),enc_id,cond(strlen(%<typed>),%<typed>,cand(comp(%<mode>,join),strlen(setr(enc_active,u(%!/FUN`ENC`ACTIVE,%#)))),%q<enc_active>,eq(words(%q<enc_here>),1),%q<enc_here>)); @assert strlen(%q<enc_id>)=@pemit %#=notice(SHEET,if(words(%q<enc_here>),There are [words(%q<enc_here>)] encounters here: name one by its number. +encounter lists them.,There is no encounter here. +encounter/start begins one.),warn); @assert cand(isint(%q<enc_id>),hasattr({{encounters}},ENC`%q<enc_id>))=@pemit %#=notice(SHEET,There is no encounter %q<enc_id>. +encounter lists the ones here.,warn)
+          think setqm(enc_here,u(%!/FUN`ENC`HERE,%l),enc_id,cond(strlen(%<typed>),%<typed>,cand(comp(%<mode>,join),strlen(setr(enc_active,u(%!/FUN`ENC`PICK,%#)))),%q<enc_active>,eq(words(%q<enc_here>),1),%q<enc_here>)); @assert strlen(%q<enc_id>)=@pemit %#=notice(SHEET,if(words(%q<enc_here>),There are [words(%q<enc_here>)] encounters here: name one by its number. +encounter lists them.,There is no encounter here. +encounter/start begins one.),warn); @assert cand(isint(%q<enc_id>),hasattr({{encounters}},ENC`%q<enc_id>))=@pemit %#=notice(SHEET,There is no encounter %q<enc_id>. +encounter lists the ones here.,warn); think setq(enc_room,get({{encounters}}/ENC`%q<enc_id>))
         flags: [cmdsyntax]
       INC`NEED`HERE:
         value: |-
@@ -938,17 +1016,18 @@ objects:
       # sheet_who joins the encounter enc_id: a copy is taken now, and it becomes the one they play in.
       INC`ENCOUNTER`ENTER:
         value: |-
-          @assert not(member(get({{encounters}}/ENC`%q<enc_id>`PEOPLE),%q<sheet_who>))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] is in [u(%!/FUN`ENC`TITLE,%q<enc_id>)] already.,warn); think u(%!/FUN`ENC`COPYIN,%q<sheet_who>,%q<enc_id>); &ENC`%q<enc_id>`PEOPLE {{encounters}}=trim(get({{encounters}}/ENC`%q<enc_id>`PEOPLE) %q<sheet_who>); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,ENCOUNTERS,value,trim(u(%!/FUN`ENC`MINE,%q<sheet_who>) %q<enc_id>); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,USING,value,%q<enc_id>
+          @assert not(member(get({{encounters}}/ENC`%q<enc_id>`PEOPLE),%q<sheet_who>))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] is in [u(%!/FUN`ENC`TITLE,%q<enc_id>)] already.,warn); think u(%!/FUN`ENC`COPYIN,%q<sheet_who>,%q<enc_id>); &ENC`%q<enc_id>`PEOPLE {{encounters}}=trim(get({{encounters}}/ENC`%q<enc_id>`PEOPLE) %q<sheet_who>); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,ENCOUNTERS,value,trim(u(%!/FUN`ENC`MINE,%q<sheet_who>) %q<enc_id>); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,USING,value,%q<enc_id>; think attrib_set({{encounters}}/ENC`%q<enc_id>`S`[u(%!/FUN`ENC`KEY,%q<sheet_who>)]`HAD,squish(iter(u(%!/FUN`LIST`ALL,CONSEQUENCE),if(strlen(get(%q<sheet_who>/FATE`CONSEQUENCE`%i0)),%i0))))
         flags: [cmdsyntax]
-      # +encounter/use <number>: which of your encounters your play goes to while you are in its room.
+      # +encounter/use <number>: which of your encounters your play goes to while you are in its room, and the GM's
+      # commands for one they run.
       INC`ENCOUNTER`USE:
         value: |-
-          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,if(strlen(setr(enc_active,u(%!/FUN`ENC`ACTIVE,%#))),Your play here goes to [u(%!/FUN`ENC`TITLE,%q<enc_active>)].,Your play here goes to your sheet.) +encounter/use <number> picks another of yours.); @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>; @assert member(get({{encounters}}/ENC`%q<enc_id>`PEOPLE),%q<viewer_objid>)=@pemit %#=notice(SHEET,You are not in [u(%!/FUN`ENC`TITLE,%q<enc_id>)]. +encounter/join %q<enc_id> takes part.,warn); @include/args %!/INC`DO`SET=who,%q<viewer_objid>,leaf,USING,value,%q<enc_id>; @pemit %#=notice(SHEET,Your play goes to [u(%!/FUN`ENC`TITLE,%q<enc_id>)] while you are in [name(get({{encounters}}/ENC`%q<enc_id>))].,ok)
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,if(strlen(setr(enc_active,u(%!/FUN`ENC`ACTIVE,%#))),Your play here goes to [u(%!/FUN`ENC`TITLE,%q<enc_active>)].,Your play here goes to your sheet.) +encounter/use <number> picks another of yours.); @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>; @assert cor(member(get({{encounters}}/ENC`%q<enc_id>`PEOPLE),%q<viewer_objid>),u(%!/FUN`ENC`ISGM,%q<enc_id>,%#))=@pemit %#=notice(SHEET,You are not in [u(%!/FUN`ENC`TITLE,%q<enc_id>)]. +encounter/join %q<enc_id> takes part.,warn); @include/args %!/INC`DO`SET=who,%q<viewer_objid>,leaf,USING,value,%q<enc_id>; @pemit %#=notice(SHEET,if(member(get({{encounters}}/ENC`%q<enc_id>`PEOPLE),%q<viewer_objid>),Your play goes to [u(%!/FUN`ENC`TITLE,%q<enc_id>)] while you are in [name(get({{encounters}}/ENC`%q<enc_id>))].,Your GM commands go to [u(%!/FUN`ENC`TITLE,%q<enc_id>)] while you are in [name(get({{encounters}}/ENC`%q<enc_id>))].),ok)
         flags: [cmdsyntax]
-      # +encounter/remove <name>[=<number>]: the GM takes someone out; their copy is dropped.
+      # +encounter/remove <name>[=<number>]: the GM takes someone out; their copy is dropped. An NPC goes.
       INC`ENCOUNTER`REMOVE:
         value: |-
-          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(SHEET,+encounter/remove <name>%[=<number>%].,warn); @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_right_side>; @include %!/INC`NEED`GM; @include/args %!/INC`NEED`MEMBER=name,%q<cmd_left_side>; think u(%!/FUN`ENC`DROP,%q<sheet_who>,%q<enc_id>); @pemit %#=notice(SHEET,You take [name(%q<sheet_who>)] out of [u(%!/FUN`ENC`TITLE,%q<enc_id>)]. Their sheet is as it was.,ok); @pemit %q<sheet_who>=notice(SHEET,tone(strong,name(%#)) takes you out of [u(%!/FUN`ENC`TITLE,%q<enc_id>)]. Your sheet is as it was.)
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(SHEET,+encounter/remove <name>%[=<number>%].,warn); @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_right_side>; @include %!/INC`NEED`GM; @include/args %!/INC`NEED`PART=name,%q<cmd_left_side>; @assert strlen(%q<part_who>); @break %q<part_npc>={think u(%!/FUN`NPC`WIPE,{{encounters}},%q<part_status>)[attrib_set({{encounters}}/ENC`%q<enc_id>`ACTED,remove(get({{encounters}}/ENC`%q<enc_id>`ACTED),%q<part_who>))]; @remit %q<enc_room>=notice(SHEET,tone(strong,name(%#)) takes %q<part_name> out of [u(%!/FUN`ENC`TITLE,%q<enc_id>)].)}; think setq(sheet_who,%q<part_who>); think u(%!/FUN`ENC`DROP,%q<sheet_who>,%q<enc_id>); @pemit %#=notice(SHEET,You take [name(%q<sheet_who>)] out of [u(%!/FUN`ENC`TITLE,%q<enc_id>)]. Their sheet is as it was.,ok); @pemit %q<sheet_who>=notice(SHEET,tone(strong,name(%#)) takes you out of [u(%!/FUN`ENC`TITLE,%q<enc_id>)]. Your sheet is as it was.)
         flags: [cmdsyntax]
       # +encounter/leave [<number>]
       INC`ENCOUNTER`LEAVE:
@@ -963,7 +1042,7 @@ objects:
       # +encounter/end [<number>]: the GM ends it; every copy not kept is dropped.
       INC`ENCOUNTER`END:
         value: |-
-          @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>; @include %!/INC`NEED`GM; think setqm(enc_title,u(%!/FUN`ENC`TITLE,%q<enc_id>),enc_room,get({{encounters}}/ENC`%q<enc_id>),enc_people,get({{encounters}}/ENC`%q<enc_id>`PEOPLE))[iter(%q<enc_people>,u(%!/FUN`ENC`DROP,%i0,%q<enc_id>))]; @dolist/inline revwords(lattr({{encounters}}/ENC`%q<enc_id>`**))={&## {{encounters}}}; &ENC`%q<enc_id> {{encounters}}; @pemit/list setunion(%q<enc_people>,%#)=notice(SHEET,tone(strong,name(%#)) ends [capstr(%q<enc_title>)]. Every sheet keeps only what the GM kept.)
+          @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>; @include %!/INC`NEED`GM; think setqm(enc_title,u(%!/FUN`ENC`TITLE,%q<enc_id>),enc_room,get({{encounters}}/ENC`%q<enc_id>),enc_people,get({{encounters}}/ENC`%q<enc_id>`PEOPLE),enc_outcomes,itemize(squish(iter(u(%!/FUN`ENC`ALL,%q<enc_id>),if(u(%!/FUN`ENC`ISOUT,%q<enc_id>,%i0),[u(%!/FUN`ENC`WHONAME,%q<enc_id>,%i0)]: [get({{encounters}}/[u(%!/FUN`ENC`STATUS,%q<enc_id>,%i0)]`OUT)]),%b,|),|),|))[iter(%q<enc_people>,u(%!/FUN`ENC`DROP,%i0,%q<enc_id>))]; @dolist/inline revwords(lattr({{encounters}}/ENC`%q<enc_id>`**))={&## {{encounters}}}; &ENC`%q<enc_id> {{encounters}}; @pemit/list setunion(%q<enc_people>,%#)=notice(SHEET,tone(strong,name(%#)) ends [capstr(%q<enc_title>)]. Every sheet keeps only what the GM kept.[if(strlen(%q<enc_outcomes>),%bOut of it: %q<enc_outcomes>.)])
         flags: [cmdsyntax]
       # %0 a room or character: its key, the objid without # and with _ for :.
       FUN`ENC`KEY:
@@ -1003,7 +1082,7 @@ objects:
       # %0 a character, %1 an encounter: drops their copy and takes them out.
       FUN`ENC`DROP:
         value: |-
-          setq(copy_at,ENC`%1`C`[u(%!/FUN`ENC`KEY,%0)])[null(iter(revwords(lattr({{encounters}}/%q<copy_at>`**)),attrib_set({{encounters}}/%i0)))][attrib_set({{encounters}}/%q<copy_at>)][attrib_set({{encounters}}/ENC`%1`PEOPLE,remove(get({{encounters}}/ENC`%1`PEOPLE),objid(%0)))][u(%!/FUN`DO`WRITE,%0,ENCOUNTERS,remove(get(%0/FATE`ENCOUNTERS),%1))][if(not(comp(get(%0/FATE`USING),%1)),u(%!/FUN`DO`WRITE,%0,USING,))]
+          setq(copy_at,ENC`%1`C`[u(%!/FUN`ENC`KEY,%0)])[null(iter(revwords(lattr({{encounters}}/%q<copy_at>`**)),attrib_set({{encounters}}/%i0)))][attrib_set({{encounters}}/%q<copy_at>)][u(%!/FUN`NPC`WIPE,{{encounters}},ENC`%1`S`[u(%!/FUN`ENC`KEY,%0)])][attrib_set({{encounters}}/ENC`%1`ACTED,remove(get({{encounters}}/ENC`%1`ACTED),objid(%0)))][attrib_set({{encounters}}/ENC`%1`PEOPLE,remove(get({{encounters}}/ENC`%1`PEOPLE),objid(%0)))][u(%!/FUN`DO`WRITE,%0,ENCOUNTERS,remove(get(%0/FATE`ENCOUNTERS),%1))][if(not(comp(get(%0/FATE`USING),%1)),u(%!/FUN`DO`WRITE,%0,USING,))]
         flags: [funsyntax]
       # %0 a character: their fate points, stress and consequences on the sheet itself.
       FUN`ENC`SUMMARY:
@@ -1018,7 +1097,394 @@ objects:
       # %0 the encounter, %1 who reads it: each one taking part with their copy.
       FUN`SCREEN`ENCOUNTER:
         value: |-
-          setqm(enc_people,get({{encounters}}/ENC`%0`PEOPLE),enc_tracks,u(%!/FUN`LIST`ALL,TRACK))[box(lfields(,Run by%*<|>In,name(get({{encounters}}/ENC`%0`LEAD))%*<|>[name(get({{encounters}}/ENC`%0))],%*<|>)%r[if(words(%q<enc_people>),ldatatable(lit({"nowrap":"1"}),Name|Fate points|[iter(%q<enc_tracks>,get({{store}}/TRACK`%i0),%b,|)]|Consequences,iter(%q<enc_people>,[name(%i0)]|[firstof(get({{encounters}}/ENC`%0`C`[u(%!/FUN`ENC`KEY,%i0)]`POINTS),0)]|[iter(%q<enc_tracks>,u(%!/FUN`DISPLAY`MARKED,%i1,%i0,get({{encounters}}/ENC`%0`C`[u(%!/FUN`ENC`KEY,%i1)]`STRESS`%i0)),%b,|)]|[firstof(itemize(squish(iter(u(%!/FUN`LIST`ALL,CONSEQUENCE),if(strlen(get({{encounters}}/ENC`%0`C`[u(%!/FUN`ENC`KEY,%i1)]`CONSEQUENCE`%i0)),lcstr(get({{store}}/CONSEQUENCE`%i0))),%b,|),|),|),-)],,%*<^>),%*<^>),tone(muted,Nobody has joined yet.))]%r[rule()]%r[tone(muted,+encounter/join %0 takes part with a copy of your sheet's fate points%, stress and consequences. The GM keeps a copy with +encounter/keep <name>=%0%, and +encounter/end %0 drops the rest.)],capstr(u(%!/FUN`ENC`TITLE,%0)))]
+          setqm(enc_people,get({{encounters}}/ENC`%0`PEOPLE),enc_npcs,u(%!/FUN`ENC`NPCS,%0),enc_tracks,u(%!/FUN`LIST`ALL,TRACK),enc_aspects,sort(iter(lattr({{encounters}}/ENC`%0`A`*),last(%i0,`)),n),enc_exchange,default({{encounters}}/ENC`%0`EXCHANGE,0),enc_current,get({{encounters}}/ENC`%0`CURRENT))[box(lfields(lit({"cols":2}),Run by%*<|>In%*<|>Exchange%*<|>GM's fate points,name(get({{encounters}}/ENC`%0`LEAD))%*<|>[name(get({{encounters}}/ENC`%0))]%*<|>[if(%q<enc_exchange>,%q<enc_exchange>[if(strlen(%q<enc_current>),%, [u(%!/FUN`ENC`WHONAME,%0,%q<enc_current>)] acting)],not started)]%*<|>[default({{encounters}}/ENC`%0`POOL,0)],%*<|>)%r[if(words(%q<enc_aspects>),[rule(Aspects on the scene)]%r[lfields(,iter(%q<enc_aspects>,%i0,%b,%*<|>),iter(%q<enc_aspects>,[get({{encounters}}/ENC`%0`A`%i0)][if(get({{encounters}}/ENC`%0`A`%i0`BOOST),%b[tone(muted,%(boost%))],if(setr(enc_free,default({{encounters}}/ENC`%0`A`%i0`INVOKES,0)),%b[tone(muted,%(%q<enc_free> free invoke[if(neq(%q<enc_free>,1),s)]%))]))],%b,%*<|>),%*<|>)]%r)][rule(Players)]%r[if(words(%q<enc_people>),ldatatable(lit({"nowrap":"1"}),Name|Fate points|[iter(%q<enc_tracks>,get({{store}}/TRACK`%i0),%b,|)]|Consequences|Status,iter(%q<enc_people>,u(%!/FUN`ENC`PROW,%0,%i0,%q<enc_tracks>),%b,%*<^>),%*<^>),tone(muted,Nobody has joined yet.))][if(words(%q<enc_npcs>),%r[rule(Opposition)]%r[ldatatable(lit({"nowrap":"1"}),Name|Kind|[iter(%q<enc_tracks>,get({{store}}/TRACK`%i0),%b,|)]|Consequences|Status,iter(%q<enc_npcs>,u(%!/FUN`ENC`NROW,%0,%i0,%q<enc_tracks>),%b,%*<^>),%*<^>)])]%r[rule()]%r[tone(muted,+encounter/join %0 takes part with a copy of your sheet's fate points%, stress and consequences. +help encounter gm lists what the GM does.)],capstr(u(%!/FUN`ENC`TITLE,%0)))]
+        flags: [funsyntax]
+      # ---- running an encounter ---------------------------------------------------------
+      # Beneath ENC`<number>: N`<k> each NPC brought in (its name, FROM the template, and a copy of the template's
+      # leaves), S`<character key>` each player's standing (HAD the consequences they came in with), and on both
+      # OUT (taken out, conceded, or what happened) and VICTORIES (in a contest). EXCHANGE the exchange, ACTED who
+      # has acted in it, CURRENT who acts now, POOL the GM's fate points, A`<k> each situation aspect with INVOKES
+      # (free invokes), BOOST (1 when it goes once invoked) and BY. Someone taking part is named by their objid, an
+      # NPC by N<k>. A package changes an NPC's rolls with NPC`ROLL (%0 object/attribute of the NPC, %1 what
+      # followed " vs ": what to add, or #-1 and why) and NPC`HIT (%0, %1, %2 the check: words after the roll), and
+      # the harm it takes with NPC`HARM (%0, %1 the shifts: the shifts that get through, then words to say why).
+      # %0 an encounter: its NPCs, oldest first.
+      FUN`ENC`NPCS:
+        value: |-
+          sort(iter(lattr({{encounters}}/ENC`%0`N`*),last(%i0,`)),n)
+        flags: [funsyntax]
+      # %0 an encounter: everyone in it, players first.
+      FUN`ENC`ALL:
+        value: |-
+          trim(get({{encounters}}/ENC`%0`PEOPLE) [iter(u(%!/FUN`ENC`NPCS,%0),N%i0)])
+        flags: [funsyntax]
+      # %0 an encounter, %1 someone in it: where their standing is kept.
+      FUN`ENC`STATUS:
+        value: |-
+          if(strmatch(%1,#*),ENC`%0`S`[u(%!/FUN`ENC`KEY,%1)],ENC`%0`N`[after(%1,N)])
+        flags: [funsyntax]
+      FUN`ENC`WHONAME:
+        value: |-
+          if(strmatch(%1,#*),name(%1),get({{encounters}}/ENC`%0`N`[after(%1,N)]))
+        flags: [funsyntax]
+      # %0 an encounter, %1 a list of those in it: "Bob, Thug 1 and Thug 2".
+      FUN`ENC`NAMES:
+        value: |-
+          itemize(iter(%1,u(%!/FUN`ENC`WHONAME,%0,%i0),%b,|),|)
+        flags: [funsyntax]
+      FUN`ENC`ISOUT:
+        value: |-
+          hasattr({{encounters}},u(%!/FUN`ENC`STATUS,%0,%1)`OUT)
+        flags: [funsyntax]
+      # %0 an encounter: who has still to act in this exchange.
+      FUN`ENC`TOACT:
+        value: |-
+          setq(toact_done,get({{encounters}}/ENC`%0`ACTED))[squish(iter(u(%!/FUN`ENC`ALL,%0),if(cor(member(%q<toact_done>,%i0),u(%!/FUN`ENC`ISOUT,%0,%i0)),,%i0)))]
+        flags: [funsyntax]
+      # %0 an encounter, %1 who: 1 when they run it.
+      FUN`ENC`ISGM:
+        value: |-
+          cor(u(%!/FUN`PERM`KEEPER,%1),not(comp(get({{encounters}}/ENC`%0`LEAD),objid(%1))))
+        flags: [funsyntax]
+      # %0 an encounter, %1 typed text: an NPC with that name, else a player in it, else the only NPC whose name
+      # starts with it. N<k> or an objid, or nothing.
+      FUN`ENC`FIND:
+        value: |-
+          setqm(ef_typed,lcstr(trim(%1)),ef_npcs,u(%!/FUN`ENC`NPCS,%0),ef_player,u(%!/FUN`PLAYER`MATCH,trim(%1)))[setqm(ef_exact,first(iter(%q<ef_npcs>,if(not(comp(lcstr(get({{encounters}}/ENC`%0`N`%i0)),%q<ef_typed>)),N%i0))),ef_start,squish(iter(%q<ef_npcs>,if(not(comp(left(lcstr(get({{encounters}}/ENC`%0`N`%i0)),strlen(%q<ef_typed>)),%q<ef_typed>)),N%i0))))][cond(not(strlen(%q<ef_typed>)),,strlen(%q<ef_exact>),%q<ef_exact>,cand(strlen(%q<ef_player>),member(get({{encounters}}/ENC`%0`PEOPLE),%q<ef_player>)),%q<ef_player>,eq(words(%q<ef_start>),1),%q<ef_start>)]
+        flags: [funsyntax]
+      # %0 an encounter, %1 a template, %2 how many: copies it in, numbering the names when there is more than one.
+      # The names, |-separated.
+      FUN`ENC`SPAWN:
+        value: |-
+          setqm(sp_name,get({{npcs}}/NPC`%1),sp_had,words(iter(u(%!/FUN`ENC`NPCS,%0),if(not(comp(get({{encounters}}/ENC`%0`N`%i0`FROM),%1)),%i0))),sp_out,)[null(iter(lnum(1,%2),[setq(sp_k,inc(default({{encounters}}/ENC`%0`NEXTN,0)))][attrib_set({{encounters}}/ENC`%0`NEXTN,%q<sp_k>)][attrib_set({{encounters}}/ENC`%0`N`%q<sp_k>,setr(sp_called,if(cand(eq(%2,1),not(%q<sp_had>)),%q<sp_name>,%q<sp_name> [add(%q<sp_had>,%i0)])))][attrib_set({{encounters}}/ENC`%0`N`%q<sp_k>`FROM,%1)][u(%!/FUN`ENC`SPAWNCOPY,%0,%1,%q<sp_k>)][setq(sp_out,if(strlen(%q<sp_out>),%q<sp_out>|)%q<sp_called>)]))]%q<sp_out>
+        flags: [funsyntax]
+      # %0 an encounter, %1 a template, %2 the NPC: copies the template's leaves, all but who made it.
+      FUN`ENC`SPAWNCOPY:
+        value: |-
+          null(iter(lattr({{npcs}}/NPC`%1`**),if(cand(strlen(setr(spc_leaf,after(%i0,NPC`%1`))),strlen(get({{npcs}}/%i0)),not(member(OWNER SHARED POINTS,%q<spc_leaf>))),attrib_set({{encounters}}/ENC`%0`N`%2`%q<spc_leaf>,get({{npcs}}/%i0)))))
+        flags: [funsyntax]
+      # %0 an encounter, %1 who: what they are doing, "taken out, 2 victories, acted", or -.
+      FUN`ENC`STATE:
+        value: |-
+          setq(st_path,u(%!/FUN`ENC`STATUS,%0,%1))[firstof(itemize(squish([if(hasattr({{encounters}},%q<st_path>`OUT),tone(warning,get({{encounters}}/%q<st_path>`OUT)))]|[if(setr(st_wins,default({{encounters}}/%q<st_path>`VICTORIES,0)),%q<st_wins> victor[if(eq(%q<st_wins>,1),y,ies)])]|[if(not(comp(get({{encounters}}/ENC`%0`CURRENT),%1)),acting,if(member(get({{encounters}}/ENC`%0`ACTED),%1),acted))],|),|),-)]
+        flags: [funsyntax]
+      # %0 an encounter, %1 a player, %2 the tracks: their row.
+      FUN`ENC`PROW:
+        value: |-
+          setq(prow_copy,ENC`%0`C`[u(%!/FUN`ENC`KEY,%1)])[name(%1)]|[firstof(get({{encounters}}/%q<prow_copy>`POINTS),0)]|[iter(%2,u(%!/FUN`DISPLAY`MARKED,%1,%i0,get({{encounters}}/%q<prow_copy>`STRESS`%i0)),%b,|)]|[firstof(itemize(squish(iter(u(%!/FUN`LIST`ALL,CONSEQUENCE),if(strlen(get({{encounters}}/%q<prow_copy>`CONSEQUENCE`%i0)),lcstr(get({{store}}/CONSEQUENCE`%i0))),%b,|),|),|),-)]|[u(%!/FUN`ENC`STATE,%0,%1)]
+        flags: [funsyntax]
+      # %0 an encounter, %1 an NPC, %2 the tracks: its row.
+      FUN`ENC`NROW:
+        value: |-
+          setq(nrow_at,{{encounters}}/ENC`%0`N`%1)[get(%q<nrow_at>)]|[get(%q<nrow_at>`KIND)]|[iter(%2,firstof(u(%!/FUN`NPC`BOXES,%q<nrow_at>,%i0),-),%b,|)]|[firstof(itemize(squish(iter(get(%q<nrow_at>`SLOTS),if(strlen(get(%q<nrow_at>`CONSEQUENCE`%i0)),lcstr(get({{store}}/CONSEQUENCE`%i0))),%b,|),|),|),if(words(get(%q<nrow_at>`SLOTS)),-,none))]|[u(%!/FUN`ENC`STATE,%0,N%1)]
+        flags: [funsyntax]
+      # %0 a character: the encounter in their room their commands go to. The one they picked with +encounter/use,
+      # if they are in it or run it; else the one their play goes to; else the only one here they run.
+      FUN`ENC`PICK:
+        value: |-
+          setqm(pick_here,u(%!/FUN`ENC`HERE,loc(%0)),pick_using,get(%0/FATE`USING),pick_mine,u(%!/FUN`ENC`ACTIVE,%0))[setq(pick_led,squish(iter(%q<pick_here>,if(not(comp(get({{encounters}}/ENC`%i0`LEAD),objid(%0))),%i0))))][cond(cand(strlen(%q<pick_using>),member(%q<pick_here>,%q<pick_using>),cor(member(get({{encounters}}/ENC`%q<pick_using>`PEOPLE),objid(%0)),u(%!/FUN`ENC`ISGM,%q<pick_using>,%0))),%q<pick_using>,strlen(%q<pick_mine>),%q<pick_mine>,eq(words(%q<pick_led>),1),%q<pick_led>)]
+        flags: [funsyntax]
+      # For those taking part and the GM.
+      INC`NEED`TAKING:
+        value: |-
+          @assert cor(member(get({{encounters}}/ENC`%q<enc_id>`PEOPLE),%q<viewer_objid>),u(%!/FUN`ENC`ISGM,%q<enc_id>,%#))=@pemit %#=notice(SHEET,You are not in [u(%!/FUN`ENC`TITLE,%q<enc_id>)]. +encounter/join takes part.,warn)
+        flags: [cmdsyntax]
+      # %<name> someone in the encounter: part_who (an objid or N<k>), part_name, part_status (where their
+      # standing is) and part_npc.
+      INC`NEED`PART:
+        value: |-
+          @assert strlen(setr(part_who,u(%!/FUN`ENC`FIND,%q<enc_id>,%<name>)))=@pemit %#=notice(SHEET,Nobody called '[trim(%<name>)]' is in [u(%!/FUN`ENC`TITLE,%q<enc_id>)]. +encounter shows who is.,warn); think setqm(part_name,u(%!/FUN`ENC`WHONAME,%q<enc_id>,%q<part_who>),part_status,u(%!/FUN`ENC`STATUS,%q<enc_id>,%q<part_who>),part_npc,not(strmatch(%q<part_who>,#*)))
+        flags: [cmdsyntax]
+      INC`NEED`NPC:
+        value: |-
+          @include/args %!/INC`NEED`PART=name,%<name>; @assert strlen(%q<part_who>); @assert %q<part_npc>=@pemit %#=notice(SHEET,%q<part_name> is a player. Players mark their own copy with +sheet.,warn)
+        flags: [cmdsyntax]
+      # +encounter/npc <opposition>[=<how many>]: the GM brings NPCs in from +npc. A major NPC's banked fate points
+      # go to the GM's pool.
+      INC`ENCOUNTER`NPC:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(SHEET,+encounter/npc <opposition>%[=<how many>%] brings NPCs from +npc into the encounter you run.,warn); @include/args %!/INC`NEED`ENCOUNTER=typed,; @include %!/INC`NEED`GM; @include/args %!/INC`NEED`NPCSEE=typed,%q<cmd_left_side>; @assert strlen(%q<npc_id>); think setq(npc_count,firstof(%q<cmd_right_side>,1)); @assert cand(isint(%q<npc_count>),gte(%q<npc_count>,1),lte(%q<npc_count>,10))=@pemit %#=notice(SHEET,Bring in 1 to 10 at a time.,warn); @assert lte(add(words(u(%!/FUN`ENC`NPCS,%q<enc_id>)),%q<npc_count>),30)=@pemit %#=notice(SHEET,An encounter holds up to 30 NPCs.,warn); think setqm(npc_added,u(%!/FUN`ENC`SPAWN,%q<enc_id>,%q<npc_id>,%q<npc_count>),npc_banked,default({{npcs}}/NPC`%q<npc_id>`POINTS,0)); @remit %q<enc_room>=notice(SHEET,tone(strong,name(%#)) brings [itemize(%q<npc_added>,|)] into [u(%!/FUN`ENC`TITLE,%q<enc_id>)].); @break not(gt(%q<npc_banked>,0)); think attrib_set({{encounters}}/ENC`%q<enc_id>`POOL,add(default({{encounters}}/ENC`%q<enc_id>`POOL,0),%q<npc_banked>))[attrib_set({{npcs}}/NPC`%q<npc_id>`POINTS)]; @pemit %#=notice(SHEET,[get({{npcs}}/NPC`%q<npc_id>)] brings back %q<npc_banked> fate point[if(neq(%q<npc_banked>,1),s)] it banked by conceding: your pool has [get({{encounters}}/ENC`%q<enc_id>`POOL)].,ok)
+        flags: [cmdsyntax]
+      # +encounter/stats <npc>: the GM reads an NPC's copy in full.
+      INC`ENCOUNTER`STATS:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+encounter/stats <npc> shows an NPC in full.,warn); @include/args %!/INC`NEED`ENCOUNTER=typed,; @include %!/INC`NEED`GM; @include/args %!/INC`NEED`NPC=name,%q<cmd_argument>; @assert %q<part_npc>; @pemit %#=u(%!/FUN`SCREEN`NPC,{{encounters}},%q<part_status>,%q<part_name>,%*<|>Status,%*<|>[u(%!/FUN`ENC`STATE,%q<enc_id>,%q<part_who>)],+encounter/roll %q<part_name>/<[u(%!/FUN`TRAIT`NOUN)]> rolls for it%, +encounter/harm %q<part_name>=<shifts> hits it.)
+        flags: [cmdsyntax]
+      # +encounter/roll <npc>/<skill>[+<n>|-<n>][=<opposition>][ vs <what>]: the GM rolls for an NPC, for the room.
+      INC`ENCOUNTER`ROLL:
+        value: |-
+          @assert strmatch(%q<cmd_left_side>,*/*)=@pemit %#=notice(SHEET,+encounter/roll <npc>/<[u(%!/FUN`TRAIT`NOUN)]>%[+<n>%]%[=<opposition>%][if(hasattr(%!,NPC`ROLL),%b%[vs <scale>%])]%, such as +encounter/roll thug/[lcstr(first(u(%!/FUN`TRAIT`ALL)))]=fair.,warn); @include/args %!/INC`NEED`ENCOUNTER=typed,; @include %!/INC`NEED`GM; think setq(roll_versus,if(cand(hasattr(%!,NPC`ROLL),strmatch(%q<cmd_argument>,* vs *)),trim(last(%q<cmd_argument>,%bvs%b)))); think setq(roll_rest,if(strlen(%q<roll_versus>),trim(before(%q<cmd_argument>,%bvs%b%q<roll_versus>)),%q<cmd_argument>)); think setqm(roll_left,trim(before(%q<roll_rest>,=)),roll_opposition,trim(after(%q<roll_rest>,=))); @include/args %!/INC`NEED`NPC=name,before(%q<roll_left>,/); @assert %q<part_npc>; think u(%!/FUN`CHECK`READ,trim(after(%q<roll_left>,/))); @assert isint(%q<check_modifier>)=@pemit %#=notice(SHEET,'[after(%q<roll_left>,/)]' ends in something that is not a number to add.,warn); @assert strlen(setr(trait_key,u(%!/FUN`TRAIT`FIND,%q<check_typed>)))=@pemit %#=notice(SHEET,There is no [u(%!/FUN`TRAIT`NOUN)] '%q<check_typed>'. +sheet/traits lists them.,warn); think setq(roll_target,u(%!/API`TARGET,%q<roll_opposition>)); @assert cor(not(strlen(%q<roll_opposition>)),isint(%q<roll_target>))=@pemit %#=notice(SHEET,'%q<roll_opposition>' is not an opposition. Give a number%, a ladder word such as fair%, or a difficulty such as hard.,warn); think setq(roll_add,if(hasattr(%!,NPC`ROLL),u(%!/NPC`ROLL,{{encounters}}/%q<part_status>,%q<roll_versus>),0)); @assert not(strmatch(%q<roll_add>,#-*))=@pemit %#=notice(SHEET,trim(after(%q<roll_add>,#-1)),warn); think setq(roll_result,u(%!/FUN`CHECK`ROLLED,%q<trait_key>,add(default({{encounters}}/%q<part_status>`SKILL`%q<trait_key>,0),%q<check_modifier>,%q<roll_add>),%q<roll_target>)); @remit %q<enc_room>=notice(SHEET,tone(strong,%q<part_name>) rolls [u(%!/FUN`DISPLAY`CHECK,%q<roll_result>)][if(hasattr(%!,NPC`HIT),u(%!/NPC`HIT,{{encounters}}/%q<part_status>,%q<roll_versus>,%q<roll_result>))])
+        flags: [cmdsyntax]
+      # +encounter/harm <name>[/<track>]=<shifts>: the GM lands a hit. An NPC marks stress boxes, one shift each,
+      # and is taken out when what is left is more than its empty consequences take. A player is told what to mark.
+      INC`ENCOUNTER`HARM:
+        value: |-
+          @assert cand(%q<cmd_has_equals>,isint(%q<cmd_right_side>),gt(%q<cmd_right_side>,0),lte(%q<cmd_right_side>,40))=@pemit %#=notice(SHEET,+encounter/harm <name>%[/<track>%]=<shifts>: the shifts of a hit%, 1 or more.,warn); @include/args %!/INC`NEED`ENCOUNTER=typed,; @include %!/INC`NEED`GM; @include/args %!/INC`NEED`PART=name,before(%q<cmd_left_side>,/); @assert strlen(%q<part_who>); @assert not(hasattr({{encounters}},%q<part_status>`OUT))=@pemit %#=notice(SHEET,%q<part_name> is out already: [get({{encounters}}/%q<part_status>`OUT)].,warn); think setq(harm_track,if(strmatch(%q<cmd_left_side>,*/*),u(%!/FUN`LIST`FIND,TRACK,after(%q<cmd_left_side>,/)),first(u(%!/FUN`LIST`ALL,TRACK)))); @assert strlen(%q<harm_track>)=@pemit %#=notice(SHEET,There is no stress track '[trim(after(%q<cmd_left_side>,/))]'. The tracks are [itemize(lcstr(u(%!/FUN`LIST`ALL,TRACK)))].,warn); think setq(harm_label,lcstr(get({{store}}/TRACK`%q<harm_track>))); @break not(%q<part_npc>)={@include %!/INC`ENCOUNTER`HARM`PLAYER}; @include %!/INC`ENCOUNTER`HARM`NPC
+        flags: [cmdsyntax]
+      INC`ENCOUNTER`HARM`NPC:
+        value: |-
+          think setqm(harm_at,{{encounters}}/%q<part_status>,harm_shifts,%q<cmd_right_side>,harm_note,); @if hasattr(%!,NPC`HARM)={think setq(harm_hooked,u(%!/NPC`HARM,%q<harm_at>,%q<harm_shifts>)); think setqm(harm_shifts,first(%q<harm_hooked>),harm_note,if(strlen(rest(%q<harm_hooked>)),%b[rest(%q<harm_hooked>)]))}; think setqm(harm_free,u(%!/FUN`NPC`FREE,%q<harm_at>,%q<harm_track>),harm_room,u(%!/FUN`NPC`ROOM,%q<harm_at>)); think setq(harm_mark,extract(%q<harm_free>,1,%q<harm_shifts>)); think setq(harm_left,sub(%q<harm_shifts>,words(%q<harm_mark>))); think if(words(%q<harm_mark>),attrib_set(%q<harm_at>`STRESS`%q<harm_track>,sort(get(%q<harm_at>`STRESS`%q<harm_track>) %q<harm_mark>,n))); think if(gt(%q<harm_left>,%q<harm_room>),attrib_set(%q<harm_at>`OUT,taken out)); @remit %q<enc_room>=notice(SHEET,tone(strong,%q<part_name>) takes a hit of [u(%!/FUN`DISPLAY`SHIFTS,%q<cmd_right_side>)].%q<harm_note>[setq(hm_boxes,capstr(%q<harm_label>) stress [if(eq(words(%q<harm_mark>),1),box %q<harm_mark> takes,boxes [itemize(%q<harm_mark>)] take)])] [cond(not(%q<harm_shifts>),Nothing gets through.,not(%q<harm_left>),%q<hm_boxes> it all.,gt(%q<harm_left>,%q<harm_room>),[if(words(%q<harm_mark>),%q<hm_boxes> [words(%q<harm_mark>)]%, and the [u(%!/FUN`DISPLAY`SHIFTS,%q<harm_left>)] left [if(eq(%q<harm_left>,1),is,are)],That is)] more than it can take: [tone(warning,taken out)].,1,[if(words(%q<harm_mark>),%q<hm_boxes> [words(%q<harm_mark>)].%b)][u(%!/FUN`DISPLAY`SHIFTS,%q<harm_left>)] still to take.)]); @break cand(gt(%q<harm_left>,0),gt(%q<harm_left>,%q<harm_room>))={@pemit %#=notice(SHEET,The one who took %q<part_name> out says what happens to it: +encounter/out %q<part_name>=<what happens>.)}; @break not(gt(%q<harm_left>,0)); @pemit %#=notice(SHEET,%q<part_name> takes the [u(%!/FUN`DISPLAY`SHIFTS,%q<harm_left>)] left with consequences: +encounter/consequence %q<part_name>/<slot>=<aspect>. Empty: [u(%!/FUN`NPC`OPEN,%q<harm_at>)]. Or it is taken out: +encounter/out %q<part_name>.)
+        flags: [cmdsyntax]
+      # The player marks it themselves; they are taken out when it is more than they can take.
+      INC`ENCOUNTER`HARM`PLAYER:
+        value: |-
+          think setq(harm_at,{{encounters}}/ENC`%q<enc_id>`C`[u(%!/FUN`ENC`KEY,%q<part_who>)]); think setqm(harm_free,squish(iter(lnum(1,u(%!/FUN`TRACK`BOXES,%q<part_who>,%q<harm_track>)),if(member(get(%q<harm_at>`STRESS`%q<harm_track>),%i0),,%i0))),harm_open,squish(iter(u(%!/FUN`LIST`ALL,CONSEQUENCE),if(strlen(get(%q<harm_at>`CONSEQUENCE`%i0)),,%i0)))); think setq(harm_room,add(words(%q<harm_free>),ladd(iter(%q<harm_open>,default({{store}}/CONSEQUENCE`%i0`SHIFTS,2))))); think if(gt(%q<cmd_right_side>,%q<harm_room>),attrib_set({{encounters}}/%q<part_status>`OUT,taken out)); @remit %q<enc_room>=notice(SHEET,tone(strong,%q<part_name>) takes a hit of [u(%!/FUN`DISPLAY`SHIFTS,%q<cmd_right_side>)] on %q<harm_label> stress[if(gt(%q<cmd_right_side>,%q<harm_room>),: more than [subj(%q<part_who>)] can take%, so [tone(warning,taken out)].,.)]); @pemit %q<part_who>=notice(SHEET,if(gt(%q<cmd_right_side>,%q<harm_room>),That hit is more than your stress and consequences take: you are taken out of [u(%!/FUN`ENC`TITLE,%q<enc_id>)]%, and whoever took you out says what happens.,Take the [u(%!/FUN`DISPLAY`SHIFTS,%q<cmd_right_side>)] with +sheet/stress %q<harm_label>=<box>%, one shift a box %([if(words(%q<harm_free>),empty: [itemize(%q<harm_free>)],none empty)]%)%, and +sheet/consequence <slot>=<aspect> %([if(words(%q<harm_open>),itemize(iter(%q<harm_open>,[lcstr(get({{store}}/CONSEQUENCE`%i0))] [default({{store}}/CONSEQUENCE`%i0`SHIFTS,2)],%b,|),|),none empty)]%). What you cannot take takes you out.))
+        flags: [cmdsyntax]
+      # %0 object/attribute of an NPC: its empty consequence slots, "mild (2) and moderate (4)", or "none".
+      FUN`NPC`OPEN:
+        value: |-
+          firstof(itemize(squish(iter(get(%0`SLOTS),if(strlen(get(%0`CONSEQUENCE`%i0)),,[lcstr(get({{store}}/CONSEQUENCE`%i0))] %([default({{store}}/CONSEQUENCE`%i0`SHIFTS,2)]%)),%b,|),|),|),none)
+        flags: [funsyntax]
+      # +encounter/stress <npc>/<track>=<box>|clear: the GM marks a box, or clears one marked, or the whole track.
+      INC`ENCOUNTER`STRESS:
+        value: |-
+          @assert cand(%q<cmd_has_equals>,strmatch(%q<cmd_left_side>,*/*))=@pemit %#=notice(SHEET,+encounter/stress <npc>/<track>=<box> marks a box or clears a marked one%, =clear the track. Players use +sheet/stress.,warn); @include/args %!/INC`NEED`ENCOUNTER=typed,; @include %!/INC`NEED`GM; @include/args %!/INC`NEED`NPC=name,before(%q<cmd_left_side>,/); @assert %q<part_npc>; @assert strlen(setr(harm_track,u(%!/FUN`LIST`FIND,TRACK,after(%q<cmd_left_side>,/))))=@pemit %#=notice(SHEET,There is no stress track '[trim(after(%q<cmd_left_side>,/))]'. The tracks are [itemize(lcstr(u(%!/FUN`LIST`ALL,TRACK)))].,warn); think setqm(nst_at,{{encounters}}/%q<part_status>,nst_label,lcstr(get({{store}}/TRACK`%q<harm_track>))); @break strmatch(%q<cmd_right_side>,clear)={think attrib_set(%q<nst_at>`STRESS`%q<harm_track>); @remit %q<enc_room>=notice(SHEET,%q<part_name>'s %q<nst_label> stress is clear.)}; think setqm(nst_count,default(%q<nst_at>`BOXES`%q<harm_track>,0),nst_marked,get(%q<nst_at>`STRESS`%q<harm_track>)); @assert cand(isint(%q<cmd_right_side>),gte(%q<cmd_right_side>,1),lte(%q<cmd_right_side>,%q<nst_count>))=@pemit %#=notice(SHEET,if(%q<nst_count>,%q<part_name> has %q<nst_label> stress boxes 1 to %q<nst_count>.,%q<part_name> has no %q<nst_label> stress boxes.),warn); think attrib_set(%q<nst_at>`STRESS`%q<harm_track>,if(member(%q<nst_marked>,%q<cmd_right_side>),remove(%q<nst_marked>,%q<cmd_right_side>),sort(%q<nst_marked> %q<cmd_right_side>,n))); @remit %q<enc_room>=notice(SHEET,%q<part_name>'s %q<nst_label> stress box %q<cmd_right_side> is [if(member(%q<nst_marked>,%q<cmd_right_side>),cleared,marked)]: [u(%!/FUN`NPC`BOXES,%q<nst_at>,%q<harm_track>)])
+        flags: [cmdsyntax]
+      # +encounter/consequence <npc>/<slot>=<aspect>: the GM gives an NPC a consequence; empty clears it.
+      INC`ENCOUNTER`CONSEQUENCE:
+        value: |-
+          @assert cand(%q<cmd_has_equals>,strmatch(%q<cmd_left_side>,*/*))=@pemit %#=notice(SHEET,+encounter/consequence <npc>/<slot>=<aspect>. Empty clears it. Players use +sheet/consequence.,warn); @include/args %!/INC`NEED`ENCOUNTER=typed,; @include %!/INC`NEED`GM; @include/args %!/INC`NEED`NPC=name,before(%q<cmd_left_side>,/); @assert %q<part_npc>; think setqm(nc_at,{{encounters}}/%q<part_status>,nc_slot,u(%!/FUN`LIST`FIND,CONSEQUENCE,after(%q<cmd_left_side>,/))); @assert cand(strlen(%q<nc_slot>),member(get(%q<nc_at>`SLOTS),%q<nc_slot>))=@pemit %#=notice(SHEET,if(words(get(%q<nc_at>`SLOTS)),%q<part_name>'s consequences are [u(%!/FUN`NPC`SLOTS,%q<nc_at>)].,%q<part_name> has no consequences: a hit its stress cannot take takes it out.),warn); @assert lte(strlen(%q<cmd_right_side>),200)=@pemit %#=notice(SHEET,Keep a consequence to 200 characters.,warn); think attrib_set(%q<nc_at>`CONSEQUENCE`%q<nc_slot>,%q<cmd_right_side>); @remit %q<enc_room>=notice(SHEET,if(strlen(%q<cmd_right_side>),[tone(strong,%q<part_name>)] takes a [lcstr(get({{store}}/CONSEQUENCE`%q<nc_slot>))] consequence: %q<cmd_right_side>,%q<part_name>'s [lcstr(get({{store}}/CONSEQUENCE`%q<nc_slot>))] consequence is cleared.))
+        flags: [cmdsyntax]
+      # +encounter/out <name>[=<what happens>]: the GM takes someone out, or says what happens to them. With nothing
+      # after it, one who is out comes back in.
+      INC`ENCOUNTER`OUT:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(SHEET,+encounter/out <name>%[=<what happens>%] takes someone out. +encounter/out <name> again brings them back.,warn); @include/args %!/INC`NEED`ENCOUNTER=typed,; @include %!/INC`NEED`GM; @include/args %!/INC`NEED`PART=name,%q<cmd_left_side>; @assert strlen(%q<part_who>); @assert lte(strlen(%q<cmd_right_side>),200)=@pemit %#=notice(SHEET,Keep what happens to 200 characters.,warn); @break cand(hasattr({{encounters}},%q<part_status>`OUT),not(strlen(%q<cmd_right_side>)))={think attrib_set({{encounters}}/%q<part_status>`OUT); @remit %q<enc_room>=notice(SHEET,tone(strong,%q<part_name>) is back in [u(%!/FUN`ENC`TITLE,%q<enc_id>)].)}; think attrib_set({{encounters}}/%q<part_status>`OUT,firstof(%q<cmd_right_side>,taken out)); @remit %q<enc_room>=notice(SHEET,tone(strong,%q<part_name>) is out of [u(%!/FUN`ENC`TITLE,%q<enc_id>)]: [get({{encounters}}/%q<part_status>`OUT)].)
+        flags: [cmdsyntax]
+      # +encounter/concede: you give in before the roll, and get a fate point and one for each consequence you took
+      # here. +encounter/concede <npc>: the GM concedes for an NPC; a major one banks them for its next encounter.
+      INC`ENCOUNTER`CONCEDE:
+        value: |-
+          @include/args %!/INC`NEED`ENCOUNTER=typed,; @break strlen(%q<cmd_argument>)={@include %!/INC`ENCOUNTER`CONCEDE`NPC}; @assert member(get({{encounters}}/ENC`%q<enc_id>`PEOPLE),%q<viewer_objid>)=@pemit %#=notice(SHEET,You are not in [u(%!/FUN`ENC`TITLE,%q<enc_id>)]. The GM concedes for an NPC with +encounter/concede <npc>.,warn); think setqm(part_status,u(%!/FUN`ENC`STATUS,%q<enc_id>,%q<viewer_objid>),cc_copy,ENC`%q<enc_id>`C`[u(%!/FUN`ENC`KEY,%#)]); @assert not(hasattr({{encounters}},%q<part_status>`OUT))=@pemit %#=notice(SHEET,You are out of it already: [get({{encounters}}/%q<part_status>`OUT)].,warn); think setq(cc_had,get({{encounters}}/%q<part_status>`HAD)); think setq(cc_new,squish(iter(u(%!/FUN`LIST`ALL,CONSEQUENCE),if(cand(strlen(get({{encounters}}/%q<cc_copy>`CONSEQUENCE`%i0)),not(member(%q<cc_had>,%i0))),%i0)))); think setq(cc_gain,inc(words(%q<cc_new>))); think attrib_set({{encounters}}/%q<cc_copy>`POINTS,add(firstof(get({{encounters}}/%q<cc_copy>`POINTS),0),%q<cc_gain>))[attrib_set({{encounters}}/%q<part_status>`OUT,conceded)]; @remit %q<enc_room>=notice(SHEET,tone(strong,name(%#)) concedes [u(%!/FUN`ENC`TITLE,%q<enc_id>)] and gets [if(eq(%q<cc_gain>,1),a fate point,%q<cc_gain> fate points: one for conceding and one for each consequence taken here)]. [name(%#)] says how it ends for [obj(%#)]%, and the other side gets what it fought for.)
+        flags: [cmdsyntax]
+      INC`ENCOUNTER`CONCEDE`NPC:
+        value: |-
+          @include %!/INC`NEED`GM; @include/args %!/INC`NEED`NPC=name,%q<cmd_argument>; @assert %q<part_npc>; think setq(cn_at,{{encounters}}/%q<part_status>); @assert not(hasattr({{encounters}},%q<part_status>`OUT))=@pemit %#=notice(SHEET,%q<part_name> is out of it already: [get(%q<cn_at>`OUT)].,warn); think setqm(cn_gain,inc(words(lattr(%q<cn_at>`CONSEQUENCE`*))),cn_from,get(%q<cn_at>`FROM)); think attrib_set(%q<cn_at>`OUT,conceded); think setq(cn_banks,cand(strmatch(get(%q<cn_at>`KIND),major),hasattr({{npcs}},NPC`%q<cn_from>))); think if(%q<cn_banks>,attrib_set({{npcs}}/NPC`%q<cn_from>`POINTS,add(default({{npcs}}/NPC`%q<cn_from>`POINTS,0),%q<cn_gain>))); @remit %q<enc_room>=notice(SHEET,tone(strong,%q<part_name>) concedes [u(%!/FUN`ENC`TITLE,%q<enc_id>)][if(%q<cn_banks>,%, and banks %q<cn_gain> fate point[if(neq(%q<cn_gain>,1),s)] for the next time it turns up)]. The GM says how it gets out%, and the other side gets what it fought for.)
+        flags: [cmdsyntax]
+      # +encounter/exchange: the GM starts the next exchange. The first gives the GM a fate point for each player.
+      INC`ENCOUNTER`EXCHANGE:
+        value: |-
+          @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>; @include %!/INC`NEED`GM; think setq(ex_n,inc(default({{encounters}}/ENC`%q<enc_id>`EXCHANGE,0))); think if(eq(%q<ex_n>,1),attrib_set({{encounters}}/ENC`%q<enc_id>`POOL,add(default({{encounters}}/ENC`%q<enc_id>`POOL,0),words(get({{encounters}}/ENC`%q<enc_id>`PEOPLE)))))[attrib_set({{encounters}}/ENC`%q<enc_id>`EXCHANGE,%q<ex_n>)][attrib_set({{encounters}}/ENC`%q<enc_id>`ACTED)][attrib_set({{encounters}}/ENC`%q<enc_id>`CURRENT)]; @remit %q<enc_room>=notice(SHEET,Exchange %q<ex_n> of [u(%!/FUN`ENC`TITLE,%q<enc_id>)] begins.[if(eq(%q<ex_n>,1),%bThe GM has [setr(ex_pool,default({{encounters}}/ENC`%q<enc_id>`POOL,0))] fate point[if(neq(%q<ex_pool>,1),s)].)] To act: [u(%!/FUN`ENC`NAMES,%q<enc_id>,u(%!/FUN`ENC`TOACT,%q<enc_id>))]. +encounter/act takes your turn%, and whoever acts picks who goes next with +encounter/act <name>.)
+        flags: [cmdsyntax]
+      # +encounter/act [<name>]: you take your turn in this exchange. With a name, the GM or whoever is acting
+      # hands the turn on.
+      INC`ENCOUNTER`ACT:
+        value: |-
+          @include/args %!/INC`NEED`ENCOUNTER=typed,; @assert gt(default({{encounters}}/ENC`%q<enc_id>`EXCHANGE,0),0)=@pemit %#=notice(SHEET,The GM starts the first exchange with +encounter/exchange.,warn); think setq(part_who,if(strlen(%q<cmd_argument>),u(%!/FUN`ENC`FIND,%q<enc_id>,%q<cmd_argument>),if(member(get({{encounters}}/ENC`%q<enc_id>`PEOPLE),%q<viewer_objid>),%q<viewer_objid>))); @assert strlen(%q<part_who>)=@pemit %#=notice(SHEET,if(strlen(%q<cmd_argument>),Nobody called '%q<cmd_argument>' is in [u(%!/FUN`ENC`TITLE,%q<enc_id>)].,You are not in [u(%!/FUN`ENC`TITLE,%q<enc_id>)]. +encounter/join takes part.),warn); think setq(part_name,u(%!/FUN`ENC`WHONAME,%q<enc_id>,%q<part_who>)); @assert cor(not(comp(%q<part_who>,%q<viewer_objid>)),u(%!/FUN`ENC`ISGM,%q<enc_id>,%#),not(comp(get({{encounters}}/ENC`%q<enc_id>`CURRENT),%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only the GM%, or whoever is acting now%, picks who acts next.,warn); @assert not(u(%!/FUN`ENC`ISOUT,%q<enc_id>,%q<part_who>))=@pemit %#=notice(SHEET,%q<part_name> is out of it.,warn); @assert not(member(get({{encounters}}/ENC`%q<enc_id>`ACTED),%q<part_who>))=@pemit %#=notice(SHEET,%q<part_name> has acted this exchange already.,warn); think attrib_set({{encounters}}/ENC`%q<enc_id>`ACTED,trim(get({{encounters}}/ENC`%q<enc_id>`ACTED) %q<part_who>))[attrib_set({{encounters}}/ENC`%q<enc_id>`CURRENT,%q<part_who>)]; think setq(act_left,u(%!/FUN`ENC`TOACT,%q<enc_id>)); @remit %q<enc_room>=notice(SHEET,[if(comp(%q<part_who>,%q<viewer_objid>),[tone(strong,name(%#))] hands the turn to [tone(strong,%q<part_name>)],[tone(strong,%q<part_name>)] acts)] in exchange [get({{encounters}}/ENC`%q<enc_id>`EXCHANGE)]. [if(words(%q<act_left>),Still to act: [u(%!/FUN`ENC`NAMES,%q<enc_id>,%q<act_left>)]. %q<part_name> picks who goes next with +encounter/act <name>.,Everyone has acted. The GM starts the next exchange with +encounter/exchange.)])
+        flags: [cmdsyntax]
+      # +encounter/aspect <aspect>[=<free invokes>] and +encounter/boost <aspect>: an aspect on the scene.
+      INC`ENCOUNTER`ASPECT:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(SHEET,+encounter/aspect <aspect>%[=<free invokes>%] puts an aspect on the scene%, such as one you created an advantage for.,warn); @include/args %!/INC`NEED`ENCOUNTER=typed,; @include %!/INC`NEED`TAKING; think setq(asp_free,firstof(%q<cmd_right_side>,0)); @assert cand(isint(%q<asp_free>),gte(%q<asp_free>,0),lte(%q<asp_free>,5))=@pemit %#=notice(SHEET,Give 0 to 5 free invokes.,warn); @include/args %!/INC`ENCOUNTER`PLACE=text,%q<cmd_left_side>,free,%q<asp_free>,boost,
+        flags: [cmdsyntax]
+      INC`ENCOUNTER`BOOST:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+encounter/boost <aspect> puts a boost on the scene: one free invoke%, and it is gone once used.,warn); @include/args %!/INC`NEED`ENCOUNTER=typed,; @include %!/INC`NEED`TAKING; @include/args %!/INC`ENCOUNTER`PLACE=text,%q<cmd_argument>,free,1,boost,1
+        flags: [cmdsyntax]
+      # %<text>, %<free>, %<boost>: the aspect on enc_id.
+      INC`ENCOUNTER`PLACE:
+        value: |-
+          @assert lte(strlen(%<text>),100)=@pemit %#=notice(SHEET,Keep an aspect to 100 characters.,warn); @assert lt(words(lattr({{encounters}}/ENC`%q<enc_id>`A`*)),20)=@pemit %#=notice(SHEET,A scene holds 20 aspects. +encounter/unaspect <number> takes one off.,warn); think setq(asp_k,inc(default({{encounters}}/ENC`%q<enc_id>`NEXTA,0))); think attrib_set({{encounters}}/ENC`%q<enc_id>`NEXTA,%q<asp_k>)[attrib_set({{encounters}}/ENC`%q<enc_id>`A`%q<asp_k>,%<text>)][attrib_set({{encounters}}/ENC`%q<enc_id>`A`%q<asp_k>`INVOKES,if(%<free>,%<free>))][attrib_set({{encounters}}/ENC`%q<enc_id>`A`%q<asp_k>`BOOST,%<boost>)][attrib_set({{encounters}}/ENC`%q<enc_id>`A`%q<asp_k>`BY,%q<viewer_objid>)]; @remit %q<enc_room>=notice(SHEET,tone(strong,name(%#)) puts [if(%<boost>,a boost,an aspect)] on [u(%!/FUN`ENC`TITLE,%q<enc_id>)]: [tone(strong,%<text>)][if(cand(%<free>,not(%<boost>)),%, with %<free> free invoke[if(neq(%<free>,1),s)])]. +encounter/invoke %q<asp_k> invokes it.)
+        flags: [cmdsyntax]
+      # +encounter/invoke <number>[=<why>]: +2 or a reroll. A free invoke first; else a fate point from your copy,
+      # or the GM's pool for the GM.
+      INC`ENCOUNTER`INVOKE:
+        value: |-
+          @assert isint(%q<cmd_left_side>)=@pemit %#=notice(SHEET,+encounter/invoke <number>%[=<what for>%] invokes an aspect on the scene. +encounter shows them.,warn); @include/args %!/INC`NEED`ENCOUNTER=typed,; @include %!/INC`NEED`TAKING; think setq(inv_at,{{encounters}}/ENC`%q<enc_id>`A`%q<cmd_left_side>); @assert hasattr({{encounters}},ENC`%q<enc_id>`A`%q<cmd_left_side>)=@pemit %#=notice(SHEET,There is no aspect %q<cmd_left_side> on [u(%!/FUN`ENC`TITLE,%q<enc_id>)].,warn); @assert lte(strlen(%q<cmd_right_side>),200)=@pemit %#=notice(SHEET,Keep what it is for to 200 characters.,warn); think setqm(inv_text,get(%q<inv_at>),inv_free,default(%q<inv_at>`INVOKES,0),inv_why,if(strlen(%q<cmd_right_side>),: %q<cmd_right_side>)); @break gt(%q<inv_free>,0)={think if(get(%q<inv_at>`BOOST),u(%!/FUN`NPC`WIPE,{{encounters}},ENC`%q<enc_id>`A`%q<cmd_left_side>),attrib_set(%q<inv_at>`INVOKES,if(dec(%q<inv_free>),dec(%q<inv_free>)))); @remit %q<enc_room>=notice(SHEET,tone(strong,name(%#)) uses a free invoke of [tone(strong,%q<inv_text>)]%q<inv_why>: +2 or a reroll.)}; @break cand(u(%!/FUN`ENC`ISGM,%q<enc_id>,%#),not(member(get({{encounters}}/ENC`%q<enc_id>`PEOPLE),%q<viewer_objid>)))={@include %!/INC`ENCOUNTER`INVOKE`POOL}; think setqm(inv_copy,{{encounters}}/ENC`%q<enc_id>`C`[u(%!/FUN`ENC`KEY,%#)],inv_points,firstof(get({{encounters}}/ENC`%q<enc_id>`C`[u(%!/FUN`ENC`KEY,%#)]`POINTS),0)); @assert gt(%q<inv_points>,0)=@pemit %#=notice(SHEET,You have no fate points left in [u(%!/FUN`ENC`TITLE,%q<enc_id>)].,warn); think attrib_set(%q<inv_copy>`POINTS,dec(%q<inv_points>)); @remit %q<enc_room>=notice(SHEET,tone(strong,name(%#)) spends a fate point to invoke [tone(strong,%q<inv_text>)]%q<inv_why>: +2 or a reroll. [dec(%q<inv_points>)] left.)
+        flags: [cmdsyntax]
+      INC`ENCOUNTER`INVOKE`POOL:
+        value: |-
+          think setq(inv_pool,default({{encounters}}/ENC`%q<enc_id>`POOL,0)); @assert gt(%q<inv_pool>,0)=@pemit %#=notice(SHEET,Your pool is empty. +encounter/pool +<n> adds to it.,warn); think attrib_set({{encounters}}/ENC`%q<enc_id>`POOL,dec(%q<inv_pool>)); @remit %q<enc_room>=notice(SHEET,The GM spends a fate point to invoke [tone(strong,%q<inv_text>)]%q<inv_why>: +2 or a reroll. [dec(%q<inv_pool>)] left in the pool.)
+        flags: [cmdsyntax]
+      # +encounter/unaspect <number>: the GM, or whoever put it there, takes an aspect off.
+      INC`ENCOUNTER`UNASPECT:
+        value: |-
+          @assert isint(%q<cmd_argument>)=@pemit %#=notice(SHEET,+encounter/unaspect <number> takes an aspect off the scene.,warn); @include/args %!/INC`NEED`ENCOUNTER=typed,; @assert hasattr({{encounters}},ENC`%q<enc_id>`A`%q<cmd_argument>)=@pemit %#=notice(SHEET,There is no aspect %q<cmd_argument> on [u(%!/FUN`ENC`TITLE,%q<enc_id>)].,warn); @assert cor(u(%!/FUN`ENC`ISGM,%q<enc_id>,%#),not(comp(get({{encounters}}/ENC`%q<enc_id>`A`%q<cmd_argument>`BY),%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only the GM and whoever put it there take it off.,warn); think setq(asp_text,get({{encounters}}/ENC`%q<enc_id>`A`%q<cmd_argument>)); think u(%!/FUN`NPC`WIPE,{{encounters}},ENC`%q<enc_id>`A`%q<cmd_argument>); @remit %q<enc_room>=notice(SHEET,tone(strong,name(%#)) takes [tone(strong,%q<asp_text>)] off [u(%!/FUN`ENC`TITLE,%q<enc_id>)].)
+        flags: [cmdsyntax]
+      # +encounter/pool: the GM's fate points. +encounter/pool <n>|+<n>|-<n>[=<why>]: the GM changes them.
+      INC`ENCOUNTER`POOL:
+        value: |-
+          @include/args %!/INC`NEED`ENCOUNTER=typed,; think setq(pool_now,default({{encounters}}/ENC`%q<enc_id>`POOL,0)); @break not(strlen(%q<cmd_argument>))={@pemit %#=notice(SHEET,The GM has %q<pool_now> fate point[if(neq(%q<pool_now>,1),s)] in [u(%!/FUN`ENC`TITLE,%q<enc_id>)].)}; @include %!/INC`NEED`GM; @assert regmatch(%q<cmd_left_side>,^\[+-\]?\[0-9\]+$)=@pemit %#=notice(SHEET,+encounter/pool <n> sets the pool%, +<n> or -<n> changes it%, =<why> says why.,warn); @assert lte(strlen(%q<cmd_right_side>),200)=@pemit %#=notice(SHEET,Keep why to 200 characters.,warn); think setq(pool_new,min(50,max(0,if(regmatch(%q<cmd_left_side>,^\[+-\]),add(%q<pool_now>,%q<cmd_left_side>),%q<cmd_left_side>)))); think attrib_set({{encounters}}/ENC`%q<enc_id>`POOL,%q<pool_new>); @remit %q<enc_room>=notice(SHEET,The GM's pool in [u(%!/FUN`ENC`TITLE,%q<enc_id>)] is %q<pool_new>[if(strlen(%q<cmd_right_side>),: %q<cmd_right_side>)].)
+        flags: [cmdsyntax]
+      # +encounter/point <name>[=<why>]: the GM gives a player a fate point in the encounter, for a compel.
+      INC`ENCOUNTER`POINT:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(SHEET,+encounter/point <name>%[=<why>%] gives a player a fate point here%, such as for a compel they accept.,warn); @include/args %!/INC`NEED`ENCOUNTER=typed,; @include %!/INC`NEED`GM; @include/args %!/INC`NEED`PART=name,%q<cmd_left_side>; @assert strlen(%q<part_who>); @assert not(%q<part_npc>)=@pemit %#=notice(SHEET,NPCs have no fate points of their own: they use your pool.,warn); @assert lte(strlen(%q<cmd_right_side>),200)=@pemit %#=notice(SHEET,Keep why to 200 characters.,warn); think setq(pt_at,{{encounters}}/ENC`%q<enc_id>`C`[u(%!/FUN`ENC`KEY,%q<part_who>)]); think attrib_set(%q<pt_at>`POINTS,inc(firstof(get(%q<pt_at>`POINTS),0))); @remit %q<enc_room>=notice(SHEET,tone(strong,%q<part_name>) gets a fate point[if(strlen(%q<cmd_right_side>),: %q<cmd_right_side>)]. [get(%q<pt_at>`POINTS)] now.)
+        flags: [cmdsyntax]
+      # +encounter/victory <name>[=<n>]: the GM gives a victory in a contest, 2 for success with style, or takes
+      # one back below 0. Three wins it.
+      INC`ENCOUNTER`VICTORY:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(SHEET,+encounter/victory <name>%[=<n>%] gives a victory in a contest: 1%, or 2 for success with style. Three wins.,warn); @include/args %!/INC`NEED`ENCOUNTER=typed,; @include %!/INC`NEED`GM; @include/args %!/INC`NEED`PART=name,%q<cmd_left_side>; @assert strlen(%q<part_who>); think setq(vic_add,firstof(%q<cmd_right_side>,1)); @assert cand(isint(%q<vic_add>),gte(%q<vic_add>,-2),lte(%q<vic_add>,2),neq(%q<vic_add>,0))=@pemit %#=notice(SHEET,Give 1 or 2 victories%, or -1 or -2 to take them back.,warn); think setq(vic_now,max(0,add(default({{encounters}}/%q<part_status>`VICTORIES,0),%q<vic_add>))); think attrib_set({{encounters}}/%q<part_status>`VICTORIES,if(%q<vic_now>,%q<vic_now>)); @remit %q<enc_room>=notice(SHEET,tone(strong,%q<part_name>) has %q<vic_now> victor[if(eq(%q<vic_now>,1),y,ies)][if(gte(%q<vic_now>,3),: [tone(success,%q<part_name> wins the contest)])].)
+        flags: [cmdsyntax]
+
+      # ---- +npc ---------------------------------------------------------------------
+      # Opposition on Fate Opposition: NPC`<number> each, holding its name, with KIND (minor or major), OWNER (who
+      # made it), SHARED (1 when every GM may use it), ASPECT`<n>, SKILL`<KEY> (a rating), STUNT`<n>, BOXES`<TRACK>
+      # (stress boxes), SLOTS (the consequence slots it has), FIELD`<NAME> (a field a package adds with
+      # NPCFIELD`<NAME>) and POINTS (fate points a major NPC banked by conceding) beneath. +encounter/npc copies one
+      # into an encounter, so a change to it never reaches an encounter already running.
+      # A package adds a field with NPCFIELD`<NAME>: %0 the value typed, it returns the value to keep or #-1 and why.
+      # NPCFIELD`<NAME>`SHOW (%0 the value kept) is how +npc shows it.
+      # %<typed> an NPC's name: npc_id, one the player may use.
+      INC`NEED`NPCSEE:
+        value: |-
+          @assert strlen(setr(npc_id,u(%!/FUN`NPC`FIND,%<typed>,%#)))=@pemit %#=notice(SHEET,There is no opposition called '[trim(%<typed>)]' that you can use. +npc lists them.,warn)
+        flags: [cmdsyntax]
+      # %<typed> an NPC's name: npc_id, one the player made, or any for a keeper.
+      INC`NEED`NPCEDIT:
+        value: |-
+          @include/args %!/INC`NEED`NPCSEE=typed,%<typed>; @assert strlen(%q<npc_id>); @assert cor(%q<viewer_keeper>,not(comp(get({{npcs}}/NPC`%q<npc_id>`OWNER),%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only [name(get({{npcs}}/NPC`%q<npc_id>`OWNER))]%, who made [get({{npcs}}/NPC`%q<npc_id>)]%, and sheet keepers change it.,error); think setq(npc_name,get({{npcs}}/NPC`%q<npc_id>))
+        flags: [cmdsyntax]
+      # <npc>/<what> left of =: npc_id and npc_what.
+      INC`NEED`NPCPART:
+        value: |-
+          @include/args %!/INC`NEED`NPCEDIT=typed,before(%q<cmd_left_side>,/); @assert strlen(%q<npc_id>); think setq(npc_what,trim(after(%q<cmd_left_side>,/)))
+        flags: [cmdsyntax]
+      # +npc: the opposition you may use.
+      INC`NPC`LIST:
+        value: |-
+          @pemit %#=u(%!/FUN`SCREEN`NPCS,%#)
+        flags: [cmdsyntax]
+      # +npc <name>: one, in full.
+      INC`NPC`SHOW:
+        value: |-
+          @include/args %!/INC`NEED`NPCSEE=typed,%q<cmd_argument>; @assert strlen(%q<npc_id>); @pemit %#=u(%!/FUN`SCREEN`NPC,{{npcs}},NPC`%q<npc_id>,get({{npcs}}/NPC`%q<npc_id>),%*<|>Made by%*<|>Used by[if(gt(default({{npcs}}/NPC`%q<npc_id>`POINTS,0),0),%*<|>Fate points banked)],%*<|>[name(get({{npcs}}/NPC`%q<npc_id>`OWNER))]%*<|>[if(get({{npcs}}/NPC`%q<npc_id>`SHARED),every GM,[name(get({{npcs}}/NPC`%q<npc_id>`OWNER))] and sheet keepers)][if(gt(default({{npcs}}/NPC`%q<npc_id>`POINTS,0),0),%*<|>[get({{npcs}}/NPC`%q<npc_id>`POINTS)])],+encounter/npc [get({{npcs}}/NPC`%q<npc_id>)]%[=<how many>%] brings it into your encounter.)
+        flags: [cmdsyntax]
+      # +npc/create <name>[=minor|major]
+      INC`NPC`CREATE:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(SHEET,+npc/create <name>%[=minor|major%]. A minor NPC has one stress box and no consequences%, a major one every track and consequence a player has.,warn); @assert cand(lte(strlen(%q<cmd_left_side>),40),regmatch(%q<cmd_left_side>,^\[A-Za-z\]\[A-Za-z0-9 '.-\]*$))=@pemit %#=notice(SHEET,A name is up to 40 letters%, digits%, spaces%, dots%, dashes and apostrophes%, starting with a letter.,warn); think setq(npc_kind,firstof(lcstr(%q<cmd_right_side>),minor)); @assert member(minor major,%q<npc_kind>)=@pemit %#=notice(SHEET,An NPC is minor or major.,warn); @assert not(strlen(u(%!/FUN`NPC`NAMED,%q<cmd_left_side>)))=@pemit %#=notice(SHEET,There is opposition called '%q<cmd_left_side>' already.,warn); @assert cor(%q<viewer_keeper>,lt(words(u(%!/FUN`NPC`OWNED,%q<viewer_objid>)),get(%!/DATA`CONFIG`NPCS)))=@pemit %#=notice(SHEET,You have made [get(%!/DATA`CONFIG`NPCS)] already. +npc/destroy <name> makes room.,warn); think setq(npc_id,inc(get({{npcs}}/NEXT))); &NEXT {{npcs}}=%q<npc_id>; think u(%!/FUN`NPC`MAKE,%q<npc_id>,%q<cmd_left_side>,%q<npc_kind>,%q<viewer_objid>); @pemit %#=notice(SHEET,You make %q<cmd_left_side>%, a %q<npc_kind> NPC. +npc/skill%, /aspect%, /stunt and /stress fill it in%, and +npc %q<cmd_left_side> shows it.,ok)
+        flags: [cmdsyntax]
+      # +npc/aspect <npc>/<n>=<aspect>: 1 to 5. Empty clears it.
+      INC`NPC`ASPECT:
+        value: |-
+          @assert cand(%q<cmd_has_equals>,strmatch(%q<cmd_left_side>,*/*))=@pemit %#=notice(SHEET,+npc/aspect <npc>/<1 to 5>=<aspect>. Empty clears it.,warn); @include %!/INC`NEED`NPCPART; @assert strlen(%q<npc_id>); @assert cand(isint(%q<npc_what>),gte(%q<npc_what>,1),lte(%q<npc_what>,5))=@pemit %#=notice(SHEET,An NPC has aspects 1 to 5.,warn); @assert lte(strlen(%q<cmd_right_side>),200)=@pemit %#=notice(SHEET,Keep an aspect to 200 characters.,warn); think attrib_set({{npcs}}/NPC`%q<npc_id>`ASPECT`%q<npc_what>,%q<cmd_right_side>); @pemit %#=notice(SHEET,if(strlen(%q<cmd_right_side>),%q<npc_name>'s aspect %q<npc_what> is now: %q<cmd_right_side>,%q<npc_name>'s aspect %q<npc_what> is cleared.),ok)
+        flags: [cmdsyntax]
+      # +npc/skill <npc>/<skill>=<rating>: a number or a ladder word. Empty takes it back to Mediocre.
+      INC`NPC`SKILL:
+        value: |-
+          @assert cand(%q<cmd_has_equals>,strmatch(%q<cmd_left_side>,*/*))=@pemit %#=notice(SHEET,+npc/skill <npc>/<[u(%!/FUN`TRAIT`NOUN)]>=<rating>%, such as +npc/skill thug/[lcstr(first(u(%!/FUN`TRAIT`ALL)))]=fair. Empty takes it back to Mediocre.,warn); @include %!/INC`NEED`NPCPART; @assert strlen(%q<npc_id>); @assert strlen(setr(trait_key,u(%!/FUN`TRAIT`FIND,%q<npc_what>)))=@pemit %#=notice(SHEET,There is no [u(%!/FUN`TRAIT`NOUN)] '%q<npc_what>'. +sheet/traits lists them.,warn); think setq(npc_rating,if(strlen(%q<cmd_right_side>),u(%!/FUN`LADDER`READ,%q<cmd_right_side>))); @assert cor(not(strlen(%q<cmd_right_side>)),cand(isint(%q<npc_rating>),gte(%q<npc_rating>,-2),lte(%q<npc_rating>,8)))=@pemit %#=notice(SHEET,A rating is a number from -2 to 8%, or a ladder word such as fair.,warn); think attrib_set({{npcs}}/NPC`%q<npc_id>`SKILL`%q<trait_key>,%q<npc_rating>); @pemit %#=notice(SHEET,%q<npc_name>'s [u(%!/FUN`TRAIT`LABEL,%q<trait_key>)] is [u(%!/FUN`LADDER`SHOW,firstof(%q<npc_rating>,0))].,ok)
+        flags: [cmdsyntax]
+      # +npc/stunt <npc>/<n>=<stunt>: 1 to 5. Empty clears it.
+      INC`NPC`STUNT:
+        value: |-
+          @assert cand(%q<cmd_has_equals>,strmatch(%q<cmd_left_side>,*/*))=@pemit %#=notice(SHEET,+npc/stunt <npc>/<1 to 5>=<stunt>. Empty clears it.,warn); @include %!/INC`NEED`NPCPART; @assert strlen(%q<npc_id>); @assert cand(isint(%q<npc_what>),gte(%q<npc_what>,1),lte(%q<npc_what>,5))=@pemit %#=notice(SHEET,An NPC has stunts 1 to 5.,warn); @assert lte(strlen(%q<cmd_right_side>),300)=@pemit %#=notice(SHEET,Keep a stunt to 300 characters.,warn); think attrib_set({{npcs}}/NPC`%q<npc_id>`STUNT`%q<npc_what>,%q<cmd_right_side>); @pemit %#=notice(SHEET,if(strlen(%q<cmd_right_side>),%q<npc_name>'s stunt %q<npc_what> is now: %q<cmd_right_side>,%q<npc_name>'s stunt %q<npc_what> is cleared.),ok)
+        flags: [cmdsyntax]
+      # +npc/stress <npc>/<track>=<boxes>: 0 to 10.
+      INC`NPC`STRESS:
+        value: |-
+          @assert cand(%q<cmd_has_equals>,strmatch(%q<cmd_left_side>,*/*))=@pemit %#=notice(SHEET,+npc/stress <npc>/<track>=<boxes>%, 0 to 10. The tracks are [itemize(lcstr(u(%!/FUN`LIST`ALL,TRACK)))].,warn); @include %!/INC`NEED`NPCPART; @assert strlen(%q<npc_id>); @assert strlen(setr(track_key,u(%!/FUN`LIST`FIND,TRACK,%q<npc_what>)))=@pemit %#=notice(SHEET,There is no stress track '%q<npc_what>'. The tracks are [itemize(lcstr(u(%!/FUN`LIST`ALL,TRACK)))].,warn); @assert cand(isint(%q<cmd_right_side>),gte(%q<cmd_right_side>,0),lte(%q<cmd_right_side>,10))=@pemit %#=notice(SHEET,Give 0 to 10 boxes.,warn); think attrib_set({{npcs}}/NPC`%q<npc_id>`BOXES`%q<track_key>,%q<cmd_right_side>); @pemit %#=notice(SHEET,%q<npc_name> has %q<cmd_right_side> [lcstr(get({{store}}/TRACK`%q<track_key>))] stress box[if(neq(%q<cmd_right_side>,1),es)].,ok)
+        flags: [cmdsyntax]
+      # +npc/consequences <npc>=<slots>|all|none: the consequence slots it has.
+      INC`NPC`CONSEQUENCES:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+npc/consequences <npc>=<slots>%, all or none. The slots are [itemize(lcstr(u(%!/FUN`LIST`ALL,CONSEQUENCE)))].,warn); @include/args %!/INC`NEED`NPCEDIT=typed,%q<cmd_left_side>; @assert strlen(%q<npc_id>); think setq(npc_found,switch(lcstr(%q<cmd_right_side>),none,,all,u(%!/FUN`LIST`ALL,CONSEQUENCE),iter(%q<cmd_right_side>,u(%!/FUN`LIST`FIND,CONSEQUENCE,%i0)))); @assert cor(member(none all,lcstr(%q<cmd_right_side>)),eq(words(%q<npc_found>),words(%q<cmd_right_side>)))=@pemit %#=notice(SHEET,The consequence slots are [itemize(lcstr(u(%!/FUN`LIST`ALL,CONSEQUENCE)))]%, or all or none.,warn); think attrib_set({{npcs}}/NPC`%q<npc_id>`SLOTS,squish(iter(u(%!/FUN`LIST`ALL,CONSEQUENCE),if(member(%q<npc_found>,%i0),%i0)))); @pemit %#=notice(SHEET,%q<npc_name>'s consequences: [u(%!/FUN`NPC`SLOTS,{{npcs}}/NPC`%q<npc_id>)].,ok)
+        flags: [cmdsyntax]
+      # +npc/set <npc>/<field>=<value>: a field a package adds, such as a scale. Empty clears it.
+      INC`NPC`SET:
+        value: |-
+          @assert cand(%q<cmd_has_equals>,strmatch(%q<cmd_left_side>,*/*))=@pemit %#=notice(SHEET,if(words(u(%!/FUN`NPC`FIELDS)),+npc/set <npc>/<field>=<value>. The fields are [itemize(lcstr(u(%!/FUN`NPC`FIELDS)))].,This game's NPCs have no fields to set.),warn); @include %!/INC`NEED`NPCPART; @assert strlen(%q<npc_id>); think setq(npc_field,ucstr(%q<npc_what>)); @assert member(u(%!/FUN`NPC`FIELDS),%q<npc_field>)=@pemit %#=notice(SHEET,if(words(u(%!/FUN`NPC`FIELDS)),There is no field '%q<npc_what>'. The fields are [itemize(lcstr(u(%!/FUN`NPC`FIELDS)))].,This game's NPCs have no fields to set.),warn); think setq(npc_value,if(strlen(%q<cmd_right_side>),u(%!/NPCFIELD`%q<npc_field>,%q<cmd_right_side>))); @assert not(strmatch(%q<npc_value>,#-*))=@pemit %#=notice(SHEET,trim(after(%q<npc_value>,#-1)),warn); think attrib_set({{npcs}}/NPC`%q<npc_id>`FIELD`%q<npc_field>,%q<npc_value>); @pemit %#=notice(SHEET,%q<npc_name>'s [lcstr(%q<npc_field>)] is [if(strlen(%q<npc_value>),u(%!/FUN`NPC`FIELDSHOW,%q<npc_field>,%q<npc_value>),cleared)].,ok)
+        flags: [cmdsyntax]
+      # +npc/share <npc>: lets every GM use it, or only you and keepers again.
+      INC`NPC`SHARE:
+        value: |-
+          @include/args %!/INC`NEED`NPCEDIT=typed,%q<cmd_argument>; @assert strlen(%q<npc_id>); think attrib_set({{npcs}}/NPC`%q<npc_id>`SHARED,if(get({{npcs}}/NPC`%q<npc_id>`SHARED),,1)); @pemit %#=notice(SHEET,if(get({{npcs}}/NPC`%q<npc_id>`SHARED),Every GM may use %q<npc_name> now.,Only [name(get({{npcs}}/NPC`%q<npc_id>`OWNER))] and sheet keepers use %q<npc_name> now.),ok)
+        flags: [cmdsyntax]
+      # +npc/destroy <npc>: encounters it is in keep their copies.
+      INC`NPC`DESTROY:
+        value: |-
+          @include/args %!/INC`NEED`NPCEDIT=typed,%q<cmd_argument>; @assert strlen(%q<npc_id>); think u(%!/FUN`NPC`WIPE,{{npcs}},NPC`%q<npc_id>); @pemit %#=notice(SHEET,%q<npc_name> is gone. Encounters it is in keep their copies.,ok)
+        flags: [cmdsyntax]
+      FUN`NPC`IDS:
+        value: |-
+          sort(iter(lattr({{npcs}}/NPC`*),after(%i0,NPC`)),n)
+        flags: [funsyntax]
+      # %0 an NPC, %1 who asks: 1 when they may use it.
+      FUN`NPC`CANUSE:
+        value: |-
+          cor(not(comp(get({{npcs}}/NPC`%0`OWNER),objid(%1))),t(get({{npcs}}/NPC`%0`SHARED)),u(%!/FUN`PERM`KEEPER,%1))
+        flags: [funsyntax]
+      FUN`NPC`USABLE:
+        value: |-
+          iter(u(%!/FUN`NPC`IDS),if(u(%!/FUN`NPC`CANUSE,%i0,%0),%i0))
+        flags: [funsyntax]
+      # %0 an objid: the NPCs they made.
+      FUN`NPC`OWNED:
+        value: |-
+          iter(u(%!/FUN`NPC`IDS),if(not(comp(get({{npcs}}/NPC`%i0`OWNER),%0)),%i0))
+        flags: [funsyntax]
+      # %0 a name: the NPC with it, whoever made it.
+      FUN`NPC`NAMED:
+        value: |-
+          first(iter(u(%!/FUN`NPC`IDS),if(not(comp(lcstr(get({{npcs}}/NPC`%i0)),lcstr(trim(%0)))),%i0)))
+        flags: [funsyntax]
+      # %0 typed text, %1 who asks: the NPC they may use with that name, or the only one it starts.
+      FUN`NPC`FIND:
+        value: |-
+          setqm(nf_typed,lcstr(trim(%0)),nf_usable,u(%!/FUN`NPC`USABLE,%1),nf_exact,iter(%q<nf_usable>,if(not(comp(lcstr(get({{npcs}}/NPC`%i0)),%q<nf_typed>)),%i0)),nf_start,iter(%q<nf_usable>,if(not(comp(left(lcstr(get({{npcs}}/NPC`%i0)),strlen(%q<nf_typed>)),%q<nf_typed>)),%i0)))[if(strlen(%q<nf_typed>),first(firstof(%q<nf_exact>,if(eq(words(%q<nf_start>),1),%q<nf_start>))))]
+        flags: [funsyntax]
+      # %0 the NPC, %1 its name, %2 minor or major, %3 who makes it. A minor NPC gets one box on the first track;
+      # a major one every track and consequence slot, as many boxes as a player starts with.
+      FUN`NPC`MAKE:
+        value: |-
+          [attrib_set({{npcs}}/NPC`%0,%1)][attrib_set({{npcs}}/NPC`%0`KIND,%2)][attrib_set({{npcs}}/NPC`%0`OWNER,%3)][if(strmatch(%2,major),[null(iter(u(%!/FUN`LIST`ALL,TRACK),attrib_set({{npcs}}/NPC`%0`BOXES`%i0,default({{store}}/TRACK`%i0`BOXES,3))))][attrib_set({{npcs}}/NPC`%0`SLOTS,u(%!/FUN`LIST`ALL,CONSEQUENCE))],attrib_set({{npcs}}/NPC`%0`BOXES`[first(u(%!/FUN`LIST`ALL,TRACK))],1))]
+        flags: [funsyntax]
+      # %0 an object, %1 an attribute: removes it and everything beneath it.
+      FUN`NPC`WIPE:
+        value: |-
+          null(iter(revwords(lattr(%0/%1`**)),attrib_set(%0/%i0)))[attrib_set(%0/%1)]
+        flags: [funsyntax]
+      # The fields packages add, NPCFIELD`<NAME>.
+      FUN`NPC`FIELDS:
+        value: |-
+          iter(lattr(%!/NPCFIELD`*),last(%i0,`))
+        flags: [funsyntax]
+      # %0 a field, %1 its value: as +npc shows it.
+      FUN`NPC`FIELDSHOW:
+        value: |-
+          if(hasattr(%!,NPCFIELD`%0`SHOW),u(%!/NPCFIELD`%0`SHOW,%1),%1)
+        flags: [funsyntax]
+      # %0 object/attribute of an NPC or its copy: its skills, highest first.
+      FUN`NPC`SKILLORDER:
+        value: |-
+          iter(revwords(sort(iter(lattr(%0`SKILL`*),[rjust(add(get([before(%0,/)]/%i0),10),2,0)]~[last(%i0,`)]))),after(%i0,~))
+        flags: [funsyntax]
+      # %0 object/attribute of an NPC or its copy, %1 a track: [X] [ ], or nothing with no boxes.
+      FUN`NPC`BOXES:
+        value: |-
+          if(gt(setr(nb_count,default(%0`BOXES`%1,0)),0),iter(lnum(1,%q<nb_count>),if(member(get(%0`STRESS`%1),%i0),%[X%],%[%b%])))
+        flags: [funsyntax]
+      # %0 object/attribute, %1 a track: the boxes not marked.
+      FUN`NPC`FREE:
+        value: |-
+          if(gt(setr(nfr_count,default(%0`BOXES`%1,0)),0),squish(iter(lnum(1,%q<nfr_count>),if(member(get(%0`STRESS`%1),%i0),,%i0))))
+        flags: [funsyntax]
+      # %0 object/attribute: the shifts its empty consequence slots take between them.
+      FUN`NPC`ROOM:
+        value: |-
+          ladd(iter(get(%0`SLOTS),if(strlen(get(%0`CONSEQUENCE`%i0)),0,default({{store}}/CONSEQUENCE`%i0`SHIFTS,2))))
+        flags: [funsyntax]
+      # %0 object/attribute: "mild (2): Bruised, moderate (4)", or "none".
+      FUN`NPC`SLOTS:
+        value: |-
+          if(words(get(%0`SLOTS)),itemize(iter(get(%0`SLOTS),[lcstr(get({{store}}/CONSEQUENCE`%i0))] %([default({{store}}/CONSEQUENCE`%i0`SHIFTS,2)]%)[if(strlen(get(%0`CONSEQUENCE`%i0)),: [get(%0`CONSEQUENCE`%i0)])],%b,|),|),none)
+        flags: [funsyntax]
+      # %0 object/attribute: "physical [X] [ ], mental [ ]", or "none".
+      FUN`NPC`STRESS:
+        value: |-
+          firstof(itemize(squish(iter(u(%!/FUN`LIST`ALL,TRACK),if(gt(default(%0`BOXES`%i0,0),0),[lcstr(get({{store}}/TRACK`%i0))] [u(%!/FUN`NPC`BOXES,%0,%i0)]),%b,|),|),|),none)
+        flags: [funsyntax]
+      # %0 a viewer: the opposition they may use.
+      FUN`SCREEN`NPCS:
+        value: |-
+          setq(sns_ids,u(%!/FUN`NPC`USABLE,%0))[box([if(words(%q<sns_ids>),ldatatable(lit({"nowrap":"1"}),Name|Kind|Made by|Shared,iter(%q<sns_ids>,[get({{npcs}}/NPC`%i0)]|[get({{npcs}}/NPC`%i0`KIND)]|[name(get({{npcs}}/NPC`%i0`OWNER))]|[if(get({{npcs}}/NPC`%i0`SHARED),yes,-)],%b,%*<^>),%*<^>)%r[rule()]%r[tone(muted,+npc <name> shows one. +encounter/npc <name>%[=<how many>%] brings it into the encounter you run.)],tone(muted,No opposition yet. +npc/create <name>%[=minor|major%] makes some.))],Fate opposition)]
+        flags: [funsyntax]
+      # %0 an object, %1 the NPC's attribute on it, %2 the title, %3 and %4 more labels and values (each starting
+      # with the separator), %5 a line at the foot.
+      FUN`SCREEN`NPC:
+        value: |-
+          setqm(sn_at,%0/%1,sn_aspects,sort(iter(lattr(%0/%1`ASPECT`*),last(%i0,`)),n),sn_stunts,sort(iter(lattr(%0/%1`STUNT`*),last(%i0,`)),n),sn_fields,squish(iter(u(%!/FUN`NPC`FIELDS),if(strlen(get(%0/%1`FIELD`%i0)),%i0))))[setq(sn_skills,u(%!/FUN`NPC`SKILLORDER,%q<sn_at>))][box(lfields(,Kind%3[if(words(%q<sn_aspects>),%*<|>[iter(%q<sn_aspects>,Aspect %i0,%b,%*<|>)])]%*<|>[capstr(u(%!/FUN`TRAIT`NOUN))]s[if(words(%q<sn_stunts>),%*<|>[iter(%q<sn_stunts>,Stunt %i0,%b,%*<|>)])]%*<|>Stress%*<|>Consequences[if(words(%q<sn_fields>),%*<|>[iter(%q<sn_fields>,capstr(lcstr(%i0)),%b,%*<|>)])],[get(%q<sn_at>`KIND)]%4[if(words(%q<sn_aspects>),%*<|>[iter(%q<sn_aspects>,get(%q<sn_at>`ASPECT`%i0),%b,%*<|>)])]%*<|>[if(words(%q<sn_skills>),itemize(iter(%q<sn_skills>,[u(%!/FUN`TRAIT`LABEL,%i0)] [u(%!/FUN`LADDER`SHOW,get(%q<sn_at>`SKILL`%i0))],%b,|),|),every one Mediocre %(+0%))][if(words(%q<sn_stunts>),%*<|>[iter(%q<sn_stunts>,get(%q<sn_at>`STUNT`%i0),%b,%*<|>)])]%*<|>[u(%!/FUN`NPC`STRESS,%q<sn_at>)]%*<|>[u(%!/FUN`NPC`SLOTS,%q<sn_at>)][if(words(%q<sn_fields>),%*<|>[iter(%q<sn_fields>,u(%!/FUN`NPC`FIELDSHOW,%i0,get(%q<sn_at>`FIELD`%i0)),%b,%*<|>)])],%*<|>)%r[rule()]%r[tone(muted,%5)],%2)]
         flags: [funsyntax]
 
       # ---- +chargen -------------------------------------------------------------------
@@ -1493,7 +1959,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add/noparse/rsnoparse +sheet; @hook/override/inline +sheet=%!,CMD`SHEET; @command/add/noparse/rsnoparse +check; @hook/override/inline +check=%!,CMD`CHECK; @command/add/noparse/rsnoparse +encounter; @hook/override/inline +encounter=%!,CMD`ENCOUNTER; @command/add/noparse/rsnoparse +chargen; @hook/override/inline +chargen=%!,CMD`CHARGEN
+          @command/add/noparse/rsnoparse +sheet; @hook/override/inline +sheet=%!,CMD`SHEET; @command/add/noparse/rsnoparse +check; @hook/override/inline +check=%!,CMD`CHECK; @command/add/noparse/rsnoparse +encounter; @hook/override/inline +encounter=%!,CMD`ENCOUNTER; @command/add/noparse/rsnoparse +chargen; @hook/override/inline +chargen=%!,CMD`CHARGEN; @command/add/noparse/rsnoparse +npc; @hook/override/inline +npc=%!,CMD`NPC
         flags: [cmdsyntax]
       AINSTALL:
         value: |-
@@ -1600,7 +2066,7 @@ objects:
         6
       CONSEQUENCE`SEVERE`ORDER: |-
         3
-  # Live encounters, one per room: ENC`<room key>. Inside the Fate Sheet; no_command.
+  # Live encounters, ENC`<number> each. Inside the Fate Sheet; no_command.
   - ref: encounters
     type: thing
     name: Fate Encounters
@@ -1612,6 +2078,18 @@ objects:
       NEXT: |-
         0
 
+  # Opposition GMs build with +npc: NPC`<number> each. Inside the Fate Sheet; no_command.
+  - ref: npcs
+    type: thing
+    name: Fate Opposition
+    location: "{{sheet}}"
+    flags: [no_command]
+    attributes:
+      NPC: |-
+        The opposition GMs keep, NPC`<number> each. +npc lists it.
+      NEXT: |-
+        0
+
   # The +help topics, on an object of their own. sheet-fate-help registers it with +help; without that bridge
   # nothing reads it. HELP`<TOPIC> is a topic, its subtopics the leaves beneath, LOCK`<TOPIC> who may read it.
   - ref: sheet_help
@@ -1620,7 +2098,7 @@ objects:
     location: "{{sheet}}"
     attributes:
       HELP: |-
-        Your character's Fate sheet, making it, advancing it, rolling against it and encounters: +sheet, +chargen, +check and +encounter.
+        Your character's Fate sheet, making it, advancing it, rolling against it, encounters and the opposition in them: +sheet, +chargen, +check, +encounter and +npc.
       SEE: |-
         Cross-references. One leaf per topic; subtopics come from the tree, not from here.
       SEE`SHEET: |-
@@ -1630,7 +2108,9 @@ objects:
       SEE`CHARGEN: |-
         sheet
       SEE`ENCOUNTER: |-
-        sheet check
+        sheet check npc
+      SEE`NPC: |-
+        encounter
       HELP`SHEET: |-
         `+sheet` shows your character's sheet: fate points, aspects, skills on the ladder, stress and consequences.
 
@@ -1716,7 +2196,7 @@ objects:
       HELP`ENCOUNTER: |-
         An encounter keeps its own copy of each player's fate points, stress and consequences, so a fight or a chase does not change your sheet unless the GM says so. A room can hold several encounters, and one can run for days.
 
-        - `+encounter` lists the encounters in the room, or shows the one there is. `+encounter <number>` shows one.
+        - `+encounter` lists the encounters in the room, or shows the one there is: who is in it, their stress and consequences, the opposition, the aspects on the scene and whose turn it is. `+encounter <number>` shows one.
         - `+encounter/start \[<title>\]` begins one. You run it as its GM.
         - `+encounter/join \[<number>\]` takes part. The copy is taken from your sheet now.
         - `+encounter/use <number>` picks which of your encounters your play goes to when you are in several in one room. Without it, the last one you joined is used.
@@ -1730,20 +2210,75 @@ objects:
 
         Output: `\[SHEET\] Alice starts Warehouse brawl \(encounter 1\). +encounter/join 1 takes part with a copy of your fate points, stress and consequences.`
 
-        See `+help encounter gm` for running one.
-      HELP`ENCOUNTER`GM: |-
-        Whoever starts an encounter runs it, and sheet keepers run every encounter. Without a number, these act on the only encounter in the room:
+        See `+help encounter conflict` for taking turns, aspects and conceding, and `+help encounter gm` for running one.
+      HELP`ENCOUNTER`CONFLICT: |-
+        A conflict goes in exchanges. In each, everyone not out of it acts once: one roll to overcome, create an advantage or attack. Defending takes no turn.
 
-        - `+encounter/add <name>\[=<number>\]` brings in someone in the room.
-        - `+encounter/remove <name>\[=<number>\]` takes someone out and drops their copy.
-        - `+encounter/keep <name>\[=<number>\]` writes their copy back onto their sheet: fate points, stress, consequences and anything a package copies. They stay in the encounter.
+        - `+encounter/act` takes your turn. When you are done, `+encounter/act <name>` hands the turn to someone who has not acted yet, a player or an NPC.
+        - `+encounter/aspect <aspect>\[=<free invokes>\]` puts an aspect on the scene, such as one you created an advantage for. `+encounter/boost <aspect>` puts a boost there: one free invoke, and it is gone once used.
+        - `+encounter/invoke <number>\[=<what for>\]` invokes one for +2 or a reroll. A free invoke is used first; otherwise it costs a fate point from your copy.
+        - `+encounter/unaspect <number>` takes off an aspect you put there.
+        - `+encounter/concede` gives in before a roll goes against you. You get a fate point, and one more for each consequence you took in this encounter, and you say how you get out of it.
+
+        When the GM hits you, you are told how many shifts to take: one shift for each stress box you mark with `+sheet/stress`, and a consequence takes 2, 4 or 6 with `+sheet/consequence`. What you cannot take takes you out.
+
+        For example:
+
+        `+encounter/invoke 1=jumping the crates`
+
+        Output: `\[SHEET\] Bob uses a free invoke of Crates Everywhere: jumping the crates: +2 or a reroll.`
+      HELP`ENCOUNTER`GM: |-
+        Whoever starts an encounter runs it, and sheet keepers run every encounter. Without a number, these act on the one you picked with `+encounter/use`, else the one you run here:
+
+        - `+encounter/add <name>\[=<number>\]` brings in someone in the room. `+encounter/remove <name>\[=<number>\]` takes a player or an NPC out.
+        - `+encounter/npc <opposition>\[=<how many>\]` brings in NPCs you made with `+npc`, numbered when there are several. `+encounter/stats <npc>` shows one in full.
+        - `+encounter/exchange` starts the next exchange. The first gives you a fate point for each player.
+        - `+encounter/pool \[<n>|+<n>|-<n>\]\[=<why>\]` shows or changes your fate points. Your invokes come from it.
+        - `+encounter/point <name>\[=<why>\]` gives a player a fate point, such as for a compel.
+        - `+encounter/keep <name>\[=<number>\]` writes a player's copy back onto their sheet.
         - `+encounter/end \[<number>\]` ends it. Every copy not kept is dropped.
 
         For example:
 
-        `+encounter/keep Bob=1`
+        `+encounter/npc thug=3`
 
-        Output: `\[SHEET\] Done: Bob's sheet keeps what happened in Warehouse brawl \(encounter 1\): 2 fate points, physical stress 1 and mental stress none, consequences mild: Bruised.`
+        Output: `\[SHEET\] Alice brings Thug 1, Thug 2, and Thug 3 into Dockside brawl \(encounter 7\).`
+
+        See `+help encounter opposition` for playing the NPCs.
+      HELP`ENCOUNTER`OPPOSITION: |-
+        The GM plays the NPCs in an encounter:
+
+        - `+encounter/roll <npc>/<skill>\[+<n>\]\[=<opposition>\]` rolls for one where the room sees it.
+        - `+encounter/harm <name>\[/<track>\]=<shifts>` lands a hit. An NPC marks its stress boxes, one shift each, and is taken out when what is left is more than its consequences take. A player is told what to mark.
+        - `+encounter/stress <npc>/<track>=<box>` marks a box, or clears a marked one. `=clear` clears the track.
+        - `+encounter/consequence <npc>/<slot>=<aspect>` gives an NPC a consequence. Empty clears it.
+        - `+encounter/out <name>\[=<what happens>\]` takes someone out, or says what happened to them. With nothing after it, one who is out comes back in.
+        - `+encounter/concede <npc>` concedes for an NPC. A major NPC banks a fate point, and one for each consequence it took. They go to your pool the next time you bring it in.
+        - `+encounter/victory <name>\[=<n>\]` gives a victory in a contest, 2 for success with style. Three wins it.
+
+        For example:
+
+        `+encounter/harm thug 3=4`
+
+        Output: `\[SHEET\] Thug 3 takes a hit of 4 shifts. Physical stress box 1 takes 1, and the 3 shifts left are more than it can take: taken out.`
+      HELP`NPC: |-
+        `+npc` keeps the opposition you bring into encounters: thugs, monsters, rivals, giant robots. Each player keeps their own, and sheet keepers change any.
+
+        - `+npc` lists the NPCs you may use. `+npc <name>` shows one.
+        - `+npc/create <name>\[=minor|major\]` makes one. A minor NPC has one stress box and no consequences, so a good hit takes it out. A major one has every stress track and consequence a player has.
+        - `+npc/skill <npc>/<skill>=<rating>` rates a skill: `+npc/skill thug/fight=fair`. Every other skill is Mediocre \(+0\).
+        - `+npc/aspect <npc>/<1 to 5>=<aspect>` and `+npc/stunt <npc>/<1 to 5>=<stunt>` write its aspects and stunts. Empty clears one.
+        - `+npc/stress <npc>/<track>=<boxes>` sets how many stress boxes it has, 0 to 10. `+npc/consequences <npc>=<slots>`, `all` or `none` sets its consequence slots.
+        - `+npc/set <npc>/<field>=<value>` sets a field a package adds, such as a scale.
+        - `+npc/share <npc>` lets every GM use it, or only you again. `+npc/destroy <npc>` removes it.
+
+        An encounter takes a copy, so a change here never reaches a fight already going.
+
+        For example:
+
+        `+npc/create Baron Vex=major`
+
+        Output: `\[SHEET\] Done: You make Baron Vex, a major NPC. +npc/skill, /aspect, /stunt and /stress fill it in, and +npc Baron Vex shows it.`
       HELP`CHECK: |-
         `+check <skill>` rolls four Fate dice, each -1, 0 or +1, and adds the skill's rating, where the room sees it.
 
@@ -1793,6 +2328,7 @@ objects:
         - `refresh`: fate points each session \(3\). `aspects`: how many aspects a sheet has \(5\). `stunts`: how many stunt slots \(3; 0 for none\).
         - `opposition`: the opposition of trivial, easy, standard, hard and extreme \(`0 1 2 3 4`\).
         - `public`: whether anyone may read anyone's sheet \(no\).
+        - `npcs`: how many NPCs each player may keep with `+npc` \(50\). Sheet keepers keep any number.
         - `skills`, `approaches`: the two lists. `+config/add fate/skills/sail=Sail` adds a skill.
         - `tracks`: the stress tracks and their boxes. `consequences`: the consequence slots and their shifts.
 
