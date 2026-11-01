@@ -1,0 +1,73 @@
+format: "1.16"
+package: fitd-wiki
+title: "Forged in the Dark rules"
+version: 1.0.0
+wiki_landing_page: category:fitd_start_here
+wiki_collection_name: Forged in the Dark
+authors: [SharpMUSH]
+description: "Wiki pages for playing with the Forged in the Dark sheet: actions and positions, making a character, the actions and attributes, stress, harm and advancement, encounters and clocks. Based on the Blades in the Dark SRD under CC BY 3.0; an unofficial offering."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [fitd, forged in the dark, wiki, rules]
+category: Characters
+requires_server: ">=0.1"
+locale: en
+
+# A content package: wiki pages only. The action page lists the actions sheet-fitd ships; a game that edits them
+# in +config changes the sheet, not these pages. help:fitd_license_notice carries the Blades in the Dark
+# attribution the CC BY 3.0 licence asks for.
+wiki:
+- page: category:fitd_start_here
+  title: 'Start here: Forged in the Dark'
+  categories: []
+  file: wiki/category/fitd_start_here.md
+  pin: true
+- page: main:fitd_how_to_play
+  title: How to play (Forged in the Dark)
+  categories:
+  - fitd_start_here
+  - fitd
+  file: wiki/main/fitd_how_to_play.md
+- page: main:fitd_making_a_character
+  title: Making a character (Forged in the Dark)
+  categories:
+  - fitd_start_here
+  - fitd
+  file: wiki/main/fitd_making_a_character.md
+- page: main:fitd_actions_and_attributes
+  title: Actions and attributes (Forged in the Dark)
+  categories:
+  - fitd_start_here
+  - fitd
+  file: wiki/main/fitd_actions_and_attributes.md
+- page: main:fitd_stress_harm_and_advancement
+  title: Stress, harm and advancement (Forged in the Dark)
+  categories:
+  - fitd_start_here
+  - fitd
+  file: wiki/main/fitd_stress_harm_and_advancement.md
+- page: main:fitd_encounters
+  title: Encounters (Forged in the Dark)
+  categories:
+  - fitd_start_here
+  - fitd
+  file: wiki/main/fitd_encounters.md
+- page: main:fitd_clocks
+  title: Clocks (Forged in the Dark)
+  categories:
+  - fitd_start_here
+  - fitd
+  file: wiki/main/fitd_clocks.md
+- page: help:fitd_license_notice
+  title: About these pages
+  categories: []
+  file: wiki/help/fitd_license_notice.md
+  requires:
+    edit:
+    - wiki.admin
+    delete:
+    - wiki.admin
+- page: category:fitd
+  title: Forged in the Dark
+  categories: []
+  file: wiki/category/fitd.md
