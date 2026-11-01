@@ -498,7 +498,7 @@ objects:
       FUN`ITEM`PREPARE`WHERE:
         value: |-
           @@(%0 a rule kind, %1 a test of one rule; prepare_keys each rule's kind, synthetic_rules the rules: the indices of the rules of that kind that pass)[
-          iter(lnum(0,dec(words(%q<prepare_keys>))),if(cand(strmatch(extract(%q<prepare_keys>,inc(%i0),1),%0),u(%1,json_query(%q<synthetic_rules>,extract,$\[%i0\]))),%i0))]
+          iter(lnum(words(%q<prepare_keys>)),if(cand(strmatch(extract(%q<prepare_keys>,inc(%i0),1),%0),u(%1,json_query(%q<synthetic_rules>,extract,$\[%i0\]))),%i0))]
         flags: [funsyntax]
       # A rule kind is applied when the core reads every rule of it on the item: FlatModifiers, the
       # builder's ChoiceSets and GrantItems, Strikes, rank-setting ActiveEffectLikes and RollOptions
@@ -506,7 +506,7 @@ objects:
       FUN`ITEM`PREPARE`UNAPPLIED:
         value: |-
           @@(prepare_keys, prepare_ranks, prepare_options: the rule kinds the core does not apply)[
-          setunion(iter(lnum(0,dec(words(%q<prepare_keys>))),
+          setunion(iter(lnum(words(%q<prepare_keys>)),
             switch(setr(prepare_key,extract(%q<prepare_keys>,inc(%i0),1)),
               FlatModifier,,ChoiceSet,,GrantItem,,Strike,,
               ActiveEffectLike,if(member(%q<prepare_ranks>,%i0),,ActiveEffectLike),
@@ -840,7 +840,7 @@ objects:
       FUN`SYNTHETICS`INDEX:
         value: |-
           @@(%0 the synthetics)[
-          iter(lnum(0,dec(json_query(%0,size))),iter(json_query(%0,extract,$\[%i0\].selectors),%i0~%i1))]
+          iter(lnum(json_query(%0,size)),iter(json_query(%0,extract,$\[%i0\].selectors),%i0~%i1))]
         flags: [funsyntax]
       FUN`CHECK: Checks and the other numbers of a sheet, from a ledger.
       # Everything the sheet needs from the ledger at once. Sets check_ledger, check_entries,
@@ -859,12 +859,12 @@ objects:
           setqm(check_options,self:level:%q<check_level>,check_conditions,,check_static,,check_dynamic,,check_names,,check_unapplied,,check_upgrades,,check_rankdyn,,check_strikes,,check_ancestry,,check_heritage,,check_background,,check_class,)][
           null(iter(%q<check_grants>,u(FUN`CHECK`GRANT,%i0)))][
           null(iter(%q<check_rankdyn>,u(FUN`CHECK`RANKDYN,%i0)))][
-          setq(check_stats,setunion(v(DATA`STATISTICS) v(DATA`PROFICIENCIES) [iter(graball(%q<check_entries>,rank~*),elements(%i0,2,~))] [iter(%q<check_upgrades>,first(%i0,~))],))][
+          setq(check_stats,setunion([v(DATA`STATISTICS)] [v(DATA`PROFICIENCIES)] [iter(graball(%q<check_entries>,rank~*),elements(%i0,2,~))] [iter(%q<check_upgrades>,first(%i0,~))],))][
           setq(check_actor,u(FUN`ACTOR`DATA,%q<check_entries>,%q<check_level>,%q<check_conditions>,%q<check_stats>))][
           if(%1,setqm(check_synthetics,json(array),check_index,,check_flats,),
             [setq(check_synthetics,u(FUN`SYNTHETICS`MODIFIERS,%q<check_actor>,%q<check_static>,%q<check_dynamic>))][
             setq(check_index,u(FUN`SYNTHETICS`INDEX,%q<check_synthetics>))][
-            setq(check_flats,iter(lnum(0,dec(json_query(%q<check_synthetics>,size))),u(FUN`CHECK`FLAT,%i0,%q<check_options>)))])][
+            setq(check_flats,iter(lnum(json_query(%q<check_synthetics>,size)),u(FUN`CHECK`FLAT,%i0,%q<check_options>)))])][
           setq(check_gear,u(FUN`SHEET`GEAR,%q<check_entries>))][
           setq(check_armor,u(FUN`CHECK`ARMOR))]
         flags: [funsyntax]
@@ -1363,7 +1363,7 @@ objects:
       # grant_step, grant_level and grant_depth; build_last ends as the grant's number.
       INC`BUILD`GRANT:
         value: |-
-          think setq(entry_json,json(object,kind,"grant",pack,json(string,%q<grant_pack>),id,json(string,%q<grant_id>),badge,null,step,json(string,%q<grant_step>),parent,firstof(%q<grant_parent>,null),level,firstof(%q<grant_level>,null),choices,firstof(%q<grant_choices>,json(object)))); @include %!/INC`BUILD`PUT; think setq(grant_d,firstof(%q<grant_depth>,0)); think setq(grant_kids_%q<grant_d>,u(%!/FUN`BUILD`CHILDREN,%q<grant_pack>,%q<grant_id>,%q<grant_choices>,%q<build_last>,%q<grant_step>,%q<grant_level>,%q<grant_d>,)); @dolist/inplace [iter(lnum(1,words(r(grant_kids_%q<grant_d>))),%q<grant_d>:%i0)]={think u(%!/FUN`BUILD`CHILD`SET,extract(r(grant_kids_[before(##,:)]),after(##,:),1)); @include %!/INC`BUILD`GRANT}
+          think setq(entry_json,json(object,kind,"grant",pack,json(string,%q<grant_pack>),id,json(string,%q<grant_id>),badge,null,step,json(string,%q<grant_step>),parent,firstof(%q<grant_parent>,null),level,firstof(%q<grant_level>,null),choices,firstof(%q<grant_choices>,json(object)))); @include %!/INC`BUILD`PUT; think setq(grant_d,firstof(%q<grant_depth>,0)); think setq(grant_kids_%q<grant_d>,u(%!/FUN`BUILD`CHILDREN,%q<grant_pack>,%q<grant_id>,%q<grant_choices>,%q<build_last>,%q<grant_step>,%q<grant_level>,%q<grant_d>,)); @dolist/inplace [iter(if(words(r(grant_kids_%q<grant_d>)),lnum(1,words(r(grant_kids_%q<grant_d>)))),%q<grant_d>:%i0)]={think u(%!/FUN`BUILD`CHILD`SET,extract(r(grant_kids_[before(##,:)]),after(##,:),1)); @include %!/INC`BUILD`GRANT}
         flags: [cmdsyntax]
       INC`BUILD`SHOW:
         value: |-
@@ -1428,7 +1428,7 @@ objects:
       # +build/choose <number>=<option>: a choice a granted item asks for, numbered as +build lists them.
       INC`BUILD`CHOOSE:
         value: |-
-          think setqm(build_choices,u(%!/FUN`BUILD`CHOICES`OPEN,1),build_at,trim(before(%q<cmd_rest>,=)),build_typed,trim(after(%q<cmd_rest>,=))); @assert cand(isint(%q<build_at>),gte(%q<build_at>,1),lte(%q<build_at>,words(%q<build_choices>,|)))=@pemit %#=notice(PF2E,[if(words(%q<build_choices>,|),Choose by number: +build/choose 1=<option>. +build lists the choices.,Nothing asks for a choice.)],warn); think setq(build_choice,extract(%q<build_choices>,%q<build_at>,1,|)); think setqm(build_owner,first(%q<build_choice>,~),build_flag,elements(%q<build_choice>,2,~),build_step,choice-[first(%q<build_choice>,~)]-[elements(%q<build_choice>,2,~)]); @include %!/INC`BUILD`GUARD; think setq(build_value,u(%!/FUN`BUILD`CHOICE`MATCH,%q<build_choice>,%q<build_typed>)); @assert strlen(%q<build_value>)=@pemit %#=notice(PF2E,%q<build_typed> is not one of the options. +build/list choice %q<build_at> shows them.,warn); @include %!/INC`BUILD`BEGIN; @include/nobreak %!/INC`BUILD`CLEAR; think setq(entry_json,json(object,kind,"choice",entry,%q<build_owner>,flag,json(string,%q<build_flag>),value,json(string,%q<build_value>),step,json(string,%q<build_step>),parent,%q<build_owner>)); @include %!/INC`BUILD`PUT; think setq(build_choice_n,%q<build_last>); think u(%!/FUN`BUILD`LOAD); think setq(build_owner_grant,u(%!/FUN`BUILD`GRANT`BY`N,%q<build_owner>)); think setq(grant_kids_c,u(%!/FUN`BUILD`CHILDREN,elements(%q<build_owner_grant>,2,~),elements(%q<build_owner_grant>,3,~),u({{core}}/FUN`CHECK`CHOICES,elements(%q<build_owner_grant>,5,~)),%q<build_choice_n>,%q<build_step>,u(%!/FUN`BUILD`ENTRY`LEVEL,%q<build_owner>),1,%q<build_flag>)); @dolist/inplace [iter(lnum(1,words(%q<grant_kids_c>)),c:%i0)]={think u(%!/FUN`BUILD`CHILD`SET,extract(r(grant_kids_[before(##,:)]),after(##,:),1)); @include %!/INC`BUILD`GRANT}; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)][elements(%q<build_choice>,4,~)]: [u(%!/FUN`BUILD`CHOICE`LABEL,%q<build_value>)].,ok); think u(%!/FUN`BUILD`LOAD); @pemit %#=u(%!/FUN`BUILD`NEXT)
+          think setqm(build_choices,u(%!/FUN`BUILD`CHOICES`OPEN,1),build_at,trim(before(%q<cmd_rest>,=)),build_typed,trim(after(%q<cmd_rest>,=))); @assert cand(isint(%q<build_at>),gte(%q<build_at>,1),lte(%q<build_at>,words(%q<build_choices>,|)))=@pemit %#=notice(PF2E,[if(words(%q<build_choices>,|),Choose by number: +build/choose 1=<option>. +build lists the choices.,Nothing asks for a choice.)],warn); think setq(build_choice,extract(%q<build_choices>,%q<build_at>,1,|)); think setqm(build_owner,first(%q<build_choice>,~),build_flag,elements(%q<build_choice>,2,~),build_step,choice-[first(%q<build_choice>,~)]-[elements(%q<build_choice>,2,~)]); @include %!/INC`BUILD`GUARD; think setq(build_value,u(%!/FUN`BUILD`CHOICE`MATCH,%q<build_choice>,%q<build_typed>)); @assert strlen(%q<build_value>)=@pemit %#=notice(PF2E,%q<build_typed> is not one of the options. +build/list choice %q<build_at> shows them.,warn); @include %!/INC`BUILD`BEGIN; @include/nobreak %!/INC`BUILD`CLEAR; think setq(entry_json,json(object,kind,"choice",entry,%q<build_owner>,flag,json(string,%q<build_flag>),value,json(string,%q<build_value>),step,json(string,%q<build_step>),parent,%q<build_owner>)); @include %!/INC`BUILD`PUT; think setq(build_choice_n,%q<build_last>); think u(%!/FUN`BUILD`LOAD); think setq(build_owner_grant,u(%!/FUN`BUILD`GRANT`BY`N,%q<build_owner>)); think setq(grant_kids_c,u(%!/FUN`BUILD`CHILDREN,elements(%q<build_owner_grant>,2,~),elements(%q<build_owner_grant>,3,~),u({{core}}/FUN`CHECK`CHOICES,elements(%q<build_owner_grant>,5,~)),%q<build_choice_n>,%q<build_step>,u(%!/FUN`BUILD`ENTRY`LEVEL,%q<build_owner>),1,%q<build_flag>)); @dolist/inplace [iter(if(words(%q<grant_kids_c>),lnum(1,words(%q<grant_kids_c>))),c:%i0)]={think u(%!/FUN`BUILD`CHILD`SET,extract(r(grant_kids_[before(##,:)]),after(##,:),1)); @include %!/INC`BUILD`GRANT}; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)][elements(%q<build_choice>,4,~)]: [u(%!/FUN`BUILD`CHOICE`LABEL,%q<build_value>)].,ok); think u(%!/FUN`BUILD`LOAD); @pemit %#=u(%!/FUN`BUILD`NEXT)
         flags: [cmdsyntax]
       # +build/spell <spell>, +build/unspell <spell>: the spells the character knows or keeps in a book.
       INC`BUILD`SPELL:
@@ -2163,7 +2163,7 @@ objects:
           switch(%0,
             proficiency, u(%!/FUN`SHOW`RANK,u({{core}}/FUN`CHECK`RANK,%1)),
             str, Strength, dex, Dexterity, con, Constitution, int, Intelligence, wis, Wisdom, cha, Charisma,
-            [setq(show_at,first(iter(lnum(0,dec(json_query(%q<check_synthetics>,size))),if(strmatch(json_query(%q<check_synthetics>,extract,$\[%i0\].modifier.slug),%0),%i0))))][
+            [setq(show_at,first(iter(lnum(json_query(%q<check_synthetics>,size)),if(strmatch(json_query(%q<check_synthetics>,extract,$\[%i0\].modifier.slug),%0),%i0))))][
             firstof(if(strlen(%q<show_at>),json_query(%q<check_synthetics>,extract,$\[%q<show_at>\].modifier.label)),%0)])]
         flags: [funsyntax]
       FUN`SHOW`STAT`MISS:
@@ -2284,7 +2284,7 @@ objects:
         flags: [funsyntax]
       FUN`ENC`INDEXES:
         value: |-
-          if(u(FUN`ENC`COUNT),lnum(0,dec(u(FUN`ENC`COUNT))))
+          if(u(FUN`ENC`COUNT),lnum(u(FUN`ENC`COUNT)))
         flags: [funsyntax]
       # Who %0 names: a combatant's number, a character's name, or the start of a combatant's name.
       FUN`ENC`FIND:
@@ -2818,7 +2818,7 @@ objects:
       FUN`RECALL`LIST:
         value: |-
           @@(%0 a list of {type, value}: as words)[
-          if(strlen(%0),itemize(iter(lnum(0,dec(json_query(%0,size))),[edit(json_query(%0,extract,$\[%i0\].type),-,%b)] [json_query(%0,extract,$\[%i0\].value)],%b,|),|))]
+          if(strlen(%0),itemize(iter(lnum(json_query(%0,size)),[edit(json_query(%0,extract,$\[%i0\].type),-,%b)] [json_query(%0,extract,$\[%i0\].value)],%b,|),|))]
         flags: [funsyntax]
       FUN`RECALL`ABILITIES:
         value: |-
