@@ -420,6 +420,12 @@ objects:
         value: |-
           think setq(sheet_who,if(strlen(%q<cmd_argument>),u(%!/FUN`PLAYER`MATCH,%q<cmd_argument>),%q<viewer_objid>)); @assert strlen(%q<sheet_who>)=@pemit %#=notice(SCIENCE,There is no player called '%q<cmd_argument>'.,warn)
         flags: [cmdsyntax]
+      # +mode/focus after approval: skill points bought with +sheet/advance point, or left over, are spent this
+      # way. Before approval it waits on the sheet's edit gate like every other choice.
+      INC`NEED`FOCUSABLE:
+        value: |-
+          @assert cor(%q<viewer_keeper>,isapproved(%#),not(strlen(setr(edit_gate,u({{sheet-fate/sheet}}/FUN`GATE`EDIT,%#)))))=@pemit %#=notice(SCIENCE,%q<edit_gate>,warn)
+        flags: [cmdsyntax]
       # Choices a player makes before approval, as the Fate sheet's own ratings and aspects are.
       INC`NEED`EDITABLE:
         value: |-
@@ -451,7 +457,7 @@ objects:
       # +mode/focus [<name>/]<skill>: one step up within its mode, for skill points.
       INC`MODE`FOCUS:
         value: |-
-          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SCIENCE,+mode/focus <skill> improves a skill in one of your modes.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @include %!/INC`NEED`SKILL; think setqm(focus_steps,u(%!/FUN`SKILL`STEPS,%q<sheet_who>,%q<skill_key>,words(%q<skill_holders>)),focus_cost,if(%q<focus_steps>,2,1),focus_left,u(%!/FUN`POINTS`LEFT,%q<sheet_who>)); @assert lt(%q<focus_steps>,2)=@pemit %#=notice(SCIENCE,[u({{sheet-fate/sheet}}/API`LABEL,%q<skill_key>)] is specialized already: two steps over its mode is the most.,warn); @assert gte(%q<focus_left>,%q<focus_cost>)=@pemit %#=notice(SCIENCE,[if(%q<focus_steps>,Specializing,Focusing)] [u({{sheet-fate/sheet}}/API`LABEL,%q<skill_key>)] costs %q<focus_cost> skill point[if(gt(%q<focus_cost>,1),s)]%, and [name(%q<sheet_who>)] has %q<focus_left> left.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,FOCUS`%q<skill_key>,value,inc(default(%q<sheet_who>/FATE`FOCUS`%q<skill_key>,0)); @include/args %!/INC`DO`RATE=who,%q<sheet_who>; @pemit %#=notice(SCIENCE,[name(%q<sheet_who>)]'s [u({{sheet-fate/sheet}}/API`LABEL,%q<skill_key>)] is [u(%!/FUN`SKILL`WORD,inc(%q<focus_steps>))]: [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,u({{sheet-fate/sheet}}/API`RATING,%q<sheet_who>,%q<skill_key>))]. [u(%!/FUN`DISPLAY`POINTSLEFT,%q<sheet_who>)],ok)
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SCIENCE,+mode/focus <skill> improves a skill in one of your modes.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`FOCUSABLE; @include %!/INC`NEED`SKILL; think setqm(focus_steps,u(%!/FUN`SKILL`STEPS,%q<sheet_who>,%q<skill_key>,words(%q<skill_holders>)),focus_cost,if(%q<focus_steps>,2,1),focus_left,u(%!/FUN`POINTS`LEFT,%q<sheet_who>)); @assert lt(%q<focus_steps>,2)=@pemit %#=notice(SCIENCE,[u({{sheet-fate/sheet}}/API`LABEL,%q<skill_key>)] is specialized already: two steps over its mode is the most.,warn); @assert gte(%q<focus_left>,%q<focus_cost>)=@pemit %#=notice(SCIENCE,[if(%q<focus_steps>,Specializing,Focusing)] [u({{sheet-fate/sheet}}/API`LABEL,%q<skill_key>)] costs %q<focus_cost> skill point[if(gt(%q<focus_cost>,1),s)]%, and [name(%q<sheet_who>)] has %q<focus_left> left.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,FOCUS`%q<skill_key>,value,inc(default(%q<sheet_who>/FATE`FOCUS`%q<skill_key>,0)); @include/args %!/INC`DO`RATE=who,%q<sheet_who>; @pemit %#=notice(SCIENCE,[name(%q<sheet_who>)]'s [u({{sheet-fate/sheet}}/API`LABEL,%q<skill_key>)] is [u(%!/FUN`SKILL`WORD,inc(%q<focus_steps>))]: [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,u({{sheet-fate/sheet}}/API`RATING,%q<sheet_who>,%q<skill_key>))]. [u(%!/FUN`DISPLAY`POINTSLEFT,%q<sheet_who>)],ok)
         flags: [cmdsyntax]
       # +mode/unfocus [<name>/]<skill>: one bought step back down, and its points back.
       INC`MODE`UNFOCUS:
@@ -461,7 +467,7 @@ objects:
       # sheet_what a skill in one of sheet_who's modes: skill_key (upper case) and skill_holders, its modes.
       INC`NEED`SKILL:
         value: |-
-          @assert strlen(setr(skill_key,ucstr(u({{sheet-fate/sheet}}/API`FIND,%q<sheet_what>))))=@pemit %#=notice(SCIENCE,There is no skill '%q<sheet_what>'. +sheet/traits lists them.,warn); @assert words(setr(skill_holders,u(%!/FUN`MODE`HOLDERS,%q<sheet_who>,%q<skill_key>)))=@pemit %#=notice(SCIENCE,[u({{sheet-fate/sheet}}/API`LABEL,%q<skill_key>)] is in none of [name(%q<sheet_who>)]'s modes%, so it stays Mediocre (+0).,warn)
+          @assert strlen(setr(skill_key,ucstr(u({{sheet-fate/sheet}}/API`FIND,%q<sheet_what>))))=@pemit %#=notice(SCIENCE,There is no skill '%q<sheet_what>'. +sheet/traits lists them.,warn); @assert words(setr(skill_holders,u(%!/FUN`MODE`HOLDERS,%q<sheet_who>,%q<skill_key>)))=@pemit %#=notice(SCIENCE,[u({{sheet-fate/sheet}}/API`LABEL,%q<skill_key>)] is in none of [name(%q<sheet_who>)]'s modes%, so it stays Mediocre %(+0%).,warn)
         flags: [cmdsyntax]
       # +mode/stress [<name>/]<mode>=physical|mental|split: where a mode's extra boxes go when its skills fit both.
       INC`MODE`STRESS:
@@ -709,7 +715,7 @@ objects:
       # %<who>, %<leaf>: clears FATE`<leaf> and everything beneath it.
       INC`DO`WIPE:
         value: |-
-          @dolist/inline revwords(lattr(%<who>/FATE`%<leaf>`**))={&## %<who>}; &FATE`%<leaf> %<who>
+          @assert strlen(%<leaf>); @dolist/inline revwords(lattr(%<who>/FATE`%<leaf>`**))={&## %<who>}; &FATE`%<leaf> %<who>
         flags: [cmdsyntax]
       # %<who>: writes their modes into the sheet's ledger again, then the sheet rebuilds its ratings and tracks.
       INC`DO`RATE:
@@ -1155,9 +1161,9 @@ objects:
 
         A skill in two of your modes is focused for free, and in all three specialized. Fair and Good modes with Athletics or Physique add physical stress boxes, with Provoke or Will mental ones.
 
-        You choose modes until your character is approved; then staff change them. `+sheet/set` does not rate skills here. `+chargen` walks you through modes and skill points, and `+sheet/ledger` shows what each mode grants: a staff grant stays when your modes change.
+        You choose modes until your character is approved; then staff change them, and `+mode/focus` still spends any skill points you have left. `+sheet/set` does not rate skills here. `+chargen` walks you through modes and skill points, and `+sheet/ledger` shows what each mode grants: a staff grant stays when your modes change.
 
-        After that, awards from staff change them: `+sheet/advance modes <mode>=<mode>` switches two modes' ratings for a milestone, and `+sheet/advance point` buys a skill point for a skill step. See `+help sheet advance`.
+        After that, awards from staff change them: `+sheet/advance modes <mode>=<mode>` switches two modes' ratings for a milestone, and `+sheet/advance point` buys a skill point for a skill step, which `+mode/focus` spends. See `+help sheet advance`.
 
         For example:
 

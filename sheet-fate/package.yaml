@@ -772,7 +772,7 @@ objects:
       # BUILD`<name> hook names, so character creation starts again. Play (stress, consequences, fate points) stays.
       INC`SHEET`CLEAR:
         value: |-
-          @include %!/INC`NEED`KEEPER; @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/clear <name> takes away their whole build so they make the character again.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>; @assert strlen(%q<sheet_who>); @dolist/inline GRANT ASPECT STUNT [iter(lattr(%!/BUILD`*),get(%!/%i0))]={@include/args %!/INC`DO`WIPE=who,%q<sheet_who>,leaf,##}; think u(%!/FUN`ADV`REOPEN,%q<sheet_who>)[u(%!/API`REBUILD,%q<sheet_who>)]; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s build is cleared: +chargen starts it again.,ok); @pemit %q<sheet_who>=notice(SHEET,[name(%#)] cleared your character's build. +chargen walks you through making it again.)
+          @include %!/INC`NEED`KEEPER; @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/clear <name> takes away their whole build so they make the character again.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>; @assert strlen(%q<sheet_who>); @dolist/inline squish(GRANT ASPECT STUNT [iter(lattr(%!/BUILD`*),get(%!/%i0))])={@include/args %!/INC`DO`WIPE=who,%q<sheet_who>,leaf,##}; think u(%!/FUN`ADV`REOPEN,%q<sheet_who>)[u(%!/API`REBUILD,%q<sheet_who>)]; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s build is cleared: +chargen starts it again.,ok); @pemit %q<sheet_who>=notice(SHEET,[name(%#)] cleared your character's build. +chargen walks you through making it again.)
         flags: [cmdsyntax]
       # ---- advancement ---------------------------------------------------------------
       # Every award stays on the character as FATE`ADV`<n> (milestone, breakthrough, refresh or skill), with BY (the
@@ -867,7 +867,7 @@ objects:
       # %<who>, %<leaf>: removes FATE`<leaf> and everything beneath it.
       INC`DO`WIPE:
         value: |-
-          @dolist/inline revwords(lattr(%<who>/FATE`%<leaf>`**))={&## %<who>}; &FATE`%<leaf> %<who>
+          @assert strlen(%<leaf>); @dolist/inline revwords(lattr(%<who>/FATE`%<leaf>`**))={&## %<who>}; &FATE`%<leaf> %<who>
         flags: [cmdsyntax]
       # +sheet/ledger [<name>]: every grant the sheet is built from, with where it came from.
       INC`SHEET`LEDGER:

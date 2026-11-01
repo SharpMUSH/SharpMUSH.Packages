@@ -26,7 +26,7 @@ rolls the ratings the modes write.
 | `+mode [<name>]` | all | Modes, skill points and stress boxes |
 | `+mode/list` | all | The modes and their skills; weird modes allow mega-stunts |
 | `+mode/set <mode>=<rating>` | unapproved player | Choose a mode at one of the `ratings`; empty drops it |
-| `+mode/focus <skill>` | unapproved player | Spend 1 point to focus a skill in a mode, 2 more to specialize it |
+| `+mode/focus <skill>` | player | Spend 1 point to focus a skill in a mode, 2 more to specialize it; after approval, points left or bought with `+sheet/advance point` |
 | `+mode/unfocus <skill>` | unapproved player | Take back a step bought |
 | `+mode/stress <mode>=physical\|mental\|split` | unapproved player | Where a mode's extra stress boxes go |
 | `+mode/mega <slot>=<benefits>` | unapproved player | Make a written stunt a mega-stunt (needs a weird mode); empty makes it plain |

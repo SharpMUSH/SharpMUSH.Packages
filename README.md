@@ -50,10 +50,15 @@ constraints checked before anything is planned.
 | [`sheet-d20-help/`](sheet-d20-help/) | 1.0.1 | Bridge: the D20 sheet's topics in `+help` |
 | [`sheet-d20-config/`](sheet-d20-config/) | 1.0.1 | Bridge: the D20 sheet's settings and trait table in `+config` |
 | [`sheet-d20-chargen/`](sheet-d20-chargen/) | 1.1.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |
-| [`sheet-fate/`](sheet-fate/) | 1.0.1 | Fate character sheet: skills or approaches on the ladder, aspects, stress, consequences and fate points; `+check` on four Fate dice. Fate SRD text under CC BY 3.0 (see its NOTICE) |
+| [`sheet-fate/`](sheet-fate/) | 1.1.0 | Fate character sheet: skills or approaches on the ladder, aspects, stunts, stress, consequences and fate points; `+check` on four Fate dice; a grant ledger, guided `+chargen`, encounters that keep their own sheet copies, and milestones and breakthroughs from staff that players spend with `+sheet/advance`. Fate SRD text under CC BY 3.0 (see its NOTICE) |
 | [`sheet-fate-help/`](sheet-fate-help/) | 1.0.0 | Bridge: the Fate sheet's topics in `+help` |
 | [`sheet-fate-config/`](sheet-fate-config/) | 1.0.0 | Bridge: the Fate sheet's settings and tables in `+config` |
-| [`sheet-fate-chargen/`](sheet-fate-chargen/) | 1.0.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |
+| [`sheet-fate-chargen/`](sheet-fate-chargen/) | 1.1.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |
+| [`sheet-fate-wiki/`](sheet-fate-wiki/) | 1.0.0 | Fate rules reference as wiki pages: the ladder, aspects, skills, stunts, actions, stress and consequences, `+chargen`, advancement and encounters. Fate SRD text under CC BY 3.0 |
+| [`atomic-robo/`](atomic-robo/) | 1.0.0 | Unofficial Atomic Robo pack: pulp action science and giant robots on the Fate sheet: modes that rate skills, mega-stunts, invention with catches and flaws, brainstorms, and machines whose scale counts. Atomic Robo RPG SRD and Fate System Toolkit under CC BY 3.0 (see its NOTICE) |
+| [`atomic-robo-help/`](atomic-robo-help/) | 1.0.0 | Bridge: the Atomic Robo topics in `+help` |
+| [`atomic-robo-config/`](atomic-robo-config/) | 1.0.0 | Bridge: the Atomic Robo settings and tables in `+config` |
+| [`atomic-robo-wiki/`](atomic-robo-wiki/) | 1.0.0 | Unofficial Atomic Robo rules reference as wiki pages: modes, chargen, mega-stunts, invention, brainstorms, scale and machines, advancement |
 | [`sheet-pbta/`](sheet-pbta/) | 2.1.0 | Powered by the Apocalypse character sheet built from a ledger: playbooks, stats and moves the game edits, guided character creation, advances, forward, ongoing, hold and XP; `+check` on 2d6; `+encounter` plays scenes from copies of the sheets. Dungeon World moves under CC BY 3.0 (see its NOTICE) |
 | [`sheet-pbta-help/`](sheet-pbta-help/) | 1.0.1 | Bridge: the PbtA sheet's topics in `+help` |
 | [`sheet-pbta-config/`](sheet-pbta-config/) | 1.0.1 | Bridge: the PbtA sheet's settings and tables in `+config` |
