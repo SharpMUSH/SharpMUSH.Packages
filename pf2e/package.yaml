@@ -1456,7 +1456,7 @@ objects:
       # +build/choose <number>=<option>: a choice a granted item asks for, numbered as +build lists them.
       INC`BUILD`CHOOSE:
         value: |-
-          think setqm(build_choices,u(%!/FUN`BUILD`CHOICES`OPEN,1),build_at,trim(before(%q<cmd_rest>,=)),build_typed,trim(after(%q<cmd_rest>,=))); think if(not(isint(%q<build_at>)),setq(build_at,firstof(match(iter(%q<build_choices>,edit(elements(%i0,4,~),%b,_),|,%b),*[edit(%q<build_at>,%b,_)]*),%q<build_at>))); @assert cand(isint(%q<build_at>),gte(%q<build_at>,1),lte(%q<build_at>,words(%q<build_choices>,|)))=@pemit %#=notice(PF2E,[if(words(%q<build_choices>,|),Choose by number or name: [itemize(iter(%q<build_choices>,+build/choose #@=<option> for [elements(%i0,4,~)],|,|),|)].,Nothing asks for a choice.)],warn); think setq(build_choice,extract(%q<build_choices>,%q<build_at>,1,|)); think setqm(build_owner,first(%q<build_choice>,~),build_flag,elements(%q<build_choice>,2,~),build_step,choice-[first(%q<build_choice>,~)]-[elements(%q<build_choice>,2,~)]); @include %!/INC`BUILD`GUARD; think setq(build_value,u(%!/FUN`BUILD`CHOICE`MATCH,%q<build_choice>,%q<build_typed>)); @assert strlen(%q<build_value>)=@pemit %#=notice(PF2E,%q<build_typed> is not one of the options. +build/list choice %q<build_at> shows them.,warn); @include %!/INC`BUILD`BEGIN; @include/nobreak %!/INC`BUILD`CLEAR; think setq(entry_json,json(object,kind,"choice",entry,%q<build_owner>,flag,json(string,%q<build_flag>),value,json(string,%q<build_value>),step,json(string,%q<build_step>),parent,%q<build_owner>)); @include %!/INC`BUILD`PUT; think setq(build_choice_n,%q<build_last>); think u(%!/FUN`BUILD`LOAD); think setq(build_owner_grant,u(%!/FUN`BUILD`GRANT`BY`N,%q<build_owner>)); @include %!/INC`BUILD`BEGIN; think u(%!/FUN`BUILD`TREE,u(%!/FUN`BUILD`CHILDREN,elements(%q<build_owner_grant>,2,~),elements(%q<build_owner_grant>,3,~),u({{core}}/FUN`CHECK`CHOICES,elements(%q<build_owner_grant>,5,~)),%q<build_choice_n>,%q<build_step>,u(%!/FUN`BUILD`ENTRY`LEVEL,%q<build_owner>),1,%q<build_flag>)); @include %!/INC`BUILD`TREE`WRITE; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)][elements(%q<build_choice>,4,~)]: [u(%!/FUN`BUILD`CHOICE`LABEL,%q<build_value>)].,ok); think u(%!/FUN`BUILD`LOAD); @pemit %#=u(%!/FUN`BUILD`NEXT)
+          think setqm(build_choices,u(%!/FUN`BUILD`CHOICES`OPEN,0),build_at,trim(before(%q<cmd_rest>,=)),build_typed,trim(after(%q<cmd_rest>,=))); think if(not(isint(%q<build_at>)),setq(build_at,firstof(match(iter(%q<build_choices>,edit(elements(%i0,4,~),%b,_),|,%b),*[edit(%q<build_at>,%b,_)]*),%q<build_at>))); @assert cand(isint(%q<build_at>),gte(%q<build_at>,1),lte(%q<build_at>,words(%q<build_choices>,|)))=@pemit %#=notice(PF2E,[if(words(%q<build_choices>,|),Choose by number or name: [itemize(iter(%q<build_choices>,+build/choose #@=<option> for [elements(%i0,4,~)],|,|),|)].,Nothing asks for a choice.)],warn); think setq(build_choice,extract(%q<build_choices>,%q<build_at>,1,|)); think setqm(build_owner,first(%q<build_choice>,~),build_flag,elements(%q<build_choice>,2,~),build_step,choice-[first(%q<build_choice>,~)]-[elements(%q<build_choice>,2,~)]); @include %!/INC`BUILD`GUARD; think setq(build_value,u(%!/FUN`BUILD`CHOICE`MATCH,%q<build_choice>,%q<build_typed>)); @assert strlen(%q<build_value>)=@pemit %#=notice(PF2E,%q<build_typed> is not one of the options. +build/list choice %q<build_at> shows them.,warn); @include %!/INC`BUILD`BEGIN; @include/nobreak %!/INC`BUILD`CLEAR; think setq(entry_json,json(object,kind,"choice",entry,%q<build_owner>,flag,json(string,%q<build_flag>),value,json(string,%q<build_value>),step,json(string,%q<build_step>),parent,%q<build_owner>)); @include %!/INC`BUILD`PUT; think setq(build_choice_n,%q<build_last>); think u(%!/FUN`BUILD`LOAD); think setq(build_owner_grant,u(%!/FUN`BUILD`GRANT`BY`N,%q<build_owner>)); @include %!/INC`BUILD`BEGIN; think u(%!/FUN`BUILD`TREE,u(%!/FUN`BUILD`CHILDREN,elements(%q<build_owner_grant>,2,~),elements(%q<build_owner_grant>,3,~),u({{core}}/FUN`CHECK`CHOICES,elements(%q<build_owner_grant>,5,~)),%q<build_choice_n>,%q<build_step>,u(%!/FUN`BUILD`ENTRY`LEVEL,%q<build_owner>),1,%q<build_flag>)); @include %!/INC`BUILD`TREE`WRITE; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)][elements(%q<build_choice>,4,~)]: [u(%!/FUN`BUILD`CHOICE`LABEL,%q<build_value>)].,ok); think u(%!/FUN`BUILD`LOAD); @pemit %#=u(%!/FUN`BUILD`NEXT)
         flags: [cmdsyntax]
       # +build/spell <spell>, +build/unspell <spell>: the spells the character knows or keeps in a book.
       INC`BUILD`SPELL:
@@ -1874,7 +1874,7 @@ objects:
           setqm(items_filter,u({{core}}/FUN`FORMULA`INJECT,json_query(%0,extract,$.choices.filter),json(object,actor,%q<check_actor>)),items_slugs,t(json_query(%0,extract,$.choices.slugsAsValues)))][
           setq(items_packs,switch(json_query(%0,extract,$.choices.itemType),spell,spells,feats class-features))][
           setq(items_keys,u({{core}}/FUN`ITEM`INDEXED,json_map({{core}}/FUN`RULE`SELECTOR,%q<items_filter>,%b)))][
-          trim(iter(%q<items_packs>,u(%!/FUN`BUILD`CHOICE`ITEMS`OF,%i0),%b,|),|)]
+          trim(squish(iter(%q<items_packs>,u(%!/FUN`BUILD`CHOICE`ITEMS`OF,%i0),%b,|),|),|)]
         flags: [funsyntax]
       FUN`BUILD`CHOICE`ITEMS`OF:
         value: |-
@@ -1883,7 +1883,7 @@ objects:
           setq(items_ids,get(%q<items_store>/OPT`[first(%q<items_keys>)]))][
           null(iter(rest(%q<items_keys>),setq(items_ids,setinter(%q<items_ids>,get(%q<items_store>/OPT`%i0)))))][
           iter(%q<items_ids>,
-            if(cand(member(u({{core}}/DATA`CONFIG`BOOKS),get(%q<items_store>/ITEM`%i0`BOOK)),u({{core}}/FUN`PREDICATE`TEST,%q<items_filter>,json_query(setr(items_prep,get(%q<items_store>/ITEM`%i0`PREP)),extract,$.opts))),
+            if(cand(member(u({{core}}/DATA`CONFIG`BOOKS),get(%q<items_store>/ITEM`%i0`BOOK)),not(words(graball(%q<check_grants>,*~%0~%i0~*))),u({{core}}/FUN`PREDICATE`TEST,%q<items_filter>,%q<check_options> [json_query(setr(items_prep,get(%q<items_store>/ITEM`%i0`PREP)),extract,$.opts)] item:[json_query(%q<items_prep>,extract,$.slug)])),
               [if(%q<items_slugs>,json(string,json_query(%q<items_prep>,extract,$.slug)),json(string,Compendium.pf2e.[before(grab(u({{core}}/DATA`UUID),*~%0),~)].Item.[json_query(%q<items_prep>,extract,$.name)]))]^[json_query(%q<items_prep>,extract,$.name)]),
             %b,|)]
         flags: [funsyntax]
@@ -1896,6 +1896,12 @@ objects:
             strmatch(left(%0,1),\{), capstr(firstof(json_query(%0,extract,$.slug),json_query(%0,extract,$.label),%0)),
             [setq(label_value,json_query(%0,extract,$))][
             if(strmatch(%q<label_value>,Compendium.*.Item.*),after(%q<label_value>,.Item.),u(%!/FUN`BUILD`CAMEL`WORDS,edit(firstof(%q<label_value>,%0),-,%b)))])]
+        flags: [funsyntax]
+      FUN`BUILD`CHOICE`AT:
+        value: |-
+          @@(%0 a number or the start of a choice's name: that open choice)[
+          setq(at_open,u(%!/FUN`BUILD`CHOICES`OPEN,0))][
+          extract(%q<at_open>,if(isint(%0),%0,match(iter(%q<at_open>,edit(elements(%i0,4,~),%b,_),|,%b),*[edit(%0,%b,_)]*)),1,|)]
         flags: [funsyntax]
       FUN`BUILD`CHOICE`MATCH:
         value: |-
@@ -1975,7 +1981,7 @@ objects:
             backg*, u(%!/FUN`BUILD`LIST`PACK,backgrounds,,%1),
             class*, u(%!/FUN`BUILD`LIST`PACK,classes,,%1),
             feat*, u(%!/FUN`BUILD`LIST`FEATS,lcstr(first(%1)),rest(%1)),
-            choice*, iter(u(%!/FUN`BUILD`CHOICE`OPTIONS,extract(u(%!/FUN`BUILD`CHOICES`OPEN,0),first(%1),1,|)),#@. [after(%i0,^)],|,|),
+            choice*, iter(u(%!/FUN`BUILD`CHOICE`OPTIONS,u(%!/FUN`BUILD`CHOICE`AT,%1)),#@. [after(%i0,^)],|,|),
             lang*, iter(u(%!/FUN`BUILD`LANGUAGES`OFFER),capstr(%i0),%b,|),
             skill*, iter(u({{core}}/DATA`STATISTICS),if(strmatch(u({{core}}/FUN`STAT`KIND,%i0),skill),[u(%!/FUN`SHOW`STAT,%i0)][if(setr(list_rank,u({{core}}/FUN`CHECK`RANK,%i0)),%b%([lcstr(u(%!/FUN`SHOW`RANK,%q<list_rank>))]%))]),%b,|),
             gear, u(%!/FUN`BUILD`LIST`GEAR,%1),
