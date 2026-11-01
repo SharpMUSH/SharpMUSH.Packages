@@ -31,8 +31,13 @@ For example, a human barbarian:
 +build/choose instinct=giant
 +build/feat ancestry-1=Natural Ambition
 +build/feat class-1=Sudden Charge
++build/choose energy=fire
++build/choose natural ambition=adrenaline rush
 +build/buy greataxe
 +build/equip greataxe=held
++build/buy hide armor
++build/equip hide armor=worn
++build/done
 ```
 
 Output of the class step:
@@ -44,7 +49,12 @@ Output of the class step:
 
 ## Your sheet and checks
 
-`+sheet` shows the finished character: attributes, hit points, AC, every skill and save with its modifier, Strikes, gear, feats and features. `+check athletics=15` rolls a check against a DC and says the degree of success.
+`+sheet` shows the finished character: attributes, hit points, AC, every skill and save with its modifier, Strikes, gear, feats and features. `+check athletics=15` rolls a check against a DC and says the degree of success:
+
+```
+[PF2E] Amiri rolls Athletics: 1d20[16] + 7 = 23 vs DC 15: Success (roll 178)
+Strength +4, Trained +3
+```
 
 Your sheet is a ledger. Every choice, award and purchase is an entry, and nothing is overwritten, so staff can always see how a character came to be.
 
