@@ -373,7 +373,7 @@ objects:
       FUN`ITEM`GET:
         value: |-
           @@(%0 a pack such as feats, %1 a Foundry id: the item, empty when the game lacks it)[
-          setq(item_store,v(DATA`PACK`%0))][
+          setq(item_store,u(DATA`PACK`%0))][
           if(strlen(%q<item_store>),get(%q<item_store>/ITEM`%1))]
         flags: [funsyntax]
       # An item named by its Foundry id or by its name, from a book the game uses. Names are looked up
@@ -381,7 +381,7 @@ objects:
       FUN`ITEM`FIND:
         value: |-
           @@(%0 a pack, %1 an id or a name: the item's id, empty when no item from a book the game uses matches)[
-          setq(item_store,v(DATA`PACK`%0))][
+          setq(item_store,u(DATA`PACK`%0))][
           if(strlen(%q<item_store>),
             first(iter(
               squish([if(strlen(get(%q<item_store>/ITEM`[ucstr(%1)])),ucstr(%1))] [get(%q<item_store>/NAME`[u(FUN`ITEM`SLUGGIFY,%1)])]),
@@ -627,7 +627,7 @@ objects:
       INC: Command lists, one tree per step of a run.
       INC`UPDATE`START:
         value: |-
-          &FEED`RUN me=%#; &FEED`FAILED me; @http me/ON`COMMIT=https://api.github.com/repos/[get({{core}}/DATA`CONFIG`REPOSITORY)]/commits/[get({{core}}/DATA`CONFIG`BRANCH)],[json(object,Accept,"application/vnd.github.sha")]
+          &FEED`RUN me=[firstof(%0,%#)]; &FEED`FAILED me; @http me/ON`COMMIT=https://api.github.com/repos/[get({{core}}/DATA`CONFIG`REPOSITORY)]/commits/[get({{core}}/DATA`CONFIG`BRANCH)],[json(object,Accept,"application/vnd.github.sha")]
         flags: [cmdsyntax]
       # The commit the branch is on, so every file of the run comes from it rather than from a cache.
       ON`COMMIT:
@@ -644,7 +644,7 @@ objects:
         flags: [cmdsyntax]
       ON`FILE:
         value: |-
-          @assert eq(%<status>,200)={&FEED`FAILED me=[squish(get(me/FEED`FAILED) [first(get(me/FEED`CURRENT),|)])]; @trigger me/INC`UPDATE`NEXT}; &FEED`BODY me=%0; &FEED`LINES me=[words(%0,%r)]; &FEED`AT me=1; @trigger me/INC`IMPORT`BATCH
+          @assert cand(eq(%<status>,200),isdbref(u({{core}}/DATA`PACK`[ucstr(elements(get(me/FEED`CURRENT),2,|))])))={&FEED`FAILED me=[squish(get(me/FEED`FAILED) [first(get(me/FEED`CURRENT),|)])]; @trigger me/INC`UPDATE`NEXT}; &FEED`BODY me=%0; &FEED`LINES me=[words(%0,%r)]; &FEED`AT me=1; @trigger me/INC`IMPORT`BATCH
         flags: [cmdsyntax]
       # The next lines of the file, a batch per queue entry, so a run stays inside each entry's time
       # limit and never floods the queue.
@@ -656,7 +656,7 @@ objects:
       # HASH matches is skipped.
       INC`IMPORT`LINE:
         value: |-
-          think [setq(line,extract(get(me/FEED`BODY),%0,1,%r))]; @assert strlen(%q<line>); think [setq(id,ucstr(first(%q<line>)),hash,elements(%q<line>,2),leaf,elements(%q<line>,3),value,after(after(after(%q<line>,%b),%b),%b),store,get({{core}}/DATA`PACK`[ucstr(elements(get(me/FEED`CURRENT),2,|))]))]; @break strmatch(get(%q<store>/ITEM`%q<id>`HASH),%q<hash>); @include me/INC`IMPORT`[first(%q<leaf>,`)]
+          think [setq(line,extract(get(me/FEED`BODY),%0,1,%r))]; @assert strlen(%q<line>); think [setq(id,ucstr(first(%q<line>)),hash,elements(%q<line>,2),leaf,elements(%q<line>,3),value,after(after(after(%q<line>,%b),%b),%b),store,u({{core}}/DATA`PACK`[ucstr(elements(get(me/FEED`CURRENT),2,|))]))]; @break strmatch(get(%q<store>/ITEM`%q<id>`HASH),%q<hash>); @include me/INC`IMPORT`[first(%q<leaf>,`)]
         flags: [cmdsyntax]
       # NAME`<slug> on the data object lists the ids of the items with that name, for lookups by name.
       INC`IMPORT`ITEM:
@@ -732,7 +732,7 @@ objects:
         flags: [regexp, cmdsyntax]
       CMD`PF2E:
         value: |-
-          $(?is)^\+pf2e(/\S*)?(?\: +(.*))?$:think setqm(cmd_switch,lcstr(after(%1,/)),cmd_args,trim(%2)); @assert match(level ability rank grant revoke ledger,%q<cmd_switch>)=@pemit %#=notice(PF2E,There is no +pf2e/%q<cmd_switch>. The switches are /level%, /ability%, /rank%, /grant%, /revoke and /ledger.,warn); think u(%!/FUN`COMMAND`TARGET); @include %!/INC`PF2E`%q<cmd_switch>
+          $(?is)^\+pf2e(/\S*)?(?\: +(.*))?$:think setqm(cmd_switch,lcstr(after(%1,/)),cmd_args,trim(%2)); @assert match(level ability rank grant revoke ledger update,%q<cmd_switch>)=@pemit %#=notice(PF2E,There is no +pf2e/%q<cmd_switch>. The switches are /level%, /ability%, /rank%, /grant%, /revoke%, /ledger and /update.,warn); think u(%!/FUN`COMMAND`TARGET); @include %!/INC`PF2E`%q<cmd_switch>
         flags: [regexp, cmdsyntax]
       # <player>/ in front of the arguments names whose sheet; without it the sheet is your own.
       FUN`COMMAND`TARGET:
@@ -759,11 +759,11 @@ objects:
         flags: [cmdsyntax]
       INC`PF2E`RANK:
         value: |-
-          @include %!/INC`TARGET`EDIT; think setqm(entry_stat,u(%!/FUN`COMMAND`STAT,before(%q<cmd_rest>,=)),entry_rank,u(%!/FUN`COMMAND`RANK,after(%q<cmd_rest>,=))); @assert strlen(%q<entry_stat>)=@pemit %#=notice(PF2E,There is no statistic called [trim(before(%q<cmd_rest>,=))]. The statistics are [itemize(get({{core}}/DATA`STATISTICS))].,warn); @assert strlen(%q<entry_rank>)=@pemit %#=notice(PF2E,A rank is untrained%, trained%, expert%, master or legendary%, or 0 to 4.,warn); think setqm(entry_json,json(object,kind,"rank",stat,json(string,%q<entry_stat>),rank,%q<entry_rank>),entry_text,[capstr(%q<entry_stat>)] [u(%!/FUN`SHOW`RANK,%q<entry_rank>)]); @include %!/INC`ENTRY`WRITE
+          @include %!/INC`TARGET`EDIT; think setqm(entry_stat,u(%!/FUN`COMMAND`STAT,before(%q<cmd_rest>,=)),entry_rank,u(%!/FUN`COMMAND`RANK,after(%q<cmd_rest>,=))); @assert eq(words(%q<entry_stat>),1)=@pemit %#=notice(PF2E,u(%!/FUN`SHOW`STAT`MISS,trim(before(%q<cmd_rest>,=)),%q<entry_stat>),warn); @assert strlen(%q<entry_rank>)=@pemit %#=notice(PF2E,A rank is untrained%, trained%, expert%, master or legendary%, or 0 to 4.,warn); think setqm(entry_json,json(object,kind,"rank",stat,json(string,%q<entry_stat>),rank,%q<entry_rank>),entry_text,[capstr(%q<entry_stat>)] [u(%!/FUN`SHOW`RANK,%q<entry_rank>)]); @include %!/INC`ENTRY`WRITE
         flags: [cmdsyntax]
       INC`PF2E`GRANT:
         value: |-
-          @include %!/INC`TARGET`EDIT; think setqm(entry_pack,lcstr(trim(before(%q<cmd_rest>,/))),entry_name,trim(before(after(%q<cmd_rest>,/),=)),entry_badge,trim(after(%q<cmd_rest>,=))); @assert strlen(get({{core}}/DATA`PACK`%q<entry_pack>))=@pemit %#=notice(PF2E,Name a pack and an item%, such as conditions/frightened. The packs are [itemize(lcstr(iter(lattr({{core}}/DATA`PACK`*),last(%i0,`))))].,warn); think setq(entry_id,u({{core}}/FUN`ITEM`FIND,%q<entry_pack>,%q<entry_name>)); @assert strlen(%q<entry_id>)=@pemit %#=notice(PF2E,There is no %q<entry_name> in %q<entry_pack> from a book the game uses.,warn); @assert cor(not(strlen(%q<entry_badge>)),cand(isint(%q<entry_badge>),gt(%q<entry_badge>,0)))=@pemit %#=notice(PF2E,A value after = is a whole number above 0%, such as conditions/frightened=2.,warn); think setqm(entry_json,json(object,kind,"grant",pack,json(string,%q<entry_pack>),id,json(string,%q<entry_id>),badge,firstof(%q<entry_badge>,null)),entry_text,[u(%!/FUN`SHOW`ITEM,%q<entry_pack>,%q<entry_id>,%q<entry_badge>)]); @include %!/INC`ENTRY`WRITE
+          @include %!/INC`TARGET`EDIT; think setqm(entry_pack,lcstr(trim(before(%q<cmd_rest>,/))),entry_name,trim(before(after(%q<cmd_rest>,/),=)),entry_badge,trim(after(%q<cmd_rest>,=))); @assert strlen(u({{core}}/DATA`PACK`%q<entry_pack>))=@pemit %#=notice(PF2E,Name a pack and an item%, such as conditions/frightened. The packs are [itemize(lcstr(iter(lattr({{core}}/DATA`PACK`*),last(%i0,`))))].,warn); think setq(entry_id,u({{core}}/FUN`ITEM`FIND,%q<entry_pack>,%q<entry_name>)); @assert strlen(%q<entry_id>)=@pemit %#=notice(PF2E,There is no %q<entry_name> in %q<entry_pack> from a book the game uses.,warn); @assert cor(not(strlen(%q<entry_badge>)),cand(isint(%q<entry_badge>),gt(%q<entry_badge>,0)))=@pemit %#=notice(PF2E,A value after = is a whole number above 0%, such as conditions/frightened=2.,warn); think setqm(entry_json,json(object,kind,"grant",pack,json(string,%q<entry_pack>),id,json(string,%q<entry_id>),badge,firstof(%q<entry_badge>,null)),entry_text,[u(%!/FUN`SHOW`ITEM,%q<entry_pack>,%q<entry_id>,%q<entry_badge>)]); @include %!/INC`ENTRY`WRITE
         flags: [cmdsyntax]
       INC`PF2E`REVOKE:
         value: |-
@@ -773,6 +773,10 @@ objects:
         value: |-
           think setq(cmd_target,firstof(%q<cmd_target>,%q<cmd_rest>)); @include %!/INC`TARGET`VIEW; @pemit %#=u(%!/FUN`SHOW`LEDGER)
         flags: [cmdsyntax]
+      INC`PF2E`UPDATE:
+        value: |-
+          @assert permission(%#,softcode.pf2e.staff)=@pemit %#=notice(PF2E,Only staff read the feed.,error); @trigger {{updater}}/INC`UPDATE`START=%#
+        flags: [cmdsyntax]
       # entry_json the entry, entry_text how it reads: numbered after the last entry, stamped with who made it.
       INC`ENTRY`WRITE:
         value: |-
@@ -781,7 +785,7 @@ objects:
       # A check: the statistic's modifiers stacked, a d20 rolled and kept, and against a DC its degree.
       INC`CHECK`ROLL:
         value: |-
-          think setq(roll_stat,u(%!/FUN`COMMAND`STAT,%q<cmd_stat>)); @assert strlen(%q<roll_stat>)=@pemit %#=notice(PF2E,There is no statistic called %q<cmd_stat>. The statistics are [itemize(get({{core}}/DATA`STATISTICS))].,warn); @assert cor(not(strlen(%q<cmd_dc>)),isint(%q<cmd_dc>))=@pemit %#=notice(PF2E,A DC is a whole number%, such as +check athletics=20.,warn); think u(%!/FUN`CHECK`PREPARE); @remit %l=notice(PF2E,u(%!/FUN`SHOW`CHECK))
+          think setq(roll_stat,u(%!/FUN`COMMAND`STAT,%q<cmd_stat>)); @assert eq(words(%q<roll_stat>),1)=@pemit %#=notice(PF2E,u(%!/FUN`SHOW`STAT`MISS,%q<cmd_stat>,%q<roll_stat>),warn); @assert cor(not(strlen(%q<cmd_dc>)),isint(%q<cmd_dc>))=@pemit %#=notice(PF2E,A DC is a whole number%, such as +check athletics=20.,warn); think u(%!/FUN`CHECK`PREPARE); @remit %l=notice(PF2E,u(%!/FUN`SHOW`CHECK))
         flags: [cmdsyntax]
       FUN`CHECK`PREPARE:
         value: |-
@@ -805,8 +809,10 @@ objects:
         flags: [funsyntax]
       FUN`COMMAND`STAT:
         value: |-
-          @@(%0 typed text: the statistic it is the start of, the first in the list when several are)[
-          if(strlen(trim(%0)),grab(get({{core}}/DATA`STATISTICS),lcstr(trim(%0))*))]
+          @@(%0 typed text: the statistic it names, else every statistic it is the start of)[
+          setq(cmd_stat_text,lcstr(trim(%0)))][
+          if(strlen(%q<cmd_stat_text>),
+            firstof(grab(get({{core}}/DATA`STATISTICS),%q<cmd_stat_text>),graball(get({{core}}/DATA`STATISTICS),%q<cmd_stat_text>*)))]
         flags: [funsyntax]
       FUN`COMMAND`RANK:
         value: |-
@@ -815,7 +821,7 @@ objects:
           switch(1,
             not(strlen(%q<cmd_rank_text>)),,
             cand(isint(%q<cmd_rank_text>),gte(%q<cmd_rank_text>,0),lte(%q<cmd_rank_text>,4)),%q<cmd_rank_text>,
-            dec(match(untrained trained expert master legendary,%q<cmd_rank_text>*)))]
+            gt(setr(cmd_rank_at,match(untrained trained expert master legendary,%q<cmd_rank_text>*)),0),dec(%q<cmd_rank_at>))]
         flags: [funsyntax]
       FUN`SHOW: What the commands draw. sheet_target and sheet_ledger the sheet.
       FUN`SHOW`SHEET:
@@ -865,6 +871,13 @@ objects:
       FUN`SHOW`RANK:
         value: |-
           extract(Untrained Trained Expert Master Legendary,inc(firstof(%0,0)),1)
+        flags: [funsyntax]
+      FUN`SHOW`STAT`MISS:
+        value: |-
+          @@(%0 what was typed, %1 the statistics it is the start of: why it names none)[
+          if(words(%1),
+            %0 could be [itemize(%1,%b,or)]. Type more of the name.,
+            There is no statistic called %0. The statistics are [itemize(get({{core}}/DATA`STATISTICS))].)]
         flags: [funsyntax]
       FUN`SHOW`SIGNED:
         value: |-
