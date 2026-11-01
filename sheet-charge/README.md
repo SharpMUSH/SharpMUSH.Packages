@@ -6,8 +6,10 @@ out their starting dots until they are approved and keep their own details, mome
 condition in play. `+check` rolls one six-sided die per dot and reads the highest against a risk,
 which the whole room sees and the game keeps as a recorded roll, and the roll gains momentum.
 
-The build is a ledger: every change to dots, milestones and talents is an entry, and the sheet adds
-them up, so staff can see how a character was built and undo one step. During chargen, changing an action's dots
+The sheet keeps two ledgers. The build ledger holds every change to dots, advances and talents. The
+milestones ledger holds every milestone given or taken, with the reason. The sheet adds the two up and
+caches the totals, so staff can see how a character was built and where its milestones came from, and
+undo one step. During chargen, changing an action's dots
 rewrites that action's entry instead of adding one, so the ledger keeps one entry per action from chargen. Encounters keep their own
 copy of each member's sheet, so a fight that runs for days changes nothing outside it until the GM
 keeps its stress and condition.
@@ -41,6 +43,7 @@ Every sheet package answers `+sheet` and `+check`. Install one sheet package per
 | `+sheet/talent <talent>` | player | Spend a milestone on a situational talent |
 | `+sheet/traits` | all | The actions and what each is for |
 | `+sheet/ledger [<name>]` | all | The entries that build the sheet, oldest first |
+| `+sheet/milestones [<name>]` | all | The milestones given and taken, with what is earned, spent and left |
 | `+check[/push\|/tension][/private] <action>[+<n>\|-<n>][=<risk> <effect>]` | all | `Alice rolls Muscle (high risk, standard effect): 2d6kh1[(3), 6] = 6: a full success. +2 momentum (4). (roll 42)` |
 | `+check/assist <name>` | all | 1 momentum: +1 die on their next action roll |
 | `+check/determination <momentum>` | all | Resist a consequence, one die per momentum spent; `/resist` too |
@@ -57,9 +60,9 @@ Every sheet package answers `+sheet` and `+check`. Install one sheet package per
 
 Keepers (`softcode.charge.admin`, the **Charge Sheet Keeper** role) start the argument of `/set`,
 `/detail`, `/advance` and `/talent` with `<name>/` (`+sheet/set <name>/<action>=<dots>`), use `<name>=<value>` with `/momentum`, `/stress` and
-`/condition`, give milestones with `+sheet/milestone <name>=<n>/<reason>` (the reason goes on the ledger), take talents off with
+`/condition`, give milestones with `+sheet/milestone <name>=<n>/<reason>` (the reason goes on the milestones ledger; a negative grant corrects one), take talents off with
 `+sheet/talent <name>/<talent>=remove`, undo a ledger entry with `+sheet/revoke <name>/<entry>`, and
-start a sheet over with `+sheet/clear <name>=confirm`.
+start a sheet over with `+sheet/clear <name>=confirm` (the milestones ledger stays).
 
 ## Encounters
 
@@ -88,7 +91,9 @@ with `/keep` (stress and condition) is on the sheet. Momentum and the build neve
 
 ```
 CHARGE                    the root: wizard, no_command
-CHARGE`LEDGER`<n>         a ledger entry, JSON, wizard-flagged; an entry without the flag is not read
+CHARGE`LEDGER`<n>         a build entry, JSON, wizard-flagged; an entry without the flag is not read
+CHARGE`XP`<n>             a milestones entry, JSON, wizard-flagged likewise
+CHARGE`TOTALS             the cached totals, JSON, wizard-flagged; worked out from the ledgers when missing
 CHARGE`DETAIL`<KEY>       a detail
 CHARGE`MOMENTUM           momentum held; unset is the session's start
 CHARGE`STRESS             stress clock segments filled; unset is 0
@@ -98,10 +103,16 @@ CHARGE`ENCOUNTERS         the encounters the character is in, last joined last
 CHARGE`USING              the one picked with +encounter/use
 ```
 
-A ledger entry is `{"kind","n","by","phase",...}`: `dots` (`action`, `dots` before advances),
-`advance` (`action`), `milestone` (`count`, below 0 to take; `reason`), `talent` (`text`), `revoke`
-(`entry`) and `clear`. `phase` is `chargen` before approval, `staff` for a keeper, else `play`.
-Revoked entries and everything before the last `clear` do not count.
+A build entry is `{"kind","n","by","phase",...}`: `dots` (`action`, `dots` before advances),
+`advance` (`action`), `talent` (`text`), `revoke` (`entry`) and `clear`. `phase` is `chargen`
+before approval, `staff` for a keeper, else `play`. Revoked entries and everything before the last
+`clear` do not count. A milestones entry is `{"kind":"milestone","n","count","reason","by","phase"}`;
+nothing revokes or clears it, and a negative `count` takes milestones.
+
+`CHARGE`TOTALS` is `{"ratings","advanced","talents","given","earned","spent","milestones"}`:
+`ratings` and `advanced` are `KEY:n` lists, `talents` a `|`-list, `given` the starting dots handed
+out, `earned` the milestones ledger's sum, `spent` one per live advance and talent. Every write to
+either ledger rewrites it.
 
 The lists are `+config` tables on **Charge Sheet Store**: `ACTION` (with `SUMMARY` and `ORDER`) and
 `DETAIL` (with `ORDER`). Clocks are on the store too: `` CLOCK`<KEY> `` with `SIZE`, `FILLED` and

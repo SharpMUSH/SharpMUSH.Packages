@@ -15,7 +15,7 @@ When a player gets a **situational talent**, they need to decide on a specific s
 
 ## On this game
 
-A keeper gives milestones with a reason, which goes on the ledger: `+sheet/milestone Alice=1/Finished the docks job`. `+sheet/advance <action>` spends a milestone on a dot, and `+sheet/talent <talent>` on a situational talent. Each is an entry on the sheet's ledger: `+sheet/ledger`.
+A keeper gives milestones with a reason, which goes on your milestones ledger (`+sheet/milestones`): `+sheet/milestone Alice=1/Finished the docks job`. `+sheet/advance <action>` spends a milestone on a dot, and `+sheet/talent <talent>` on a situational talent. Each is an entry on the sheet's ledger: `+sheet/ledger`.
 
 ---
 

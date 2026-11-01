@@ -1,7 +1,7 @@
 format: "1.16"
 package: sheet-charge
 title: "Charge sheet"
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
 description: "A Charge character sheet: details, twelve actions rated in dots, momentum, a stress clock with a condition, milestones and talents built up on a ledger, encounters that keep their own copy of each sheet, plus progress clocks. +check rolls an action's dice against a risk for the room and gains momentum; push yourself, add tension, assist a friend, and make determination and fortune rolls. Based on the Charge SRD under CC BY 4.0 and Blades in the Dark under CC BY 3.0."
 license: MIT
@@ -45,9 +45,10 @@ objects:
   #
   # A character's sheet is their own attributes under CHARGE`: CHARGE`ACTION`<KEY> an action's dots (0 to 4),
   # CHARGE`DETAIL`<KEY> a detail, CHARGE`MOMENTUM the momentum they hold (unset is the session's start),
-  # CHARGE`STRESS the stress clock's filled segments, CHARGE`CONDITION the condition, CHARGE`MILESTONES the
-  # milestones not yet spent, CHARGE`TALENT the situational talents (a |-list) and CHARGE`ASSIST who has spent
-  # momentum to help their next roll. The CHARGE root is wizard-flagged, so only this object writes them.
+  # CHARGE`STRESS the stress clock's filled segments, CHARGE`CONDITION the condition and CHARGE`ASSIST who has
+  # spent momentum to help their next roll. Two ledgers hold the rest: CHARGE`LEDGER`<n> builds the sheet (dots,
+  # advances, talents) and CHARGE`XP`<n> holds the milestones given and taken. CHARGE`TOTALS caches what the two
+  # add up to, rewritten after every entry. The CHARGE root is wizard-flagged, so only this object writes them.
   #
   # +sheet, +check and +clock are added with /noparse/rsnoparse and hooked to CMD`<word>, so what a player types
   # reaches the code exactly as typed and nothing a player wrote is ever evaluated.
@@ -317,6 +318,8 @@ objects:
         SHEET`TRAITS
       DATA`ROUTE`SHEET`LEDGER: |-
         SHEET`LEDGER
+      DATA`ROUTE`SHEET`MILESTONES: |-
+        SHEET`MILESTONES
       DATA`ROUTE`SHEET`REVOKE: |-
         SHEET`REVOKE
       DATA`ROUTE`SHEET`CLEAR: |-
@@ -492,7 +495,7 @@ objects:
       # +sheet/milestone <name>=<n>/<reason>: a keeper gives milestones (or takes them, below 0); the reason goes on the ledger.
       INC`SHEET`MILESTONE:
         value: |-
-          @include %!/INC`NEED`KEEPER; @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>))=@pemit %#=notice(SHEET,+sheet/milestone <name>=<n>/<reason> gives milestones%, or takes unspent ones with a number below 0.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; think setqm(milestone_by,edit(before(%q<cmd_right_side>,/),+,),milestone_reason,trim(after(%q<cmd_right_side>,/))); @assert cand(isint(%q<milestone_by>),neq(%q<milestone_by>,0))=@pemit %#=notice(SHEET,Give a whole number of milestones%, not 0.,warn); @assert cand(strlen(%q<milestone_reason>),lte(strlen(%q<milestone_reason>),80),not(regmatch(%q<milestone_reason>,\[|~\])))=@pemit %#=notice(SHEET,Say why after a /%, in 80 characters or fewer without | or ~: +sheet/milestone [name(%q<sheet_who>)]=%q<milestone_by>/Finished the docks job.,warn); think setq(milestone_have,u(%!/API`MILESTONES,%q<sheet_who>)); @assert gte(add(%q<milestone_have>,%q<milestone_by>),0)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<milestone_have> unspent. To undo a spent one%, revoke the advance or talent: +sheet/ledger [name(%q<sheet_who>)].,warn); think u(%!/API`MILESTONE,%q<sheet_who>,%q<milestone_by>,%q<milestone_reason>); think setq(milestone_total,add(%q<milestone_have>,%q<milestone_by>)); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<milestone_total> [if(eq(%q<milestone_total>,1),milestone,milestones)] to spend.,ok); @if comp(%q<sheet_who>,%q<viewer_objid>)={@pemit %q<sheet_who>=notice(SHEET,[name(%#)] [if(gt(%q<milestone_by>,0),gives you %q<milestone_by>,takes [abs(%q<milestone_by>)] of your)] [if(eq(abs(%q<milestone_by>),1),milestone,milestones)]: %q<milestone_reason>. You have %q<milestone_total> to spend: +sheet/advance <action> or +sheet/talent <talent>.)}
+          @include %!/INC`NEED`KEEPER; @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>))=@pemit %#=notice(SHEET,+sheet/milestone <name>=<n>/<reason> gives milestones%, or takes unspent ones with a number below 0.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; think setqm(milestone_by,edit(before(%q<cmd_right_side>,/),+,),milestone_reason,trim(after(%q<cmd_right_side>,/))); @assert cand(isint(%q<milestone_by>),neq(%q<milestone_by>,0))=@pemit %#=notice(SHEET,Give a whole number of milestones%, not 0.,warn); @assert cand(strlen(%q<milestone_reason>),lte(strlen(%q<milestone_reason>),80),not(regmatch(%q<milestone_reason>,\[|~\])))=@pemit %#=notice(SHEET,Say why after a /%, in 80 characters or fewer without | or ~: +sheet/milestone [name(%q<sheet_who>)]=%q<milestone_by>/Finished the docks job.,warn); think setq(milestone_have,u(%!/API`MILESTONES,%q<sheet_who>)); @assert gte(add(%q<milestone_have>,%q<milestone_by>),0)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<milestone_have> unspent. To undo a spent one%, revoke the advance or talent: +sheet/ledger [name(%q<sheet_who>)].,warn); think u(%!/API`MILESTONE,%q<sheet_who>,%q<milestone_by>,%q<milestone_reason>); think setq(milestone_total,add(%q<milestone_have>,%q<milestone_by>)); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<milestone_total> [if(eq(%q<milestone_total>,1),milestone,milestones)] to spend.,ok); @if comp(%q<sheet_who>,%q<viewer_objid>)={@pemit %q<sheet_who>=notice(SHEET,[name(%#)] [if(gt(%q<milestone_by>,0),gives you %q<milestone_by> [if(eq(%q<milestone_by>,1),milestone,milestones)],takes [abs(%q<milestone_by>)] of your milestones)]: %q<milestone_reason>. You have %q<milestone_total> to spend: +sheet/advance <action> or +sheet/talent <talent>.)}
         flags: [cmdsyntax]
       # +sheet/advance [<name>/]<action>: spends a milestone on one more dot, up to 4.
       INC`SHEET`ADVANCE:
@@ -509,16 +512,21 @@ objects:
         value: |-
           @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert strlen(%q<sheet_who>); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`LEDGER,%q<sheet_who>)
         flags: [cmdsyntax]
+      # +sheet/milestones [<name>]: the milestones ledger, oldest first.
+      INC`SHEET`MILESTONES:
+        value: |-
+          @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert strlen(%q<sheet_who>); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`MILESTONES,%q<sheet_who>)
+        flags: [cmdsyntax]
       # +sheet/revoke <name>/<entry>: a keeper undoes a ledger entry by adding one that revokes it.
       INC`SHEET`REVOKE:
         value: |-
-          @include %!/INC`NEED`KEEPER; @assert strmatch(%q<cmd_argument>,*/*)=@pemit %#=notice(SHEET,+sheet/revoke <name>/<entry> undoes a ledger entry. +sheet/ledger <name> numbers them.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_argument>; think setqm(revoke_n,%q<sheet_what>,revoke_rows,u(%!/FUN`LEDGER`ENTRIES,%q<sheet_who>),revoke_row,grab(%q<revoke_rows>,%q<sheet_what>~*,|)); @assert cand(isint(%q<revoke_n>),strlen(%q<revoke_row>))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has no entry '%q<sheet_what>'. +sheet/ledger [name(%q<sheet_who>)] numbers them.,warn); @assert comp(elements(%q<revoke_row>,2,~),revoke)=@pemit %#=notice(SHEET,Entry %q<revoke_n> is itself a revoke. Make the entry again instead.,warn); @assert comp(elements(%q<revoke_row>,2,~),clear)=@pemit %#=notice(SHEET,Entry %q<revoke_n> cleared the sheet%, and a clear is not revoked. Build the sheet again with keeper commands.,warn); @assert not(member(u(%!/FUN`LEDGER`REVOKED,%q<revoke_rows>),%q<revoke_n>))=@pemit %#=notice(SHEET,Entry %q<revoke_n> is revoked already.,warn); think setq(revoke_spent,sub(u(%!/API`MILESTONES,%q<sheet_who>),if(strmatch(elements(%q<revoke_row>,2,~),milestone),elements(%q<revoke_row>,4,~),0))); @assert gte(%q<revoke_spent>,0)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] spent that milestone already. Revoke the advance or talent first.,warn); think u(%!/API`RECORD,%q<sheet_who>,json(object,kind,"revoke",entry,%q<revoke_n>)); @pemit %#=notice(SHEET,Entry %q<revoke_n> on [name(%q<sheet_who>)]'s ledger is revoked: [u(%!/FUN`DISPLAY`ENTRY,%q<revoke_row>)].,ok)
+          @include %!/INC`NEED`KEEPER; @assert strmatch(%q<cmd_argument>,*/*)=@pemit %#=notice(SHEET,+sheet/revoke <name>/<entry> undoes a ledger entry. +sheet/ledger <name> numbers them.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_argument>; think setqm(revoke_n,%q<sheet_what>,revoke_rows,u(%!/FUN`LEDGER`ENTRIES,%q<sheet_who>),revoke_row,grab(%q<revoke_rows>,%q<sheet_what>~*,|)); @assert cand(isint(%q<revoke_n>),strlen(%q<revoke_row>))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has no entry '%q<sheet_what>'. +sheet/ledger [name(%q<sheet_who>)] numbers them.,warn); @assert comp(elements(%q<revoke_row>,2,~),revoke)=@pemit %#=notice(SHEET,Entry %q<revoke_n> is itself a revoke. Make the entry again instead.,warn); @assert comp(elements(%q<revoke_row>,2,~),clear)=@pemit %#=notice(SHEET,Entry %q<revoke_n> cleared the sheet%, and a clear is not revoked. Build the sheet again with keeper commands.,warn); @assert not(member(u(%!/FUN`LEDGER`REVOKED,%q<revoke_rows>),%q<revoke_n>))=@pemit %#=notice(SHEET,Entry %q<revoke_n> is revoked already.,warn); think u(%!/API`RECORD,%q<sheet_who>,json(object,kind,"revoke",entry,%q<revoke_n>)); @pemit %#=notice(SHEET,Entry %q<revoke_n> on [name(%q<sheet_who>)]'s ledger is revoked: [u(%!/FUN`DISPLAY`ENTRY,%q<revoke_row>)].,ok)
         flags: [cmdsyntax]
       # +sheet/clear <name>=confirm: a keeper starts a sheet over. The build is cleared by one ledger entry, so the history stays;
       # the details and play state are wiped.
       INC`SHEET`CLEAR:
         value: |-
-          @include %!/INC`NEED`KEEPER; @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(SHEET,+sheet/clear <name> starts a character's sheet over.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; @assert strmatch(%q<cmd_right_side>,confirm)=@pemit %#=notice(SHEET,This clears [name(%q<sheet_who>)]'s whole build on the ledger%, and [poss(%q<sheet_who>)] details%, momentum%, stress and condition%, and takes [obj(%q<sheet_who>)] out of every encounter. The ledger keeps the history. +sheet/clear [name(%q<sheet_who>)]=confirm does it.,warn); @include/args %!/INC`ENCOUNTER`DROPALL=who,%q<sheet_who>; think u(%!/API`RECORD,%q<sheet_who>,json(object,kind,"clear")); @dolist/inline DETAIL MOMENTUM STRESS CONDITION ASSIST={@wipe %q<sheet_who>/CHARGE`##}; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s sheet is cleared. [if(isapproved(%q<sheet_who>),[capstr(subj(%q<sheet_who>))] [if(strmatch(subj(%q<sheet_who>),they),are,is)] still approved%, so only keepers set [poss(%q<sheet_who>)] dots until staff unapprove [obj(%q<sheet_who>)].,[capstr(subj(%q<sheet_who>))] can give out [poss(%q<sheet_who>)] dots again.)],ok); @if comp(%q<sheet_who>,%q<viewer_objid>)={@pemit %q<sheet_who>=notice(SHEET,[name(%#)] clears your sheet. +sheet shows it.)}
+          @include %!/INC`NEED`KEEPER; @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(SHEET,+sheet/clear <name> starts a character's sheet over.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; @assert strmatch(%q<cmd_right_side>,confirm)=@pemit %#=notice(SHEET,This clears [name(%q<sheet_who>)]'s whole build on the ledger%, and [poss(%q<sheet_who>)] details%, momentum%, stress and condition%, and takes [obj(%q<sheet_who>)] out of every encounter. The ledger keeps the history%, and the milestones stay to spend again. +sheet/clear [name(%q<sheet_who>)]=confirm does it.,warn); @include/args %!/INC`ENCOUNTER`DROPALL=who,%q<sheet_who>; think u(%!/API`RECORD,%q<sheet_who>,json(object,kind,"clear")); @dolist/inline DETAIL MOMENTUM STRESS CONDITION ASSIST={@wipe %q<sheet_who>/CHARGE`##}; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s sheet is cleared. [if(isapproved(%q<sheet_who>),[capstr(subj(%q<sheet_who>))] [if(strmatch(subj(%q<sheet_who>),they),are,is)] still approved%, so only keepers set [poss(%q<sheet_who>)] dots until staff unapprove [obj(%q<sheet_who>)].,[capstr(subj(%q<sheet_who>))] can give out [poss(%q<sheet_who>)] dots again.)],ok); @if comp(%q<sheet_who>,%q<viewer_objid>)={@pemit %q<sheet_who>=notice(SHEET,[name(%#)] clears your sheet. +sheet shows it.)}
         flags: [cmdsyntax]
       INC`SHEET`TRAITS:
         value: |-
@@ -625,17 +633,18 @@ objects:
           record_key,ucstr(json_query(%1,extract,$.action)),
           record_phase,cond(not(isapproved(%0)),chargen,u(%!/FUN`PERM`KEEPER,%#),staff,play),
           record_reuse,if(cand(strmatch(%q<record_phase>,chargen),strmatch(%q<record_kind>,dots)),first(iter(u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ENTRIES,%0)),if(cand(strmatch(elements(%i0,2,~),dots),strmatch(elements(%i0,3,~),%q<record_key>),strmatch(elements(%i0,5,~),chargen)),first(%i0,~)),|,%b))),
-          record_n,firstof(%q<record_reuse>,inc(lmax(0 [iter(lattr(%0/CHARGE`LEDGER`*),last(%i0,`))]))))[u(%!/FUN`DO`ROOT,%0)][null(attrib_set(%0/CHARGE`LEDGER`%q<record_n>,json_mod(%1,patch,json(object,n,%q<record_n>,by,json(string,objid(%#)),phase,json(string,%q<record_phase>)))))][null(set(%0/CHARGE`LEDGER`%q<record_n>,wizard))]%q<record_n>
+          record_n,firstof(%q<record_reuse>,inc(lmax(0 [iter(lattr(%0/CHARGE`LEDGER`*),last(%i0,`))]))))[u(%!/FUN`DO`ROOT,%0)][null(attrib_set(%0/CHARGE`LEDGER`%q<record_n>,json_mod(%1,patch,json(object,n,%q<record_n>,by,json(string,objid(%#)),phase,json(string,%q<record_phase>)))))][null(set(%0/CHARGE`LEDGER`%q<record_n>,wizard))][u(%!/FUN`TOTALS`WRITE,%0)]%q<record_n>
         flags: [VISUAL]
-      # %0 a character: their ledger's entry numbers, oldest first. An entry without the wizard flag is not read.
+      # %0 a character, %1 XP for the milestones ledger (else the build ledger): its entry numbers, oldest first. An
+      # entry without the wizard flag is not read.
       FUN`LEDGER`NUMBERS:
         value: |-
-          sort(iter(lattr(%0/CHARGE`LEDGER`*),if(hasflag(%0/%i0,wizard),last(%i0,`))),n)
+          sort(iter(lattr(%0/CHARGE`[firstof(%1,LEDGER)]`*),if(hasflag(%0/%i0,wizard),last(%i0,`))),n)
         flags: [funsyntax]
-      # %0 a character: every entry in one pass, a |-list of n~kind~key~value~phase~by.
+      # %0 a character, %1 XP for the milestones ledger: every entry in one pass, a |-list of n~kind~key~value~phase~by~reason.
       FUN`LEDGER`ENTRIES:
         value: |-
-          iter(u(%!/FUN`LEDGER`NUMBERS,%0),u(%!/FUN`LEDGER`ROW,%i0,get(%0/CHARGE`LEDGER`%i0)),%b,|)
+          iter(u(%!/FUN`LEDGER`NUMBERS,%0,%1),u(%!/FUN`LEDGER`ROW,%i0,get(%0/CHARGE`[firstof(%1,LEDGER)]`%i0)),%b,|)
         flags: [funsyntax]
       FUN`LEDGER`ROW:
         value: |-
@@ -652,17 +661,38 @@ objects:
           setqm(ledger_revoked,u(%!/FUN`LEDGER`REVOKED,%0),
           ledger_cleared,firstof(last(iter(%0,if(strmatch(elements(%i0,2,~),clear),first(%i0,~)),|,%b)),0))[trim(squish(iter(%0,if(cor(match(revoke clear,elements(%i0,2,~)),member(%q<ledger_revoked>,first(%i0,~)),lte(first(%i0,~),%q<ledger_cleared>)),,%i0),|,|),|),|)]
         flags: [funsyntax]
-      # %0 a character, %1 1 for their sheet even in an encounter. Sets build_rows (the live ledger), build_copy (their encounter
-      # copy, or nothing), build_ratings (KEY:dots for every action), build_talents (a |-list) and build_milestones (unspent).
-      # The ratings and talents come from the encounter's copy while they are in one.
+      # %0 a character, %1 1 for their sheet even in an encounter. Sets build_totals (the cached totals), build_copy (their
+      # encounter copy, or nothing), build_ratings (KEY:dots for every action), build_talents (a |-list) and build_milestones
+      # (unspent). The ratings and talents come from the encounter's copy while they are in one.
       FUN`BUILD`PREPARE:
         value: |-
           setqm(build_who,%0,
-          build_rows,u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ENTRIES,%0)),
+          build_totals,u(%!/FUN`TOTALS`GET,%0),
           build_copy,if(%1,,u(%!/FUN`ENCOUNTER`COPY,%0)),
-          build_ratings,if(strlen(%q<build_copy>),get(%q<build_copy>`DOTS),u(%!/FUN`BUILD`RATINGS)),
-          build_talents,if(strlen(%q<build_copy>),get(%q<build_copy>`TALENTS),u(%!/FUN`BUILD`TALENTS)),
-          build_milestones,u(%!/FUN`BUILD`MILESTONES))
+          build_ratings,if(strlen(%q<build_copy>),get(%q<build_copy>`DOTS),json_query(%q<build_totals>,extract,$.ratings)),
+          build_talents,if(strlen(%q<build_copy>),get(%q<build_copy>`TALENTS),json_query(%q<build_totals>,extract,$.talents)),
+          build_milestones,json_query(%q<build_totals>,extract,$.milestones))
+        flags: [funsyntax]
+      # %0 a character: CHARGE`TOTALS when this object wrote it, else the totals worked out from the ledgers now.
+      FUN`TOTALS`GET:
+        value: |-
+          if(cand(hasattr(%0,CHARGE`TOTALS),hasflag(%0/CHARGE`TOTALS,wizard)),get(%0/CHARGE`TOTALS),u(%!/FUN`TOTALS`BUILD,%0))
+        flags: [funsyntax]
+      # %0 a character: works the totals out from both ledgers and caches them in CHARGE`TOTALS.
+      FUN`TOTALS`WRITE:
+        value: |-
+          setq(totals_json,u(%!/FUN`TOTALS`BUILD,%0))[u(%!/FUN`DO`ROOT,%0)][null(attrib_set(%0/CHARGE`TOTALS,%q<totals_json>))][null(set(%0/CHARGE`TOTALS,wizard))]
+        flags: [funsyntax]
+      # %0 a character: {"ratings","advanced","talents","given","earned","spent","milestones"} from the build ledger's live
+      # entries and the milestones ledger. ratings and advanced are KEY:n lists, talents a |-list, given the starting dots
+      # handed out, earned the milestones given less those taken, spent one for each advance and talent.
+      FUN`TOTALS`BUILD:
+        value: |-
+          setqm(build_rows,u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ENTRIES,%0)),
+          totals_ratings,u(%!/FUN`BUILD`RATINGS),
+          totals_advanced,iter(u(%!/FUN`LIST`ALL,ACTION),%i0:[u(%!/FUN`BUILD`ROWADVANCES,%i0)]),
+          totals_spent,words(iter(%q<build_rows>,if(match(advance talent,elements(%i0,2,~)),x),|,%b)),
+          totals_earned,ladd(0 [iter(u(%!/FUN`LEDGER`ENTRIES,%0,XP),elements(%i0,4,~),|,%b)]))[json(object,ratings,json(string,%q<totals_ratings>),advanced,json(string,%q<totals_advanced>),talents,json(string,u(%!/FUN`BUILD`TALENTS)),given,sub(ladd(0 [iter(%q<totals_ratings>,after(%i0,:))]),ladd(0 [iter(%q<totals_advanced>,after(%i0,:))])),earned,%q<totals_earned>,spent,%q<totals_spent>,milestones,sub(%q<totals_earned>,%q<totals_spent>))]
         flags: [funsyntax]
       FUN`BUILD`RATINGS:
         value: |-
@@ -671,11 +701,16 @@ objects:
       # %0 an action key: its starting dots (the last dots entry) and one for each advance.
       FUN`BUILD`LEDGERRATING:
         value: |-
-          add(firstof(last(iter(%q<build_rows>,if(cand(strmatch(elements(%i0,2,~),dots),strmatch(elements(%i0,3,~),%0)),firstof(elements(%i0,4,~),0)),|,%b)),0),u(%!/FUN`BUILD`ADVANCES,%0))
+          add(firstof(last(iter(%q<build_rows>,if(cand(strmatch(elements(%i0,2,~),dots),strmatch(elements(%i0,3,~),%0)),firstof(elements(%i0,4,~),0)),|,%b)),0),u(%!/FUN`BUILD`ROWADVANCES,%0))
         flags: [funsyntax]
-      FUN`BUILD`ADVANCES:
+      FUN`BUILD`ROWADVANCES:
         value: |-
           words(iter(%q<build_rows>,if(cand(strmatch(elements(%i0,2,~),advance),strmatch(elements(%i0,3,~),%0)),x),|,%b))
+        flags: [funsyntax]
+      # %0 an action key: the dots bought for it with milestones, from the totals.
+      FUN`BUILD`ADVANCES:
+        value: |-
+          firstof(after(grab(json_query(%q<build_totals>,extract,$.advanced),ucstr(%0):*),:),0)
         flags: [funsyntax]
       FUN`BUILD`RATING:
         value: |-
@@ -688,21 +723,16 @@ objects:
       # The starting dots given out: every dot but those bought with milestones, which the chargen budget leaves out.
       FUN`BUILD`GIVEN:
         value: |-
-          sub(u(%!/FUN`BUILD`DOTS),words(iter(%q<build_rows>,if(strmatch(elements(%i0,2,~),advance),x),|,%b)))
+          json_query(%q<build_totals>,extract,$.given)
         flags: [funsyntax]
       FUN`BUILD`TALENTS:
         value: |-
           trim(squish(iter(%q<build_rows>,if(strmatch(elements(%i0,2,~),talent),elements(%i0,4,~)),|,|),|),|)
         flags: [funsyntax]
-      # %0 a talent's text: the entry that gave it, or nothing.
+      # %0 a talent's text: the live build entry that gave it, or nothing.
       FUN`BUILD`TALENTENTRY:
         value: |-
-          first(iter(%q<build_rows>,if(cand(strmatch(elements(%i0,2,~),talent),not(comp(lcstr(elements(%i0,4,~)),lcstr(%0)))),first(%i0,~)),|,%b))
-        flags: [funsyntax]
-      # Milestones given, less one for each advance and talent.
-      FUN`BUILD`MILESTONES:
-        value: |-
-          sub(ladd(0 [iter(%q<build_rows>,if(strmatch(elements(%i0,2,~),milestone),elements(%i0,4,~)),|,%b)]),words(iter(%q<build_rows>,if(match(advance talent,elements(%i0,2,~)),x),|,%b)))
+          first(iter(u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ENTRIES,%q<build_who>)),if(cand(strmatch(elements(%i0,2,~),talent),not(comp(lcstr(elements(%i0,4,~)),lcstr(%0)))),first(%i0,~)),|,%b))
         flags: [funsyntax]
       # %0 a character, %1 1 for their sheet even in an encounter: where their momentum, stress and condition are kept now,
       # as obj/path` to put a leaf after. Their encounter's copy while they are in one, else their sheet.
@@ -1012,14 +1042,20 @@ objects:
         flags: [funsyntax]
       FUN`DISPLAY`FOOTER:
         value: |-
-          cond(cand(not(comp(objid(%1),%0)),not(isapproved(%1)),not(u(%!/FUN`PERM`KEEPER,%1))),[u(%!/FUN`BUILD`PREPARE,%0,1)][u(%!/FUN`BUILD`GIVEN)] of [get(%!/DATA`CONFIG`DOTS)] dots given. +sheet/set <action>=<dots> gives them%, +sheet/detail <detail>=<text> writes a detail.[u(%!/FUN`HINT,FOOTER)],not(comp(objid(%1),%0)),+check <action>=<risk> rolls. +sheet/momentum and +sheet/stress keep count%, +sheet/advance and +sheet/talent spend milestones%, +sheet/ledger shows how the sheet was built.,+check <action> rolls a die for each dot.)
+          cond(cand(not(comp(objid(%1),%0)),not(isapproved(%1)),not(u(%!/FUN`PERM`KEEPER,%1))),[u(%!/FUN`BUILD`PREPARE,%0,1)][u(%!/FUN`BUILD`GIVEN)] of [get(%!/DATA`CONFIG`DOTS)] dots given. +sheet/set <action>=<dots> gives them%, +sheet/detail <detail>=<text> writes a detail.[u(%!/FUN`HINT,FOOTER)],not(comp(objid(%1),%0)),+check <action>=<risk> rolls. +sheet/momentum and +sheet/stress keep count%, +sheet/advance and +sheet/talent spend milestones%, +sheet/ledger shows how the sheet was built and +sheet/milestones where the milestones came from.,+check <action> rolls a die for each dot.)
         flags: [funsyntax]
       # %0 a character: their ledger, oldest first, with what is revoked or cleared marked.
       FUN`SCREEN`LEDGER:
         value: |-
           setqm(ledger_rows,u(%!/FUN`LEDGER`ENTRIES,%0),
           ledger_live,u(%!/FUN`LEDGER`LIVE,%q<ledger_rows>),
-          ledger_built,u(%!/FUN`BUILD`PREPARE,%0,1))[box(if(strlen(%q<ledger_rows>),ldatatable(lit({"nowrap":"1|3|4","rule":""}),>#|Entry|Phase|By,iter(%q<ledger_rows>,u(%!/FUN`LEDGER`LINE,%i0),|,%*<^>),%*<^>),tone(muted,Nothing is on the ledger yet.))%r[rule()]%r[tone(muted,%q<build_milestones> [if(eq(%q<build_milestones>,1),milestone,milestones)] to spend. A keeper undoes an entry with +sheet/revoke [name(%0)]/<entry>.)],[name(%0)]'s ledger)]
+          ledger_built,u(%!/FUN`BUILD`PREPARE,%0,1))[box(if(strlen(%q<ledger_rows>),ldatatable(lit({"nowrap":"1|3|4","rule":""}),>#|Entry|Phase|By,iter(%q<ledger_rows>,u(%!/FUN`LEDGER`LINE,%i0),|,%*<^>),%*<^>),tone(muted,Nothing is on the ledger yet.))%r[rule()]%r[tone(muted,%q<build_milestones> [if(eq(%q<build_milestones>,1),milestone,milestones)] to spend: +sheet/milestones [name(%0)] lists where they came from. A keeper undoes an entry with +sheet/revoke [name(%0)]/<entry>.)],[name(%0)]'s ledger)]
+        flags: [funsyntax]
+      # %0 a character: their milestones ledger, oldest first, and what is earned, spent and left.
+      FUN`SCREEN`MILESTONES:
+        value: |-
+          setqm(xp_rows,u(%!/FUN`LEDGER`ENTRIES,%0,XP),
+          xp_totals,u(%!/FUN`TOTALS`GET,%0))[box(if(strlen(%q<xp_rows>),ldatatable(lit({"nowrap":"1|3|4","rule":""}),>#|Milestones|Phase|By,iter(%q<xp_rows>,[first(%i0,~)]|[u(%!/FUN`DISPLAY`ENTRY,%i0)]|[elements(%i0,5,~)]|[name(elements(%i0,6,~))],|,%*<^>),%*<^>),tone(muted,No milestones yet.))%r[rule()]%r[tone(muted,[json_query(%q<xp_totals>,extract,$.earned)] earned%, [json_query(%q<xp_totals>,extract,$.spent)] spent on advances and talents%, [json_query(%q<xp_totals>,extract,$.milestones)] to spend. A keeper corrects a grant with +sheet/milestone [name(%0)]=-<n>/<reason>.)],[name(%0)]'s milestones)]
         flags: [funsyntax]
       FUN`LEDGER`LINE:
         value: |-
@@ -1124,10 +1160,11 @@ objects:
           [u(%!/FUN`BUILD`PREPARE,%0,1)]%q<build_milestones>
         flags: [VISUAL]
       # %0 a character, %1 milestones to give (or take, below 0), %2 why (80 characters, no | or ~): records it on
-      # the ledger with the reason and returns the new count.
+      # the milestones ledger (CHARGE`XP`<n>, stamped like a build entry), rewrites the totals and returns the new count.
       API`MILESTONE:
         value: |-
-          [null(u(%!/API`RECORD,%0,json(object,kind,"milestone",count,%1,reason,json(string,left(edit(%2,|,,~,),80)))))][u(%!/API`MILESTONES,%0)]
+          setqm(xp_phase,cond(not(isapproved(%0)),chargen,u(%!/FUN`PERM`KEEPER,%#),staff,play),
+          xp_n,inc(lmax(0 [iter(lattr(%0/CHARGE`XP`*),last(%i0,`))])))[u(%!/FUN`DO`ROOT,%0)][null(attrib_set(%0/CHARGE`XP`%q<xp_n>,json(object,n,%q<xp_n>,kind,"milestone",count,%1,reason,json(string,left(edit(%2,|,,~,),80)),by,json(string,objid(%#)),phase,json(string,%q<xp_phase>))))][null(set(%0/CHARGE`XP`%q<xp_n>,wizard))][u(%!/FUN`TOTALS`WRITE,%0)][u(%!/API`MILESTONES,%0)]
         flags: [VISUAL]
       # Named: %<roller> an objid, %<trait> an action key, %<modifier> dice to add (or take), %<target> the risk,
       # %<effect> the effect (standard when empty), %<live> 1 to roll the sheet even in an encounter. Rolls the pool and keeps the roll (roll() record), and returns
@@ -1316,7 +1353,7 @@ objects:
 
         Output: `\[SHEET\] Done: Alice has 2 of 4 stress.`
       HELP`SHEET`GROWTH: |-
-        When a big event in the story ends, the GM may give a milestone, with the reason on your ledger. Spend each one:
+        When a big event in the story ends, the GM may give a milestone, with the reason on your milestones ledger \(`+sheet/milestones`\). Spend each one:
 
         - `+sheet/advance <action>` puts one more dot in an action, up to 4: `+sheet/advance shoot`.
         - `+sheet/talent <talent>` takes a situational talent, a boost in a situation you choose: `+sheet/talent +1d6 when I fight to protect my crew`.
@@ -1329,9 +1366,11 @@ objects:
 
         Output: `\[SHEET\] Done: Alice spends a milestone: Shoot has 3 dots. 0 left to spend.`
       HELP`SHEET`LEDGER: |-
-        Your dots, talents and milestones are not stored as totals. Each change is an entry on your sheet's ledger, and the sheet adds them up: the dots you gave out, each milestone given and why, each advance and talent it bought.
+        Your sheet keeps two ledgers. The build ledger holds the dots you gave out and each advance and talent you bought. The milestones ledger holds each milestone given or taken, and why. The sheet adds the two up and keeps the totals ready.
 
-        - `+sheet/ledger` lists the entries, oldest first, with the phase each was made in \(chargen, play or staff\) and who made it. `+sheet/ledger <name>` shows another character's, when you may read their sheet.
+        - `+sheet/ledger` lists the build entries, oldest first, with the phase each was made in \(chargen, play or staff\) and who made it.
+        - `+sheet/milestones` lists the milestones ledger, with what you earned, spent and have left.
+        - Both take a name, `+sheet/ledger <name>`, when you may read that character's sheet.
         - Changing an action's dots during chargen rewrites that action's chargen entry, so the ledger keeps one per action.
         - Only a sheet keeper undoes an entry, by adding one that revokes it. A revoked entry stays on the list, marked.
 
@@ -1441,10 +1480,10 @@ objects:
         - `+sheet <name>` shows a character's sheet.
         - `/set`, `/detail`, `/advance` and `/talent` take `<name>/` first: `+sheet/set Alice/muscle=3`. A keeper may put up to 4 dots in an action, past the starting dots.
         - `+sheet/momentum <name>=<n>`, `+sheet/stress <name>=<n>` and `+sheet/condition <name>=<condition>` change those.
-        - `+sheet/milestone <name>=<n>/<reason>` gives milestones, or takes them with a number below 0. The reason goes on the ledger: `+sheet/milestone Alice=1/Finished the docks job`.
+        - `+sheet/milestone <name>=<n>/<reason>` gives milestones, or takes them with a number below 0. The reason goes on the milestones ledger: `+sheet/milestone Alice=1/Finished the docks job`. A wrong grant is corrected with a negative one.
         - `+sheet/talent <name>/<talent>=remove` takes a talent off and gives the milestone back.
         - `+sheet/revoke <name>/<entry>` undoes an entry on a character's ledger: `+sheet/revoke Alice/3`. `+sheet/ledger <name>` numbers them. A clear is not undone.
-        - `+sheet/clear <name>=confirm` starts a sheet over: one ledger entry clears the build, and the details, momentum, stress and condition are wiped. It takes the character out of every encounter.
+        - `+sheet/clear <name>=confirm` starts a sheet over: one ledger entry clears the build, and the details, momentum, stress and condition are wiped. It takes the character out of every encounter. The milestones ledger stays, so every milestone earned is there to spend again.
         - Keepers run any encounter as its GM, and tick and remove anyone's clocks.
 
         `@role/assign <player>=charge-sheet-keeper` makes someone a keeper.
