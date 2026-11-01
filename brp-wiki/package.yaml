@@ -1,0 +1,67 @@
+format: "1.16"
+package: brp-wiki
+title: "Percentile rules (BRP)"
+version: 1.0.0
+wiki_landing_page: category:brp_start_here
+wiki_collection_name: Percentile rules
+authors: [SharpMUSH]
+description: "Wiki pages for playing with the percentile sheet: rolling and success levels, making a character, the characteristics and skills, hit points, coin and experience, and encounters. Contains ORC Licensed Material from Basic Roleplaying: Universal Game Engine; an unofficial offering."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [brp, percentile, d100, wiki, rules]
+category: Characters
+requires_server: ">=0.1"
+locale: en
+
+# A content package: wiki pages only. The trait page lists the characteristics and skills sheet-brp ships; a
+# game that edits them in +config changes the sheet, not these pages. help:brp_license_notice carries the ORC
+# notice the Licensed Material asks for.
+wiki:
+- page: category:brp_start_here
+  title: 'Start here: Percentile rules'
+  categories: []
+  file: wiki/category/brp_start_here.md
+  pin: true
+- page: main:brp_how_to_play
+  title: How to play (percentile)
+  categories:
+  - brp_start_here
+  - brp
+  file: wiki/main/brp_how_to_play.md
+- page: main:brp_making_a_character
+  title: Making a character (percentile)
+  categories:
+  - brp_start_here
+  - brp
+  file: wiki/main/brp_making_a_character.md
+- page: main:brp_characteristics_and_skills
+  title: Characteristics and skills (percentile)
+  categories:
+  - brp_start_here
+  - brp
+  file: wiki/main/brp_characteristics_and_skills.md
+- page: main:brp_play_and_experience
+  title: Hit points, coin and experience (percentile)
+  categories:
+  - brp_start_here
+  - brp
+  file: wiki/main/brp_play_and_experience.md
+- page: main:brp_encounters
+  title: Encounters (percentile)
+  categories:
+  - brp_start_here
+  - brp
+  file: wiki/main/brp_encounters.md
+- page: help:brp_license_notice
+  title: About these pages
+  categories: []
+  file: wiki/help/brp_license_notice.md
+  requires:
+    edit:
+    - wiki.admin
+    delete:
+    - wiki.admin
+- page: category:brp
+  title: Percentile rules
+  categories: []
+  file: wiki/category/brp.md
