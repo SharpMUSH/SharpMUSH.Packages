@@ -1,7 +1,7 @@
 format: "1.16"
 package: sheet-fitd
 title: "Forged in the Dark sheet"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "A Forged in the Dark character sheet: twelve action ratings under three attributes, stress, trauma and harm, plus progress clocks. +check rolls a pool of six-sided dice and reads the highest against a position for the room; +check/resist rolls an attribute to resist a consequence. Based on the Blades in the Dark SRD under CC BY 3.0."
 license: MIT
@@ -361,7 +361,7 @@ objects:
       # The left of =: <name>/<what> for a sheet keeper, else <what> on your own sheet. sheet_who and sheet_what.
       INC`NEED`WHO:
         value: |-
-          @if strmatch(%<text>,*/*)={@include/args %!/INC`NEED`TARGET=name,before(%<text>,/); think setq(sheet_what,trim(after(%<text>,/)))},{think setqm(sheet_who,%q<viewer_objid>,sheet_what,%<text>)}; @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error)
+          @if strmatch(%<text>,*/*)={@include/args %!/INC`NEED`TARGET=name,before(%<text>,/); think setq(sheet_what,trim(after(%<text>,/)))},{think setqm(sheet_who,%q<viewer_objid>,sheet_what,%<text>)}; @assert strlen(%q<sheet_who>); @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error)
         flags: [cmdsyntax]
       # Changes only a keeper makes once a character is approved: action ratings.
       INC`NEED`EDITABLE:
@@ -377,7 +377,7 @@ objects:
       # ---- +sheet -----------------------------------------------------------------
       INC`SHEET`SHOW:
         value: |-
-          @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`SHEET,%q<sheet_who>,%#)
+          @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert strlen(%q<sheet_who>); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`SHEET,%q<sheet_who>,%#)
         flags: [cmdsyntax]
       # +sheet/set [<name>/]<action>=<rating>: 0 up to cap, or 4 for a keeper. Empty clears it back to 0.
       INC`SHEET`SET:
@@ -387,7 +387,7 @@ objects:
       # +sheet/stress [<name>=]<n>|+<n>|-<n>|clear. Past the most stress, a trauma is due and stress clears.
       INC`SHEET`STRESS:
         value: |-
-          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/stress +<n> marks stress%, -<n> clears some%, <n> sets it%, clear empties it.,warn); @if %q<cmd_has_equals>={@include/args %!/INC`NEED`WHO=text,%q<cmd_left_side>/; think setq(stress_typed,%q<cmd_right_side>)},{think setqm(sheet_who,%q<viewer_objid>,stress_typed,%q<cmd_argument>)}; think setqm(stress_now,u(%!/API`STRESSED,%q<sheet_who>),stress_to,cond(strmatch(%q<stress_typed>,clear),0,strmatch(%q<stress_typed>,+*),add(%q<stress_now>,rest(%q<stress_typed>,+)),strmatch(%q<stress_typed>,-*),add(%q<stress_now>,%q<stress_typed>),%q<stress_typed>)); @assert isint(%q<stress_to>)=@pemit %#=notice(SHEET,'%q<stress_typed>' is not stress. Give +<n>%, -<n>%, <n> or clear.,warn); think setq(stress_result,u(%!/API`STRESS,%q<sheet_who>,sub(%q<stress_to>,%q<stress_now>))); @pemit %#=notice(SHEET,u(%!/FUN`DISPLAY`STRESSED,%q<sheet_who>,%q<stress_result>),ok)
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/stress +<n> marks stress%, -<n> clears some%, <n> sets it%, clear empties it.,warn); @if %q<cmd_has_equals>={@include/args %!/INC`NEED`WHO=text,%q<cmd_left_side>/; think setq(stress_typed,%q<cmd_right_side>)},{think setqm(sheet_who,%q<viewer_objid>,stress_typed,%q<cmd_argument>)}; @assert cand(strlen(%q<sheet_who>),cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))); think setqm(stress_now,u(%!/API`STRESSED,%q<sheet_who>),stress_to,cond(strmatch(%q<stress_typed>,clear),0,strmatch(%q<stress_typed>,+*),add(%q<stress_now>,rest(%q<stress_typed>,+)),strmatch(%q<stress_typed>,-*),add(%q<stress_now>,%q<stress_typed>),%q<stress_typed>)); @assert isint(%q<stress_to>)=@pemit %#=notice(SHEET,'%q<stress_typed>' is not stress. Give +<n>%, -<n>%, <n> or clear.,warn); think setq(stress_result,u(%!/API`STRESS,%q<sheet_who>,sub(%q<stress_to>,%q<stress_now>))); @pemit %#=notice(SHEET,u(%!/FUN`DISPLAY`STRESSED,%q<sheet_who>,%q<stress_result>),ok)
         flags: [cmdsyntax]
       # +sheet/trauma [<name>/]<trauma> marks one; =remove takes it off (keepers only).
       INC`SHEET`TRAUMA:
@@ -403,7 +403,7 @@ objects:
       # +sheet/coin -<n> spends coin from your own sheet; a keeper gives or takes with <name>=<n>.
       INC`SHEET`COIN:
         value: |-
-          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/coin -<n> spends coin.,warn); @if %q<cmd_has_equals>={@include %!/INC`NEED`KEEPER; @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; think setq(coin_by,edit(%q<cmd_right_side>,+,))},{think setqm(sheet_who,%q<viewer_objid>,coin_by,%q<cmd_argument>)}; @assert cand(isint(%q<coin_by>),neq(%q<coin_by>,0))=@pemit %#=notice(SHEET,Give a whole number of coin%, not 0.,warn); @assert cor(%q<cmd_has_equals>,lt(%q<coin_by>,0))=@pemit %#=notice(SHEET,You spend coin with a number below 0. Staff give it.,warn); @assert cor(%q<cmd_has_equals>,gte(u(%!/API`COIN,%q<sheet_who>),abs(%q<coin_by>)))=@pemit %#=notice(SHEET,You have [u(%!/API`COIN,%q<sheet_who>)] coin.,warn); think setq(coin_total,u(%!/API`AWARD,%q<sheet_who>,%q<coin_by>)); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<coin_total> coin.,ok); @if cand(%q<cmd_has_equals>,comp(%q<sheet_who>,%q<viewer_objid>))={@pemit %q<sheet_who>=notice(SHEET,[name(%#)] [if(gt(%q<coin_by>,0),gives you %q<coin_by>,takes [abs(%q<coin_by>)] from your)] coin. You have %q<coin_total>.)}
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/coin -<n> spends coin.,warn); @if %q<cmd_has_equals>={@include %!/INC`NEED`KEEPER; @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; think setq(coin_by,edit(%q<cmd_right_side>,+,))},{think setqm(sheet_who,%q<viewer_objid>,coin_by,%q<cmd_argument>)}; @assert cor(not(%q<cmd_has_equals>),%q<viewer_keeper>); @assert strlen(%q<sheet_who>); @assert cand(isint(%q<coin_by>),neq(%q<coin_by>,0))=@pemit %#=notice(SHEET,Give a whole number of coin%, not 0.,warn); @assert cor(%q<cmd_has_equals>,lt(%q<coin_by>,0))=@pemit %#=notice(SHEET,You spend coin with a number below 0. Staff give it.,warn); @assert cor(%q<cmd_has_equals>,gte(u(%!/API`COIN,%q<sheet_who>),abs(%q<coin_by>)))=@pemit %#=notice(SHEET,You have [u(%!/API`COIN,%q<sheet_who>)] coin.,warn); think setq(coin_total,u(%!/API`AWARD,%q<sheet_who>,%q<coin_by>)); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<coin_total> coin.,ok); @if cand(%q<cmd_has_equals>,comp(%q<sheet_who>,%q<viewer_objid>))={@pemit %q<sheet_who>=notice(SHEET,[name(%#)] [if(gt(%q<coin_by>,0),gives you %q<coin_by>,takes [abs(%q<coin_by>)] from your)] coin. You have %q<coin_total>.)}
         flags: [cmdsyntax]
       INC`SHEET`TRAITS:
         value: |-
@@ -686,7 +686,7 @@ objects:
       API`STRESS:
         value: |-
           setqm(stress_new,max(0,add(u(%!/API`STRESSED,%0),%1)),
-          stress_over,gt(%q<stress_new>,get(%!/DATA`CONFIG`STRESS)))[if(hasattr(%0,FITD),,attrib_set(%0/FITD,This character's Forged in the Dark sheet. +sheet shows it.)[set(%0/FITD,wizard)][set(%0/FITD,no_command)])][attrib_set(%0/FITD`STRESS,if(%q<stress_over>,,if(%q<stress_new>,%q<stress_new>)))][json(object,stress,if(%q<stress_over>,0,%q<stress_new>),trauma,%q<stress_over>)]
+          stress_over,gt(%q<stress_new>,get(%!/DATA`CONFIG`STRESS)))[if(hasattr(%0,FITD),,attrib_set(%0/FITD,This character's Forged in the Dark sheet. +sheet shows it.)[set(%0/FITD,wizard)][set(%0/FITD,no_command)])][if(cand(not(%q<stress_over>),%q<stress_new>),attrib_set(%0/FITD`STRESS,%q<stress_new>),attrib_set(%0/FITD`STRESS))][json(object,stress,if(%q<stress_over>,0,%q<stress_new>),trauma,%q<stress_over>)]
         flags: [VISUAL]
       # %0 a character: their coin.
       API`COIN:
@@ -696,7 +696,7 @@ objects:
       # %0 a character, %1 coin to give (or take, below 0): writes it, never below 0, and returns the new count.
       API`AWARD:
         value: |-
-          setq(award_new,max(0,add(u(%!/API`COIN,%0),%1)))[if(hasattr(%0,FITD),,attrib_set(%0/FITD,This character's Forged in the Dark sheet. +sheet shows it.)[set(%0/FITD,wizard)][set(%0/FITD,no_command)])][attrib_set(%0/FITD`COIN,if(%q<award_new>,%q<award_new>))]%q<award_new>
+          setq(award_new,max(0,add(u(%!/API`COIN,%0),%1)))[if(hasattr(%0,FITD),,attrib_set(%0/FITD,This character's Forged in the Dark sheet. +sheet shows it.)[set(%0/FITD,wizard)][set(%0/FITD,no_command)])][if(%q<award_new>,attrib_set(%0/FITD`COIN,%q<award_new>),attrib_set(%0/FITD`COIN))]%q<award_new>
         flags: [VISUAL]
       # Named: %<roller> an objid, %<trait> an action key, %<modifier> dice to add (or take), %<target> the position
       # or nothing. Rolls the pool and keeps the roll (roll() record), and returns

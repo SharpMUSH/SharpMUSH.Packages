@@ -1,7 +1,7 @@
 format: "1.16"
 package: sheet-fate
 title: "Fate sheet"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "A Fate character sheet: skills or the six approaches on the ladder, aspects, stress tracks, consequences and fate points. +sheet shows and fills it in, and +check rolls four Fate dice plus a rating against an opposition for the room. Fate Core and Fate Accelerated SRD material under CC BY 3.0."
 license: MIT
@@ -458,7 +458,7 @@ objects:
       # The left of =: <name>/<what> for a sheet keeper, else <what> on your own sheet. sheet_who and sheet_what.
       INC`NEED`WHO:
         value: |-
-          @if strmatch(%q<cmd_left_side>,*/*)={@include/args %!/INC`NEED`TARGET=name,before(%q<cmd_left_side>,/); think setq(sheet_what,trim(after(%q<cmd_left_side>,/)))},{think setqm(sheet_who,%q<viewer_objid>,sheet_what,%q<cmd_left_side>)}; @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error)
+          @if strmatch(%q<cmd_left_side>,*/*)={@include/args %!/INC`NEED`TARGET=name,before(%q<cmd_left_side>,/); think setq(sheet_what,trim(after(%q<cmd_left_side>,/)))},{think setqm(sheet_who,%q<viewer_objid>,sheet_what,%q<cmd_left_side>)}; @assert strlen(%q<sheet_who>); @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error)
         flags: [cmdsyntax]
       # Changes only a keeper makes once a character is approved: ratings, aspects.
       INC`NEED`EDITABLE:
@@ -473,7 +473,7 @@ objects:
       # ---- +sheet -----------------------------------------------------------------
       INC`SHEET`SHOW:
         value: |-
-          @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`SHEET,%q<sheet_who>,%#)
+          @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert strlen(%q<sheet_who>); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`SHEET,%q<sheet_who>,%#)
         flags: [cmdsyntax]
       # +sheet/set [<name>/]<skill>=<rating>: a number or a ladder word. Empty clears it back to Mediocre.
       INC`SHEET`SET:
@@ -493,7 +493,7 @@ objects:
       # +sheet/recover [<name>]: clears every stress track.
       INC`SHEET`RECOVER:
         value: |-
-          @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error); @dolist/inline u(%!/FUN`LIST`ALL,TRACK)={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,STRESS`##,value,}; @pemit %#=notice(SHEET,Every stress box on [name(%q<sheet_who>)]'s sheet is clear.,ok)
+          @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert strlen(%q<sheet_who>); @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error); @dolist/inline u(%!/FUN`LIST`ALL,TRACK)={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,STRESS`##,value,}; @pemit %#=notice(SHEET,Every stress box on [name(%q<sheet_who>)]'s sheet is clear.,ok)
         flags: [cmdsyntax]
       # +sheet/consequence [<name>/]<slot>=<aspect>: takes one; empty clears it.
       INC`SHEET`CONSEQUENCE:

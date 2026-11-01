@@ -1,7 +1,7 @@
 format: "1.16"
 package: sheet-d20
 title: "D20 sheet"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "A d20 character sheet: six ability scores, a skill list the game edits, training and level. +sheet shows it, +sheet/set fills it in, and +check rolls 1d20 plus a trait against a DC for the room."
 license: MIT
@@ -365,7 +365,7 @@ objects:
       # +sheet shows your own; +sheet <name> another's, to them, sheet keepers, and whoever a bridge allows.
       INC`SHEET`SHOW:
         value: |-
-          @assert hastype(%#,player)=@pemit %#=notice(SHEET,Only players have a sheet.,warn); @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`SHEET,%q<sheet_who>,%#)
+          @assert hastype(%#,player)=@pemit %#=notice(SHEET,Only players have a sheet.,warn); @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert strlen(%q<sheet_who>); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`SHEET,%q<sheet_who>,%#)
         flags: [cmdsyntax]
       # +sheet/set <trait>=<value> for your own sheet; +sheet/set <name>/<trait>=<value> for a sheet keeper.
       # An empty value clears the trait.
@@ -377,7 +377,7 @@ objects:
       # that sheet now.
       INC`NEED`EDITOR:
         value: |-
-          @if strmatch(%q<cmd_left_side>,*/*)={@include/args %!/INC`NEED`TARGET=name,before(%q<cmd_left_side>,/); think setq(set_typed,after(%q<cmd_left_side>,/))},{think setqm(sheet_who,%q<viewer_objid>,set_typed,%q<cmd_left_side>)}; think setq(set_keeper,u(%!/FUN`PERM`KEEPER,%#)); @assert cor(%q<set_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error); @assert cor(%q<set_keeper>,not(isapproved(%#)))=@pemit %#=notice(SHEET,Your character is approved%, so staff change your sheet now.,error); @assert cor(%q<set_keeper>,not(strlen(setr(set_gate,u(%!/FUN`GATE`EDIT,%#)))))=@pemit %#=notice(SHEET,%q<set_gate>,warn)
+          @if strmatch(%q<cmd_left_side>,*/*)={@include/args %!/INC`NEED`TARGET=name,before(%q<cmd_left_side>,/); think setq(set_typed,after(%q<cmd_left_side>,/))},{think setqm(sheet_who,%q<viewer_objid>,set_typed,%q<cmd_left_side>)}; @assert strlen(%q<sheet_who>); think setq(set_keeper,u(%!/FUN`PERM`KEEPER,%#)); @assert cor(%q<set_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error); @assert cor(%q<set_keeper>,not(isapproved(%#)))=@pemit %#=notice(SHEET,Your character is approved%, so staff change your sheet now.,error); @assert cor(%q<set_keeper>,not(strlen(setr(set_gate,u(%!/FUN`GATE`EDIT,%#)))))=@pemit %#=notice(SHEET,%q<set_gate>,warn)
         flags: [cmdsyntax]
       # The trait and value: set_value, what is stored, after each kind's own check.
       INC`SHEET`SET`VALUE:

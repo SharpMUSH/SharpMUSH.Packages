@@ -46,30 +46,30 @@ constraints checked before anything is planned.
 | [`profile-handler/`](profile-handler/) | 1.0.0 | Read-only character directory and profile API; depends on HTTP Handler |
 | [`roll-tables/`](roll-tables/) | 1.0.0 | Random tables as softcode data: `+table/roll` tells the room, table keepers edit them by command, and a table can be published to a wiki page |
 | [`pf2e-remaster/`](pf2e-remaster/) | 1.4.0 | Pathfinder Second Edition (Remaster) core rules as wiki pages: classes, ancestries, heritages, backgrounds, feats, spells, actions, equipment, skills, conditions and DC tables; a content pack under the ORC License |
-| [`sheet-d20/`](sheet-d20/) | 1.0.0 | d20 character sheet: six abilities, a skill list the game edits, training and level; `+sheet` and `+check` against a DC |
+| [`sheet-d20/`](sheet-d20/) | 1.0.1 | d20 character sheet: six abilities, a skill list the game edits, training and level; `+sheet` and `+check` against a DC |
 | [`sheet-d20-help/`](sheet-d20-help/) | 1.0.0 | Bridge: the D20 sheet's topics in `+help` |
 | [`sheet-d20-config/`](sheet-d20-config/) | 1.0.0 | Bridge: the D20 sheet's settings and trait table in `+config` |
 | [`sheet-d20-chargen/`](sheet-d20-chargen/) | 1.0.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |
-| [`sheet-fate/`](sheet-fate/) | 1.0.0 | Fate character sheet: skills or approaches on the ladder, aspects, stress, consequences and fate points; `+check` on four Fate dice. Fate SRD text under CC BY 3.0 (see its NOTICE) |
+| [`sheet-fate/`](sheet-fate/) | 1.0.1 | Fate character sheet: skills or approaches on the ladder, aspects, stress, consequences and fate points; `+check` on four Fate dice. Fate SRD text under CC BY 3.0 (see its NOTICE) |
 | [`sheet-fate-help/`](sheet-fate-help/) | 1.0.0 | Bridge: the Fate sheet's topics in `+help` |
 | [`sheet-fate-config/`](sheet-fate-config/) | 1.0.0 | Bridge: the Fate sheet's settings and tables in `+config` |
 | [`sheet-fate-chargen/`](sheet-fate-chargen/) | 1.0.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |
-| [`sheet-pbta/`](sheet-pbta/) | 1.0.0 | Powered by the Apocalypse character sheet: stats, moves and playbooks the game edits, forward, ongoing, hold and XP; `+check` on 2d6. Dungeon World moves under CC BY 3.0 (see its NOTICE) |
+| [`sheet-pbta/`](sheet-pbta/) | 1.0.1 | Powered by the Apocalypse character sheet: stats, moves and playbooks the game edits, forward, ongoing, hold and XP; `+check` on 2d6. Dungeon World moves under CC BY 3.0 (see its NOTICE) |
 | [`sheet-pbta-help/`](sheet-pbta-help/) | 1.0.0 | Bridge: the PbtA sheet's topics in `+help` |
 | [`sheet-pbta-config/`](sheet-pbta-config/) | 1.0.0 | Bridge: the PbtA sheet's settings and tables in `+config` |
 | [`sheet-pbta-chargen/`](sheet-pbta-chargen/) | 1.0.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |
 | [`duties-d20/`](duties-d20/) | 1.0.0 | Duties roll provider `d20` on the D20 sheet |
 | [`duties-fate/`](duties-fate/) | 1.0.0 | Duties roll provider `fate` on the Fate sheet: teamwork, paid invokes, fate points as rewards |
 | [`duties-pbta/`](duties-pbta/) | 1.0.0 | Duties roll provider `pbta` on the PbtA sheet: aid, forward and ongoing, XP as a reward |
-| [`sheet-fitd/`](sheet-fitd/) | 1.0.0 | Forged in the Dark character sheet: twelve actions under three attributes, stress, trauma, harm, coin and progress clocks; `+check` on a d6 pool against a position. Blades in the Dark SRD under CC BY 3.0 (see its NOTICE) |
+| [`sheet-fitd/`](sheet-fitd/) | 1.0.1 | Forged in the Dark character sheet: twelve actions under three attributes, stress, trauma, harm, coin and progress clocks; `+check` on a d6 pool against a position. Blades in the Dark SRD under CC BY 3.0 (see its NOTICE) |
 | [`sheet-fitd-help/`](sheet-fitd-help/) | 1.0.0 | Bridge: the FitD sheet's topics in `+help` |
 | [`sheet-fitd-config/`](sheet-fitd-config/) | 1.0.0 | Bridge: the FitD sheet's settings and lists in `+config` |
 | [`sheet-fitd-chargen/`](sheet-fitd-chargen/) | 1.0.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |
-| [`sheet-brp/`](sheet-brp/) | 1.0.0 | Percentile character sheet on Basic Roleplaying: characteristics, a skill list with base chances, hit points and power points; `+check` on 1d100. ORC Licensed Material (see its NOTICE) |
+| [`sheet-brp/`](sheet-brp/) | 1.0.1 | Percentile character sheet on Basic Roleplaying: characteristics, a skill list with base chances, hit points and power points; `+check` on 1d100. ORC Licensed Material (see its NOTICE) |
 | [`sheet-brp-help/`](sheet-brp-help/) | 1.0.0 | Bridge: the BRP sheet's topics in `+help` |
 | [`sheet-brp-config/`](sheet-brp-config/) | 1.0.0 | Bridge: the BRP sheet's settings and skill list in `+config` |
 | [`sheet-brp-chargen/`](sheet-brp-chargen/) | 1.0.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |
-| [`sheet-ironsworn/`](sheet-ironsworn/) | 1.0.0 | Ironsworn character sheet: five stats, meters, momentum and iron vows with progress; `+check` action rolls and `+vow`. Ironsworn SRD under CC BY 4.0 (see its NOTICE) |
+| [`sheet-ironsworn/`](sheet-ironsworn/) | 1.0.1 | Ironsworn character sheet: five stats, meters, momentum and iron vows with progress; `+check` action rolls and `+vow`. Ironsworn SRD under CC BY 4.0 (see its NOTICE) |
 | [`sheet-ironsworn-help/`](sheet-ironsworn-help/) | 1.0.0 | Bridge: the Ironsworn sheet's topics in `+help` |
 | [`sheet-ironsworn-config/`](sheet-ironsworn-config/) | 1.0.0 | Bridge: the Ironsworn sheet's settings and stat list in `+config` |
 | [`sheet-ironsworn-chargen/`](sheet-ironsworn-chargen/) | 1.0.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |

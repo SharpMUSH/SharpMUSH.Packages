@@ -1,7 +1,7 @@
 format: "1.16"
 package: sheet-ironsworn
 title: "Ironsworn sheet"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "An Ironsworn character sheet: five stats, health, spirit, supply, momentum and experience, and iron vows with progress tracks. +check makes an action roll, a six-sided die plus a stat against two ten-sided challenge dice, for the room; +vow swears, marks and fulfils vows. Based on the Ironsworn SRD under CC BY 4.0."
 license: MIT
@@ -284,7 +284,7 @@ objects:
       # %<text>: <name>/<what> for a sheet keeper, else <what> on your own sheet. sheet_who and sheet_what.
       INC`NEED`WHO:
         value: |-
-          @if strmatch(%<text>,*/*)={@include/args %!/INC`NEED`TARGET=name,before(%<text>,/); think setq(sheet_what,trim(after(%<text>,/)))},{think setqm(sheet_who,%q<viewer_objid>,sheet_what,%<text>)}; @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error)
+          @if strmatch(%<text>,*/*)={@include/args %!/INC`NEED`TARGET=name,before(%<text>,/); think setq(sheet_what,trim(after(%<text>,/)))},{think setqm(sheet_who,%q<viewer_objid>,sheet_what,%<text>)}; @assert strlen(%q<sheet_who>); @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error)
         flags: [cmdsyntax]
       # Changes only a keeper makes once a character is approved: stats.
       INC`NEED`EDITABLE:
@@ -305,7 +305,7 @@ objects:
       # ---- +sheet -----------------------------------------------------------------
       INC`SHEET`SHOW:
         value: |-
-          @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`SHEET,%q<sheet_who>,%#)
+          @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert strlen(%q<sheet_who>); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`SHEET,%q<sheet_who>,%#)
         flags: [cmdsyntax]
       # +sheet/set [<name>/]<stat>=<n>: 1 up to the cap, or 5 for a keeper. Empty puts it back to 1.
       INC`SHEET`SET:
@@ -316,7 +316,7 @@ objects:
       # reset puts it back to its start: momentum to +2, the others to their most.
       INC`SHEET`METER:
         value: |-
-          think setqm(meter_key,ucstr(%q<cmd_switch>),meter_label,lcstr(v(DATA`METER`[ucstr(%q<cmd_switch>)])),meter_range,v(DATA`METER`[ucstr(%q<cmd_switch>)]`RANGE)); @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/%q<cmd_switch> +<n> adds%, -<n> takes away%, <n> sets it and reset puts it back to [last(%q<meter_range>)]. [capstr(%q<meter_label>)] runs from [first(%q<meter_range>)] to [extract(%q<meter_range>,2,1)].,warn); @if %q<cmd_has_equals>={@include/args %!/INC`NEED`WHO=text,%q<cmd_left_side>/; think setq(meter_typed,%q<cmd_right_side>)},{think setqm(sheet_who,%q<viewer_objid>,meter_typed,%q<cmd_argument>)}; think setqm(meter_now,u(%!/API`METER,%q<sheet_who>,%q<meter_key>),meter_to,cond(strmatch(%q<meter_typed>,reset),last(%q<meter_range>),strmatch(%q<meter_typed>,+*),add(%q<meter_now>,rest(%q<meter_typed>,+)),strmatch(%q<meter_typed>,-*),add(%q<meter_now>,%q<meter_typed>),%q<meter_typed>)); @assert isint(%q<meter_to>)=@pemit %#=notice(SHEET,'%q<meter_typed>' is not a number. Give +<n>%, -<n>%, <n> or reset.,warn); think setq(meter_new,u(%!/API`ADJUST,%q<sheet_who>,%q<meter_key>,sub(%q<meter_to>,%q<meter_now>))); @pemit %#=notice(SHEET,u(%!/FUN`DISPLAY`METER,%q<sheet_who>,%q<meter_key>,%q<meter_new>)[if(neq(%q<meter_new>,%q<meter_to>),%b%(it runs from [first(%q<meter_range>)] to [extract(%q<meter_range>,2,1)]%))].,ok)
+          think setqm(meter_key,ucstr(%q<cmd_switch>),meter_label,lcstr(v(DATA`METER`[ucstr(%q<cmd_switch>)])),meter_range,v(DATA`METER`[ucstr(%q<cmd_switch>)]`RANGE)); @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/%q<cmd_switch> +<n> adds%, -<n> takes away%, <n> sets it and reset puts it back to [last(%q<meter_range>)]. [capstr(%q<meter_label>)] runs from [first(%q<meter_range>)] to [extract(%q<meter_range>,2,1)].,warn); @if %q<cmd_has_equals>={@include/args %!/INC`NEED`WHO=text,%q<cmd_left_side>/; think setq(meter_typed,%q<cmd_right_side>)},{think setqm(sheet_who,%q<viewer_objid>,meter_typed,%q<cmd_argument>)}; @assert cand(strlen(%q<sheet_who>),cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))); think setqm(meter_now,u(%!/API`METER,%q<sheet_who>,%q<meter_key>),meter_to,cond(strmatch(%q<meter_typed>,reset),last(%q<meter_range>),strmatch(%q<meter_typed>,+*),add(%q<meter_now>,rest(%q<meter_typed>,+)),strmatch(%q<meter_typed>,-*),add(%q<meter_now>,%q<meter_typed>),%q<meter_typed>)); @assert isint(%q<meter_to>)=@pemit %#=notice(SHEET,'%q<meter_typed>' is not a number. Give +<n>%, -<n>%, <n> or reset.,warn); think setq(meter_new,u(%!/API`ADJUST,%q<sheet_who>,%q<meter_key>,sub(%q<meter_to>,%q<meter_now>))); @pemit %#=notice(SHEET,u(%!/FUN`DISPLAY`METER,%q<sheet_who>,%q<meter_key>,%q<meter_new>)[if(neq(%q<meter_new>,%q<meter_to>),%b%(it runs from [first(%q<meter_range>)] to [extract(%q<meter_range>,2,1)]%))].,ok)
         flags: [cmdsyntax]
       INC`SHEET`TRAITS:
         value: |-
@@ -346,7 +346,7 @@ objects:
       # +vow [<name>]: a character's vows.
       INC`VOW`LIST:
         value: |-
-          @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(VOW,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] vows.,error); @pemit %#=u(%!/FUN`SCREEN`VOWS,%q<sheet_who>)
+          @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert strlen(%q<sheet_who>); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(VOW,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] vows.,error); @pemit %#=u(%!/FUN`SCREEN`VOWS,%q<sheet_who>)
         flags: [cmdsyntax]
       # +vow/swear [<name>/]<vow>=<rank>.
       INC`VOW`SWEAR:
@@ -586,7 +586,7 @@ objects:
         value: |-
           setqm(adjust_key,ucstr(%1),
           adjust_range,v(DATA`METER`[ucstr(%1)]`RANGE),
-          adjust_new,bound(add(u(%!/API`METER,%0,%1),%2),first(%q<adjust_range>),extract(%q<adjust_range>,2,1)))[if(words(%q<adjust_range>),[if(hasattr(%0,IRONSWORN),,attrib_set(%0/IRONSWORN,This character's Ironsworn sheet. +sheet shows it.)[set(%0/IRONSWORN,wizard)][set(%0/IRONSWORN,no_command)])][attrib_set(%0/IRONSWORN`METER`%q<adjust_key>,if(neq(%q<adjust_new>,last(%q<adjust_range>)),%q<adjust_new>))]%q<adjust_new>,#-1 NO SUCH METER)]
+          adjust_new,bound(add(u(%!/API`METER,%0,%1),%2),first(%q<adjust_range>),extract(%q<adjust_range>,2,1)))[if(words(%q<adjust_range>),[if(hasattr(%0,IRONSWORN),,attrib_set(%0/IRONSWORN,This character's Ironsworn sheet. +sheet shows it.)[set(%0/IRONSWORN,wizard)][set(%0/IRONSWORN,no_command)])][if(neq(%q<adjust_new>,last(%q<adjust_range>)),attrib_set(%0/IRONSWORN`METER`%q<adjust_key>,%q<adjust_new>),attrib_set(%0/IRONSWORN`METER`%q<adjust_key>))]%q<adjust_new>,#-1 NO SUCH METER)]
         flags: [VISUAL]
       # Named: %<roller> an objid, %<trait> a stat key, %<modifier> adds, %<target> adds from the difficulty or
       # nothing. Makes the action roll and keeps it (roll() record), and returns {"tier","action","challenge",

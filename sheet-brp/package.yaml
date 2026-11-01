@@ -1,7 +1,7 @@
 format: "1.16"
 package: sheet-brp
 title: "Percentile sheet (BRP)"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "A percentile character sheet on the Basic Roleplaying rules: seven characteristics, a skill list with base chances the game edits, hit points and power points. +check rolls 1d100 under a skill or a characteristic roll, doubled or halved for difficulty, and reads critical, special, success, failure or fumble. The skill list is ORC Licensed Material from Basic Roleplaying: Universal Game Engine."
 license: MIT
@@ -280,7 +280,7 @@ objects:
       # %<text>: <name>/<what> for a sheet keeper, else <what> on your own sheet. sheet_who and sheet_what.
       INC`NEED`WHO:
         value: |-
-          @if strmatch(%<text>,*/*)={@include/args %!/INC`NEED`TARGET=name,before(%<text>,/); think setq(sheet_what,trim(after(%<text>,/)))},{think setqm(sheet_who,%q<viewer_objid>,sheet_what,%<text>)}; @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error)
+          @if strmatch(%<text>,*/*)={@include/args %!/INC`NEED`TARGET=name,before(%<text>,/); think setq(sheet_what,trim(after(%<text>,/)))},{think setqm(sheet_who,%q<viewer_objid>,sheet_what,%<text>)}; @assert strlen(%q<sheet_who>); @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error)
         flags: [cmdsyntax]
       # Changes only a keeper makes once a character is approved: characteristics and skills.
       INC`NEED`EDITABLE:
@@ -296,7 +296,7 @@ objects:
       # ---- +sheet -----------------------------------------------------------------
       INC`SHEET`SHOW:
         value: |-
-          @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`SHEET,%q<sheet_who>,%#)
+          @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert strlen(%q<sheet_who>); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`SHEET,%q<sheet_who>,%#)
         flags: [cmdsyntax]
       # +sheet/set [<name>/]<characteristic or skill>=<value>. Empty puts it back: 10, or the base chance.
       INC`SHEET`SET:
@@ -315,7 +315,7 @@ objects:
       # %<pool> HP or PP, %<noun> what it is called.
       INC`SHEET`POOL:
         value: |-
-          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/[lcstr(%<pool>)] -<n> loses %<noun>%, +<n> gets some back%, <n> sets them%, full fills them.,warn); @if %q<cmd_has_equals>={@include/args %!/INC`NEED`WHO=text,%q<cmd_left_side>/; think setq(pool_typed,%q<cmd_right_side>)},{think setqm(sheet_who,%q<viewer_objid>,pool_typed,%q<cmd_argument>)}; think setqm(pool_most,u(%!/API`MOST,%q<sheet_who>,%<pool>),pool_now,u(%!/API`LEFT,%q<sheet_who>,%<pool>),pool_to,cond(strmatch(%q<pool_typed>,full),%q<pool_most>,strmatch(%q<pool_typed>,+*),add(%q<pool_now>,rest(%q<pool_typed>,+)),strmatch(%q<pool_typed>,-*),add(%q<pool_now>,%q<pool_typed>),%q<pool_typed>)); @assert isint(%q<pool_to>)=@pemit %#=notice(SHEET,'%q<pool_typed>' is not a number of %<noun>. Give -<n>%, +<n>%, <n> or full.,warn); think setq(pool_to,min(%q<pool_to>,%q<pool_most>)); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,%<pool>,value,if(neq(%q<pool_to>,%q<pool_most>),%q<pool_to>); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<pool_to> of %q<pool_most> %<noun>.[if(lte(%q<pool_to>,0),%b[if(strmatch(%<pool>,HP),tone(strong,At 0 or below a character is dying.),tone(strong,No power points are left.))])],ok)
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/[lcstr(%<pool>)] -<n> loses %<noun>%, +<n> gets some back%, <n> sets them%, full fills them.,warn); @if %q<cmd_has_equals>={@include/args %!/INC`NEED`WHO=text,%q<cmd_left_side>/; think setq(pool_typed,%q<cmd_right_side>)},{think setqm(sheet_who,%q<viewer_objid>,pool_typed,%q<cmd_argument>)}; @assert cand(strlen(%q<sheet_who>),cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))); think setqm(pool_most,u(%!/API`MOST,%q<sheet_who>,%<pool>),pool_now,u(%!/API`LEFT,%q<sheet_who>,%<pool>),pool_to,cond(strmatch(%q<pool_typed>,full),%q<pool_most>,strmatch(%q<pool_typed>,+*),add(%q<pool_now>,rest(%q<pool_typed>,+)),strmatch(%q<pool_typed>,-*),add(%q<pool_now>,%q<pool_typed>),%q<pool_typed>)); @assert isint(%q<pool_to>)=@pemit %#=notice(SHEET,'%q<pool_typed>' is not a number of %<noun>. Give -<n>%, +<n>%, <n> or full.,warn); think setq(pool_to,min(%q<pool_to>,%q<pool_most>)); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,%<pool>,value,if(neq(%q<pool_to>,%q<pool_most>),%q<pool_to>); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<pool_to> of %q<pool_most> %<noun>.[if(lte(%q<pool_to>,0),%b[if(strmatch(%<pool>,HP),tone(strong,At 0 or below a character is dying.),tone(strong,No power points are left.))])],ok)
         flags: [cmdsyntax]
       INC`SHEET`TRAITS:
         value: |-
@@ -569,7 +569,7 @@ objects:
       # %0 a character, %1 HP or PP, %2 how many to give back: never past the most. Returns what they have.
       API`HEAL:
         value: |-
-          setqm(heal_most,u(%!/API`MOST,%0,%1),heal_new,min(%q<heal_most>,add(u(%!/API`LEFT,%0,%1),%2)))[if(hasattr(%0,BRP),,attrib_set(%0/BRP,This character's percentile sheet. +sheet shows it.)[set(%0/BRP,wizard)][set(%0/BRP,no_command)])][attrib_set(%0/BRP`%1,if(neq(%q<heal_new>,%q<heal_most>),%q<heal_new>))]%q<heal_new>
+          setqm(heal_most,u(%!/API`MOST,%0,%1),heal_new,min(%q<heal_most>,add(u(%!/API`LEFT,%0,%1),%2)))[if(hasattr(%0,BRP),,attrib_set(%0/BRP,This character's percentile sheet. +sheet shows it.)[set(%0/BRP,wizard)][set(%0/BRP,no_command)])][if(neq(%q<heal_new>,%q<heal_most>),attrib_set(%0/BRP`%1,%q<heal_new>),attrib_set(%0/BRP`%1))]%q<heal_new>
         flags: [VISUAL]
       # Named: %<roller> an objid, %<trait> a key, %<modifier> percent to add, %<target> a level or nothing
       # (average). Rolls 1d100 and keeps the roll (roll() record); automatic and impossible roll nothing. Returns
