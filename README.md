@@ -54,8 +54,13 @@ constraints checked before anything is planned.
 | [`sheet-fate-help/`](sheet-fate-help/) | 1.0.0 | Bridge: the Fate sheet's topics in `+help` |
 | [`sheet-fate-config/`](sheet-fate-config/) | 1.0.0 | Bridge: the Fate sheet's settings and tables in `+config` |
 | [`sheet-fate-chargen/`](sheet-fate-chargen/) | 1.0.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |
+| [`sheet-pbta/`](sheet-pbta/) | 1.0.0 | Powered by the Apocalypse character sheet: stats, moves and playbooks the game edits, forward, ongoing, hold and XP; `+check` on 2d6. Dungeon World moves under CC BY 3.0 (see its NOTICE) |
+| [`sheet-pbta-help/`](sheet-pbta-help/) | 1.0.0 | Bridge: the PbtA sheet's topics in `+help` |
+| [`sheet-pbta-config/`](sheet-pbta-config/) | 1.0.0 | Bridge: the PbtA sheet's settings and tables in `+config` |
+| [`sheet-pbta-chargen/`](sheet-pbta-chargen/) | 1.0.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |
 | [`duties-d20/`](duties-d20/) | 1.0.0 | Duties roll provider `d20` on the D20 sheet |
 | [`duties-fate/`](duties-fate/) | 1.0.0 | Duties roll provider `fate` on the Fate sheet: teamwork, paid invokes, fate points as rewards |
+| [`duties-pbta/`](duties-pbta/) | 1.0.0 | Duties roll provider `pbta` on the PbtA sheet: aid, forward and ongoing, XP as a reward |
 
 These currently double as the reference implementations for package authors —
 each README explains which manifest features it demonstrates. The curated
