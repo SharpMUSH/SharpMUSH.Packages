@@ -2649,7 +2649,12 @@ objects:
               u(FUN`ENC`PATCH,%0,json(object,conds,json(object,dying,%q<harm_dying>,unconscious,0,prone,0)))][
               setq(harm_text,%q<harm_text> and falls%, dying %q<harm_dying>)],
               [u(FUN`ENC`SET,%0,down,1)][
-              setq(harm_text,%q<harm_text> and is down)]))]
+              setq(harm_text,%q<harm_text> and is down)]),
+            if(cand(eq(%q<harm_hp>,0),gt(%q<harm_left>,0),isnum(setr(harm_was,json_query(u(FUN`ENC`C,%0,conds),extract,$.dying)))),
+              [setq(harm_dying,min(4,add(%q<harm_was>,if(%2,2,1))))][
+              u(FUN`ENC`PATCH,%0,json(object,conds,json(object,dying,%q<harm_dying>)))][
+              setq(harm_text,%q<harm_text>%, dying %q<harm_dying>)]))][
+          if(gte(firstof(%q<harm_dying>,0),4),[u(FUN`ENC`SET,%0,down,1)][setq(harm_text,%q<harm_text>. [u(FUN`ENC`C,%0,name)] dies)])]
         flags: [funsyntax]
       FUN`ACT`HEAL:
         value: |-
