@@ -1,7 +1,7 @@
 format: "1.16"
 package: sheet-fate
 title: "Fate sheet"
-version: 1.5.0
+version: 1.6.0
 authors: [SharpMUSH]
 description: "A Fate character sheet: skills or the six approaches on the ladder, aspects, stunts, stress tracks, consequences and fate points. +sheet shows and fills it in, +chargen walks a player through it, and +check rolls four Fate dice plus a rating against an opposition for the room. The build is a ledger of grants; staff give milestones and breakthroughs that stay on a log, and players spend them with +sheet/advance. +encounter gives each encounter its own copy of fate points, stress and consequences, and runs a conflict: NPCs a GM builds with +npc, exchanges, harm, concessions, aspects on the scene and the GM's fate points. Fate Core and Fate Accelerated SRD material under CC BY 3.0."
 license: MIT
@@ -1087,7 +1087,7 @@ objects:
       # %0 a character: their fate points, stress and consequences on the sheet itself.
       FUN`ENC`SUMMARY:
         value: |-
-          setq(summary_taken,iter(u(%!/FUN`LIST`ALL,CONSEQUENCE),if(strlen(get(%0/FATE`CONSEQUENCE`%i0)),[lcstr(get({{store}}/CONSEQUENCE`%i0))]: [get(%0/FATE`CONSEQUENCE`%i0)]),%b,|))[firstof(get(%0/FATE`POINTS),u(%!/FUN`POINTS`REFRESH,%0))] fate points%, [itemize(iter(u(%!/FUN`LIST`ALL,TRACK),[lcstr(get({{store}}/TRACK`%i0))] stress [firstof(itemize(get(%0/FATE`STRESS`%i0)),none)],%b,|),|)]%, [if(words(squish(%q<summary_taken>,|),|),consequences [itemize(squish(%q<summary_taken>,|),|)],no consequences)]
+          setq(summary_taken,iter(u(%!/FUN`LIST`ALL,CONSEQUENCE),if(strlen(get(%0/FATE`CONSEQUENCE`%i0)),[lcstr(get({{store}}/CONSEQUENCE`%i0))]: [get(%0/FATE`CONSEQUENCE`%i0)]),%b,|))[u(%!/API`POINTS,%0)] fate points%, [itemize(iter(u(%!/FUN`LIST`ALL,TRACK),[lcstr(get({{store}}/TRACK`%i0))] stress [firstof(itemize(get(%0/FATE`STRESS`%i0)),none)],%b,|),|)]%, [if(words(squish(%q<summary_taken>,|),|),consequences [itemize(squish(%q<summary_taken>,|),|)],no consequences)]
         flags: [funsyntax]
       # %0 a room, %1 who reads it: the encounters running there.
       FUN`SCREEN`ENCOUNTERS:
@@ -1555,7 +1555,7 @@ objects:
         flags: [funsyntax]
       FUN`PLAY`POINTS:
         value: |-
-          firstof(u(%!/FUN`PLAY`GET,%0,POINTS),u(%!/FUN`POINTS`REFRESH,%0))
+          if(strlen(setr(play_points,u(%!/FUN`PLAY`GET,%0,POINTS))),%q<play_points>,u(%!/FUN`POINTS`REFRESH,%0))
         flags: [funsyntax]
       # %0 a character: " in <encounter>" while they are in one.
       FUN`PLAY`IN:
@@ -1957,8 +1957,14 @@ objects:
       # empty without an opposition. #-1 and why when the trait or roller is wrong.
       API`CHECK:
         value: |-
-          cond(not(hastype(%<roller>,player)),#-1 There is no character to roll for.,not(strlen(u(%!/FUN`TRAIT`FIND,%<trait>))),#-1 There is no [u(%!/FUN`TRAIT`NOUN)] '%<trait>'.,u(%!/FUN`CHECK`ROLLED,ucstr(u(%!/FUN`TRAIT`FIND,%<trait>)),add(u(%!/API`RATING,%<roller>,u(%!/FUN`TRAIT`FIND,%<trait>)),firstof(%<modifier>,0)),%<target>))
+          cond(not(hastype(%<roller>,player)),#-1 There is no character to roll for.,not(strlen(u(%!/FUN`TRAIT`FIND,%<trait>))),#-1 There is no [u(%!/FUN`TRAIT`NOUN)] '%<trait>'.,u(%!/FUN`CHECK`ROLLED,ucstr(u(%!/FUN`TRAIT`FIND,%<trait>)),add(u(%!/API`RATING,%<roller>,u(%!/FUN`TRAIT`FIND,%<trait>)),u(%!/FUN`CHECK`RATE,%<roller>,ucstr(u(%!/FUN`TRAIT`FIND,%<trait>))),firstof(%<modifier>,0)),%<target>))
         flags: [VISUAL]
+      # %0 a character, %1 a key: what the RATE`<NAME> hooks add to that rating in a roll, such as a super skill
+      # stepped back after use.
+      FUN`CHECK`RATE:
+        value: |-
+          ladd(0 [iter(lattr(%!/RATE`*),u(%!/%i0,%0,%1))])
+        flags: [funsyntax]
       # %0 the key, %1 what is added, %2 the opposition or nothing.
       FUN`CHECK`ROLLED:
         value: |-

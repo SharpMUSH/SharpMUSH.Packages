@@ -213,6 +213,9 @@ pack uses one to thin a filler mob as its members go down.
 Any number of `` SOAK`<NAME> `` hooks (%0 the player, %1 their encounter copy's object/attribute)
 return more shifts a player can take before a hit takes them out, and `` SOAK`<NAME>`TEXT `` how,
 which `+encounter/harm` adds to what it tells the player. The System Toolkit pack's conditions use one.
+Any number of `` RATE`<NAME> `` hooks (%0 the roller, %1 the skill or approach key, upper case) return
+a number that `API`CHECK` adds to the rating in every roll. The System Toolkit pack's super skills use one
+for a skill stepped back after its power is used.
 
 The lists are `+config` tables on **Fate Sheet Store**: `SKILL`, `APPROACH`, `TRACK` (with `BOXES`)
 and `CONSEQUENCE` (with `SHIFTS`).

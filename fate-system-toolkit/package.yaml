@@ -1,22 +1,23 @@
 format: "1.16"
 package: fate-system-toolkit
 title: "Fate System Toolkit (unofficial)"
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
-description: "Rules from the Fate System Toolkit for the Fate sheet: conditions that soak stress in place of consequences (fleeting, sticky and lasting, treated before they heal), a Wealth track for money that a player checks for a bonus on a roll and staff refill with audited parcels of loot, and Stormcallers, magic drawn from five great storms at a cost in refresh, with barriers and each storm's own attacks. Based on the Fate System Toolkit SRD under CC BY 3.0. An unofficial fan package, not affiliated with or endorsed by Evil Hat Productions."
+description: "Rules from the Fate System Toolkit for the Fate sheet: conditions that soak stress in place of consequences (fleeting, sticky and lasting, treated before they heal), a Wealth track for money that a player checks for a bonus on a roll and staff refill with audited parcels of loot, Stormcallers, magic drawn from five great storms at a cost in refresh, with barriers and each storm's own attacks; super skills that double for a fate point and step back after, with fate-point bids between powers; gadgets and magic items with a function, flaws and stunts; and cyberware on a cyber-heart, with surgery paid for in play. Based on the Fate System Toolkit SRD under CC BY 3.0. An unofficial fan package, not affiliated with or endorsed by Evil Hat Productions."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
-keywords: [sheet, fate, conditions, wealth, magic]
+keywords: [sheet, fate, magic, supers, cyberware]
 category: Characters
 requires_server: ">=0.1"
 
 # It keeps conditions in the Fate sheet's play (encounter copies hold them through PLAY`CONDITION), counts them
-# against a hit through the sheet's SOAK` hooks (sheet-fate 1.5), adds a Wealth option to +sheet/advance, and
-# charges a storm's refresh through the sheet's grant ledger. Sheet keepers (softcode.fate.admin) keep this too;
+# against a hit through the sheet's SOAK` hooks, steps super skills back through its RATE` hooks (sheet-fate 1.6),
+# adds a Wealth option to +sheet/advance, and charges storms, super skills, gadgets and cyberware as refresh
+# grants on the sheet's ledger. Sheet keepers (softcode.fate.admin) keep this too;
 # there is no permission of its own.
 depends:
   - package: sheet-fate
-    version: ">=1.5 <2.0"
+    version: ">=1.6 <2.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH.Packages
       path: sheet-fate/
@@ -31,14 +32,19 @@ objects:
   # condition (play: an encounter holds its own copy), FATE`WEALTH`ASPECTS the aspect slots about wealth (build),
   # FATE`WEALTH`LEDGER`<n> the Wealth ledger ("spend <box>" or "gain <parcel>", with BY, AT, WHY, CLEARED and VOID
   # beneath), FATE`WEALTH`MARKED the boxes checked, worked out from the ledger, and FATE`STORM`<KEY> a storm the
-  # character is attuned to (build), charged as a refresh grant from source STORM_<KEY>.
+  # character is attuned to (build), charged as a refresh grant from source STORM_<KEY>. FATE`SUPER`<KEY> a super
+  # skill (build, grant SUPER_<KEY>), with STEP beneath (play) and OUT (exhausted). FATE`GADGET`<n> a gadget (build,
+  # grant GADGET_<n>), with FUNCTION, FLAW`<m> and STUNT`<m> beneath. FATE`AUG`<KEY> installed cyberware (build), with
+  # OPTIONS (choices taken) or SLOT (the heart's aspect) beneath, charged together as the grant CYBER. Open power bids
+  # live on the store, BID`<room number>.
   #
-  # +condition, +wealth and +storm are added with /noparse/rsnoparse and hooked to CMD`<word>, so what a player
-  # types reaches the code exactly as typed and nothing a player wrote is ever evaluated.
+  # +condition, +wealth, +storm, +super, +gadget and +aug are added with /noparse/rsnoparse and hooked to CMD`<word>,
+  # so what a player types reaches the code exactly as typed and nothing a player wrote is ever evaluated.
   #
-  # Trees: CMD` the hooked commands, INC`COMMAND` the parse and dispatch, INC`COND`, INC`WEALTH` and INC`STORM` one
-  # routine per switch, INC`NEED` the guards. FUN`LIST` the store's lists, FUN`COND`, FUN`WEALTH` and FUN`STORM` the
-  # rules, FUN`SCREEN` the screens.
+  # Trees: CMD` the hooked commands, INC`COMMAND` the parse and dispatch, INC`COND`, INC`WEALTH`, INC`STORM`,
+  # INC`SUPER`, INC`GADGET` and INC`AUG` one routine per switch, INC`NEED` the guards. FUN`LIST` the store's lists,
+  # FUN`COND`, FUN`WEALTH`, FUN`STORM`, FUN`SUPER`, FUN`BID`, FUN`GADGET` and FUN`AUG` the rules, FUN`SCREEN` the
+  # screens.
   - ref: toolkit
     type: thing
     name: Fate System Toolkit
@@ -48,7 +54,7 @@ objects:
       # ---- settings ---------------------------------------------------------------
       # +config toolkit shows and changes them (fate-system-toolkit-config).
       DATA`CONFIG: |-
-        Settings for conditions, Wealth and Stormcallers on the Fate sheet. One leaf per setting.
+        Settings for conditions, Wealth, Stormcallers, super skills and cyberware on the Fate sheet. One leaf per setting.
       DATA`CONFIG`LABEL: |-
         Fate System Toolkit
       DATA`CONFIG`TREAT: |-
@@ -131,6 +137,128 @@ objects:
         The refresh each storm costs: 2 when the game has no Weapon and Armor ratings, 1 when it does.
       DATA`CONFIG`STORM_COST`EXAMPLE: |-
         1
+      DATA`CONFIG`SUPER_COST: |-
+        1
+      DATA`CONFIG`SUPER_COST`TYPE: |-
+        integer
+      DATA`CONFIG`SUPER_COST`DEFAULT: |-
+        1
+      DATA`CONFIG`SUPER_COST`MIN: |-
+        0
+      DATA`CONFIG`SUPER_COST`MAX: |-
+        3
+      DATA`CONFIG`SUPER_COST`LABEL: |-
+        Refresh per super skill
+      DATA`CONFIG`SUPER_COST`DESCRIPTION: |-
+        The refresh each super skill costs, as a stunt does.
+      DATA`CONFIG`SUPER_COST`EXAMPLE: |-
+        1
+      DATA`CONFIG`SUPER_MAX: |-
+        2
+      DATA`CONFIG`SUPER_MAX`TYPE: |-
+        integer
+      DATA`CONFIG`SUPER_MAX`DEFAULT: |-
+        2
+      DATA`CONFIG`SUPER_MAX`MIN: |-
+        0
+      DATA`CONFIG`SUPER_MAX`MAX: |-
+        5
+      DATA`CONFIG`SUPER_MAX`LABEL: |-
+        Super skills
+      DATA`CONFIG`SUPER_MAX`DESCRIPTION: |-
+        How many of their skills a character may make super skills.
+      DATA`CONFIG`SUPER_MAX`EXAMPLE: |-
+        1
+      DATA`CONFIG`AUG_SKILL: |-
+        resources
+      DATA`CONFIG`AUG_SKILL`TYPE: |-
+        text
+      DATA`CONFIG`AUG_SKILL`DEFAULT: |-
+        resources
+      DATA`CONFIG`AUG_SKILL`PATTERN: |-
+        ^[A-Za-z0-9_-]+$
+      DATA`CONFIG`AUG_SKILL`LABEL: |-
+        Surgery skill
+      DATA`CONFIG`AUG_SKILL`DESCRIPTION: |-
+        The skill that pays for an aug installed in play, on a game of skills. On a game of approaches the player names one.
+      DATA`CONFIG`AUG_SKILL`EXAMPLE: |-
+        resources
+      DATA`CONFIG`AUG_MINOR: |-
+        1
+      DATA`CONFIG`AUG_MINOR`TYPE: |-
+        integer
+      DATA`CONFIG`AUG_MINOR`DEFAULT: |-
+        1
+      DATA`CONFIG`AUG_MINOR`MIN: |-
+        0
+      DATA`CONFIG`AUG_MINOR`MAX: |-
+        8
+      DATA`CONFIG`AUG_MINOR`LABEL: |-
+        Minor surgery
+      DATA`CONFIG`AUG_MINOR`DESCRIPTION: |-
+        The difficulty of paying for a minor aug or a prosthesis installed in play.
+      DATA`CONFIG`AUG_MINOR`EXAMPLE: |-
+        1
+      DATA`CONFIG`AUG_MAJOR: |-
+        3
+      DATA`CONFIG`AUG_MAJOR`TYPE: |-
+        integer
+      DATA`CONFIG`AUG_MAJOR`DEFAULT: |-
+        3
+      DATA`CONFIG`AUG_MAJOR`MIN: |-
+        0
+      DATA`CONFIG`AUG_MAJOR`MAX: |-
+        8
+      DATA`CONFIG`AUG_MAJOR`LABEL: |-
+        Major surgery
+      DATA`CONFIG`AUG_MAJOR`DESCRIPTION: |-
+        The difficulty of paying for a major aug or a cyber-heart installed in play.
+      DATA`CONFIG`AUG_MAJOR`EXAMPLE: |-
+        3
+      DATA`CONFIG`AUG_MINOR_HARM: |-
+        moderate
+      DATA`CONFIG`AUG_MINOR_HARM`TYPE: |-
+        text
+      DATA`CONFIG`AUG_MINOR_HARM`DEFAULT: |-
+        moderate
+      DATA`CONFIG`AUG_MINOR_HARM`PATTERN: |-
+        ^[A-Za-z0-9-]*$
+      DATA`CONFIG`AUG_MINOR_HARM`LABEL: |-
+        Minor surgery consequence
+      DATA`CONFIG`AUG_MINOR_HARM`DESCRIPTION: |-
+        The consequence slot recovering from minor surgery fills. Empty for none.
+      DATA`CONFIG`AUG_MINOR_HARM`EXAMPLE: |-
+        moderate
+      DATA`CONFIG`AUG_MAJOR_HARM: |-
+        severe
+      DATA`CONFIG`AUG_MAJOR_HARM`TYPE: |-
+        text
+      DATA`CONFIG`AUG_MAJOR_HARM`DEFAULT: |-
+        severe
+      DATA`CONFIG`AUG_MAJOR_HARM`PATTERN: |-
+        ^[A-Za-z0-9-]*$
+      DATA`CONFIG`AUG_MAJOR_HARM`LABEL: |-
+        Major surgery consequence
+      DATA`CONFIG`AUG_MAJOR_HARM`DESCRIPTION: |-
+        The consequence slot recovering from major surgery fills. Empty for none.
+      DATA`CONFIG`AUG_MAJOR_HARM`EXAMPLE: |-
+        severe
+      DATA`CONFIG`AUG_PER_REFRESH: |-
+        3
+      DATA`CONFIG`AUG_PER_REFRESH`TYPE: |-
+        integer
+      DATA`CONFIG`AUG_PER_REFRESH`DEFAULT: |-
+        3
+      DATA`CONFIG`AUG_PER_REFRESH`MIN: |-
+        1
+      DATA`CONFIG`AUG_PER_REFRESH`MAX: |-
+        10
+      DATA`CONFIG`AUG_PER_REFRESH`LABEL: |-
+        Minor augs per refresh
+      DATA`CONFIG`AUG_PER_REFRESH`DESCRIPTION: |-
+        How many minor augs cost 1 refresh between them.
+      DATA`CONFIG`AUG_PER_REFRESH`EXAMPLE: |-
+        3
       DATA`CONFIG`STORM_SKILL: |-
         stormcaller
       DATA`CONFIG`STORM_SKILL`TYPE: |-
@@ -395,6 +523,84 @@ objects:
         Order
       DATA`CONFIG`STORMS`FIELD`ORDER`DESCRIPTION: |-
         Where it comes in the list: lower first, then by key.
+      DATA`CONFIG`AUGS`TYPE: |-
+        table
+      DATA`CONFIG`AUGS`LABEL: |-
+        Augs
+      DATA`CONFIG`AUGS`DESCRIPTION: |-
+        The cyberware a character installs: a cyber-heart first, then minor and major augs, and prostheses that cost no refresh.
+      DATA`CONFIG`AUGS`STORE: |-
+        {{store}}
+      DATA`CONFIG`AUGS`PATH: |-
+        AUG
+      DATA`CONFIG`AUGS`ENTRY: |-
+        label
+      DATA`CONFIG`AUGS`FIELDS: |-
+        label size text options included order
+      DATA`CONFIG`AUGS`KEYPATTERN: |-
+        ^[A-Za-z0-9-]{1,30}$
+      DATA`CONFIG`AUGS`FIELD`LABEL`TYPE: |-
+        text
+      DATA`CONFIG`AUGS`FIELD`LABEL`MIN: |-
+        1
+      DATA`CONFIG`AUGS`FIELD`LABEL`MAX: |-
+        30
+      DATA`CONFIG`AUGS`FIELD`LABEL`PATTERN: |-
+        ^[A-Za-z][A-Za-z0-9 '-]*$
+      DATA`CONFIG`AUGS`FIELD`LABEL`LABEL: |-
+        Name
+      DATA`CONFIG`AUGS`FIELD`LABEL`DESCRIPTION: |-
+        Its name.
+      DATA`CONFIG`AUGS`FIELD`SIZE`TYPE: |-
+        choice
+      DATA`CONFIG`AUGS`FIELD`SIZE`CHOICES: |-
+        heart minor major prosthesis
+      DATA`CONFIG`AUGS`FIELD`SIZE`DEFAULT: |-
+        minor
+      DATA`CONFIG`AUGS`FIELD`SIZE`LABEL: |-
+        Kind
+      DATA`CONFIG`AUGS`FIELD`SIZE`DESCRIPTION: |-
+        heart (the power source every other aug needs, 1 refresh), minor (three cost 1 refresh), major (1 refresh each) or prosthesis (no refresh).
+      DATA`CONFIG`AUGS`FIELD`TEXT`TYPE: |-
+        text
+      DATA`CONFIG`AUGS`FIELD`TEXT`MAX: |-
+        400
+      DATA`CONFIG`AUGS`FIELD`TEXT`LABEL: |-
+        What it does
+      DATA`CONFIG`AUGS`FIELD`TEXT`DESCRIPTION: |-
+        What it does, as +aug/list shows it.
+      DATA`CONFIG`AUGS`FIELD`OPTIONS`TYPE: |-
+        text
+      DATA`CONFIG`AUGS`FIELD`OPTIONS`MAX: |-
+        400
+      DATA`CONFIG`AUGS`FIELD`OPTIONS`LABEL: |-
+        Choices
+      DATA`CONFIG`AUGS`FIELD`OPTIONS`DESCRIPTION: |-
+        What a character picks with it, separated by |. Empty when there is no choice.
+      DATA`CONFIG`AUGS`FIELD`INCLUDED`TYPE: |-
+        integer
+      DATA`CONFIG`AUGS`FIELD`INCLUDED`DEFAULT: |-
+        0
+      DATA`CONFIG`AUGS`FIELD`INCLUDED`MIN: |-
+        0
+      DATA`CONFIG`AUGS`FIELD`INCLUDED`MAX: |-
+        5
+      DATA`CONFIG`AUGS`FIELD`INCLUDED`LABEL: |-
+        Choices included
+      DATA`CONFIG`AUGS`FIELD`INCLUDED`DESCRIPTION: |-
+        How many choices come with it. Each more is a minor aug, or free on a prosthesis.
+      DATA`CONFIG`AUGS`FIELD`ORDER`TYPE: |-
+        integer
+      DATA`CONFIG`AUGS`FIELD`ORDER`DEFAULT: |-
+        50
+      DATA`CONFIG`AUGS`FIELD`ORDER`MIN: |-
+        0
+      DATA`CONFIG`AUGS`FIELD`ORDER`MAX: |-
+        999
+      DATA`CONFIG`AUGS`FIELD`ORDER`LABEL: |-
+        Order
+      DATA`CONFIG`AUGS`FIELD`ORDER`DESCRIPTION: |-
+        Where it comes in the list: lower first, then by key.
       # Which INC` routine each switch runs: DATA`ROUTE`<table>`<switch>. BARE is the command alone, ARG the
       # command with something after it and no switch.
       DATA`ROUTE: |-
@@ -451,6 +657,58 @@ objects:
         STORM`ROLL
       DATA`ROUTE`STORM`ADVANTAGE: |-
         STORM`ROLL
+      DATA`ROUTE`SUPER`BARE: |-
+        SUPER`SHOW
+      DATA`ROUTE`SUPER`ARG: |-
+        SUPER`SHOW
+      DATA`ROUTE`SUPER`ADD: |-
+        SUPER`ADD
+      DATA`ROUTE`SUPER`REMOVE: |-
+        SUPER`REMOVE
+      DATA`ROUTE`SUPER`USE: |-
+        SUPER`USE
+      DATA`ROUTE`SUPER`REFRESH: |-
+        SUPER`REFRESH
+      DATA`ROUTE`SUPER`RECHARGE: |-
+        SUPER`RECHARGE
+      DATA`ROUTE`SUPER`BID: |-
+        SUPER`BID
+      DATA`ROUTE`SUPER`CANCEL: |-
+        SUPER`ANSWER
+      DATA`ROUTE`SUPER`RAISE: |-
+        SUPER`ANSWER
+      DATA`ROUTE`SUPER`YIELD: |-
+        SUPER`YIELD
+      DATA`ROUTE`SUPER`END: |-
+        SUPER`END
+      DATA`ROUTE`GADGET`BARE: |-
+        GADGET`SHOW
+      DATA`ROUTE`GADGET`ARG: |-
+        GADGET`SHOW
+      DATA`ROUTE`GADGET`MAKE: |-
+        GADGET`MAKE
+      DATA`ROUTE`GADGET`STUNT: |-
+        GADGET`STUNT
+      DATA`ROUTE`GADGET`FLAW: |-
+        GADGET`FLAW
+      DATA`ROUTE`GADGET`UNSTUNT: |-
+        GADGET`UNSTUNT
+      DATA`ROUTE`GADGET`UNFLAW: |-
+        GADGET`UNFLAW
+      DATA`ROUTE`GADGET`SCRAP: |-
+        GADGET`SCRAP
+      DATA`ROUTE`AUG`BARE: |-
+        AUG`SHOW
+      DATA`ROUTE`AUG`ARG: |-
+        AUG`SHOW
+      DATA`ROUTE`AUG`LIST: |-
+        AUG`LIST
+      DATA`ROUTE`AUG`INSTALL: |-
+        AUG`INSTALL
+      DATA`ROUTE`AUG`REMOVE: |-
+        AUG`REMOVE
+      DATA`ROUTE`AUG`SURGERY: |-
+        AUG`SURGERY
 
       # ---- commands ---------------------------------------------------------------
       # %1 the switches and %2 what follows, exactly as typed.
@@ -461,6 +719,18 @@ objects:
       CMD`WEALTH:
         value: |-
           $(?is)^\+wealth(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,wealth,table,WEALTH,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`SUPER:
+        value: |-
+          $(?is)^\+super(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,super,table,SUPER,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`GADGET:
+        value: |-
+          $(?is)^\+gadget(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,gadget,table,GADGET,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`AUG:
+        value: |-
+          $(?is)^\+aug(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,aug,table,AUG,switches,%1,argument,%2
         flags: [regexp, cmdsyntax]
       # A storm roll may go straight on to its opposition: +storm/attack=fair.
       CMD`STORM:
@@ -821,6 +1091,312 @@ objects:
           think setq(storm_held,u(%!/FUN`STORM`HELD,%q<viewer_objid>)); @assert words(%q<storm_held>)=@pemit %#=notice(STORM,You are attuned to no storm. +storm/list shows them.,warn); think u(%!/FUN`STORM`READ,%q<cmd_left_side>); @assert not(words(%q<st_bad>))=@pemit %#=notice(STORM,'[first(%q<st_bad>)]' means nothing to +storm/%q<cmd_switch>. It takes [firstof(itemize(get(%!/DATA`STORM`WORDS`[ucstr(%q<cmd_switch>)])),no words)] besides a storm%, with <approach>%, held and +<n>.[u(%!/FUN`HINT,STORM)],warn); think setq(storm_key,firstof(%q<st_storm>,if(eq(words(%q<storm_held>),1),%q<storm_held>))); @assert strlen(%q<storm_key>)=@pemit %#=notice(STORM,You are attuned to [u(%!/FUN`LIST`NAMES,STORM,%q<storm_held>)]: name the one you call%, such as +storm/%q<cmd_switch> [lcstr(first(%q<storm_held>))].,warn); @assert member(%q<storm_held>,%q<storm_key>)=@pemit %#=notice(STORM,You are not attuned to the [get({{store}}/STORM`%q<storm_key>)].,warn); think u(%!/FUN`STORM`PLAN,%q<cmd_switch>,%q<storm_key>); @assert not(strlen(%q<st_error>))=@pemit %#=notice(STORM,%q<st_error>,warn); think setq(storm_approaches,strmatch(get({{sheet-fate/sheet}}/DATA`CONFIG`MODE),approaches)); @assert cor(not(%q<storm_approaches>),strlen(%q<st_with>))=@pemit %#=notice(STORM,Name the approach you call it with: +storm/%q<cmd_switch> with forceful.,warn); @assert cor(%q<storm_approaches>,not(strlen(%q<st_with>)))=@pemit %#=notice(STORM,Stormcalling rolls [u({{sheet-fate/sheet}}/API`LABEL,get(%!/DATA`CONFIG`STORM_SKILL))] on this game%, so leave with out.,warn); @assert strlen(setr(trait_key,u({{sheet-fate/sheet}}/API`FIND,firstof(%q<st_with>,get(%!/DATA`CONFIG`STORM_SKILL)))))=@pemit %#=notice(STORM,There is no [u({{sheet-fate/sheet}}/FUN`TRAIT`NOUN)] '[firstof(%q<st_with>,get(%!/DATA`CONFIG`STORM_SKILL))]'.,warn); think setq(storm_target,if(strmatch(%q<cmd_switch>,barrier),,u({{sheet-fate/sheet}}/API`TARGET,%q<cmd_right_side>))); @assert cor(strmatch(%q<cmd_switch>,barrier),not(strlen(%q<cmd_right_side>)),isint(%q<storm_target>))=@pemit %#=notice(STORM,'%q<cmd_right_side>' is not an opposition. Give a number%, a ladder word such as Fair%, or a difficulty such as hard.,warn); think setq(storm_result,uargs({{sheet-fate/sheet}}/API`CHECK,roller,%q<viewer_objid>,trait,%q<trait_key>,modifier,u(%!/FUN`STORM`TOTAL,%q<st_parts>),target,%q<storm_target>)); @assert not(strmatch(%q<storm_result>,#-*))=@pemit %#=notice(STORM,%q<storm_result>,error); @remit %l=notice(STORM,tone(strong,name(%#)) calls the [get({{store}}/STORM`%q<storm_key>)] to [get(%!/DATA`STORM`VERB`[ucstr(%q<cmd_switch>)])][u(%!/FUN`STORM`WHY,%q<st_parts>)]: [u({{sheet-fate/sheet}}/FUN`DISPLAY`CHECK,%q<storm_result>)][if(strlen(setr(storm_after,u(%!/FUN`STORM`AFTER,%q<cmd_switch>,%q<storm_key>,%q<storm_result>))),%b%q<storm_after>)])
         flags: [cmdsyntax]
 
+      # ---- supers --------------------------------------------------------------------
+      # A character's FATE`SUPER`<KEY> makes that skill or approach a super skill, charged as a refresh grant from
+      # SUPER_<KEY>. FATE`SUPER`<KEY>`STEP (play) is how far it has stepped back since its power was last refreshed,
+      # and FATE`SUPER`<KEY>`OUT, on the sheet itself, says it stepped back to nothing and waits to be recharged.
+      FUN`SUPER`HELD:
+        value: |-
+          squish(iter(lattr(%0/FATE`SUPER`*),after(%i0,FATE`SUPER`)))
+        flags: [funsyntax]
+      FUN`SUPER`STEP:
+        value: |-
+          firstof(u({{sheet-fate/sheet}}/API`PLAY,%0,SUPER`%1`STEP),0)
+        flags: [funsyntax]
+      FUN`SUPER`OUT:
+        value: |-
+          hasattr(%0,FATE`SUPER`%1`OUT)
+        flags: [funsyntax]
+      # %0 a character, %1 a key: how far the rating is stepped back, all of it while exhausted.
+      FUN`SUPER`DOWN:
+        value: |-
+          if(hasattr(%0,FATE`SUPER`%1),setq(sd_rating,u({{sheet-fate/sheet}}/API`RATING,%0,%1))[if(u(%!/FUN`SUPER`OUT,%0,%1),%q<sd_rating>,min(%q<sd_rating>,u(%!/FUN`SUPER`STEP,%0,%1)))],0)
+        flags: [funsyntax]
+      FUN`SUPER`NOW:
+        value: |-
+          sub(u({{sheet-fate/sheet}}/API`RATING,%0,%1),u(%!/FUN`SUPER`DOWN,%0,%1))
+        flags: [funsyntax]
+      # %0 a character, %1 a key: its rating and where it stands, Superb (+5), stepped back to Fair (+2).
+      FUN`SUPER`STATE:
+        value: |-
+          [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,u({{sheet-fate/sheet}}/API`RATING,%0,%1))][cond(u(%!/FUN`SUPER`OUT,%0,%1),%, [tone(warning,exhausted)],u(%!/FUN`SUPER`DOWN,%0,%1),%, stepped back to [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,u(%!/FUN`SUPER`NOW,%0,%1))])]
+        flags: [funsyntax]
+      # %0 a character, %1 the refresh a change costs (below 0 when it gives some back): whether refresh stays at 1
+      # or more.
+      FUN`REFRESH`ROOM:
+        value: |-
+          cor(lte(%1,0),gt(u({{sheet-fate/sheet}}/FUN`POINTS`REFRESH,%0),%1))
+        flags: [funsyntax]
+      INC`SUPER`SHOW:
+        value: |-
+          @include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>; @include %!/INC`NEED`VIEW; @pemit %#=u(%!/FUN`SCREEN`SUPERS,%q<sheet_who>)
+        flags: [cmdsyntax]
+      # %<typed> a skill or approach: super_key, upper case.
+      INC`NEED`SUPERTRAIT:
+        value: |-
+          @assert strlen(setr(super_key,ucstr(u({{sheet-fate/sheet}}/API`FIND,%<typed>))))=@pemit %#=notice(SUPER,There is no [u({{sheet-fate/sheet}}/FUN`TRAIT`NOUN)] '%<typed>'. +sheet/traits lists them.,warn)
+        flags: [cmdsyntax]
+      # +super/add [<name>/]<skill>: makes a skill a super skill for its refresh, before approval or by a sheet keeper.
+      INC`SUPER`ADD:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(SUPER,+super/add <[u({{sheet-fate/sheet}}/FUN`TRAIT`NOUN)]> makes one of yours a super skill for [get(%!/DATA`CONFIG`SUPER_COST)] refresh.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @include/args %!/INC`NEED`SUPERTRAIT=typed,%q<sheet_what>; @assert not(hasattr(%q<sheet_who>,FATE`SUPER`%q<super_key>))=@pemit %#=notice(SUPER,[u({{sheet-fate/sheet}}/API`LABEL,%q<super_key>)] is a super skill already.,warn); @assert lt(words(u(%!/FUN`SUPER`HELD,%q<sheet_who>)),get(%!/DATA`CONFIG`SUPER_MAX))=@pemit %#=notice(SUPER,[if(get(%!/DATA`CONFIG`SUPER_MAX),A character has at most [get(%!/DATA`CONFIG`SUPER_MAX)] super skills on this game%, and [name(%q<sheet_who>)] has that many.,This game has no super skills.)],warn); think setq(super_cost,get(%!/DATA`CONFIG`SUPER_COST)); @assert u(%!/FUN`REFRESH`ROOM,%q<sheet_who>,%q<super_cost>)=@pemit %#=notice(SUPER,A super skill costs %q<super_cost> refresh%, and [name(%q<sheet_who>)] has [u({{sheet-fate/sheet}}/FUN`POINTS`REFRESH,%q<sheet_who>)]: refresh never goes below 1.,warn); think setq(super_grant,uargs({{sheet-fate/sheet}}/API`GRANT,who,%q<sheet_who>,source,SUPER_%q<super_key>,target,REFRESH,key,ALL,kind,add,value,if(%q<super_cost>,-%q<super_cost>))); @assert not(strmatch(%q<super_grant>,#-*))=@pemit %#=notice(SUPER,%q<super_grant>,error); think u({{sheet-fate/sheet}}/FUN`DO`WRITE,%q<sheet_who>,SUPER`%q<super_key>,1)[u({{sheet-fate/sheet}}/API`REBUILD,%q<sheet_who>)]; @pemit %#=notice(SUPER,[u({{sheet-fate/sheet}}/API`LABEL,%q<super_key>)] is a super skill for [name(%q<sheet_who>)]: refresh [u({{sheet-fate/sheet}}/FUN`POINTS`REFRESH,%q<sheet_who>)]. +super/use [lcstr(%q<super_key>)] spends a fate point to double it%, and it steps back by one after each use.,ok)
+        flags: [cmdsyntax]
+      INC`SUPER`REMOVE:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(SUPER,+super/remove <[u({{sheet-fate/sheet}}/FUN`TRAIT`NOUN)]> makes a super skill an ordinary one again and gives its refresh back.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @include/args %!/INC`NEED`SUPERTRAIT=typed,%q<sheet_what>; @assert hasattr(%q<sheet_who>,FATE`SUPER`%q<super_key>)=@pemit %#=notice(SUPER,[u({{sheet-fate/sheet}}/API`LABEL,%q<super_key>)] is not a super skill of [name(%q<sheet_who>)]'s.,warn); think u({{sheet-fate/sheet}}/API`PLAYSET,%q<sheet_who>,SUPER`%q<super_key>`STEP,)[null(iter(revwords(lattr(%q<sheet_who>/FATE`SUPER`%q<super_key>`**)),attrib_set(%q<sheet_who>/%i0)))][u({{sheet-fate/sheet}}/FUN`DO`WRITE,%q<sheet_who>,SUPER`%q<super_key>,)][uargs({{sheet-fate/sheet}}/API`REVOKE,who,%q<sheet_who>,source,SUPER_%q<super_key>)][u({{sheet-fate/sheet}}/API`REBUILD,%q<sheet_who>)]; @pemit %#=notice(SUPER,[u({{sheet-fate/sheet}}/API`LABEL,%q<super_key>)] is an ordinary [u({{sheet-fate/sheet}}/FUN`TRAIT`NOUN)] of [name(%q<sheet_who>)]'s again: refresh [u({{sheet-fate/sheet}}/FUN`POINTS`REFRESH,%q<sheet_who>)].,ok)
+        flags: [cmdsyntax]
+      # +super/use <skill>[+<n>][=<opposition>]: spends a fate point and rolls the skill doubled, then steps it back by one.
+      # At nothing it is exhausted until a GM or sheet keeper recharges it.
+      INC`SUPER`USE:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(SUPER,+super/use <[u({{sheet-fate/sheet}}/FUN`TRAIT`NOUN)]>%[+<n>%]%[=<opposition>%] spends a fate point to double a super skill for one roll%, such as +super/use physique=great.,warn); @include/args %!/INC`NEED`TRAIT=typed,%q<cmd_left_side>; think setqm(super_key,ucstr(%q<trait_key>),super_label,u({{sheet-fate/sheet}}/API`LABEL,%q<trait_key>)); @assert hasattr(%#,FATE`SUPER`%q<super_key>)=@pemit %#=notice(SUPER,%q<super_label> is not one of your super skills.[if(isapproved(%#),,%b+super/add [lcstr(%q<super_key>)] makes it one.)],warn); @assert not(u(%!/FUN`SUPER`OUT,%#,%q<super_key>))=@pemit %#=notice(SUPER,Your %q<super_label> is exhausted: rest or recharge%, and a GM or staff brings it back with +super/recharge [name(%#)].,warn); think setq(super_now,u(%!/FUN`SUPER`NOW,%#,%q<super_key>)); @assert gt(%q<super_now>,0)=@pemit %#=notice(SUPER,Your %q<super_label> is at [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,%q<super_now>)]: there is nothing to double.,warn); think setq(super_points,u({{sheet-fate/sheet}}/FUN`PLAY`POINTS,%q<viewer_objid>)); @assert gt(%q<super_points>,0)=@pemit %#=notice(SUPER,You have no fate points to spend.,warn); think setq(super_target,u({{sheet-fate/sheet}}/API`TARGET,%q<cmd_right_side>)); @assert cor(not(strlen(%q<cmd_right_side>)),isint(%q<super_target>))=@pemit %#=notice(SUPER,'%q<cmd_right_side>' is not an opposition. Give a number%, a ladder word such as Fair%, or a difficulty such as hard.,warn); think setq(super_result,uargs({{sheet-fate/sheet}}/API`CHECK,roller,%q<viewer_objid>,trait,%q<trait_key>,modifier,add(%q<check_modifier>,%q<super_now>),target,%q<super_target>)); @assert not(strmatch(%q<super_result>,#-*))=@pemit %#=notice(SUPER,%q<super_result>,error); think setq(super_step,inc(u(%!/FUN`SUPER`STEP,%#,%q<super_key>)))[u({{sheet-fate/sheet}}/API`PLAYSET,%q<viewer_objid>,POINTS,dec(%q<super_points>))][u({{sheet-fate/sheet}}/API`PLAYSET,%q<viewer_objid>,SUPER`%q<super_key>`STEP,%q<super_step>)][setq(super_left,sub(u({{sheet-fate/sheet}}/API`RATING,%#,%q<super_key>),%q<super_step>))][if(lte(%q<super_left>,0),u({{sheet-fate/sheet}}/FUN`DO`WRITE,%q<viewer_objid>,SUPER`%q<super_key>`OUT,1))]; @remit %l=notice(SUPER,tone(strong,name(%#)) spends a fate point on [poss(%#)] super %q<super_label>[u({{sheet-fate/sheet}}/FUN`PLAY`IN,%q<viewer_objid>)]%, doubling it %(+%q<super_now> more%): [u({{sheet-fate/sheet}}/FUN`DISPLAY`CHECK,%q<super_result>)] [if(gt(%q<super_left>,0),%q<super_label> steps back to [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,%q<super_left>)] until the next scene.,%q<super_label> is [tone(warning,exhausted)]: it rolls at [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,0)] until it is recharged.)])
+        flags: [cmdsyntax]
+      # +super/refresh: a new scene brings your super skills back, unless one is exhausted.
+      INC`SUPER`REFRESH:
+        value: |-
+          think setq(super_back,squish(iter(u(%!/FUN`SUPER`HELD,%#),if(cand(not(u(%!/FUN`SUPER`OUT,%#,%i0)),u(%!/FUN`SUPER`STEP,%#,%i0)),%i0)))); @assert words(%q<super_back>)=@pemit %#=notice(SUPER,No super skill of yours is stepped back[if(words(squish(iter(u(%!/FUN`SUPER`HELD,%#),if(u(%!/FUN`SUPER`OUT,%#,%i0),%i0)))),%, and an exhausted one waits for +super/recharge from a GM or staff)].,warn); think null(iter(%q<super_back>,u({{sheet-fate/sheet}}/API`PLAYSET,%q<viewer_objid>,SUPER`%i0`STEP,))); @remit %l=notice(SUPER,tone(strong,name(%#))'s powers refresh for a new scene[u({{sheet-fate/sheet}}/FUN`PLAY`IN,%q<viewer_objid>)]: [itemize(iter(%q<super_back>,[u({{sheet-fate/sheet}}/API`LABEL,%i0)] [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,u({{sheet-fate/sheet}}/API`RATING,%#,%i0))],%b,|),|)].)
+        flags: [cmdsyntax]
+      # +super/recharge <name>[=<skill>]: a sheet keeper, or the GM of the encounter they are in, brings back one super
+      # skill or every one, exhausted or not.
+      INC`SUPER`RECHARGE:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(SUPER,+super/recharge <name>%[=<[u({{sheet-fate/sheet}}/FUN`TRAIT`NOUN)]>%] brings someone's super skills back once they rest or recharge.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; @include %!/INC`NEED`RUNS; think setq(super_keys,u(%!/FUN`SUPER`HELD,%q<sheet_who>)); @assert words(%q<super_keys>)=@pemit %#=notice(SUPER,[name(%q<sheet_who>)] has no super skills.,warn); think setq(super_pick,if(strlen(%q<cmd_right_side>),ucstr(u({{sheet-fate/sheet}}/API`FIND,%q<cmd_right_side>)),%q<super_keys>)); @assert cor(not(strlen(%q<cmd_right_side>)),member(%q<super_keys>,%q<super_pick>))=@pemit %#=notice(SUPER,'%q<cmd_right_side>' is not a super skill of [name(%q<sheet_who>)]'s.,warn); think setq(super_keys,%q<super_pick>); think null(iter(%q<super_keys>,[u({{sheet-fate/sheet}}/API`PLAYSET,%q<sheet_who>,SUPER`%i0`STEP,)][u({{sheet-fate/sheet}}/FUN`DO`WRITE,%q<sheet_who>,SUPER`%i0`STEP,)][u({{sheet-fate/sheet}}/FUN`DO`WRITE,%q<sheet_who>,SUPER`%i0`OUT,)])); @remit loc(%q<sheet_who>)=notice(SUPER,tone(strong,name(%#)) recharges [name(%q<sheet_who>)]'s [itemize(iter(%q<super_keys>,[u({{sheet-fate/sheet}}/API`LABEL,%i0)] to [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,u({{sheet-fate/sheet}}/API`RATING,%q<sheet_who>,%i0))],%b,|),|)].); @if comp(loc(%#),loc(%q<sheet_who>))={@pemit %#=notice(SUPER,[name(%q<sheet_who>)]'s super skills are back.,ok)}
+        flags: [cmdsyntax]
+
+      # ---- bids ----------------------------------------------------------------------
+      # A power bid in a room is BID`<room number> on the store, the opener's power, with OPENER, FOE (the first to
+      # answer), LAST (who moved last), MOVE (open, cancel or raise), POWER (the last raise's power) and POT (the fate
+      # points bid) beneath.
+      FUN`BID`AT:
+        value: |-
+          BID`[after(num(%0),#)]
+        flags: [funsyntax]
+      FUN`BID`GET:
+        value: |-
+          get({{store}}/[u(%!/FUN`BID`AT,%0)]`%1)
+        flags: [funsyntax]
+      # %<cost> fate points from you: paid_left, what you have after.
+      INC`DO`PAY:
+        value: |-
+          think setq(paid_have,u({{sheet-fate/sheet}}/FUN`PLAY`POINTS,%q<viewer_objid>)); @assert gte(%q<paid_have>,%<cost>)=@pemit %#=notice(SUPER,That takes %<cost> fate [if(eq(%<cost>,1),point,points)]%, and you have %q<paid_have>.,warn); think setq(paid_left,sub(%q<paid_have>,%<cost>))[u({{sheet-fate/sheet}}/API`PLAYSET,%q<viewer_objid>,POINTS,%q<paid_left>)]
+        flags: [cmdsyntax]
+      # An open bid where you are: bid_at, bid_opener, bid_foe, bid_last, bid_move and bid_pot.
+      INC`NEED`BID:
+        value: |-
+          think setq(bid_at,u(%!/FUN`BID`AT,%l)); @assert hasattr({{store}},%q<bid_at>)=@pemit %#=notice(SUPER,No power bid is open here. +super/bid <power> opens one.,warn); think setqm(bid_opener,get({{store}}/%q<bid_at>`OPENER),bid_foe,get({{store}}/%q<bid_at>`FOE),bid_last,get({{store}}/%q<bid_at>`LAST),bid_move,get({{store}}/%q<bid_at>`MOVE),bid_pot,get({{store}}/%q<bid_at>`POT))
+        flags: [cmdsyntax]
+      # +super/bid [<power>]: shows the bid here, or bids a fate point that a power does what you say. It works with
+      # no roll unless someone with powers answers.
+      INC`SUPER`BID:
+        value: |-
+          @break not(strlen(%q<cmd_argument>))={@include %!/INC`NEED`BID; @pemit %#=u(%!/FUN`SCREEN`BID,%q<bid_at>)}; @assert not(hasattr({{store}},u(%!/FUN`BID`AT,%l)))=@pemit %#=notice(SUPER,A power bid is open here already: +super/bid shows it.,warn); @assert lte(strlen(%q<cmd_argument>),200)=@pemit %#=notice(SUPER,Keep what the power does to 200 characters.,warn); @include/args %!/INC`DO`PAY=cost,1; think setq(bid_at,u(%!/FUN`BID`AT,%l))[attrib_set({{store}}/%q<bid_at>,%q<cmd_argument>)][attrib_set({{store}}/%q<bid_at>`OPENER,%q<viewer_objid>)][attrib_set({{store}}/%q<bid_at>`LAST,%q<viewer_objid>)][attrib_set({{store}}/%q<bid_at>`MOVE,open)][attrib_set({{store}}/%q<bid_at>`POT,1)][attrib_set({{store}}/%q<bid_at>`AT,secs())]; @remit %l=notice(SUPER,tone(strong,name(%#)) bids a fate point on a power: %q<cmd_argument>. It works with no roll unless someone with powers answers: +super/cancel bids 1 to stop it%, +super/raise <power> bids 2 to stop it and use a power of your own%, and +super/end lets it stand.)
+        flags: [cmdsyntax]
+      # +super/cancel [<how>] bids 1 to stop the last power; +super/raise <power> bids 2 to stop it and use your own. Only
+      # the opener and the first to answer go on bidding.
+      INC`SUPER`ANSWER:
+        value: |-
+          @include %!/INC`NEED`BID; @assert comp(%q<bid_last>,%q<viewer_objid>)=@pemit %#=notice(SUPER,You moved last: the other side answers%, or yields with +super/yield.,warn); @assert cor(not(strlen(%q<bid_foe>)),member(%q<bid_opener> %q<bid_foe>,%q<viewer_objid>))=@pemit %#=notice(SUPER,This bid is between [name(%q<bid_opener>)] and [name(%q<bid_foe>)].,warn); think setq(bid_raise,strmatch(%q<cmd_switch>,raise)); @assert cor(not(%q<bid_raise>),strlen(%q<cmd_argument>))=@pemit %#=notice(SUPER,+super/raise <power> says what your power does instead.,warn); @assert lte(strlen(%q<cmd_argument>),200)=@pemit %#=notice(SUPER,Keep what the power does to 200 characters.,warn); think setq(bid_cost,if(%q<bid_raise>,2,1)); @include/args %!/INC`DO`PAY=cost,%q<bid_cost>; think setq(bid_pot,add(%q<bid_pot>,if(%q<bid_raise>,2,1)))[if(strlen(%q<bid_foe>),,attrib_set({{store}}/%q<bid_at>`FOE,%q<viewer_objid>))][attrib_set({{store}}/%q<bid_at>`LAST,%q<viewer_objid>)][attrib_set({{store}}/%q<bid_at>`MOVE,%q<cmd_switch>)][attrib_set({{store}}/%q<bid_at>`POT,%q<bid_pot>)][if(%q<bid_raise>,attrib_set({{store}}/%q<bid_at>`POWER,%q<cmd_argument>))][setq(bid_other,if(strmatch(%q<viewer_objid>,%q<bid_opener>),%q<bid_foe>,%q<bid_opener>))]; @remit %l=notice(SUPER,tone(strong,name(%#)) [if(%q<bid_raise>,raises with 2 fate points: %q<cmd_argument>. It stops [name(%q<bid_other>)]'s power and works in its place,cancels with a fate point[if(strlen(%q<cmd_argument>),: %q<cmd_argument>)]. Neither power works as things stand)]%, and %q<bid_pot> points are bid. [name(%q<bid_other>)] answers with +super/cancel or +super/raise%, or yields with +super/yield.)
+        flags: [cmdsyntax]
+      # %<loser> the side that gives up. A cancel standing is a tie, and the pot goes to the GM; otherwise whoever moved
+      # last wins, and the loser takes every point bid.
+      INC`SUPER`SETTLE:
+        value: |-
+          think setqm(bid_winner,%q<bid_last>,bid_power,if(strmatch(%q<bid_move>,raise),get({{store}}/%q<bid_at>`POWER),get({{store}}/%q<bid_at>)))[null(iter(revwords(lattr({{store}}/%q<bid_at>`**)),attrib_set({{store}}/%i0)))][attrib_set({{store}}/%q<bid_at>)]; @break strmatch(%q<bid_move>,cancel)={@remit %l=notice(SUPER,tone(strong,name(%<loser>)) lets the cancel stand: neither power works%, and the %q<bid_pot> fate points bid go to the GM.)}; think u({{sheet-fate/sheet}}/API`PLAYSET,%<loser>,POINTS,add(u({{sheet-fate/sheet}}/FUN`PLAY`POINTS,%<loser>),%q<bid_pot>)); @remit %l=notice(SUPER,tone(strong,name(%<loser>)) yields: [name(%q<bid_winner>)]'s power works: %q<bid_power>. [name(%<loser>)] takes the %q<bid_pot> fate points bid.)
+        flags: [cmdsyntax]
+      INC`SUPER`YIELD:
+        value: |-
+          @include %!/INC`NEED`BID; @assert member(%q<bid_opener> %q<bid_foe>,%q<viewer_objid>)=@pemit %#=notice(SUPER,You are not bidding here.,warn); @assert strlen(%q<bid_foe>)=@pemit %#=notice(SUPER,Nobody has answered your bid: +super/end lets your power stand.,warn); @assert comp(%q<bid_last>,%q<viewer_objid>)=@pemit %#=notice(SUPER,You moved last: [name(if(strmatch(%q<viewer_objid>,%q<bid_opener>),%q<bid_foe>,%q<bid_opener>))] answers or yields.,warn); @include/args %!/INC`SUPER`SETTLE=loser,%q<viewer_objid>
+        flags: [cmdsyntax]
+      # +super/end: the opener lets an unanswered bid stand. A sheet keeper, or the GM of an encounter the opener is in,
+      # ends any bid as though the side to answer yielded.
+      INC`SUPER`END:
+        value: |-
+          @include %!/INC`NEED`BID; think setqm(bid_enc,u({{sheet-fate/sheet}}/FUN`ENC`ACTIVE,%q<bid_opener>),bid_staff,cor(%q<viewer_keeper>,cand(strlen(%q<bid_enc>),u({{sheet-fate/sheet}}/FUN`ENC`ISGM,%q<bid_enc>,%#)))); @assert cor(%q<bid_staff>,cand(not(strlen(%q<bid_foe>)),strmatch(%q<bid_opener>,%q<viewer_objid>)))=@pemit %#=notice(SUPER,[if(strlen(%q<bid_foe>),The bid goes on until a side yields%, or a GM or staff ends it.,Only [name(%q<bid_opener>)]%, a GM or staff end this bid.)],warn); think setq(bid_loser,if(strmatch(%q<bid_last>,%q<bid_opener>),%q<bid_foe>,%q<bid_opener>)); @break strlen(%q<bid_foe>)={@include/args %!/INC`SUPER`SETTLE=loser,%q<bid_loser>}; think setq(bid_power,get({{store}}/%q<bid_at>))[null(iter(revwords(lattr({{store}}/%q<bid_at>`**)),attrib_set({{store}}/%i0)))][attrib_set({{store}}/%q<bid_at>)]; @remit %l=notice(SUPER,Nobody with powers answers: [name(%q<bid_opener>)]'s power works: %q<bid_power>.)
+        flags: [cmdsyntax]
+
+      # ---- gadgets -------------------------------------------------------------------
+      # A character's FATE`GADGET`<n> is a gadget's name, with FUNCTION, FLAW`<m> (FLAW`1 its flaw, more each take 1
+      # refresh off) and STUNT`<m> (1 refresh each) beneath. It costs a refresh grant from GADGET_<n>: nothing without
+      # a stunt, and at least 1 with one.
+      FUN`GADGET`ALL:
+        value: |-
+          sort(iter(lattr(%0/FATE`GADGET`*),last(%i0,`)),n)
+        flags: [funsyntax]
+      # %0 a character, %1 what was typed: their gadget by number, by name, or the only one whose name holds those words.
+      FUN`GADGET`FIND:
+        value: |-
+          setqm(gf_all,u(%!/FUN`GADGET`ALL,%0),gf_typed,trim(%1))[cond(not(strlen(%q<gf_typed>)),,member(%q<gf_all>,%q<gf_typed>),%q<gf_typed>,words(setr(gf_exact,squish(iter(%q<gf_all>,if(strmatch(get(%0/FATE`GADGET`%i0),%q<gf_typed>),%i0))))),first(%q<gf_exact>),eq(words(setr(gf_start,squish(iter(%q<gf_all>,if(strmatch(get(%0/FATE`GADGET`%i0),*%q<gf_typed>*),%i0))))),1),%q<gf_start>)]
+        flags: [funsyntax]
+      # %0 a character, %1 a gadget, %2 STUNT or FLAW: its numbers.
+      FUN`GADGET`PARTS:
+        value: |-
+          sort(iter(lattr(%0/FATE`GADGET`%1`%2`*),last(%i0,`)),n)
+        flags: [funsyntax]
+      # %0 a character, %1 a gadget, %2 stunts more, %3 flaws more: its refresh cost.
+      FUN`GADGET`COST:
+        value: |-
+          setqm(gc_stunts,add(words(u(%!/FUN`GADGET`PARTS,%0,%1,STUNT)),%2),gc_flaws,add(words(u(%!/FUN`GADGET`PARTS,%0,%1,FLAW)),%3))[if(gt(%q<gc_stunts>,0),max(1,sub(%q<gc_stunts>,dec(%q<gc_flaws>))),0)]
+        flags: [funsyntax]
+      FUN`GADGET`CHARGE:
+        value: |-
+          setq(gch_cost,u(%!/FUN`GADGET`COST,%0,%1,0,0))[uargs({{sheet-fate/sheet}}/API`GRANT,who,%0,source,GADGET_%1,target,REFRESH,key,ALL,kind,add,value,if(%q<gch_cost>,-%q<gch_cost>))][u({{sheet-fate/sheet}}/API`REBUILD,%0)]
+        flags: [funsyntax]
+      FUN`GADGET`NAME:
+        value: |-
+          get(%0/FATE`GADGET`%1)
+        flags: [funsyntax]
+      # gadget_n, a gadget of sheet_who's named by %<typed>.
+      INC`NEED`GADGET:
+        value: |-
+          @assert strlen(setr(gadget_n,u(%!/FUN`GADGET`FIND,%q<sheet_who>,%<typed>)))=@pemit %#=notice(GADGET,[name(%q<sheet_who>)] has no gadget '%<typed>'. +gadget[if(comp(%q<sheet_who>,%q<viewer_objid>),%b[name(%q<sheet_who>)])] lists them.,warn)
+        flags: [cmdsyntax]
+      # %<delta> the refresh a change costs: refused unless refresh stays at 1 or more.
+      INC`NEED`ROOM:
+        value: |-
+          @assert u(%!/FUN`REFRESH`ROOM,%q<sheet_who>,%<delta>)=@pemit %#=notice(%q<cmd_tag>,That costs %<delta> more refresh%, and [name(%q<sheet_who>)] has [u({{sheet-fate/sheet}}/FUN`POINTS`REFRESH,%q<sheet_who>)]: refresh never goes below 1.,warn)
+        flags: [cmdsyntax]
+      INC`GADGET`SHOW:
+        value: |-
+          @include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>; @include %!/INC`NEED`VIEW; @pemit %#=u(%!/FUN`SCREEN`GADGETS,%q<sheet_who>)
+        flags: [cmdsyntax]
+      # +gadget/make [<name>/]<gadget>=<function>/<flaw>: a gadget with its two aspects. It costs nothing until a stunt.
+      INC`GADGET`MAKE:
+        value: |-
+          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>),strmatch(%q<cmd_right_side>,?*/?*))=@pemit %#=notice(GADGET,+gadget/make <gadget>=<function>/<flaw> makes a gadget with what it does and what is wrong with it%, such as +gadget/make Grapnel Gun=High-Powered Electromagnetic Swingline/Still Working Out the Bugs.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @assert cand(lte(strlen(%q<sheet_what>),40),regmatch(%q<sheet_what>,^\[A-Za-z0-9\]\[A-Za-z0-9 '.%,!-\]*$))=@pemit %#=notice(GADGET,A gadget's name is up to 40 letters%, digits%, spaces and ' . %, ! -%, starting with a letter or digit.,warn); @assert not(isint(%q<sheet_what>))=@pemit %#=notice(GADGET,Give the gadget a name%, not a number.,warn); @assert not(words(squish(iter(u(%!/FUN`GADGET`ALL,%q<sheet_who>),if(strmatch(u(%!/FUN`GADGET`NAME,%q<sheet_who>,%i0),%q<sheet_what>),%i0)))))=@pemit %#=notice(GADGET,[name(%q<sheet_who>)] has a gadget called that already.,warn); think setqm(gadget_function,trim(before(%q<cmd_right_side>,/)),gadget_flaw,trim(after(%q<cmd_right_side>,/))); @assert cand(lte(strlen(%q<gadget_function>),100),lte(strlen(%q<gadget_flaw>),100))=@pemit %#=notice(GADGET,Keep each aspect to 100 characters.,warn); think setq(gadget_n,inc(lmath(max,0 [u(%!/FUN`GADGET`ALL,%q<sheet_who>)])))[u({{sheet-fate/sheet}}/FUN`DO`WRITE,%q<sheet_who>,GADGET`%q<gadget_n>,%q<sheet_what>)][u({{sheet-fate/sheet}}/FUN`DO`WRITE,%q<sheet_who>,GADGET`%q<gadget_n>`FUNCTION,%q<gadget_function>)][u({{sheet-fate/sheet}}/FUN`DO`WRITE,%q<sheet_who>,GADGET`%q<gadget_n>`FLAW,Its flaws.)][u({{sheet-fate/sheet}}/FUN`DO`WRITE,%q<sheet_who>,GADGET`%q<gadget_n>`FLAW`1,%q<gadget_flaw>)][u({{sheet-fate/sheet}}/FUN`DO`WRITE,%q<sheet_who>,GADGET`%q<gadget_n>`STUNT,Its stunts.)]; @pemit %#=notice(GADGET,[name(%q<sheet_who>)] has the %q<sheet_what>%, gadget %q<gadget_n>: function %q<gadget_function>%, flaw %q<gadget_flaw>. It costs nothing until it has a stunt: +gadget/stunt %q<gadget_n>=<stunt>: <what it does>.,ok)
+        flags: [cmdsyntax]
+      # +gadget/stunt [<name>/]<gadget>=<stunt>: a stunt for 1 refresh.
+      INC`GADGET`STUNT:
+        value: |-
+          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>),strlen(%q<cmd_right_side>))=@pemit %#=notice(GADGET,+gadget/stunt <gadget>=<stunt>: <what it does> gives a gadget a stunt for 1 refresh%, such as +gadget/stunt 1=Trick Shots: +2 to create an advantage with Shoot when you swing around.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @include/args %!/INC`NEED`GADGET=typed,%q<sheet_what>; @assert lte(strlen(%q<cmd_right_side>),300)=@pemit %#=notice(GADGET,Keep a stunt to 300 characters.,warn); think setq(gadget_delta,sub(u(%!/FUN`GADGET`COST,%q<sheet_who>,%q<gadget_n>,1,0),u(%!/FUN`GADGET`COST,%q<sheet_who>,%q<gadget_n>,0,0))); @include/args %!/INC`NEED`ROOM=delta,%q<gadget_delta>; think setq(gadget_m,inc(lmath(max,0 [u(%!/FUN`GADGET`PARTS,%q<sheet_who>,%q<gadget_n>,STUNT)])))[u({{sheet-fate/sheet}}/FUN`DO`WRITE,%q<sheet_who>,GADGET`%q<gadget_n>`STUNT`%q<gadget_m>,%q<cmd_right_side>)][u(%!/FUN`GADGET`CHARGE,%q<sheet_who>,%q<gadget_n>)]; @include/args %!/INC`GADGET`DONE=what,stunt %q<gadget_m>
+        flags: [cmdsyntax]
+      # +gadget/flaw [<name>/]<gadget>=<flaw>: one more flaw, 1 refresh off (never below 1 while it has a stunt).
+      INC`GADGET`FLAW:
+        value: |-
+          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>),strlen(%q<cmd_right_side>))=@pemit %#=notice(GADGET,+gadget/flaw <gadget>=<flaw> gives a gadget one more flaw%, for 1 refresh off its cost.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @include/args %!/INC`NEED`GADGET=typed,%q<sheet_what>; @assert lte(strlen(%q<cmd_right_side>),100)=@pemit %#=notice(GADGET,Keep a flaw to 100 characters.,warn); think setq(gadget_m,inc(lmath(max,0 [u(%!/FUN`GADGET`PARTS,%q<sheet_who>,%q<gadget_n>,FLAW)])))[u({{sheet-fate/sheet}}/FUN`DO`WRITE,%q<sheet_who>,GADGET`%q<gadget_n>`FLAW`%q<gadget_m>,%q<cmd_right_side>)][u(%!/FUN`GADGET`CHARGE,%q<sheet_who>,%q<gadget_n>)]; @include/args %!/INC`GADGET`DONE=what,flaw %q<gadget_m>
+        flags: [cmdsyntax]
+      # +gadget/unstunt and /unflaw [<name>/]<gadget>=<n>: takes one away. The first flaw stays.
+      INC`GADGET`UNSTUNT:
+        value: |-
+          @include/args %!/INC`GADGET`UNPART=part,STUNT
+        flags: [cmdsyntax]
+      INC`GADGET`UNFLAW:
+        value: |-
+          @include/args %!/INC`GADGET`UNPART=part,FLAW
+        flags: [cmdsyntax]
+      INC`GADGET`UNPART:
+        value: |-
+          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>),isint(%q<cmd_right_side>))=@pemit %#=notice(GADGET,+gadget/un[lcstr(%<part>)] <gadget>=<number> takes a [lcstr(%<part>)] away. +gadget shows the numbers.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @include/args %!/INC`NEED`GADGET=typed,%q<sheet_what>; @assert hasattr(%q<sheet_who>,FATE`GADGET`%q<gadget_n>`%<part>`%q<cmd_right_side>)=@pemit %#=notice(GADGET,[u(%!/FUN`GADGET`NAME,%q<sheet_who>,%q<gadget_n>)] has no [lcstr(%<part>)] %q<cmd_right_side>.,warn); @assert cor(strmatch(%<part>,STUNT),gt(%q<cmd_right_side>,1))=@pemit %#=notice(GADGET,Flaw 1 is what is wrong with [u(%!/FUN`GADGET`NAME,%q<sheet_who>,%q<gadget_n>)]: it stays. +gadget/scrap takes the whole gadget away.,warn); think setq(gadget_delta,sub(u(%!/FUN`GADGET`COST,%q<sheet_who>,%q<gadget_n>,if(strmatch(%<part>,STUNT),-1,0),if(strmatch(%<part>,FLAW),-1,0)),u(%!/FUN`GADGET`COST,%q<sheet_who>,%q<gadget_n>,0,0))); @include/args %!/INC`NEED`ROOM=delta,%q<gadget_delta>; think u({{sheet-fate/sheet}}/FUN`DO`WRITE,%q<sheet_who>,GADGET`%q<gadget_n>`%<part>`%q<cmd_right_side>,)[u(%!/FUN`GADGET`CHARGE,%q<sheet_who>,%q<gadget_n>)]; @include/args %!/INC`GADGET`DONE=what,[lcstr(%<part>)] %q<cmd_right_side> gone
+        flags: [cmdsyntax]
+      INC`GADGET`DONE:
+        value: |-
+          @pemit %#=notice(GADGET,[u(%!/FUN`GADGET`NAME,%q<sheet_who>,%q<gadget_n>)]%, %<what>: it costs [u(%!/FUN`GADGET`COST,%q<sheet_who>,%q<gadget_n>,0,0)] refresh%, and [name(%q<sheet_who>)] has [u({{sheet-fate/sheet}}/FUN`POINTS`REFRESH,%q<sheet_who>)].,ok)
+        flags: [cmdsyntax]
+      # +gadget/scrap [<name>/]<gadget>: takes a gadget away and gives its refresh back.
+      INC`GADGET`SCRAP:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(GADGET,+gadget/scrap <gadget> takes a gadget away and gives its refresh back.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @include/args %!/INC`NEED`GADGET=typed,%q<sheet_what>; think setq(gadget_name,u(%!/FUN`GADGET`NAME,%q<sheet_who>,%q<gadget_n>))[null(iter(revwords(lattr(%q<sheet_who>/FATE`GADGET`%q<gadget_n>`**)),attrib_set(%q<sheet_who>/%i0)))][u({{sheet-fate/sheet}}/FUN`DO`WRITE,%q<sheet_who>,GADGET`%q<gadget_n>,)][uargs({{sheet-fate/sheet}}/API`REVOKE,who,%q<sheet_who>,source,GADGET_%q<gadget_n>)][u({{sheet-fate/sheet}}/API`REBUILD,%q<sheet_who>)]; @pemit %#=notice(GADGET,The %q<gadget_name> is gone: [name(%q<sheet_who>)] has refresh [u({{sheet-fate/sheet}}/FUN`POINTS`REFRESH,%q<sheet_who>)].,ok)
+        flags: [cmdsyntax]
+
+      # ---- cyberware -----------------------------------------------------------------
+      # An aug is AUG`<KEY> on the store, with SIZE (heart, minor, major or prosthesis), TEXT, OPTIONS (| between) and
+      # INCLUDED beneath. A character's FATE`AUG`<KEY> says it is installed, with OPTIONS (the numbers of the choices
+      # taken) and, on the heart, SLOT (the aspect tied to being a cyborg). One refresh grant from CYBER charges for
+      # all of it: 1 for the heart, 1 a major aug, and 1 for every three minor augs, each choice past the included ones
+      # counting as a minor aug (free on a prosthesis).
+      FUN`AUG`HELD:
+        value: |-
+          squish(iter(u(%!/FUN`LIST`ALL,AUG),if(hasattr(%0,FATE`AUG`%i0),%i0)))
+        flags: [funsyntax]
+      FUN`AUG`SIZE:
+        value: |-
+          default({{store}}/AUG`%0`SIZE,minor)
+        flags: [funsyntax]
+      FUN`AUG`CHOSEN:
+        value: |-
+          get(%0/FATE`AUG`%1`OPTIONS)
+        flags: [funsyntax]
+      # %0 a key, %1 choices taken: how many are past the included ones.
+      FUN`AUG`EXTRA:
+        value: |-
+          max(0,sub(words(%1),default({{store}}/AUG`%0`INCLUDED,0)))
+        flags: [funsyntax]
+      # %0 a key, %1 the numbers of choices: their names.
+      FUN`AUG`OPTNAMES:
+        value: |-
+          itemize(iter(%1,extract(get({{store}}/AUG`%0`OPTIONS),%i0,1,|),%b,|),|)
+        flags: [funsyntax]
+      # %0 a key, %1 what was typed: the choice's number, by number, name, or the only one whose name holds those words.
+      FUN`AUG`OPTFIND:
+        value: |-
+          setqm(ao_all,get({{store}}/AUG`%0`OPTIONS),ao_typed,trim(%1))[setq(ao_n,words(%q<ao_all>,|))][cond(not(strlen(%q<ao_typed>)),,cand(isint(%q<ao_typed>),gte(%q<ao_typed>,1),lte(%q<ao_typed>,%q<ao_n>)),%q<ao_typed>,words(setr(ao_exact,squish(iter(lnum(1,%q<ao_n>),if(strmatch(extract(%q<ao_all>,%i0,1,|),%q<ao_typed>),%i0))))),first(%q<ao_exact>),eq(words(setr(ao_start,squish(iter(lnum(1,%q<ao_n>),if(strmatch(extract(%q<ao_all>,%i0,1,|),*%q<ao_typed>*),%i0))))),1),%q<ao_start>)]
+        flags: [funsyntax]
+      # %0 a character, %1 hearts more, %2 major augs more, %3 minor augs more: the refresh all their cyberware costs.
+      FUN`AUG`COST:
+        value: |-
+          setqm(ac_held,u(%!/FUN`AUG`HELD,%0),ac_per,get(%!/DATA`CONFIG`AUG_PER_REFRESH))[setqm(ac_heart,add(words(squish(iter(%q<ac_held>,if(strmatch(u(%!/FUN`AUG`SIZE,%i0),heart),%i0)))),%1),ac_major,add(words(squish(iter(%q<ac_held>,if(strmatch(u(%!/FUN`AUG`SIZE,%i0),major),%i0)))),%2),ac_minor,add(ladd(0 [iter(%q<ac_held>,switch(u(%!/FUN`AUG`SIZE,%i0),minor,inc(u(%!/FUN`AUG`EXTRA,%i0,u(%!/FUN`AUG`CHOSEN,%0,%i0))),major,u(%!/FUN`AUG`EXTRA,%i0,u(%!/FUN`AUG`CHOSEN,%0,%i0)),0))]),%3))][add(%q<ac_heart>,%q<ac_major>,div(add(%q<ac_minor>,dec(%q<ac_per>)),%q<ac_per>))]
+        flags: [funsyntax]
+      FUN`AUG`CHARGE:
+        value: |-
+          setq(ach_cost,u(%!/FUN`AUG`COST,%0,0,0,0))[uargs({{sheet-fate/sheet}}/API`GRANT,who,%0,source,CYBER,target,REFRESH,key,ALL,kind,add,value,if(%q<ach_cost>,-%q<ach_cost>))][u({{sheet-fate/sheet}}/API`REBUILD,%0)]
+        flags: [funsyntax]
+      # %0 a character, %1 a key: what is installed, Cyber-Eye (Thermal Imaging and Zoom Magnification).
+      FUN`AUG`LABEL:
+        value: |-
+          [get({{store}}/AUG`%1)][if(strmatch(%1,HEART),if(strlen(setr(al_slot,get(%0/FATE`AUG`HEART`SLOT))),%b%(tied to [lcstr(u({{sheet-fate/sheet}}/FUN`ASPECT`LABEL,%q<al_slot>))]%)),if(words(setr(al_chosen,u(%!/FUN`AUG`CHOSEN,%0,%1))),%b%([u(%!/FUN`AUG`OPTNAMES,%1,%q<al_chosen>)]%)))]
+        flags: [funsyntax]
+      # %0 a character, %1 the aug typed, %2 the choice typed: why it cannot go in, or nothing. Sets aug_key, aug_size,
+      # aug_label, aug_new (1 when it is not installed yet), aug_opts, aug_chosen, aug_opt (a choice's number, or the
+      # aspect slot on the heart) and aug_delta, the refresh it costs.
+      FUN`AUG`PLAN:
+        value: |-
+          setq(aug_key,u(%!/FUN`LIST`FIND,AUG,%1))[if(strlen(%q<aug_key>),setqm(aug_size,u(%!/FUN`AUG`SIZE,%q<aug_key>),aug_label,get({{store}}/AUG`%q<aug_key>),aug_new,not(hasattr(%0,FATE`AUG`%q<aug_key>)),aug_opts,get({{store}}/AUG`%q<aug_key>`OPTIONS),aug_chosen,u(%!/FUN`AUG`CHOSEN,%0,%q<aug_key>),aug_opt,,aug_delta,0))][cond(not(strlen(%q<aug_key>)),There is no aug '%1'. +aug/list shows them.,strmatch(%q<aug_size>,heart),u(%!/FUN`AUG`PLANHEART,%0,%2),cand(not(strmatch(%q<aug_size>,prosthesis)),not(hasattr(%0,FATE`AUG`HEART))),Augs run on a cyber-heart: install one first%, tying one of [poss(%0)] aspects to being a cyborg%, with [if(isapproved(%0),+aug/surgery,+aug/install)] cyber-heart=<aspect slot>.,not(words(%q<aug_opts>,|)),u(%!/FUN`AUG`PLANPLAIN,%0,%2),1,u(%!/FUN`AUG`PLANCHOICE,%0,%2))]
+        flags: [funsyntax]
+      FUN`AUG`PLANHEART:
+        value: |-
+          cond(not(%q<aug_new>),[name(%0)] has a %q<aug_label> already.,not(strlen(setr(aug_opt,u({{sheet-fate/sheet}}/FUN`ASPECT`SLOT,%1)))),The %q<aug_label> needs one of [name(%0)]'s aspects tied to being a cyborg: name it after =%, concept%, trouble or 1 to [sub(get({{sheet-fate/sheet}}/DATA`CONFIG`ASPECTS),2)].,not(strlen(get(%0/FATE`ASPECT`%q<aug_opt>))),Write that aspect first: +sheet/aspect [lcstr(%q<aug_opt>)]=<aspect>%, one about being a cyborg.,1,setq(aug_delta,sub(u(%!/FUN`AUG`COST,%0,1,0,0),u(%!/FUN`AUG`COST,%0,0,0,0))))
+        flags: [funsyntax]
+      FUN`AUG`PLANPLAIN:
+        value: |-
+          cond(strlen(%1),The %q<aug_label> has no choices to make.,not(%q<aug_new>),[name(%0)] has the %q<aug_label> already.,1,setq(aug_delta,sub(u(%!/FUN`AUG`COST,%0,0,if(strmatch(%q<aug_size>,major),1,0),if(strmatch(%q<aug_size>,minor),1,0)),u(%!/FUN`AUG`COST,%0,0,0,0))))
+        flags: [funsyntax]
+      FUN`AUG`PLANCHOICE:
+        value: |-
+          cond(not(strlen(%1)),if(%q<aug_new>,Choose [if(gt(default({{store}}/AUG`%q<aug_key>`INCLUDED,0),1),what comes,one that comes)] with the %q<aug_label> after =: [itemize(%q<aug_opts>,|,or)].,[name(%0)] has the %q<aug_label> already. Name another choice after = to add it: [itemize(%q<aug_opts>,|,or)].),not(strlen(setr(aug_opt,u(%!/FUN`AUG`OPTFIND,%q<aug_key>,%1)))),The %q<aug_label> has no choice '%1'. Choose [itemize(%q<aug_opts>,|,or)].,member(%q<aug_chosen>,%q<aug_opt>),[name(%0)]'s %q<aug_label> has [extract(%q<aug_opts>,%q<aug_opt>,1,|)] already.,1,[setq(aug_more,if(strmatch(%q<aug_size>,prosthesis),0,sub(u(%!/FUN`AUG`EXTRA,%q<aug_key>,%q<aug_chosen> %q<aug_opt>),u(%!/FUN`AUG`EXTRA,%q<aug_key>,%q<aug_chosen>))))][setq(aug_delta,sub(u(%!/FUN`AUG`COST,%0,0,if(cand(%q<aug_new>,strmatch(%q<aug_size>,major)),1,0),add(%q<aug_more>,if(cand(%q<aug_new>,strmatch(%q<aug_size>,minor)),1,0))),u(%!/FUN`AUG`COST,%0,0,0,0)))])
+        flags: [funsyntax]
+      INC`NEED`AUG:
+        value: |-
+          think setq(aug_error,u(%!/FUN`AUG`PLAN,%q<sheet_who>,%<aug>,%<choice>)); @assert not(strlen(%q<aug_error>))=@pemit %#=notice(AUG,%q<aug_error>,warn)
+        flags: [cmdsyntax]
+      # Writes aug_key with aug_opt on sheet_who and charges for it.
+      FUN`AUG`WRITE:
+        value: |-
+          [u({{sheet-fate/sheet}}/FUN`DO`WRITE,%q<sheet_who>,AUG`%q<aug_key>,1)][if(strmatch(%q<aug_size>,heart),u({{sheet-fate/sheet}}/FUN`DO`WRITE,%q<sheet_who>,AUG`%q<aug_key>`SLOT,%q<aug_opt>),if(strlen(%q<aug_opt>),u({{sheet-fate/sheet}}/FUN`DO`WRITE,%q<sheet_who>,AUG`%q<aug_key>`OPTIONS,squish(%q<aug_chosen> %q<aug_opt>))))][u(%!/FUN`AUG`CHARGE,%q<sheet_who>)]
+        flags: [funsyntax]
+      INC`AUG`SHOW:
+        value: |-
+          @include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>; @include %!/INC`NEED`VIEW; @pemit %#=u(%!/FUN`SCREEN`AUGS,%q<sheet_who>)
+        flags: [cmdsyntax]
+      INC`AUG`LIST:
+        value: |-
+          @pemit %#=u(%!/FUN`SCREEN`AUGLIST)
+        flags: [cmdsyntax]
+      # +aug/install [<name>/]<aug>[=<choice>]: before approval, or by a sheet keeper, with no surgery to pay for.
+      INC`AUG`INSTALL:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(AUG,+aug/install <aug>%[=<choice>%] installs cyberware: a cyber-heart first%, tied to an aspect%, such as +aug/install cyber-heart=trouble. +aug/list shows them.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @include/args %!/INC`NEED`AUG=aug,%q<sheet_what>,choice,%q<cmd_right_side>; @include/args %!/INC`NEED`ROOM=delta,%q<aug_delta>; think u(%!/FUN`AUG`WRITE); @pemit %#=notice(AUG,[name(%q<sheet_who>)] has [u(%!/FUN`AUG`LABEL,%q<sheet_who>,%q<aug_key>)] now: cyberware costs [u(%!/FUN`AUG`COST,%q<sheet_who>,0,0,0)] refresh%, and refresh is [u({{sheet-fate/sheet}}/FUN`POINTS`REFRESH,%q<sheet_who>)].,ok)
+        flags: [cmdsyntax]
+      # +aug/remove [<name>/]<aug>[=<choice>]: takes a choice, or the whole aug, out again. The heart goes last.
+      INC`AUG`REMOVE:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(AUG,+aug/remove <aug>%[=<choice>%] takes cyberware out again%, or one choice of it.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @assert strlen(setr(aug_key,u(%!/FUN`LIST`FIND,AUG,%q<sheet_what>)))=@pemit %#=notice(AUG,There is no aug '%q<sheet_what>'. +aug/list shows them.,warn); think setqm(aug_label,get({{store}}/AUG`%q<aug_key>),aug_chosen,u(%!/FUN`AUG`CHOSEN,%q<sheet_who>,%q<aug_key>)); @assert hasattr(%q<sheet_who>,FATE`AUG`%q<aug_key>)=@pemit %#=notice(AUG,[name(%q<sheet_who>)] has no %q<aug_label>.,warn); @assert cor(not(strmatch(u(%!/FUN`AUG`SIZE,%q<aug_key>),heart)),not(words(squish(iter(u(%!/FUN`AUG`HELD,%q<sheet_who>),if(member(minor major,u(%!/FUN`AUG`SIZE,%i0)),%i0))))))=@pemit %#=notice(AUG,The %q<aug_label> powers [name(%q<sheet_who>)]'s other augs: take them out first.,warn); @break strlen(%q<cmd_right_side>)={@assert strlen(setr(aug_opt,u(%!/FUN`AUG`OPTFIND,%q<aug_key>,%q<cmd_right_side>)))=@pemit %#=notice(AUG,The %q<aug_label> has no choice '%q<cmd_right_side>'.,warn); @assert member(%q<aug_chosen>,%q<aug_opt>)=@pemit %#=notice(AUG,[name(%q<sheet_who>)]'s %q<aug_label> has no [extract(get({{store}}/AUG`%q<aug_key>`OPTIONS),%q<aug_opt>,1,|)].,warn); @assert gt(words(%q<aug_chosen>),default({{store}}/AUG`%q<aug_key>`INCLUDED,0))=@pemit %#=notice(AUG,That choice comes with the %q<aug_label>: take the whole aug out with +aug/remove [if(comp(%q<sheet_who>,%q<viewer_objid>),[name(%q<sheet_who>)]/)][lcstr(%q<aug_key>)]%, or add another choice first.,warn); think u({{sheet-fate/sheet}}/FUN`DO`WRITE,%q<sheet_who>,AUG`%q<aug_key>`OPTIONS,remove(%q<aug_chosen>,%q<aug_opt>))[u(%!/FUN`AUG`CHARGE,%q<sheet_who>)]; @pemit %#=notice(AUG,[name(%q<sheet_who>)] has [u(%!/FUN`AUG`LABEL,%q<sheet_who>,%q<aug_key>)] now: cyberware costs [u(%!/FUN`AUG`COST,%q<sheet_who>,0,0,0)] refresh.,ok)}; think null(iter(revwords(lattr(%q<sheet_who>/FATE`AUG`%q<aug_key>`**)),attrib_set(%q<sheet_who>/%i0)))[u({{sheet-fate/sheet}}/FUN`DO`WRITE,%q<sheet_who>,AUG`%q<aug_key>,)][u(%!/FUN`AUG`CHARGE,%q<sheet_who>)]; @pemit %#=notice(AUG,The %q<aug_label> is out: cyberware costs [name(%q<sheet_who>)] [u(%!/FUN`AUG`COST,%q<sheet_who>,0,0,0)] refresh%, and refresh is [u({{sheet-fate/sheet}}/FUN`POINTS`REFRESH,%q<sheet_who>)].,ok)
+        flags: [cmdsyntax]
+      # +aug/surgery <aug>[=<choice>][ with <approach>][ +<n>]: an approved character pays for an aug in play, rolling the
+      # surgery skill against its difficulty. A tie or better installs it, and recovering fills a consequence.
+      INC`AUG`SURGERY:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(AUG,+aug/surgery <aug>%[=<choice>%] pays for cyberware in play: [u({{sheet-fate/sheet}}/API`LABEL,get(%!/DATA`CONFIG`AUG_SKILL))] against [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,get(%!/DATA`CONFIG`AUG_MINOR))] for a minor aug or a prosthesis%, [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,get(%!/DATA`CONFIG`AUG_MAJOR))] for a major one.,warn); @assert isapproved(%#)=@pemit %#=notice(AUG,Your character is not approved yet: +aug/install puts cyberware in with no surgery to pay for.,warn); @assert not(strlen(setr(surg_enc,u({{sheet-fate/sheet}}/FUN`ENC`ACTIVE,%q<viewer_objid>))))=@pemit %#=notice(AUG,Nobody has surgery in the middle of [u({{sheet-fate/sheet}}/FUN`ENC`TITLE,%q<surg_enc>)]: finish it first.,warn); think setq(surg_words,trim(%q<cmd_argument>))[if(regmatch(last(%q<surg_words>),^\[+-\]\[0-9\]+$),setqm(surg_mod,edit(last(%q<surg_words>),+,),surg_words,ldelete(%q<surg_words>,words(%q<surg_words>))),setq(surg_mod,0))][if(strmatch(extract(%q<surg_words>,dec(words(%q<surg_words>)),1),with),setqm(surg_with,last(%q<surg_words>),surg_words,extract(%q<surg_words>,1,sub(words(%q<surg_words>),2))),setq(surg_with,))][setqm(sheet_who,%q<viewer_objid>,surg_aug,trim(before(%q<surg_words>,=)),surg_choice,trim(after(%q<surg_words>,=)),surg_approaches,strmatch(get({{sheet-fate/sheet}}/DATA`CONFIG`MODE),approaches))]; @include/args %!/INC`NEED`AUG=aug,%q<surg_aug>,choice,%q<surg_choice>; @include/args %!/INC`NEED`ROOM=delta,%q<aug_delta>; @assert cor(not(%q<surg_approaches>),strlen(%q<surg_with>))=@pemit %#=notice(AUG,Name the approach you pay for it with: +aug/surgery %q<surg_words> with careful.,warn); @assert cor(%q<surg_approaches>,not(strlen(%q<surg_with>)))=@pemit %#=notice(AUG,Surgery is paid for with [u({{sheet-fate/sheet}}/API`LABEL,get(%!/DATA`CONFIG`AUG_SKILL))] on this game%, so leave with out.,warn); @assert strlen(setr(trait_key,u({{sheet-fate/sheet}}/API`FIND,firstof(%q<surg_with>,get(%!/DATA`CONFIG`AUG_SKILL)))))=@pemit %#=notice(AUG,There is no [u({{sheet-fate/sheet}}/FUN`TRAIT`NOUN)] '[firstof(%q<surg_with>,get(%!/DATA`CONFIG`AUG_SKILL))]'.,warn); think setqm(surg_major,member(heart major,%q<aug_size>),surg_harm,ucstr(get(%!/DATA`CONFIG`AUG_[if(member(heart major,%q<aug_size>),MAJOR,MINOR)]_HARM)))[setq(surg_harm,if(cand(strlen(%q<surg_harm>),hasattr({{sheet-fate/store}},CONSEQUENCE`%q<surg_harm>)),%q<surg_harm>))]; @assert cor(not(strlen(%q<surg_harm>)),not(strlen(get(%#/FATE`CONSEQUENCE`%q<surg_harm>))))=@pemit %#=notice(AUG,Recovering from this surgery takes your [lcstr(get({{sheet-fate/store}}/CONSEQUENCE`%q<surg_harm>))] consequence%, and it is taken: heal first.,warn); think setq(surg_result,uargs({{sheet-fate/sheet}}/API`CHECK,roller,%q<viewer_objid>,trait,%q<trait_key>,modifier,%q<surg_mod>,target,get(%!/DATA`CONFIG`AUG_[if(%q<surg_major>,MAJOR,MINOR)]))); @assert not(strmatch(%q<surg_result>,#-*))=@pemit %#=notice(AUG,%q<surg_result>,error); think setq(surg_tier,json_query(%q<surg_result>,extract,$.tier)); @break strmatch(%q<surg_tier>,fail)={@remit %l=notice(AUG,tone(strong,name(%#)) tries to pay for [art(%q<aug_label>)] %q<aug_label>: [u({{sheet-fate/sheet}}/FUN`DISPLAY`CHECK,%q<surg_result>)] It is out of reach for now%, and nothing changes.)}; think u(%!/FUN`AUG`WRITE)[if(strlen(%q<surg_harm>),u({{sheet-fate/sheet}}/FUN`DO`WRITE,%q<viewer_objid>,CONSEQUENCE`%q<surg_harm>,Recovering from Surgery))]; @remit %l=notice(AUG,tone(strong,name(%#)) pays for [art(%q<aug_label>)] %q<aug_label>: [u({{sheet-fate/sheet}}/FUN`DISPLAY`CHECK,%q<surg_result>)] [if(strmatch(%q<surg_tier>,partial),At a minor cost the GM names%, it,It)] goes in: [u(%!/FUN`AUG`LABEL,%#,%q<aug_key>)].[if(strlen(%q<surg_harm>),%b[capstr(subj(%#))] [if(strmatch(subj(%#),they),are,is)] Recovering from Surgery%, a [lcstr(get({{sheet-fate/store}}/CONSEQUENCE`%q<surg_harm>))] consequence.)] Refresh [u({{sheet-fate/sheet}}/FUN`POINTS`REFRESH,%#)].)
+        flags: [cmdsyntax]
+
       # ---- screens ------------------------------------------------------------------
       # %0 a character: their conditions.
       FUN`SCREEN`CONDITIONS:
@@ -843,6 +1419,26 @@ objects:
         value: |-
           setq(ss_at,{{store}}/STORM`%0)[box(lfields(,Aspect%*<|>Passive%*<|>Invoke%*<|>Compel%*<|>Create%*<|>Attack%*<|>Defend%*<|>Overcome,[firstof(get(%q<ss_at>`ASPECT),-)]%*<|>[firstof(get(%q<ss_at>`PASSIVE),-)]%*<|>[firstof(get(%q<ss_at>`INVOKE),-)]%*<|>[firstof(get(%q<ss_at>`COMPEL),-)]%*<|>[firstof(get(%q<ss_at>`CREATE),-)] [get(%q<ss_at>`FADE)]%*<|>[firstof(get(%q<ss_at>`ATTACK),-)]%*<|>[firstof(get(%q<ss_at>`DEFEND),No special rules.)]%*<|>[firstof(get(%q<ss_at>`OVERCOME),No special rules.)],%*<|>)%r[rule()]%r[tone(muted,+storm/attack%, /defend%, /barrier%, /overcome and /advantage roll it: +storm/attack far 1=fair. Attuning costs [get(%!/DATA`CONFIG`STORM_COST)] refresh.)],The [get(%q<ss_at>)])]
         flags: [funsyntax]
+      FUN`SCREEN`SUPERS:
+        value: |-
+          setq(ss_held,u(%!/FUN`SUPER`HELD,%0))[box(if(words(%q<ss_held>),ldatatable(lit({"nowrap":"1|2|3","grow":"|||1"}),Super skill|Rating|Now|Steps back,iter(%q<ss_held>,[u({{sheet-fate/sheet}}/API`LABEL,%i0)]|[u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,u({{sheet-fate/sheet}}/API`RATING,%0,%i0))]|[if(u(%!/FUN`SUPER`OUT,%0,%i0),tone(warning,exhausted),u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,u(%!/FUN`SUPER`NOW,%0,%i0)))]|[u(%!/FUN`SUPER`STEP,%0,%i0)],%b,%*<^>),%*<^>),tone(muted,No super skills.))%r[rule()]%r[tone(muted,+super/use <skill> spends a fate point to double one for a roll%, and it steps back by one. +super/refresh brings them back for a new scene%, unless one is exhausted. +super/bid <power> bids fate points on a power.)],Super skills: [name(%0)][u({{sheet-fate/sheet}}/FUN`PLAY`IN,%0)])]
+        flags: [funsyntax]
+      FUN`SCREEN`BID:
+        value: |-
+          box(lfields(,Power%*<|>Bid by%*<|>Answered by%*<|>Standing%*<|>Points bid,[get({{store}}/%0)]%*<|>[name(get({{store}}/%0`OPENER))]%*<|>[firstof(name(get({{store}}/%0`FOE)),nobody yet)]%*<|>[switch(get({{store}}/%0`MOVE),open,[name(get({{store}}/%0`OPENER))]'s power,cancel,a cancel from [name(get({{store}}/%0`LAST))]: neither power works,raise,[name(get({{store}}/%0`LAST))]'s raise: [get({{store}}/%0`POWER)])]%*<|>[get({{store}}/%0`POT)],%*<|>)%r[rule()]%r[tone(muted,The side that did not move last answers with +super/cancel or +super/raise <power>%, or yields with +super/yield. A cancel left standing is a tie: the points go to the GM. Otherwise the loser takes every point bid.)],Power bid)
+        flags: [funsyntax]
+      FUN`SCREEN`GADGETS:
+        value: |-
+          setq(sg_all,u(%!/FUN`GADGET`ALL,%0))[box(if(words(%q<sg_all>),iter(%q<sg_all>,[rule(%i0. [u(%!/FUN`GADGET`NAME,%0,%i0)]: [u(%!/FUN`GADGET`COST,%0,%i0,0,0)] refresh)]%r[lfields(,Function%*<|>[iter(u(%!/FUN`GADGET`PARTS,%0,%i0,FLAW),Flaw %i0,%b,%*<|>)][if(words(setr(sg_stunts,u(%!/FUN`GADGET`PARTS,%0,%i0,STUNT))),%*<|>[iter(%q<sg_stunts>,Stunt %i0,%b,%*<|>)])],[get(%0/FATE`GADGET`%i0`FUNCTION)]%*<|>[iter(u(%!/FUN`GADGET`PARTS,%0,%i0,FLAW),get(%0/FATE`GADGET`%i1`FLAW`%i0),%b,%*<|>)][if(words(%q<sg_stunts>),%*<|>[iter(%q<sg_stunts>,get(%0/FATE`GADGET`%i1`STUNT`%i0),%b,%*<|>)])],%*<|>)],%b,%r),tone(muted,No gadgets.))%r[rule()]%r[tone(muted,A gadget's function and flaw are aspects of its own. Each stunt costs 1 refresh%, and each flaw past the first takes 1 off%, never below 1. +gadget/make%, /stunt and /flaw build one.)],Gadgets: [name(%0)])]
+        flags: [funsyntax]
+      FUN`SCREEN`AUGS:
+        value: |-
+          setq(sa_held,u(%!/FUN`AUG`HELD,%0))[box(if(words(%q<sa_held>),ldatatable(lit({"nowrap":"2","grow":"||1"}),Aug|Kind|What it does,iter(%q<sa_held>,[u(%!/FUN`AUG`LABEL,%0,%i0)]|[u(%!/FUN`AUG`SIZE,%i0)]|[firstof(get({{store}}/AUG`%i0`TEXT),-)],%b,%*<^>),%*<^>),tone(muted,No cyberware.))%r[rule()]%r[tone(muted,Cyberware costs [u(%!/FUN`AUG`COST,%0,0,0,0)] refresh: 1 for the heart%, 1 each major aug and 1 for every [get(%!/DATA`CONFIG`AUG_PER_REFRESH)] minor ones. +aug/list shows what there is. Every aug has a downside%, and the GM compels the aspect tied to being a cyborg for it.)],Cyberware: [name(%0)])]
+        flags: [funsyntax]
+      FUN`SCREEN`AUGLIST:
+        value: |-
+          setq(sa_all,u(%!/FUN`LIST`ALL,AUG))[box(ldatatable(lit({"nowrap":"1|2","grow":"|||1"}),Aug|Kind|What it does|Choices,iter(%q<sa_all>,[get({{store}}/AUG`%i0)]|[u(%!/FUN`AUG`SIZE,%i0)]|[firstof(get({{store}}/AUG`%i0`TEXT),-)]|[if(words(get({{store}}/AUG`%i0`OPTIONS),|),[if(default({{store}}/AUG`%i0`INCLUDED,0),[get({{store}}/AUG`%i0`INCLUDED)] of:%b)][itemize(get({{store}}/AUG`%i0`OPTIONS),|,or)],-)],%b,%*<^>),%*<^>)%r[rule()]%r[tone(muted,A cyber-heart comes first and costs 1 refresh. A major aug costs 1%, and every [get(%!/DATA`CONFIG`AUG_PER_REFRESH)] minor augs cost 1 between them. +aug/install <aug>%[=<choice>%] before approval%, +aug/surgery after.)],Cyberware)]
+        flags: [funsyntax]
       FUN`SCREEN`STORMS:
         value: |-
           setq(ss_all,u(%!/FUN`LIST`ALL,STORM))[box(ldatatable(lit({"nowrap":"1|2","grow":"||1"}),Storm|Aspect|Passive,iter(%q<ss_all>,[get({{store}}/STORM`%i0)]|[firstof(get({{store}}/STORM`%i0`ASPECT),-)]|[firstof(get({{store}}/STORM`%i0`PASSIVE),-)],%b,%*<^>),%*<^>)%r[rule()]%r[tone(muted,+storm <storm> shows one. +storm/attune <storm> attunes you for [get(%!/DATA`CONFIG`STORM_COST)] refresh before approval.)],Storms)]
@@ -852,7 +1448,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add/noparse/rsnoparse +condition; @hook/override/inline +condition=%!,CMD`CONDITION; @command/add/noparse/rsnoparse +wealth; @hook/override/inline +wealth=%!,CMD`WEALTH; @command/add/noparse/rsnoparse +storm; @hook/override/inline +storm=%!,CMD`STORM
+          @command/add/noparse/rsnoparse +condition; @hook/override/inline +condition=%!,CMD`CONDITION; @command/add/noparse/rsnoparse +wealth; @hook/override/inline +wealth=%!,CMD`WEALTH; @command/add/noparse/rsnoparse +storm; @hook/override/inline +storm=%!,CMD`STORM; @command/add/noparse/rsnoparse +super; @hook/override/inline +super=%!,CMD`SUPER; @command/add/noparse/rsnoparse +gadget; @hook/override/inline +gadget=%!,CMD`GADGET; @command/add/noparse/rsnoparse +aug; @hook/override/inline +aug=%!,CMD`AUG
         flags: [cmdsyntax]
       AINSTALL:
         value: |-
@@ -863,8 +1459,8 @@ objects:
           @trigger %!/STARTUP
         flags: [cmdsyntax]
 
-  # The lists: conditions COND`<KEY> and storms STORM`<KEY>, each entry's own attribute its name and every field
-  # a leaf beneath it. +config toolkit/conditions and toolkit/storms change them. The six conditions are the toolkit's
+  # The lists: conditions COND`<KEY>, storms STORM`<KEY> and cyberware AUG`<KEY>, each entry's own attribute its name and every field
+  # a leaf beneath it. +config toolkit/conditions, /storms and /augs change them. The six conditions are the toolkit's
   # own, 14 shifts in all; the storms and their rules are the toolkit's Stormcallers.
   - ref: store
     type: thing
@@ -1052,6 +1648,96 @@ objects:
         -1
       STORM`THUNDER`ORDER: |-
         50
+      AUG: |-
+        The cyberware, AUG`<KEY> each. +config toolkit/augs changes it.
+      BID: |-
+        Open power bids, BID`<room number> each.
+      AUG`HEART: |-
+        Cyber-Heart
+      AUG`HEART`SIZE: |-
+        heart
+      AUG`HEART`TEXT: |-
+        You can install and use other augs. It backs up your natural heart and filters toxins from your blood: spend a fate point to ignore a poison or toxin, or to concede instead of being taken out by something it could save you from.
+      AUG`HEART`INCLUDED: |-
+        0
+      AUG`HEART`ORDER: |-
+        5
+      AUG`EYE: |-
+        Cyber-Eye
+      AUG`EYE`SIZE: |-
+        minor
+      AUG`EYE`TEXT: |-
+        +1 to sight-based Notice rolls, and one of these as an aspect; each more is another minor aug.
+      AUG`EYE`OPTIONS: |-
+        Image Filtering|Low-Light Vision|Sonar Imaging|Targeting Interface|Thermal Imaging|Visual Net Interface|Zoom Magnification
+      AUG`EYE`INCLUDED: |-
+        1
+      AUG`EYE`ORDER: |-
+        10
+      AUG`LEGS: |-
+        Cyber-Legs
+      AUG`LEGS`SIZE: |-
+        major
+      AUG`LEGS`TEXT: |-
+        Move two zones as a free action, and +2 to Athletics to run or jump. One add-on comes with them, each more a minor aug: a Hidden Compartment for something the size of a hand gun, a Magnetic Grip that keeps you standing on metal and walks you up it, or a Pneumatic Kick at Weapon:2.
+      AUG`LEGS`OPTIONS: |-
+        Hidden Compartment|Magnetic Grip|Pneumatic Kick
+      AUG`LEGS`INCLUDED: |-
+        1
+      AUG`LEGS`ORDER: |-
+        20
+      AUG`NEURAL: |-
+        Neural Interface
+      AUG`NEURAL`SIZE: |-
+        major
+      AUG`NEURAL`TEXT: |-
+        You reach the Net from anywhere with a thought. Low-security systems do what you want, and you get +2 to Computers rolls against high-security ones.
+      AUG`NEURAL`INCLUDED: |-
+        0
+      AUG`NEURAL`ORDER: |-
+        30
+      AUG`NAILS: |-
+        Razor Nails
+      AUG`NAILS`SIZE: |-
+        minor
+      AUG`NAILS`TEXT: |-
+        One-inch blades pop out of your fingertips and back at will: Weapon:1.
+      AUG`NAILS`INCLUDED: |-
+        0
+      AUG`NAILS`ORDER: |-
+        40
+      AUG`PLATING: |-
+        Subdermal Plating
+      AUG`PLATING`SIZE: |-
+        major
+      AUG`PLATING`TEXT: |-
+        Oppose most physical attacks with Physique, and once per scene ignore one mild or moderate physical consequence from one.
+      AUG`PLATING`INCLUDED: |-
+        0
+      AUG`PLATING`ORDER: |-
+        50
+      AUG`CAMO: |-
+        Thermoptic Camouflage
+      AUG`CAMO`SIZE: |-
+        minor
+      AUG`CAMO`TEXT: |-
+        Spend a fate point to become invisible to sight and thermal imaging for as long as you do not move.
+      AUG`CAMO`INCLUDED: |-
+        0
+      AUG`CAMO`ORDER: |-
+        60
+      AUG`PROSTHESIS: |-
+        Prosthesis
+      AUG`PROSTHESIS`SIZE: |-
+        prosthesis
+      AUG`PROSTHESIS`TEXT: |-
+        A replacement that does what the part it replaced did, and no more. No refresh and no aspect; one put in during play takes the money and the recovery a minor aug does.
+      AUG`PROSTHESIS`OPTIONS: |-
+        Arm|Leg|Hand|Foot|Eye|Ear|Organ
+      AUG`PROSTHESIS`INCLUDED: |-
+        1
+      AUG`PROSTHESIS`ORDER: |-
+        70
 
   # The help topics. fate-system-toolkit-help registers this object with +help.
   - ref: toolkit_help
@@ -1060,7 +1746,7 @@ objects:
     location: "{{toolkit}}"
     attributes:
       HELP: |-
-        Rules from the Fate System Toolkit for the Fate sheet: +condition, +wealth and +storm.
+        Rules from the Fate System Toolkit for the Fate sheet: +condition, +wealth, +storm, +super, +gadget and +aug.
       SEE: |-
         Cross-references. One leaf per topic; subtopics come from the tree, not from here.
       SEE`CONDITION: |-
@@ -1069,8 +1755,14 @@ objects:
         condition storm sheet
       SEE`STORM: |-
         condition wealth sheet
+      SEE`SUPER: |-
+        gadget aug sheet
+      SEE`GADGET: |-
+        super aug sheet
+      SEE`AUG: |-
+        super gadget wealth sheet
       SEE`TOOLKIT: |-
-        condition wealth storm
+        condition wealth storm super gadget aug
       HELP`CONDITION: |-
         Conditions are set hurts, such as Angry or Wounded, that soak stress the way consequences do. Each is an aspect while you suffer it, and someone else may invoke it once for free.
 
@@ -1164,8 +1856,104 @@ objects:
         `+storm/barrier length 3 +4`
 
         Output: `\[STORM\] Kim calls the Glacier to raise a barrier (+1 for the Glacier and +4 more): Stormcaller: 4dF\[0, 0, 1, 1\] + 5 = 7 (Epic) (roll 23) A Superb (+5) barrier stands 3 lengths long, 1 off for each past the first: getting past it takes 5, and a defender behind it may take 5 in place of a defence roll. It stays.`
+      HELP`SUPER: |-
+        A super skill is a power. Use it as an ordinary skill, or spend a fate point to double it for one roll. Each use steps it back by one until the next scene, and stepped back to nothing it is exhausted until you rest or recharge.
+
+        - `+super` shows yours; `+super <name>` someone else's, where you may read their sheet.
+        - `+super/add <skill>` makes one of your skills a super skill, before approval, for 1 refresh unless the game sets another. `+super/remove <skill>` makes it ordinary again.
+        - `+super/use <skill>\[+<n>\]\[=<opposition>\]` spends a fate point and rolls it doubled. It steps back by one after.
+        - `+super/refresh` brings your super skills back when a new scene starts. An exhausted one stays exhausted.
+
+        On a game of approaches, the same goes for an approach. In an encounter, steps back happen on its copy of your sheet. Exhaustion is kept on your sheet either way.
+
+        A superhero may write an origin story as their trouble: how they got their powers, and why those powers cause them problems.
+
+        For example:
+
+        `+super/use physique=fair`
+
+        Output: `\[SUPER\] Max spends a fate point on their super Physique, doubling it (+5 more): Physique: 4dF\[0, 0, 0, 0\] + 10 = 10 against Fair (+2): success with style, 8 shifts (roll 37) Physique steps back to Great (+4) until the next scene.`
+
+        See `+help super bid` for powers against powers, and `+help super gm` for recharging.
+      HELP`SUPER`BID: |-
+        A power can simply work, for a fate point. When someone else's power stands in its way, the two of you bid fate points, back and forth:
+
+        1. `+super/bid <what your power does>` bids 1 point. With nobody against it, `+super/end` lets it stand, with no roll.
+        2. Someone answers. `+super/cancel \[<how>\]` bids 1 to stop it. `+super/raise <power>` bids 2 to stop it and use a power of their own instead.
+        3. The two of you go on answering each other's last move, until one side gives up with `+super/yield`.
+
+        If the last move was a cancel, it is a tie: neither power works, and the points go to the GM. Otherwise the last power works, and whoever yields takes every point bid.
+
+        `+super/bid` alone shows the bid in the room. A room holds one bid at a time.
+
+        For example:
+
+        `+super/raise Catch the car and throw it back`
+
+        Output: `\[SUPER\] Max raises with 2 fate points: Catch the car and throw it back. It stops Pat's power and works in its place, and 3 points are bid. Pat answers with +super/cancel or +super/raise, or yields with +super/yield.`
+      HELP`SUPER`GM: |-
+        An exhausted super skill comes back when the story says so: a night's rest, a trip home, a drink from the Horn of Might. Sheet keepers anywhere, and the GM of the encounter a player is in, use:
+
+        - `+super/recharge <name>\[=<skill>\]` to bring back one super skill, or every one, exhausted or not.
+        - `+super/end` to end a stalled bid as though the side to answer yielded.
+
+        Staff set the refresh a super skill costs and how many a character may have: `+help toolkit settings`.
+      HELP`GADGET: |-
+        A gadget, or a magic item, comes with two aspects of its own: a function, what it is for, and a flaw, what is wrong with it. They do not take up your aspects.
+
+        - `+gadget` shows yours; `+gadget <name>` someone else's, where you may read their sheet.
+        - `+gadget/make <gadget>=<function>/<flaw>` makes one. It costs nothing until it has a stunt.
+        - `+gadget/stunt <gadget>=<stunt>: <what it does>` gives it a stunt, for 1 refresh.
+        - `+gadget/flaw <gadget>=<flaw>` gives it one more flaw, for 1 refresh off. A gadget with stunts always costs at least 1.
+        - `+gadget/unstunt <gadget>=<n>` and `+gadget/unflaw <gadget>=<n>` take one away. Its first flaw stays.
+        - `+gadget/scrap <gadget>` takes it away, and its refresh comes back.
+
+        Name a gadget by its number or any part of its name. These are for before approval; after it, staff change gadgets with `+gadget/stunt <name>/<gadget>=...`.
+
+        A flaw has to bite. The GM may turn down one that never will.
+
+        For example:
+
+        `+gadget/make Magnetic Grapnel Gun=High-Powered Electromagnetic Swingline/Still Working Out the Bugs`
+
+        Output: `\[GADGET\] Done: Max has the Magnetic Grapnel Gun, gadget 1: function High-Powered Electromagnetic Swingline, flaw Still Working Out the Bugs. It costs nothing until it has a stunt: +gadget/stunt 1=<stunt>: <what it does>.`
+      HELP`AUG: |-
+        Augs make you more than human. They run on a cyber-heart, and every one has a downside the GM may compel.
+
+        1. The cyber-heart comes first, for 1 refresh, tied to one of your aspects about being a cyborg: `+aug/install cyber-heart=<aspect slot>`.
+        2. A major aug, such as a limb or anything in your brain, costs 1 refresh.
+        3. Minor augs cost 1 refresh for every three. A choice past the ones an aug comes with counts as one more minor aug.
+        4. A prosthesis only replaces what you lost. It costs no refresh and needs no heart.
+
+        - `+aug/list` shows the augs; `+aug` yours; `+aug <name>` someone else's.
+        - `+aug/install <aug>\[=<choice>\]` installs one before approval, or adds a choice to one you have.
+        - `+aug/remove <aug>\[=<choice>\]` takes one out, or a choice from it. The heart goes last.
+
+        Name an aug by its name or the start of it, and a choice by any part of its name. After approval it takes surgery: `+help aug surgery`.
+
+        For example:
+
+        `+aug/install eye=thermal`
+
+        Output: `\[AUG\] Done: Max has Cyber-Eye (Thermal Imaging) now: cyberware costs 2 refresh, and refresh is 5.`
+      HELP`AUG`SURGERY: |-
+        After approval, an aug costs money and time in a clinic:
+
+        `+aug/surgery <aug>\[=<choice>\]\[ with <approach>\]\[ +<n>\]`
+
+        You roll Resources against Average \(+1\) for a minor aug or a prosthesis, Good \(+3\) for a major aug or the heart. On a game of approaches, name the approach with `with`. A tie or better puts it in, at a minor cost on a tie, and you take Recovering from Surgery: a moderate consequence for minor surgery, severe for major. A failure changes nothing.
+
+        Surgery waits while that consequence is taken, while you are in an encounter, and while it would bring your refresh below 1. Spend Wealth first and add it with `+<n>`.
+
+        For example:
+
+        `+aug/surgery heart=3`
+
+        Output: `\[AUG\] Pat pays for a Cyber-Heart: Resources: 4dF\[0, -1, 0, 1\] + 4 = 4 (Great) against Good (+3): success, 1 shift (roll 45) It goes in: Cyber-Heart (tied to aspect 3). They are Recovering from Surgery, a severe consequence. Refresh 9.`
+
+        Sheet keepers install cyberware any time with `+aug/install <name>/<aug>`, with no roll.
       HELP`TOOLKIT: |-
-        The Fate System Toolkit package adds three of the toolkit's rules to the Fate sheet: conditions \(`+help condition`\), Wealth \(`+help wealth`\) and Stormcallers \(`+help storm`\). `+help toolkit settings` covers what staff change, and `+help toolkit credits` names the source.
+        The Fate System Toolkit package adds six of the toolkit's rules to the Fate sheet: conditions \(`+help condition`\), Wealth \(`+help wealth`\), Stormcallers \(`+help storm`\), super skills \(`+help super`\), gadgets \(`+help gadget`\) and cyberware \(`+help aug`\). `+help toolkit settings` covers what staff change, and `+help toolkit credits` names the source.
       HELP`TOOLKIT`SETTINGS: |-
         `+config toolkit` lists the settings and `+config toolkit/<setting>=<value>` changes one \(`config.admin`\):
 
@@ -1175,11 +1963,13 @@ objects:
         - `parcel_max`: the most a parcel of Wealth is worth \(10\).
         - `storm_cost`: the refresh each storm costs \(2; 1 on a game that uses Weapon and Armor ratings\).
         - `storm_skill`: the skill Stormcallers roll \(stormcaller\).
-        - `conditions` and `storms`: the lists. `+config toolkit/storms/<storm>` shows a storm's fields.
+        - `super_cost`: the refresh each super skill costs \(1\), and `super_max` how many a character may have \(2\).
+        - `aug_skill`: the skill that pays for surgery \(resources\); `aug_minor` and `aug_major` its difficulty \(1 and 3\); `aug_minor_harm` and `aug_major_harm` the consequence recovering fills \(moderate and severe\); `aug_per_refresh` how many minor augs cost 1 refresh \(3\).
+        - `conditions`, `storms` and `augs`: the lists. `+config toolkit/storms/<storm>` shows a storm's fields.
       LOCK`TOOLKIT`SETTINGS: |-
         perm^config.admin
       HELP`TOOLKIT`CREDITS: |-
-        Conditions, Wealth and Stormcallers are from the Fate System Toolkit SRD.
+        Conditions, Wealth, Stormcallers, super skills, power bids, gadgets and cyberware are from the Fate System Toolkit SRD.
 
         This work is based on the Fate System Toolkit \(found at http://www.faterpg.com/\), a product of Evil Hat Productions, LLC, developed, authored, and edited by Robert Donoghue, Brian Engard, Brennan Taylor, Mike Olson, Mark Diaz Truman, Fred Hicks, and Matthew Gandy, and licensed for our use under the Creative Commons Attribution 3.0 Unported license \(http://creativecommons.org/licenses/by/3.0/\).
 
@@ -1204,7 +1994,7 @@ objects:
       PLAY`CONDITION: |-
         CONDITION`*
       BUILD`TOOLKIT: |-
-        WEALTH`ASPECTS STORM
+        WEALTH`ASPECTS STORM SUPER GADGET AUG
       # %0 the player, %1 their encounter copy: the shifts their clear conditions soak, and how to take them.
       SOAK`CONDITION:
         value: |-
@@ -1279,4 +2069,77 @@ objects:
       ADVANCE`WEALTH`RUN:
         value: |-
           setq(r_slot,u(%!/FUN`ASPECT`SLOT,%1))[cond(not(strlen(%q<r_slot>)),#-1 There is no aspect '%1'. Use trouble%, or 1 to [sub(get(%!/DATA`CONFIG`ASPECTS),2)].,strmatch(%q<r_slot>,CONCEPT),#-1 A new high concept takes a breakthrough: +sheet/advance aspect concept=<aspect>%, then +wealth/aspect concept asks staff.,member(get(%0/FATE`WEALTH`ASPECTS),%q<r_slot>),#-1 [u(%!/FUN`ASPECT`LABEL,%q<r_slot>)] is about wealth already.,not(strlen(%2)),#-1 Write the new aspect after =: one about how well off you are.,gt(strlen(%2),200),#-1 Keep an aspect to 200 characters.,1,[u(%!/FUN`DO`WRITE,%0,ASPECT`%q<r_slot>,%2)][u(%!/FUN`DO`WRITE,%0,WEALTH`ASPECTS,squish(get(%0/FATE`WEALTH`ASPECTS) %q<r_slot>))][u(%!/FUN`ASPECT`LABEL,%q<r_slot>)] is now: %2. [name(%0)] has [u({{toolkit}}/FUN`WEALTH`BOXES,%0)] Wealth boxes.)]
+        flags: [funsyntax]
+      PLAY`SUPER: |-
+        SUPER`*`STEP
+      # %0 the roller, %1 a key: a super skill stepped back rolls lower.
+      RATE`SUPER:
+        value: |-
+          sub(0,u({{toolkit}}/FUN`SUPER`DOWN,%0,%1))
+        flags: [funsyntax]
+      SECTION`SUPERS:
+        value: |-
+          if(words(setr(section_supers,u({{toolkit}}/FUN`SUPER`HELD,%0))),lfields(,iter(%q<section_supers>,u(%!/API`LABEL,%i0),%b,%*<|>),iter(%q<section_supers>,u({{toolkit}}/FUN`SUPER`STATE,%0,%i0),%b,%*<|>),%*<|>))
+        flags: [funsyntax]
+      SECTION`SUPERS`TITLE: |-
+        Super skills
+      SECTION`SUPERS`ORDER: |-
+        63
+      SECTION`GADGETS:
+        value: |-
+          if(words(setr(section_gadgets,u({{toolkit}}/FUN`GADGET`ALL,%0))),lfields(,iter(%q<section_gadgets>,get(%0/FATE`GADGET`%i0),%b,%*<|>),iter(%q<section_gadgets>,[get(%0/FATE`GADGET`%i0`FUNCTION)]; flaw [itemize(iter(u({{toolkit}}/FUN`GADGET`PARTS,%0,%i0,FLAW),get(%0/FATE`GADGET`%i1`FLAW`%i0),%b,|),|)]; [words(u({{toolkit}}/FUN`GADGET`PARTS,%0,%i0,STUNT))] [if(eq(words(u({{toolkit}}/FUN`GADGET`PARTS,%0,%i0,STUNT)),1),stunt,stunts)],%b,%*<|>),%*<|>))
+        flags: [funsyntax]
+      SECTION`GADGETS`TITLE: |-
+        Gadgets
+      SECTION`GADGETS`ORDER: |-
+        64
+      SECTION`AUGS:
+        value: |-
+          if(words(setr(section_augs,u({{toolkit}}/FUN`AUG`HELD,%0))),lfields(,Cyberware%*<|>Refresh,[itemize(iter(%q<section_augs>,u({{toolkit}}/FUN`AUG`LABEL,%0,%i0),%b,|),|)]%*<|>[u({{toolkit}}/FUN`AUG`COST,%0,0,0,0)],%*<|>))
+        flags: [funsyntax]
+      SECTION`AUGS`TITLE: |-
+        Cyberware
+      SECTION`AUGS`ORDER: |-
+        65
+      CHARGEN`SUPER: |-
+        Super skills
+      CHARGEN`SUPER`ORDER: |-
+        37
+      CHARGEN`SUPER`OPTIONAL: |-
+        1
+      CHARGEN`SUPER`DONE:
+        value: |-
+          words(u({{toolkit}}/FUN`SUPER`HELD,%0))
+        flags: [funsyntax]
+      CHARGEN`SUPER`TEXT:
+        value: |-
+          A super skill is a power: spend a fate point to double it for a roll%, and it steps back by one until the next scene. Stepped back to nothing%, it is exhausted until you rest or recharge. Each costs [get({{toolkit}}/DATA`CONFIG`SUPER_COST)] refresh%, and you may have [get({{toolkit}}/DATA`CONFIG`SUPER_MAX)]: +super/add <[u(%!/FUN`TRAIT`NOUN)]>. A superhero may write an origin story as their trouble: how they got their powers%, and why those powers cause them problems.%r%r[if(words(setr(chargen_supers,u({{toolkit}}/FUN`SUPER`HELD,%0))),Your super skills: [itemize(iter(%q<chargen_supers>,u(%!/API`LABEL,%i0),%b,|),|)].,You have no super skills.)]
+        flags: [funsyntax]
+      CHARGEN`GADGET: |-
+        Gadgets
+      CHARGEN`GADGET`ORDER: |-
+        38
+      CHARGEN`GADGET`OPTIONAL: |-
+        1
+      CHARGEN`GADGET`DONE:
+        value: |-
+          words(u({{toolkit}}/FUN`GADGET`ALL,%0))
+        flags: [funsyntax]
+      CHARGEN`GADGET`TEXT:
+        value: |-
+          A gadget, or a magic item, has two aspects of its own: a function and a flaw. +gadget/make <gadget>=<function>/<flaw> makes one. Each stunt you give it costs 1 refresh %(+gadget/stunt%)%, and each flaw more takes 1 off %(+gadget/flaw%)%, never below 1.%r%r[if(words(setr(chargen_gadgets,u({{toolkit}}/FUN`GADGET`ALL,%0))),Your gadgets: [itemize(iter(%q<chargen_gadgets>,get(%0/FATE`GADGET`%i0),%b,|),|)].,You have no gadgets.)]
+        flags: [funsyntax]
+      CHARGEN`AUG: |-
+        Cyberware
+      CHARGEN`AUG`ORDER: |-
+        39
+      CHARGEN`AUG`OPTIONAL: |-
+        1
+      CHARGEN`AUG`DONE:
+        value: |-
+          words(u({{toolkit}}/FUN`AUG`HELD,%0))
+        flags: [funsyntax]
+      CHARGEN`AUG`TEXT:
+        value: |-
+          Augs make you more than human%, and run on a cyber-heart: +aug/install cyber-heart=<slot> ties one of your aspects to being a cyborg%, for 1 refresh. A major aug then costs 1 refresh%, and every [get({{toolkit}}/DATA`CONFIG`AUG_PER_REFRESH)] minor augs 1 between them. A prosthesis costs nothing. +aug/list shows them%, and +aug/install <aug>%[=<choice>%] installs one.%r%r[if(words(setr(chargen_augs,u({{toolkit}}/FUN`AUG`HELD,%0))),Your cyberware: [itemize(iter(%q<chargen_augs>,u({{toolkit}}/FUN`AUG`LABEL,%0,%i0),%b,|),|)].,You have no cyberware.)]
         flags: [funsyntax]
