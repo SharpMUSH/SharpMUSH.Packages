@@ -1,0 +1,87 @@
+format: "1.16"
+package: charge-wiki
+title: Charge rules
+version: 1.0.0
+wiki_landing_page: category:charge_start_here
+wiki_collection_name: Charge
+authors: [SharpMUSH]
+description: >-
+  The Charge rules as wiki pages: the game, character creation, action rolls, momentum,
+  teamwork, consequences and determination, stress and recovery, clocks, progression,
+  fortune rolls and flashbacks, and the commands that play them on this game. Based on the
+  Charge SRD under CC BY 4.0 and Blades in the Dark under CC BY 3.0.
+license: CC-BY-4.0
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages/tree/main/charge-wiki
+keywords: [charge, rules, wiki, forged in the dark]
+category: Characters
+locale: en
+
+# A content pack: wiki pages only, no objects or softcode. Softcode never reads these pages. The sheet that
+# plays these rules is sheet-charge; this package does not need it, and it does not need this one.
+wiki:
+  - page: category:charge_start_here
+    title: Start here — Charge
+    pin: true
+    file: wiki/category/charge_start_here.md
+
+  - page: help:charge_license_notice
+    title: Charge License Notice
+    requires:
+      edit: [wiki.admin]
+      delete: [wiki.admin]
+    file: wiki/help/charge_license_notice.md
+
+  - page: main:charge_the_game
+    title: The Game
+    categories: [charge_start_here]
+    file: wiki/main/charge_the_game.md
+
+  - page: main:charge_character_creation
+    title: Character Creation
+    categories: [charge_start_here]
+    file: wiki/main/charge_character_creation.md
+
+  - page: main:charge_action_rolls
+    title: Action Rolls
+    categories: [charge_start_here]
+    file: wiki/main/charge_action_rolls.md
+
+  - page: main:charge_momentum
+    title: Momentum
+    categories: [charge_start_here]
+    file: wiki/main/charge_momentum.md
+
+  - page: main:charge_teamwork
+    title: Teamwork
+    categories: [charge_start_here]
+    file: wiki/main/charge_teamwork.md
+
+  - page: main:charge_consequences
+    title: Consequences
+    categories: [charge_start_here]
+    file: wiki/main/charge_consequences.md
+
+  - page: main:charge_stress_and_recovery
+    title: Stress and Recovery
+    categories: [charge_start_here]
+    file: wiki/main/charge_stress_and_recovery.md
+
+  - page: main:charge_clocks
+    title: Clocks
+    categories: [charge_start_here]
+    file: wiki/main/charge_clocks.md
+
+  - page: main:charge_progression
+    title: Progression
+    categories: [charge_start_here]
+    file: wiki/main/charge_progression.md
+
+  - page: main:charge_fortune_rolls_and_flashbacks
+    title: Fortune Rolls and Flashbacks
+    categories: [charge_start_here]
+    file: wiki/main/charge_fortune_rolls_and_flashbacks.md
+
+  - page: main:charge_on_this_game
+    title: Charge on this game
+    categories: [charge_start_here]
+    file: wiki/main/charge_on_this_game.md
