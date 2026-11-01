@@ -76,4 +76,4 @@ When you help or hinder someone, roll+Bond with them. On a 10+ they take +1 or -
 
 ---
 
-*Move text from Dungeon World by Sage LaTorra and Adam Koebel, under CC BY 3.0. See [[Dungeon World Notice|help:pbta_dungeon_world_notice]].*
+*Move text from Dungeon World by Sage LaTorra and Adam Koebel, under CC BY 3.0. See [[Dungeon World Notice|help:pbta_license_notice]].*

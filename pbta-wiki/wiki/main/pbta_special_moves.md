@@ -60,4 +60,4 @@ When you return to a civilized place in which you’ve caused trouble before, ro
 
 ---
 
-*Move text from Dungeon World by Sage LaTorra and Adam Koebel, under CC BY 3.0. See [[Dungeon World Notice|help:pbta_dungeon_world_notice]].*
+*Move text from Dungeon World by Sage LaTorra and Adam Koebel, under CC BY 3.0. See [[Dungeon World Notice|help:pbta_license_notice]].*
