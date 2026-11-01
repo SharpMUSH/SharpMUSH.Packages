@@ -1081,14 +1081,27 @@ objects:
         Modes, mega-stunts, machines, inventions and brainstorms on the Fate sheet: +mode, +machine, +invent and +brainstorm.
       SEE: |-
         Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`ATOMIC-ROBO: |-
+        mode machine invent brainstorm sheet
       SEE`MODE: |-
-        sheet machine invent brainstorm
+        atomic-robo sheet machine invent brainstorm
       SEE`MACHINE: |-
         mode check
       SEE`INVENT: |-
         mode brainstorm
       SEE`BRAINSTORM: |-
         invent
+      HELP`ATOMIC-ROBO: |-
+        This game plays pulp action science and giant robots, an unofficial take on the Atomic Robo RPG, on top of the Fate sheet \(`+help sheet`\).
+
+        - `+help mode`: your three modes, which rate your skills, and mega-stunts for weird modes such as Robot or Pilot.
+        - `+help machine`: giant robots, tanks and starships, and what scale does in a fight.
+        - `+help invent`: building a gadget, its catches and its flaw.
+        - `+help brainstorm`: working out what is going on, three facts and a hypothesis.
+
+        A new character starts with `+mode/list`, then `+mode/set <mode>=<rating>` three times, then `+sheet/aspect` and `+sheet/stunt`. `+sheet` shows it all.
+
+        `+help mode credits` names the sources this is based on.
       HELP`MODE: |-
         On this game your skills come from three modes, rated Good \(+3\), Fair \(+2\) and Average \(+1\). Each mode holds a set of skills; a skill takes the rating of your best mode that holds it.
 

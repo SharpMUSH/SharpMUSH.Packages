@@ -12,7 +12,7 @@ Depends on [`sheet-fate`](../sheet-fate/) 1.1 or later. Bridges add the rest:
 
 | Bridge | Adds |
 |---|---|
-| [`atomic-robo-help`](../atomic-robo-help/) | the `+help mode`, `+help machine`, `+help invent` and `+help brainstorm` topics |
+| [`atomic-robo-help`](../atomic-robo-help/) | the `+help atomic-robo`, `+help mode`, `+help machine`, `+help invent` and `+help brainstorm` topics |
 | [`atomic-robo-config`](../atomic-robo-config/) | the settings and the `modes` and `scales` tables in `+config atomic-robo` |
 
 The Fate sheet's own bridges keep working: [`sheet-fate-chargen`](../sheet-fate-chargen/) ties mode,
