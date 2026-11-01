@@ -1649,7 +1649,7 @@ objects:
                 if(cand(strlen(%q<boost_pick>),member(edit(%i0,|,%b),%q<boost_pick>)),setq(boost_out,%q<boost_out> boost~%q<boost_pick>~%q<boost_parent>),setq(boost_bad,%q<boost_bad> [edit(%i0,|,/)]))])))][
             setq(boost_chosen,iter(%q<boost_out>,elements(%i0,2,~)))][
             switch(1,
-              cor(words(%q<boost_bad>),words(%q<boost_left>)), #-1 [u(%!/FUN`BUILD`BOOST`ASK,%q<boost_slots>,%2)],
+              cor(words(%q<boost_bad>),words(%q<boost_left>)), #-1 [u(%!/FUN`BUILD`BOOST`ASK,%q<boost_slots>,%2,if(%3,iter(json_map(%!/FUN`BUILD`FLAW,json_query(%0,extract,$.system.flaws),%b),capstr(elements(%i0,2,~)))))],
               neq(words(%q<boost_chosen>),words(setunion(%q<boost_chosen>,))), #-1 Each boost goes to a different attribute.,
               squish(%q<boost_out> [if(%3,json_map(%!/FUN`BUILD`FLAW,json_query(%0,extract,$.system.flaws),%b))]))])]
         flags: [funsyntax]
@@ -1665,12 +1665,12 @@ objects:
         flags: [funsyntax]
       FUN`BUILD`BOOST`ASK:
         value: |-
-          @@(%0 the slots, %1 the set)[
+          @@(%0 the slots, %1 the set, %2 the attributes that take a flaw)[
           setq(ask_open,squish(iter(%0,if(gt(words(edit(%i0,|,%b)),1),if(eq(words(edit(%i0,|,%b)),6),any,itemize(edit(%i0,|,%b),%b,or))),%b,|),|))][
           setq(ask_fixed,squish(iter(%0,if(eq(words(edit(%i0,|,%b)),1),capstr(%i0)))))][
           setq(ask_example,)][
           null(iter(%0,if(gt(words(edit(%i0,|,%b)),1),setq(ask_example,%q<ask_example> [first(setdiff(edit(%i0,|,%b),%q<ask_example> %q<ask_fixed>))]))))][
-          Name [words(%q<ask_open>,|)] [if(eq(words(%q<ask_open>,|),1),attribute,attributes)][if(strmatch(edit(%q<ask_open>,|,%b),any*),if(gt(words(%q<ask_open>,|),1),%, each different),: [itemize(%q<ask_open>,|,then)])].[if(words(%q<ask_fixed>),%b[itemize(%q<ask_fixed>)] [if(gt(words(%q<ask_fixed>),1),come,comes)] fixed.)] Example: +build/boost %1=[trim(%q<ask_example>)][if(strmatch(%1,ancestry),. Or two free boosts and no flaw: +build/boost ancestry=free str dex)]]
+          Name [words(%q<ask_open>,|)] [if(eq(words(%q<ask_open>,|),1),attribute,attributes)][if(strmatch(edit(%q<ask_open>,|,%b),any*),if(gt(words(%q<ask_open>,|),1),%, each different),: [itemize(%q<ask_open>,|,then)])].[if(words(%q<ask_fixed>),%b[itemize(%q<ask_fixed>)] [if(gt(words(%q<ask_fixed>),1),come,comes)] fixed.)][if(words(%2),%b[itemize(%2)] [if(gt(words(%2),1),take,takes)] a flaw.)] Example: +build/boost %1=[trim(%q<ask_example>)][if(strmatch(%1,ancestry),. Or two free boosts and no flaw: +build/boost ancestry=free str dex)]]
         flags: [funsyntax]
       FUN`BUILD`BOOST`ALTERNATE:
         value: |-
