@@ -3,7 +3,7 @@ package: pf2e
 title: Pathfinder 2e rules
 version: "0.2.0"
 authors: [SharpMUSH]
-description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +sheet, +check and +pf2e."
+description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, encounters that keep their own copy of each character (+enc), exploration, skill challenges, Recall Knowledge, and audited awards with levels and runes (+pf2e/award)."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [pf2e, pathfinder, rules, dice]
@@ -3075,6 +3075,180 @@ objects:
               Skills,firstof(itemize(squish([iter(json_map(%!/FUN`JSON`KEY,%q<show_options>,%b),[u({{commands}}/FUN`SHOW`STAT,%i0)] DC [json_query(%q<show_options>,extract,$.%i0)],%b,|)]|[if(isint(json_query(%q<vp>,extract,$.dc)),any other skill DC [json_query(%q<vp>,extract,$.dc)])],|),|),tone(muted,none set yet)))],
             json_query(%q<vp>,extract,$.name))]
         flags: [funsyntax]
+  # The help topics, a HELP tree for +help: HELP`PF2E`BUILD is "pf2e build". The pf2e-help package
+  # registers this object with +help. Bodies are evaluated, so a literal bracket is \[ and \].
+  - ref: pf2e_help
+    type: thing
+    name: PF2e Help
+    location: "{{commands}}"
+    attributes:
+      HELP: |-
+        Pathfinder Second Edition: building a character, the sheet, checks, encounters, exploration, skill challenges, Recall Knowledge, awards and levels.
+      SEE: |-
+        Cross-references. One leaf per topic.
+      HELP`PF2E: |-
+        This game plays Pathfinder Second Edition, with the rules of Player Core, Player Core 2, GM Core and Monster Core as Foundry VTT's pf2e system has them.
+
+        - `+build` makes your character, one choice at a time: `+help pf2e build`.
+        - `+sheet` shows it and `+check` rolls against it: `+help pf2e sheet`, `+help pf2e check`.
+        - `+enc` runs a fight: `+help pf2e enc`.
+        - `+explore`, `+challenge` and `+recall` cover exploration, skill challenges and Recall Knowledge.
+        - `+dc` gives the DC for a task of a level.
+        - Staff give experience and money with `+pf2e/award`, and you spend them with `+build/level` and `+build/upgrade`: `+help pf2e advance`.
+
+        Your sheet is a ledger: every choice, award and purchase is an entry, and nothing is ever overwritten. Staff read it with `+pf2e/ledger`.
+      SEE`PF2E: |-
+        pf2e build
+        pf2e sheet
+        pf2e enc
+      HELP`PF2E`BUILD: |-
+        `+build` makes your character. Type it on its own to see every step, what is done and what to type next.
+
+        ## Steps
+
+        - `+build/ancestry <name>`, `+build/heritage <name>`, `+build/background <name>`, `+build/class <name>`. The start of a name is enough when only one fits: `+build/heritage ancient`. What each brings comes with it.
+        - `+build/boost ancestry=<attributes>`, `+build/boost background=<attributes>`, `+build/boost class=<attribute>`, `+build/boost 1=<four attributes>`. Type a set on its own, such as `+build/boost background`, to see what it asks for.
+        - `+build/skills <skill> <skill> ...`: every skill your class lets you choose, in one line. The skills you are already trained in show on `+build/list skills`.
+        - `+build/language <name> ...`: your extra languages, in one line.
+        - `+build/feat <slot>=<name>`: a feat for a slot, such as `+build/feat class-1=Sudden Charge`. `+build/list feats class-1` lists only the feats whose prerequisites you meet.
+        - `+build/choose <number or name>=<option>`: a choice a feature asks for, such as `+build/choose instinct=giant`. `+build/list choice instinct` lists the options.
+        - `+build/spell <name>`, `+build/unspell <name>`: the spells a spontaneous caster or a wizard knows.
+
+        ## Gear
+
+        You start with 15 gp. `+build/list gear <text>` finds items, `+build/buy <item>\[=<count>\]`, `+build/sell <item>\[=<count>\]`, `+build/equip <item>=<held, worn or carried>`. Once the sheet is finished, selling gives half the price.
+
+        ## Along the way
+
+        `+build/info <name>` describes anything. `+build/undo <step>` takes a step back, with everything that came with it. `+build/done` finishes the sheet; after that only staff change a choice already made, and each new level adds its own steps.
+
+        Example:
+
+        `+build/class Fighter`
+
+        Output: `\[PF2E\] Done: Class: Fighter.`
+      SEE`PF2E`BUILD: |-
+        pf2e sheet
+        pf2e advance
+      HELP`PF2E`SHEET: |-
+        `+sheet` shows your character: level and experience, ancestry, background, class, attributes, hit points, AC, Speed, class DC, spell attack and DC, every skill and save with its rank and modifier, Lores, Strikes, languages, money, gear, spells, feats and features, actions and conditions.
+
+        - `+sheet` shows your own; staff add a name: `+sheet Amiri`.
+        - Rules the game does not apply yet are listed at the end, so a sheet never looks finished when it is not.
+      SEE`PF2E`SHEET: |-
+        pf2e check
+        pf2e build
+      HELP`PF2E`CHECK: |-
+        `+check <statistic>\[=<DC>\]` rolls a d20 with every modifier that counts, and against a DC tells you the degree of success.
+
+        - A statistic is a skill, a save, Perception or a Lore: `+check athletics`, `+check will=18`, `+check society lore=15`.
+        - The modifiers that counted are listed under the roll; Foundry's stacking rules decide which.
+
+        Example:
+
+        `+check athletics=15`
+
+        Output: `\[PF2E\] Amiri rolls Athletics: 1d20\[12\] + 7 = 19 vs DC 15: Success.`
+      SEE`PF2E`CHECK: |-
+        pf2e sheet
+        pf2e dc
+      HELP`PF2E`ENC: |-
+        `+enc` runs a fight in the room. The encounter keeps its own copy of everyone in it: hit points, conditions, dying and the consumables used never touch a sheet, and the encounter stays as it is, across days, until whoever runs it ends it.
+
+        ## Starting
+
+        - `+enc/start` begins one; you run it.
+        - `+enc/join` puts your character in. The GM adds others with `+enc/add <player>` and creatures with `+enc/add <creature>\[=<count>\]`, such as `+enc/add Goblin Warrior=3`.
+        - `+enc/init` rolls initiative for everyone who has none: Perception, or Stealth when Avoiding Notice, and +1 when a Scout is with you. `+enc/init <who>=<skill>` rolls one again.
+        - `+enc` shows the order, hit points, conditions and the threat.
+
+        ## Turns
+
+        `+enc/next` ends the turn and starts the next. Frightened goes down, persistent damage is rolled with its flat check, timed conditions run out, and a dying character makes a recovery check. `+enc/delay` waits until after the next in line.
+
+        ## Acting
+
+        - `+enc/strike <target>\[=<Strike>\]`: a Strike, with the multiple attack penalty, against the target's AC; damage on a hit, doubled on a critical hit. The GM names the attacker: `+enc/strike 2:Amiri=Jaws`.
+        - `+enc/check <who>=<statistic> \[vs <DC>\]`: a check or save with the combatant's conditions.
+        - `+enc/use <item>`: drinks, eats or uses a consumable. It comes off the encounter's copy, and a healing item heals. The GM names who: `+enc/use Lini=healing potion`.
+
+        ## For the GM
+
+        `+enc/damage <who>=<amount or formula>`, `+enc/heal <who>=<amount or formula>`, `+enc/cond <who>=<condition>\[ <value>\]\[/<rounds>\]` (a value of 0 takes it off), `+enc/persist <who>=<formula> <type>`, `+enc/undo`, `+enc/redo` and `+enc/end`.
+
+        Damage to a dying character raises dying by 1, or 2 on a critical hit; at dying 4 they die. Healing wakes them, wounded 1 more.
+      SEE`PF2E`ENC: |-
+        pf2e explore
+        pf2e recall
+      HELP`PF2E`EXPLORE: |-
+        `+explore` shows what everyone in the room is doing while exploring.
+
+        - `+explore/set <activity>`: Avoid Notice, Defend, Detect Magic, Follow the Expert, Investigate, Repeat a Spell, Search, Scout, Hustle or Track. Avoid Notice rolls Stealth for initiative, and Scout gives every character +1 to it.
+        - `+explore/stop` stops.
+        - `+explore/search <DC>`: the GM's secret Perception check for everyone here who is Searching. Only the GM sees the rolls.
+      SEE`PF2E`EXPLORE: |-
+        pf2e enc
+        pf2e challenge
+      HELP`PF2E`CHALLENGE: |-
+        `+challenge` runs a skill challenge with victory points, as GM Core describes them.
+
+        - `+challenge/start <name>=<points>`: a challenge won at that many victory points.
+        - `+challenge/option <skill>=<DC>`: a skill that helps, and its DC; `*=<DC>` for any other skill, and a DC of 0 takes one off.
+        - `+challenge/roll <skill>`: one check a round each. A critical success earns 2 points, a success 1, a failure none, and a critical failure loses 1.
+        - `+challenge/round` starts the next round; `+challenge/end` ends it.
+      SEE`PF2E`CHALLENGE: |-
+        pf2e explore
+        pf2e dc
+      HELP`PF2E`RECALL: |-
+        `+recall <creature>\[=<skill>\]` tries to remember what you know about a creature in the encounter or in the books.
+
+        - The skill comes from the creature's traits: Arcana for a dragon, Religion for undead, Society for a humanoid. A Lore that fits works too, at an easier DC: `+recall goblin warrior=goblin lore`.
+        - The DC is the creature's level DC, harder for uncommon, rare and unique creatures.
+        - A success tells you what it is, its weakest save and its weaknesses, resistances and immunities; a critical success adds its AC, best save and abilities. On a failure you recall nothing. The GM running the encounter sees every roll.
+      SEE`PF2E`RECALL: |-
+        pf2e enc
+        pf2e dc
+      HELP`PF2E`DC: |-
+        `+dc <level> \[difficulty\] \[rarity\]` gives a DC from GM Core's table.
+
+        Difficulties: incredibly easy, very easy, easy, hard, very hard, incredibly hard. Rarities: uncommon, rare, unique.
+
+        Example:
+
+        `+dc 5 hard`
+
+        Output: `\[PF2E\] DC 24 for a level 5 task, hard.`
+      SEE`PF2E`DC: |-
+        pf2e check
+        pf2e challenge
+      HELP`PF2E`ADVANCE: |-
+        Experience and money come from staff, and you spend them.
+
+        - `+build/level`: a new level, for 1000 XP. The XP is spent, and `+build` then lists what the level brings: feats, boosts, skill increases.
+        - `+build/upgrade <item>=<rune>`: a fundamental rune on a weapon or armor. A weapon takes `+1`, `+2` or `+3` and `striking`, `greater striking` or `major striking`; armor takes `+1`, `+2` or `+3` and `resilient`, `greater resilient` or `major resilient`. You pay the new rune's price less the old one's, and a rune above your level is refused.
+        - `+build/buy` and `+build/sell` keep working after the sheet is finished.
+
+        `+sheet` shows your XP beside your level, and every award is in your ledger with the reason staff gave.
+
+        Example:
+
+        `+build/upgrade greataxe=+1`
+
+        Output: `\[PF2E\] Done: Greataxe has +1 potency now, for 35 gp.`
+      SEE`PF2E`ADVANCE: |-
+        pf2e staff
+        pf2e build
+      HELP`PF2E`STAFF: |-
+        `+pf2e` is for staff: awards, changing a sheet by hand and reading the rules feed.
+
+        - `+pf2e/award <players>=<amount> <unit> <reason>`: experience (`xp`) or money (`pp`, `gp`, `sp`, `cp`) for each player named, written to each ledger with the reason and who gave it. A negative amount takes away: `+pf2e/award Amiri Lini=80 xp Drove off the goblins`.
+        - `+pf2e/level <player>/<level>`, `+pf2e/ability <player>/<attribute>=<modifier>`, `+pf2e/rank <player>/<statistic>=<rank>`, `+pf2e/grant <player>/<pack>/<item>\[=<value>\]` and `+pf2e/revoke <player>/<entry>` add entries to a ledger.
+        - `+pf2e/ledger <player>` lists a ledger's entries.
+        - `+pf2e/update` reads Foundry's content again from the feed.
+      SEE`PF2E`STAFF: |-
+        pf2e advance
+        pf2e
+
   - ref: data_actions
     type: thing
     name: "PF2e Data: actions"

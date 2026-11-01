@@ -1,0 +1,35 @@
+format: "1.16"
+package: pf2e-help
+title: "Pathfinder 2e: +help topics"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Puts the Pathfinder 2e topics into +help: registers the pf2e package's help with the +help librarian."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [pathfinder, pf2e, help, bridge]
+category: Characters
+requires_server: ">=0.1"
+
+# A bridge: pf2e keeps its topics on its own help object, and plus-help reads any object registered
+# with its librarian. This package is that registration; uninstalling it takes the topics out of
+# +help, and neither package changes.
+depends:
+  - package: pf2e
+    version: ">=0.2 <1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH.Packages
+      path: pf2e/
+      branch: main
+  - package: plus-help
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+
+objects:
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`PF2E: |-
+        {{pf2e/pf2e_help}}
