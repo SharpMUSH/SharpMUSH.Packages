@@ -664,8 +664,13 @@ objects:
             level,%1,
             abilities,fold(me/FUN`ACTOR`ABILITY,str dex con int wis cha,json(object)),
             skills,%q<actor_ranks>,
-            system,json(object,skills,%q<actor_ranks>),
+            system,json(object,skills,%q<actor_ranks>,details,json(object,class,json(object,trait,json(string,u(FUN`ACTOR`SLUG,%q<check_class>))),ancestry,json(object,trait,json(string,u(FUN`ACTOR`SLUG,%q<check_ancestry>))),level,json(object,value,%1))),
             conditions,fold(me/FUN`ACTOR`CONDITION,%2,json(object)))]
+        flags: [funsyntax]
+      FUN`ACTOR`SLUG:
+        value: |-
+          @@(%0 pack~id~index of a granted item: its slug)[
+          if(strlen(%0),json_query(get(u(DATA`PACK`[first(%0,~)])/ITEM`[elements(%0,2,~)]`PREP),extract,$.slug))]
         flags: [funsyntax]
       # fold callbacks, each a merge patch: %0 the object so far, %1 the next statistic, attribute or grant; actor_entries the entries.
       # A statistic's rank is the higher of its rank entries' and every rank a granted item sets.
@@ -909,7 +914,7 @@ objects:
           @@(%0 the grant's index in check_ledger)[
           if(strlen(%0),
             [setq(choices_out,firstof(json_query(%q<check_ledger>,extract,$\[%0\].choices),json(object)))][
-            null(iter(graball(%q<check_entries>,choice~[json_query(%q<check_ledger>,extract,$\[%0\].n)]|*),setq(choices_out,json_mod(%q<choices_out>,patch,json(object,after(elements(%i0,2,~),|),json(string,json_query(%q<check_ledger>,extract,$\[[elements(%i0,7,~)]\].value)))))))]%q<choices_out>,
+            null(iter(graball(%q<check_entries>,choice~[json_query(%q<check_ledger>,extract,$\[%0\].n)]|*),setq(choices_out,json_mod(%q<choices_out>,patch,json(object,after(elements(%i0,2,~),|),json_query(%q<check_ledger>,extract,$\[[elements(%i0,7,~)]\].value))))))]%q<choices_out>,
             json(object))]
         flags: [funsyntax]
       # option:value for each ChoiceSet with a roll option that has a selection; a selected item gives its slug.
@@ -1582,7 +1587,7 @@ objects:
         value: |-
           @@(%0 a GrantItem, %1 a flag or nothing; child_ registers)[
           setq(child_uuid,json_query(%0,extract,$.uuid))][
-          if(cand(cor(not(strlen(%1)),strmatch(%q<child_uuid>,*rulesSelections.%1\x7D*)),u({{core}}/FUN`PREDICATE`TEST,firstof(json_query(%0,get,predicate),json(array)),%q<child_options>)),
+          if(cand(cor(not(strlen(%1)),strmatch(%q<child_uuid>,*rulesSelections.%1\}*)),u({{core}}/FUN`PREDICATE`TEST,firstof(json_query(%0,get,predicate),json(array)),%q<child_options>)),
             [setq(child_uuid,u({{core}}/FUN`FORMULA`INJECT,%q<child_uuid>,%q<child_data>))][
             setq(child_found,u(%!/FUN`BUILD`UUID,%q<child_uuid>))][
             if(strlen(%q<child_found>),%q<child_found>~%q<child_base>~[edit(u({{core}}/FUN`FORMULA`INJECT,firstof(json_query(%0,extract,$.preselectChoices),json(object)),%q<child_data>),%b,\\u0020)])])]
@@ -1850,8 +1855,8 @@ objects:
       FUN`BUILD`CHOICE`LISTED:
         value: |-
           @@(%1 one listed choice: {value, label} or a plain value)[
-          setq(listed_value,firstof(json_query(%1,get,value),if(strmatch(left(%1,1),\x7B),,%1)))][
-          if(strmatch(left(%q<listed_value>,1),"),%q<listed_value>,if(strmatch(left(%q<listed_value>,1),\x7B),%q<listed_value>,json(string,%q<listed_value>)))]^[u(%!/FUN`BUILD`CHOICE`LABEL,%q<listed_value>,json_query(%1,extract,$.label))]
+          setq(listed_value,firstof(json_query(%1,get,value),if(strmatch(left(%1,1),\{),,%1)))][
+          if(strmatch(left(%q<listed_value>,1),"),%q<listed_value>,if(strmatch(left(%q<listed_value>,1),\{),%q<listed_value>,json(string,%q<listed_value>)))]^[u(%!/FUN`BUILD`CHOICE`LABEL,%q<listed_value>,json_query(%1,extract,$.label))]
         flags: [funsyntax]
       FUN`BUILD`CHOICE`CONFIG:
         value: |-
@@ -1866,7 +1871,7 @@ objects:
       FUN`BUILD`CHOICE`ITEMS:
         value: |-
           @@(%0 the ChoiceSet)[
-          setqm(items_filter,json_query(%0,extract,$.choices.filter),items_slugs,t(json_query(%0,extract,$.choices.slugsAsValues)))][
+          setqm(items_filter,u({{core}}/FUN`FORMULA`INJECT,json_query(%0,extract,$.choices.filter),json(object,actor,%q<check_actor>)),items_slugs,t(json_query(%0,extract,$.choices.slugsAsValues)))][
           setq(items_packs,switch(json_query(%0,extract,$.choices.itemType),spell,spells,feats class-features))][
           setq(items_keys,u({{core}}/FUN`ITEM`INDEXED,json_map({{core}}/FUN`RULE`SELECTOR,%q<items_filter>,%b)))][
           trim(iter(%q<items_packs>,u(%!/FUN`BUILD`CHOICE`ITEMS`OF,%i0),%b,|),|)]
@@ -1888,7 +1893,7 @@ objects:
           @@(%0 the value as JSON, %1 its label)[
           switch(1,
             cand(strlen(%1),not(strmatch(%1,PF2E.*))), %1,
-            strmatch(left(%0,1),\x7B), capstr(firstof(json_query(%0,extract,$.slug),json_query(%0,extract,$.label),%0)),
+            strmatch(left(%0,1),\{), capstr(firstof(json_query(%0,extract,$.slug),json_query(%0,extract,$.label),%0)),
             [setq(label_value,json_query(%0,extract,$))][
             if(strmatch(%q<label_value>,Compendium.*.Item.*),after(%q<label_value>,.Item.),u(%!/FUN`BUILD`CAMEL`WORDS,edit(firstof(%q<label_value>,%0),-,%b)))])]
         flags: [funsyntax]
