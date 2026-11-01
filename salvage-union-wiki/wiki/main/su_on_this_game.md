@@ -5,12 +5,13 @@ This game keeps your Salvage Union pilot, mech and Union Crawler for you. `+help
 - `+sheet/chargen` lists the steps of making a pilot and their mech, and which are done.
 - `+sheet/class <class>`, `+sheet/learn <ability>` and `+sheet/take <equipment>` build your pilot; `+sheet/callsign`, `/background`, `/motto`, `/keepsake` and `/appearance` write the details.
 - `+sheet` shows your sheet; `+sheet/hp` and `+sheet/ap` keep count in play, and `+sheet/use <equipment>` spends a use.
-- `+sheet/learn` after approval spends Training Points; `+sheet/ledger` lists every entry that built your sheet, and staff can take one back.
-- `+sheet/downtime` restores HP, AP, re-rolls and uses after a week of downtime.
+- `+sheet/learn` after approval spends the Training Points staff award; `+sheet/ledger` lists every entry that built your sheet, and staff can take one back.
+- After a week of downtime, staff run `+sheet/downtime`: HP, AP, re-rolls and uses come back, and you may take one piece of equipment from the Armoury.
 
 ## Your mech
 
 - `+mech/chassis <chassis>` and `+mech/install <system or module>` build it; a new pilot builds from Tech 1 parts within 20 scrap, chassis included.
+- Once approved, `+mech/craft <part>` gets a new chassis, system or module from the Union Crawler for its Salvage Value in scrap.
 - `+mech` shows it; `+mech/sp`, `/ep` and `/heat` keep count, `+mech/use` spends a use, and `+mech/vent` cools it.
 
 ## Rolling
@@ -21,7 +22,7 @@ This game keeps your Salvage Union pilot, mech and Union Crawler for you. `+help
 
 ## The Union Crawler
 
-`+crawler` shows the crawler the pilots share: its type, Tech Level, bays, scrap in the hold and upkeep.
+`+crawler` shows the crawler the pilots share: its type, Tech Level, bays, scrap in the hold and upkeep. `+crawler/unload` moves your mech's scrap into the hold, `+crawler/trade` trades it at the Trading Bay, and `+crawler/ledger` lists every change to it.
 
 ## Encounters
 

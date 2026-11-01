@@ -32,17 +32,18 @@ Every sheet package answers `+sheet` and `+check`. Install one per game.
 | `+sheet/learn <ability or tree>` | player | Learns an ability, or a tree's next one; costs TP once approved |
 | `+sheet/unlearn <ability>` | player | Forgets the last of a tree |
 | `+sheet/trees [<class>]`, `/ability <ability>` | all | The trees, with what you have marked; one ability's text |
-| `+sheet/take <equipment>`, `/drop` | player | The inventory; a new pilot takes two pieces of Tech 1 equipment |
+| `+sheet/take <equipment>`, `/drop` | player | The inventory; a new pilot takes two pieces of Tech 1 equipment, an approved one one piece from the Armoury each downtime |
 | `+sheet/item <equipment>`, `/list [<tech>]` | all | One piece of equipment; the equipment of a Tech Level |
 | `+sheet/use <equipment>` | player | Spends one use |
 | `+sheet/hp`, `/ap` `+<n>\|-<n>\|<n>\|reset` | player | The meters |
 | `+sheet/callsign`, `/background`, `/motto`, `/keepsake`, `/appearance <text>` | player | The details |
-| `+sheet/downtime [<name>]` | player | HP, AP, uses and re-rolls back; the mech repaired, recharged and cool |
+| `+sheet/downtime [<name>]` | keeper | HP, AP, uses, re-rolls and the Armoury's pick back; the mech repaired, recharged and cool |
 | `+sheet/ledger [<name>]` | all | Every entry that built the sheet |
-| `+sheet/tp <name>=<n>`, `/max <name>/<hp\|ap\|slots>=<n>` | keeper | Training Points; a pilot's most |
+| `+sheet/tp <name>=+<n> [<reason>]`, `/max <name>/<hp\|ap\|slots>=<n>` | keeper | Training Points, with the reason in the ledger; a pilot's most |
 | `+sheet/revoke <name>/<n>`, `/clear <name>` | keeper | Takes back one ledger entry, or all of them |
 | `+mech [<name>]` | all | The mech |
-| `+mech/chassis <chassis>`, `/install`, `/remove <part>` | player | Builds it; a new pilot uses Tech 1 parts within 20 scrap, chassis included |
+| `+mech/chassis <chassis>`, `/install`, `/remove <part>` | unapproved player, keeper | Builds it; a new pilot uses Tech 1 parts within 20 scrap, chassis included |
+| `+mech/craft <part>[=<scrap tech>]` | approved player | A new chassis, system or module from the crawler, for its Salvage Value in scrap from the hold |
 | `+mech/name`, `/quirk <text>` | player | Its pattern name and quirk |
 | `+mech/sp`, `/ep`, `/heat`, `/vent`, `/use <part>` | player | Play |
 | `+mech/scrap <tech>=+<n>\|-<n>` | player | Scrap in the cargo |
@@ -51,8 +52,9 @@ Every sheet package answers `+sheet` and `+check`. Install one per game.
 | `+check/push`, `/reroll <background\|keepsake>`, `/motto <name>`, `/heat` | player | The re-rolls and the heat check |
 | `+check/table [<table>]` | all | A roll on a table; nested tables roll on |
 | `+crawler`, `/bay [<bay>]` | all | The Union Crawler and its bays |
-| `+crawler/unload`, `/scrap <tech>=+<n>\|-<n>` | approved player | Scrap from the mech into the hold, or changed |
-| `+crawler/name`, `/type`, `/weapon`, `/tech`, `/sp`, `/pool`, `/upkeep`, `/upgrade` | keeper | Runs it |
+| `+crawler/unload`, `/trade <n> <tech>=<tech>` | approved player | Scrap from the mech into the hold; scrap traded at its value |
+| `+crawler/ledger` | all | Every change to the hold, the upgrade pool and the Tech Level |
+| `+crawler/scrap <tech>=+<n> [<reason>]`, `/name`, `/type`, `/weapon`, `/tech`, `/sp`, `/pool`, `/upkeep`, `/upgrade` | keeper | Runs it |
 | `+encounter [<n>]`, `/start [<title>]`, `/join [<n>]`, `/leave [<n>]`, `/use <n>` | all | Encounters |
 | `+encounter/add`, `/remove`, `/keep <name>[=<n>]`, `/end [<n>]` | GM or keeper | Runs one |
 
@@ -77,6 +79,16 @@ The sheet's own leaves (`CLASS`, `ABILITIES`, `GEAR`, `TP`, `PATH`, `DETAIL`*`, 
 (`FUN`LEDGER`REBUILD`). Before approval, choosing a `set` leaf again rewrites the chargen entry,
 and taking back a chargen entry wipes it, so the ledger keeps the choices that were made. After
 approval every change is a new entry.
+
+## Advancement
+
+What a pilot, their mech and the crew gain is audited:
+
+- Training Points come only from staff (`+sheet/tp <name>=+<n> <reason>`) and from Duties, each a `tp` entry with its note; `+sheet/learn` spends them in entries of its own.
+- Scrap enters the Union Crawler's hold from staff (`+crawler/scrap`), a pilot's `+crawler/unload`, and Duties. `+mech/craft` spends it on chassis, systems and modules at the crawler's Tech Level or lower, `+crawler/trade` swaps it, and upkeep and upgrades move it into the pool and the Tech Level.
+- Equipment comes from the Armoury, one piece each downtime, or from staff.
+
+The crawler's ledger is `CRAWLER`LEDGER`<n>` on the store: JSON with `kind` (`scrap`, `pool` or `tech`), `n`, `by`, `at`, `for` (the pilot), `note`, and `tech` and `amount`. Amounts are the change made, and no entry is rewritten or removed.
 
 ## Encounters
 

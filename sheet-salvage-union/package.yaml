@@ -1,7 +1,7 @@
 format: "1.16"
 package: sheet-salvage-union
 title: "Salvage Union sheet (unofficial)"
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
 description: "An unofficial Salvage Union pilot and mech sheet: a class, abilities bought down their trees with training points, HP, AP and pilot equipment; a mech built from a chassis, systems and modules, with SP, EP and heat; and the Union Crawler the pilots share. +check rolls the one d20 against the core mechanic table, spends the AP, EP and heat it costs, and lets a mech Push for a re-roll and a heat check. The Core Book's abilities, chassis, systems, modules, equipment and tables come from the Salvage Union (Unofficial) Foundry VTT system, under the Salvage Union Open Game Licence 1.0b."
 license: MIT
@@ -247,6 +247,8 @@ objects:
         MECH`REMOVE
       DATA`ROUTE`MECH`USE: |-
         MECH`USE
+      DATA`ROUTE`MECH`CRAFT: |-
+        MECH`CRAFT
       DATA`ROUTE`MECH`NAME: |-
         MECH`DETAIL
       DATA`ROUTE`MECH`QUIRK: |-
@@ -307,6 +309,10 @@ objects:
         CRAWLER`UPGRADE
       DATA`ROUTE`CRAWLER`BAY: |-
         CRAWLER`BAY
+      DATA`ROUTE`CRAWLER`LEDGER: |-
+        CRAWLER`LEDGER
+      DATA`ROUTE`CRAWLER`TRADE: |-
+        CRAWLER`TRADE
       DATA`ROUTE`ENCOUNTER`BARE: |-
         ENCOUNTER`SHOW
       DATA`ROUTE`ENCOUNTER`START: |-
@@ -515,7 +521,7 @@ objects:
       # count from the settings.
       INC`SHEET`TAKE:
         value: |-
-          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/take <equipment>%, such as +sheet/take first aid kit. +sheet/list shows it all.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_argument>; @include %!/INC`NEED`GATE; @assert cor(not(%q<chargen>),not(strlen(u(%!/FUN`GATE`EDIT,%#)))); @include/args %!/INC`NEED`FOUND=kind,EQUIPMENT,typed,%q<sheet_what>,among,; @assert strlen(%q<found_key>); think setq(take_gear,get(%q<sheet_who>/SALVAGE`GEAR)); @assert lt(words(%q<take_gear>),u(%!/FUN`MAX`SLOTS,%q<sheet_who>))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s [u(%!/FUN`MAX`SLOTS,%q<sheet_who>)] inventory slots are full. +sheet/drop <equipment> frees one.,warn); @assert cor(not(%q<chargen>),eq(get({{data}}/EQUIPMENT`%q<found_key>`TECH),1))=@pemit %#=notice(SHEET,A new pilot chooses Tech 1 equipment. +sheet/list 1 shows it.,warn); @assert cor(not(%q<chargen>),lt(words(%q<take_gear>),get(%!/DATA`CONFIG`GEAR)))=@pemit %#=notice(SHEET,A new pilot chooses [get(%!/DATA`CONFIG`GEAR)] pieces of equipment.,warn); think u(%!/FUN`LEDGER`GRANT,%q<sheet_who>,GEAR,%q<found_key>); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] carries [get({{data}}/EQUIPMENT`%q<found_key>)].,ok)
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/take <equipment>%, such as +sheet/take first aid kit. +sheet/list shows it all.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_argument>; @include %!/INC`NEED`GATE; @assert cor(not(%q<chargen>),not(strlen(u(%!/FUN`GATE`EDIT,%#)))); @include/args %!/INC`NEED`FOUND=kind,EQUIPMENT,typed,%q<sheet_what>,among,; @assert strlen(%q<found_key>); think setq(take_gear,get(%q<sheet_who>/SALVAGE`GEAR)); @assert lt(words(%q<take_gear>),u(%!/FUN`MAX`SLOTS,%q<sheet_who>))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s [u(%!/FUN`MAX`SLOTS,%q<sheet_who>)] inventory slots are full. +sheet/drop <equipment> frees one.,warn); @assert cor(not(%q<chargen>),eq(get({{data}}/EQUIPMENT`%q<found_key>`TECH),1))=@pemit %#=notice(SHEET,A new pilot chooses Tech 1 equipment. +sheet/list 1 shows it.,warn); @assert cor(not(%q<chargen>),lt(words(%q<take_gear>),get(%!/DATA`CONFIG`GEAR)))=@pemit %#=notice(SHEET,A new pilot chooses [get(%!/DATA`CONFIG`GEAR)] pieces of equipment.,warn); think setq(take_armoury,cand(not(%q<viewer_keeper>),not(%q<chargen>))); @assert cor(not(%q<take_armoury>),not(get(%q<sheet_who>/SALVAGE`USED`ARMOURY)))=@pemit %#=notice(SHEET,A pilot takes one piece of equipment from the Armoury each downtime%, and [name(%q<sheet_who>)] has this one. Staff give equipment found in the wastes.,warn); @assert cor(not(%q<take_armoury>),lte(get({{data}}/EQUIPMENT`%q<found_key>`TECH),u(%!/FUN`CRAWLER`TECH)))=@pemit %#=notice(SHEET,The Armoury holds equipment of the Union Crawler's Tech [u(%!/FUN`CRAWLER`TECH)] or lower. [get({{data}}/EQUIPMENT`%q<found_key>)] is Tech [get({{data}}/EQUIPMENT`%q<found_key>`TECH)].,warn); think u(%!/FUN`LEDGER`GRANT,%q<sheet_who>,GEAR,%q<found_key>,if(%q<take_armoury>,from the Armoury)); @if %q<take_armoury>={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,USED`ARMOURY,value,1}; @pemit %#=notice(SHEET,[name(%q<sheet_who>)] [if(%q<take_armoury>,takes [get({{data}}/EQUIPMENT`%q<found_key>)] from the Armoury. The next comes after downtime.,carries [get({{data}}/EQUIPMENT`%q<found_key>)].)],ok)
         flags: [cmdsyntax]
       INC`SHEET`DROP:
         value: |-
@@ -538,7 +544,7 @@ objects:
       # +sheet/<hp|ap|tp> [<name>=]+<n>|-<n>|<n>|reset. TP is a keeper's: a player spends it with /learn.
       INC`SHEET`METER:
         value: |-
-          think setq(meter_key,ucstr(%q<cmd_switch>)); @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/%q<cmd_switch> +<n> adds%, -<n> takes away%, <n> sets it and reset puts it back.,warn); @include %!/INC`NEED`WHOEQ; @assert cor(%q<viewer_keeper>,comp(%q<meter_key>,TP))=@pemit %#=notice(SHEET,Staff award training points. +sheet/learn spends them.,warn); @include/args %!/INC`DO`METER=who,%q<sheet_who>,meter,%q<meter_key>,typed,%q<sheet_what>,tag,SHEET
+          think setq(meter_key,ucstr(%q<cmd_switch>)); @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/%q<cmd_switch> +<n> adds%, -<n> takes away%, <n> sets it and reset puts it back.,warn); @include %!/INC`NEED`WHOEQ; @assert cor(%q<viewer_keeper>,comp(%q<meter_key>,TP))=@pemit %#=notice(SHEET,Staff award training points. +sheet/learn spends them.,warn); think setq(meter_note,if(strmatch(%q<meter_key>,TP),rest(%q<sheet_what>)))[if(strmatch(%q<meter_key>,TP),setq(sheet_what,first(%q<sheet_what>)))]; @include/args %!/INC`DO`METER=who,%q<sheet_who>,meter,%q<meter_key>,typed,%q<sheet_what>,tag,SHEET
         flags: [cmdsyntax]
       # +sheet/max <name>/<hp|ap|slots>=<n>: a keeper's. Empty puts it back to the setting.
       INC`SHEET`MAX:
@@ -550,7 +556,7 @@ objects:
         value: |-
           think setq(detail_key,ucstr(%q<cmd_switch>)); @include %!/INC`NEED`WHOEQ; @assert lte(strlen(%q<sheet_what>),400)=@pemit %#=notice(SHEET,Keep it to 400 characters.,warn); think u(%!/FUN`LEDGER`SET,%q<sheet_who>,DETAIL`%q<detail_key>,%q<sheet_what>); @pemit %#=notice(SHEET,if(strlen(%q<sheet_what>),[name(%q<sheet_who>)]'s %q<cmd_switch> is: %q<sheet_what>,[name(%q<sheet_who>)] has no %q<cmd_switch> now.),ok)
         flags: [cmdsyntax]
-      # +sheet/downtime [<name>]: HP and AP back to full, the background, motto and keepsake re-rolls back, and the
+      # +sheet/downtime [<name>], staff only: HP and AP back to full, the Armoury's pick, the background, motto and keepsake re-rolls back, and the
       # mech's SP and EP full with no heat.
       # +sheet/ledger [<name>]: every change to the sheet, oldest first.
       INC`SHEET`LEDGER:
@@ -570,7 +576,7 @@ objects:
         flags: [cmdsyntax]
       INC`SHEET`DOWNTIME:
         value: |-
-          @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert strlen(%q<sheet_who>); @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error); @assert not(strlen(setr(down_enc,u(%!/FUN`ENC`OF,%q<sheet_who>))))=@pemit %#=notice(SHEET,Downtime comes after [u(%!/FUN`ENC`TITLE,%q<down_enc>)]. +encounter/leave first%, or ask its GM to keep what happened.,warn); @dolist/inline HP AP USED`BACKGROUND USED`MOTTO USED`KEEPSAKE MECH`SP MECH`EP MECH`HEAT [iter(lattr(%q<sheet_who>/SALVAGE`SPENT`**),after(%i0,SALVAGE`))]={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,##,value,}; @pemit %#=notice(SHEET,[name(%q<sheet_who>)] rests through downtime: HP [u(%!/API`METER,%q<sheet_who>,HP)]%, AP [u(%!/API`METER,%q<sheet_who>,AP)]%, re-rolls and uses back[if(hasattr(%q<sheet_who>,SALVAGE`MECH`CHASSIS),%, and the mech repaired%, recharged and cool)].,ok)
+          @assert %q<viewer_keeper>=@pemit %#=notice(SHEET,Staff run downtime: it brings back the Armoury's pick as well as HP%, AP%, uses and re-rolls. +sheet/hp reset and +sheet/ap reset fill the meters.,warn); @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert strlen(%q<sheet_who>); @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error); @assert not(strlen(setr(down_enc,u(%!/FUN`ENC`OF,%q<sheet_who>))))=@pemit %#=notice(SHEET,Downtime comes after [u(%!/FUN`ENC`TITLE,%q<down_enc>)]. +encounter/leave first%, or ask its GM to keep what happened.,warn); @dolist/inline HP AP USED`BACKGROUND USED`MOTTO USED`KEEPSAKE USED`ARMOURY MECH`SP MECH`EP MECH`HEAT [iter(lattr(%q<sheet_who>/SALVAGE`SPENT`**),after(%i0,SALVAGE`))]={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,##,value,}; @pemit %#=notice(SHEET,[name(%q<sheet_who>)] rests through downtime: HP [u(%!/API`METER,%q<sheet_who>,HP)]%, AP [u(%!/API`METER,%q<sheet_who>,AP)]%, re-rolls and uses back[if(hasattr(%q<sheet_who>,SALVAGE`MECH`CHASSIS),%, and the mech repaired%, recharged and cool)].,ok)
         flags: [cmdsyntax]
 
       # ---- +mech ------------------------------------------------------------------
@@ -582,13 +588,13 @@ objects:
       # stay when they fit. Before approval, Tech 1 within the starting scrap.
       INC`MECH`CHASSIS:
         value: |-
-          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(MECH,+mech/chassis <chassis>%, such as +mech/chassis mule. +mech/list chassis 1 shows the Tech 1 ones.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_argument>; @include %!/INC`NEED`GATE; @assert cor(not(%q<chargen>),not(strlen(u(%!/FUN`GATE`EDIT,%#)))); @include/args %!/INC`NEED`FOUND=kind,CHASSIS,typed,%q<sheet_what>,among,; @assert strlen(%q<found_key>); think setq(build_why,u(%!/FUN`MECH`FITS,%q<sheet_who>,%q<found_key>,get(%q<sheet_who>/SALVAGE`MECH`SYSTEMS),get(%q<sheet_who>/SALVAGE`MECH`MODULES),%q<chargen>)); @assert not(strlen(%q<build_why>))=@pemit %#=notice(MECH,%q<build_why>,warn); think u(%!/FUN`LEDGER`SET,%q<sheet_who>,MECH`CHASSIS,%q<found_key>); @dolist/inline MECH`SP MECH`EP MECH`HEAT={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,##,value,}; @pemit %#=notice(MECH,[name(%q<sheet_who>)]'s mech is a [get({{data}}/CHASSIS`%q<found_key>)]: [u(%!/FUN`DISPLAY`MECHLINE,%q<sheet_who>)].,ok)
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(MECH,+mech/chassis <chassis>%, such as +mech/chassis mule. +mech/list chassis 1 shows the Tech 1 ones.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_argument>; @include %!/INC`NEED`GATE; @assert cor(%q<viewer_keeper>,%q<chargen>)=@pemit %#=notice(MECH,Once approved%, a pilot gets new parts with +mech/craft%, paid for in scrap from the Union Crawler. Staff install salvage found in the wastes.,warn); @assert cor(not(%q<chargen>),not(strlen(u(%!/FUN`GATE`EDIT,%#)))); @include/args %!/INC`NEED`FOUND=kind,CHASSIS,typed,%q<sheet_what>,among,; @assert strlen(%q<found_key>); think setq(build_why,u(%!/FUN`MECH`FITS,%q<sheet_who>,%q<found_key>,get(%q<sheet_who>/SALVAGE`MECH`SYSTEMS),get(%q<sheet_who>/SALVAGE`MECH`MODULES),%q<chargen>)); @assert not(strlen(%q<build_why>))=@pemit %#=notice(MECH,%q<build_why>,warn); think u(%!/FUN`LEDGER`SET,%q<sheet_who>,MECH`CHASSIS,%q<found_key>); @dolist/inline MECH`SP MECH`EP MECH`HEAT={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,##,value,}; @pemit %#=notice(MECH,[name(%q<sheet_who>)]'s mech is a [get({{data}}/CHASSIS`%q<found_key>)]: [u(%!/FUN`DISPLAY`MECHLINE,%q<sheet_who>)].,ok)
         flags: [cmdsyntax]
       # +mech/install [<name>/]<system or module>: within the chassis's slots; before approval, Tech 1 within the
       # starting scrap.
       INC`MECH`INSTALL:
         value: |-
-          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(MECH,+mech/install <system or module>%, such as +mech/install red laser.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_argument>; @include %!/INC`NEED`GATE; @assert cor(not(%q<chargen>),not(strlen(u(%!/FUN`GATE`EDIT,%#)))); @include %!/INC`NEED`MECH; @assert strlen(%q<mech_chassis>); think setqm(install_system,u(%!/FUN`FIND,SYSTEM,%q<sheet_what>,get({{data}}/LIST`SYSTEM)),install_module,u(%!/FUN`FIND,MODULE,%q<sheet_what>,get({{data}}/LIST`MODULE)),install_kind,if(strlen(%q<install_system>),SYSTEM,if(strlen(%q<install_module>),MODULE)),install_key,firstof(%q<install_system>,%q<install_module>)); @assert strlen(%q<install_key>)=@pemit %#=notice(MECH,There is no system or module '%q<sheet_what>'.[u(%!/FUN`FIND`HINT,SYSTEM,%q<sheet_what>,get({{data}}/LIST`SYSTEM))][u(%!/FUN`FIND`HINT,MODULE,%q<sheet_what>,get({{data}}/LIST`MODULE))] +mech/list systems and +mech/list modules show them.,warn); think setqm(install_systems,trim(get(%q<sheet_who>/SALVAGE`MECH`SYSTEMS)[if(strmatch(%q<install_kind>,SYSTEM),%b%q<install_key>)]),install_modules,trim(get(%q<sheet_who>/SALVAGE`MECH`MODULES)[if(strmatch(%q<install_kind>,MODULE),%b%q<install_key>)])); think setq(build_why,u(%!/FUN`MECH`FITS,%q<sheet_who>,%q<mech_chassis>,%q<install_systems>,%q<install_modules>,%q<chargen>)); @assert not(strlen(%q<build_why>))=@pemit %#=notice(MECH,%q<build_why>,warn); think u(%!/FUN`LEDGER`GRANT,%q<sheet_who>,MECH`%q<install_kind>S,%q<install_key>); @pemit %#=notice(MECH,[name(%q<sheet_who>)] installs [get({{data}}/%q<install_kind>`%q<install_key>)]: [u(%!/FUN`DISPLAY`SLOTS,%q<sheet_who>)].,ok)
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(MECH,+mech/install <system or module>%, such as +mech/install red laser.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_argument>; @include %!/INC`NEED`GATE; @assert cor(%q<viewer_keeper>,%q<chargen>)=@pemit %#=notice(MECH,Once approved%, a pilot gets new parts with +mech/craft%, paid for in scrap from the Union Crawler. Staff install salvage found in the wastes.,warn); @assert cor(not(%q<chargen>),not(strlen(u(%!/FUN`GATE`EDIT,%#)))); @include %!/INC`NEED`MECH; @assert strlen(%q<mech_chassis>); think setqm(install_system,u(%!/FUN`FIND,SYSTEM,%q<sheet_what>,get({{data}}/LIST`SYSTEM)),install_module,u(%!/FUN`FIND,MODULE,%q<sheet_what>,get({{data}}/LIST`MODULE)),install_kind,if(strlen(%q<install_system>),SYSTEM,if(strlen(%q<install_module>),MODULE)),install_key,firstof(%q<install_system>,%q<install_module>)); @assert strlen(%q<install_key>)=@pemit %#=notice(MECH,There is no system or module '%q<sheet_what>'.[u(%!/FUN`FIND`HINT,SYSTEM,%q<sheet_what>,get({{data}}/LIST`SYSTEM))][u(%!/FUN`FIND`HINT,MODULE,%q<sheet_what>,get({{data}}/LIST`MODULE))] +mech/list systems and +mech/list modules show them.,warn); think setqm(install_systems,trim(get(%q<sheet_who>/SALVAGE`MECH`SYSTEMS)[if(strmatch(%q<install_kind>,SYSTEM),%b%q<install_key>)]),install_modules,trim(get(%q<sheet_who>/SALVAGE`MECH`MODULES)[if(strmatch(%q<install_kind>,MODULE),%b%q<install_key>)])); think setq(build_why,u(%!/FUN`MECH`FITS,%q<sheet_who>,%q<mech_chassis>,%q<install_systems>,%q<install_modules>,%q<chargen>)); @assert not(strlen(%q<build_why>))=@pemit %#=notice(MECH,%q<build_why>,warn); think u(%!/FUN`LEDGER`GRANT,%q<sheet_who>,MECH`%q<install_kind>S,%q<install_key>); @pemit %#=notice(MECH,[name(%q<sheet_who>)] installs [get({{data}}/%q<install_kind>`%q<install_key>)]: [u(%!/FUN`DISPLAY`SLOTS,%q<sheet_who>)].,ok)
         flags: [cmdsyntax]
       INC`MECH`REMOVE:
         value: |-
@@ -598,6 +604,14 @@ objects:
       INC`MECH`USE:
         value: |-
           @assert strlen(%q<cmd_argument>)=@pemit %#=notice(MECH,+mech/use <system or module> spends one of its uses.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_argument>; @include %!/INC`NEED`MECH; @assert strlen(%q<mech_chassis>); think setqm(use_system,u(%!/FUN`FIND,SYSTEM,%q<sheet_what>,get(%q<sheet_who>/SALVAGE`MECH`SYSTEMS)),use_module,u(%!/FUN`FIND,MODULE,%q<sheet_what>,get(%q<sheet_who>/SALVAGE`MECH`MODULES)),use_kind,if(strlen(%q<use_system>),SYSTEM,if(strlen(%q<use_module>),MODULE)),use_key,firstof(%q<use_system>,%q<use_module>)); @assert strlen(%q<use_key>)=@pemit %#=notice(MECH,[name(%q<sheet_who>)]'s mech has no system or module '%q<sheet_what>'.,warn); @include/args %!/INC`USE`SPEND=area,MECH,kind,%q<use_kind>,key,%q<use_key>
+        flags: [cmdsyntax]
+      # +mech/craft <chassis, system or module>[=<scrap tech>]: an approved pilot's new part, from the Union
+      # Crawler's Crafting Bay or Trading Bay. It is of the crawler's Tech Level or lower, and costs its Salvage
+      # Value in scrap of its Tech Level (or the higher one given) from the crawler's hold. A chassis replaces the
+      # mech's, which must still hold its parts. Both ledgers get an entry.
+      INC`MECH`CRAFT:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(MECH,+mech/craft <chassis%, system or module>%[=<scrap tech>%] crafts it at the Union Crawler for its Salvage Value in scrap.,warn); @include/args %!/INC`NEED`WHO=text,if(%q<cmd_has_equals>,%q<cmd_left_side>,%q<cmd_argument>); @assert not(%q<chargen>)=@pemit %#=notice(MECH,A new pilot builds with +mech/chassis and +mech/install. +mech/craft is for after approval.,warn); think setqm(craft_system,u(%!/FUN`FIND,SYSTEM,%q<sheet_what>,get({{data}}/LIST`SYSTEM)),craft_module,u(%!/FUN`FIND,MODULE,%q<sheet_what>,get({{data}}/LIST`MODULE)),craft_chassis,u(%!/FUN`FIND,CHASSIS,%q<sheet_what>,get({{data}}/LIST`CHASSIS)),craft_kind,cond(strlen(%q<craft_system>),SYSTEM,strlen(%q<craft_module>),MODULE,strlen(%q<craft_chassis>),CHASSIS),craft_key,firstof(%q<craft_system>,%q<craft_module>,%q<craft_chassis>)); @assert strlen(%q<craft_key>)=@pemit %#=notice(MECH,There is no chassis%, system or module '%q<sheet_what>'.[u(%!/FUN`FIND`HINT,SYSTEM,%q<sheet_what>,get({{data}}/LIST`SYSTEM))][u(%!/FUN`FIND`HINT,MODULE,%q<sheet_what>,get({{data}}/LIST`MODULE))],warn); think setqm(craft_name,get({{data}}/%q<craft_kind>`%q<craft_key>),craft_tech,get({{data}}/%q<craft_kind>`%q<craft_key>`TECH),craft_cost,get({{data}}/%q<craft_kind>`%q<craft_key>`VALUE),craft_chassis_now,get(%q<sheet_who>/SALVAGE`MECH`CHASSIS)); think setq(craft_pay,if(%q<cmd_has_equals>,u(%!/FUN`TECH,%q<cmd_right_side>),%q<craft_tech>)); @assert cor(strmatch(%q<craft_kind>,CHASSIS),strlen(%q<craft_chassis_now>))=@pemit %#=notice(MECH,[name(%q<sheet_who>)] has no mech to fit it to. +mech/craft a chassis first.,warn); @assert lte(%q<craft_tech>,u(%!/FUN`CRAWLER`TECH))=@pemit %#=notice(MECH,The Union Crawler is Tech [u(%!/FUN`CRAWLER`TECH)]%, so it crafts and trades Tech [u(%!/FUN`CRAWLER`TECH)] parts or lower. %q<craft_name> is Tech %q<craft_tech>.,warn); @assert cand(strlen(%q<craft_pay>),gte(%q<craft_pay>,%q<craft_tech>))=@pemit %#=notice(MECH,%q<craft_name> is paid for in Tech %q<craft_tech> scrap or higher.,warn); @assert gte(default({{store}}/CRAWLER`SCRAP`T%q<craft_pay>,0),%q<craft_cost>)=@pemit %#=notice(MECH,%q<craft_name> costs %q<craft_cost> Tech %q<craft_pay> scrap%, and the Union Crawler has [default({{store}}/CRAWLER`SCRAP`T%q<craft_pay>,0)]. +crawler/trade changes scrap of one Tech Level for another.,warn); think setq(build_why,switch(%q<craft_kind>,CHASSIS,u(%!/FUN`MECH`FITS,%q<sheet_who>,%q<craft_key>,get(%q<sheet_who>/SALVAGE`MECH`SYSTEMS),get(%q<sheet_who>/SALVAGE`MECH`MODULES),0),SYSTEM,u(%!/FUN`MECH`FITS,%q<sheet_who>,%q<craft_chassis_now>,trim([get(%q<sheet_who>/SALVAGE`MECH`SYSTEMS)] %q<craft_key>),get(%q<sheet_who>/SALVAGE`MECH`MODULES),0),u(%!/FUN`MECH`FITS,%q<sheet_who>,%q<craft_chassis_now>,get(%q<sheet_who>/SALVAGE`MECH`SYSTEMS),trim([get(%q<sheet_who>/SALVAGE`MECH`MODULES)] %q<craft_key>),0))); @assert not(strlen(%q<build_why>))=@pemit %#=notice(MECH,%q<build_why>,warn); think setq(craft_note,crafted for %q<craft_cost> Tech %q<craft_pay> scrap)[u(%!/FUN`CRAWLER`ADDSCRAP,%q<craft_pay>,-%q<craft_cost>,crafts %q<craft_name>,%q<sheet_who>)]; @if strmatch(%q<craft_kind>,CHASSIS)={think u(%!/FUN`LEDGER`SET,%q<sheet_who>,MECH`CHASSIS,%q<craft_key>,%q<craft_note>); @dolist/inline MECH`SP MECH`EP MECH`HEAT={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,##,value,}},{think u(%!/FUN`LEDGER`GRANT,%q<sheet_who>,MECH`%q<craft_kind>S,%q<craft_key>,%q<craft_note>)}; @remit %l=notice(MECH,tone(strong,name(%q<sheet_who>)) gets [art(%q<craft_name>)] %q<craft_name> from the Union Crawler for %q<craft_cost> Tech %q<craft_pay> scrap: [if(strmatch(%q<craft_kind>,CHASSIS),u(%!/FUN`DISPLAY`MECHLINE,%q<sheet_who>),u(%!/FUN`DISPLAY`SLOTS,%q<sheet_who>))]. The hold has [default({{store}}/CRAWLER`SCRAP`T%q<craft_pay>,0)] Tech %q<craft_pay> left.)
         flags: [cmdsyntax]
       # %<area> SHEET or MECH, %<kind> GEAR, SYSTEM or MODULE, %<key>: spends one use of what sheet_who holds.
       INC`USE`SPEND:
@@ -698,37 +712,47 @@ objects:
       # +crawler/tech <1-6>: its Tech Level, SP back to full.
       INC`CRAWLER`TECH:
         value: |-
-          @include %!/INC`NEED`KEEPER; think setq(crawler_tech,u(%!/FUN`TECH,%q<cmd_argument>)); @assert strlen(%q<crawler_tech>)=@pemit %#=notice(CRAWLER,+crawler/tech <1 to 6>.,warn); @include/args %!/INC`DO`CRAWLER=leaf,TECH,value,if(neq(%q<crawler_tech>,1),%q<crawler_tech>); @include/args %!/INC`DO`CRAWLER=leaf,SP,value,; @pemit %#=notice(CRAWLER,The Union Crawler is Tech %q<crawler_tech>%, a [rest(rest(rest(v(DATA`CRAWLER`%q<crawler_tech>))))].,ok)
+          @include %!/INC`NEED`KEEPER; think setq(crawler_tech,u(%!/FUN`TECH,%q<cmd_argument>)); @assert strlen(%q<crawler_tech>)=@pemit %#=notice(CRAWLER,+crawler/tech <1 to 6>.,warn); think u(%!/FUN`CRAWLER`SETTECH,%q<crawler_tech>,set by staff); @include/args %!/INC`DO`CRAWLER=leaf,SP,value,; @pemit %#=notice(CRAWLER,The Union Crawler is Tech %q<crawler_tech>%, a [rest(rest(rest(v(DATA`CRAWLER`%q<crawler_tech>))))].,ok)
         flags: [cmdsyntax]
       # +crawler/<sp|pool> +<n>|-<n>|<n>|reset.
       INC`CRAWLER`NUMBER:
         value: |-
-          @include %!/INC`NEED`KEEPER; think setqm(crawler_key,ucstr(%q<cmd_switch>),crawler_max,if(strmatch(%q<cmd_switch>,sp),u(%!/FUN`CRAWLER`MAX),999),crawler_now,u(%!/FUN`CRAWLER`[ucstr(%q<cmd_switch>)]),crawler_to,u(%!/FUN`METER`TO,u(%!/FUN`CRAWLER`[ucstr(%q<cmd_switch>)]),%q<cmd_argument>,if(strmatch(%q<cmd_switch>,sp),u(%!/FUN`CRAWLER`MAX),0))); @assert isint(%q<crawler_to>)=@pemit %#=notice(CRAWLER,Give +<n>%, -<n>%, <n> or reset.,warn); think setq(crawler_to,bound(%q<crawler_to>,0,%q<crawler_max>)); @include/args %!/INC`DO`CRAWLER=leaf,%q<crawler_key>,value,if(cor(cand(strmatch(%q<crawler_key>,SP),neq(%q<crawler_to>,%q<crawler_max>)),cand(strmatch(%q<crawler_key>,POOL),%q<crawler_to>)),%q<crawler_to>); @pemit %#=notice(CRAWLER,The Union Crawler's [if(strmatch(%q<crawler_key>,SP),SP is %q<crawler_to>/%q<crawler_max>,upgrade pool is %q<crawler_to>)].,ok)
+          @include %!/INC`NEED`KEEPER; think setqm(crawler_key,ucstr(%q<cmd_switch>),crawler_max,if(strmatch(%q<cmd_switch>,sp),u(%!/FUN`CRAWLER`MAX),999),crawler_now,u(%!/FUN`CRAWLER`[ucstr(%q<cmd_switch>)]),crawler_to,u(%!/FUN`METER`TO,u(%!/FUN`CRAWLER`[ucstr(%q<cmd_switch>)]),%q<cmd_argument>,if(strmatch(%q<cmd_switch>,sp),u(%!/FUN`CRAWLER`MAX),0))); @assert isint(%q<crawler_to>)=@pemit %#=notice(CRAWLER,Give +<n>%, -<n>%, <n> or reset.,warn); think setq(crawler_to,bound(%q<crawler_to>,0,%q<crawler_max>)); @if strmatch(%q<crawler_key>,POOL)={think u(%!/FUN`CRAWLER`ADDPOOL,sub(%q<crawler_to>,u(%!/FUN`CRAWLER`POOL)),set by staff)},{@include/args %!/INC`DO`CRAWLER=leaf,SP,value,if(neq(%q<crawler_to>,%q<crawler_max>),%q<crawler_to>)}; @pemit %#=notice(CRAWLER,The Union Crawler's [if(strmatch(%q<crawler_key>,SP),SP is %q<crawler_to>/%q<crawler_max>,upgrade pool is %q<crawler_to>)].,ok)
         flags: [cmdsyntax]
       # +crawler/scrap <tech>=+<n>|-<n>|<n>: the shared scrap. Any approved pilot, or a keeper.
       INC`CRAWLER`SCRAP:
         value: |-
-          @assert cor(%q<viewer_keeper>,isapproved(%#))=@pemit %#=notice(CRAWLER,Approved pilots and staff change the Union Crawler's scrap.,error); @assert %q<cmd_has_equals>=@pemit %#=notice(CRAWLER,+crawler/scrap <tech>=+<n> adds scrap of that Tech Level%, -<n> takes it: +crawler/scrap 1=+5.,warn); think setq(scrap_tech,u(%!/FUN`TECH,%q<cmd_left_side>)); @assert strlen(%q<scrap_tech>)=@pemit %#=notice(CRAWLER,'%q<cmd_left_side>' is not a Tech Level. Give 1 to 6.,warn); think setq(scrap_to,u(%!/FUN`METER`TO,default({{store}}/CRAWLER`SCRAP`T%q<scrap_tech>,0),%q<cmd_right_side>,0)); @assert cand(isint(%q<scrap_to>),gte(%q<scrap_to>,0))=@pemit %#=notice(CRAWLER,The Union Crawler has [default({{store}}/CRAWLER`SCRAP`T%q<scrap_tech>,0)] Tech %q<scrap_tech> scrap. Give +<n>%, -<n> or <n>%, and no less than 0.,warn); @include/args %!/INC`DO`CRAWLER=leaf,SCRAP`T%q<scrap_tech>,value,if(%q<scrap_to>,%q<scrap_to>); @remit %l=notice(CRAWLER,tone(strong,name(%#)) puts the Union Crawler's Tech %q<scrap_tech> scrap at %q<scrap_to>.)
+          @include %!/INC`NEED`KEEPER; @assert %q<cmd_has_equals>=@pemit %#=notice(CRAWLER,+crawler/scrap <tech>=+<n> %[<reason>%] adds scrap of that Tech Level%, -<n> takes it: +crawler/scrap 1=+5 salvage from the Meld.,warn); think setqm(scrap_tech,u(%!/FUN`TECH,%q<cmd_left_side>),scrap_typed,first(%q<cmd_right_side>),scrap_note,rest(%q<cmd_right_side>)); @assert strlen(%q<scrap_tech>)=@pemit %#=notice(CRAWLER,'%q<cmd_left_side>' is not a Tech Level. Give 1 to 6.,warn); think setq(scrap_to,u(%!/FUN`METER`TO,default({{store}}/CRAWLER`SCRAP`T%q<scrap_tech>,0),%q<scrap_typed>,0)); @assert cand(isint(%q<scrap_to>),gte(%q<scrap_to>,0))=@pemit %#=notice(CRAWLER,The Union Crawler has [default({{store}}/CRAWLER`SCRAP`T%q<scrap_tech>,0)] Tech %q<scrap_tech> scrap. Give +<n>%, -<n> or <n>%, and no less than 0.,warn); think u(%!/FUN`CRAWLER`ADDSCRAP,%q<scrap_tech>,sub(%q<scrap_to>,default({{store}}/CRAWLER`SCRAP`T%q<scrap_tech>,0)),%q<scrap_note>,); @remit %l=notice(CRAWLER,tone(strong,name(%#)) puts the Union Crawler's Tech %q<scrap_tech> scrap at %q<scrap_to>[if(strlen(%q<scrap_note>),: %q<scrap_note>)].)
         flags: [cmdsyntax]
       # +crawler/unload: the scrap your mech carries into the shared scrap.
       INC`CRAWLER`UNLOAD:
         value: |-
-          think setqm(sheet_who,%q<viewer_objid>,unload_text,u(%!/FUN`DISPLAY`SCRAP,%#/SALVAGE`MECH`SCRAP)); @assert u(%!/FUN`MECH`SCRAP,%#)=@pemit %#=notice(CRAWLER,Your mech carries no scrap.,warn); @dolist/inline lnum(1,6)={@if get(%#/SALVAGE`MECH`SCRAP`T##)={@include/args %!/INC`DO`CRAWLER=leaf,SCRAP`T##,value,add(default({{store}}/CRAWLER`SCRAP`T##,0),get(%#/SALVAGE`MECH`SCRAP`T##)); @include/args %!/INC`DO`SET=who,%q<viewer_objid>,leaf,MECH`SCRAP`T##,value,}}; @remit %l=notice(CRAWLER,tone(strong,name(%#)) unloads %q<unload_text> into the Union Crawler.)
+          think setqm(sheet_who,%q<viewer_objid>,unload_text,u(%!/FUN`DISPLAY`SCRAP,%#/SALVAGE`MECH`SCRAP)); @assert u(%!/FUN`MECH`SCRAP,%#)=@pemit %#=notice(CRAWLER,Your mech carries no scrap.,warn); @dolist/inline lnum(1,6)={@if get(%#/SALVAGE`MECH`SCRAP`T##)={think u(%!/FUN`CRAWLER`ADDSCRAP,##,get(%#/SALVAGE`MECH`SCRAP`T##),unloaded from [poss(%#)] mech,%#); @include/args %!/INC`DO`SET=who,%q<viewer_objid>,leaf,MECH`SCRAP`T##,value,}}; @remit %l=notice(CRAWLER,tone(strong,name(%#)) unloads %q<unload_text> into the Union Crawler.)
         flags: [cmdsyntax]
       # +crawler/upkeep: pays 5 scrap of its Tech Level into the upgrade pool, or rolls on the deterioration table.
       INC`CRAWLER`UPKEEP:
         value: |-
-          @include %!/INC`NEED`KEEPER; think setqm(upkeep_tech,u(%!/FUN`CRAWLER`TECH),upkeep_cost,extract(v(DATA`CRAWLER`[u(%!/FUN`CRAWLER`TECH)]),2,1),upkeep_have,default({{store}}/CRAWLER`SCRAP`T[u(%!/FUN`CRAWLER`TECH)],0)); @break lt(%q<upkeep_have>,%q<upkeep_cost>)=@remit %l=notice(CRAWLER,The Union Crawler cannot pay its upkeep of %q<upkeep_cost> Tech %q<upkeep_tech> scrap%, having %q<upkeep_have>. It deteriorates: [u(%!/FUN`ROLL`TABLE,CRAWLER-DETERIORATION,)],warn); @include/args %!/INC`DO`CRAWLER=leaf,SCRAP`T%q<upkeep_tech>,value,if(sub(%q<upkeep_have>,%q<upkeep_cost>),sub(%q<upkeep_have>,%q<upkeep_cost>)); @include/args %!/INC`DO`CRAWLER=leaf,POOL,value,add(u(%!/FUN`CRAWLER`POOL),%q<upkeep_cost>); @remit %l=notice(CRAWLER,The Union Crawler pays its dues: %q<upkeep_cost> Tech %q<upkeep_tech> scrap. Upgrade pool [u(%!/FUN`CRAWLER`POOL)][if(extract(v(DATA`CRAWLER`%q<upkeep_tech>),3,1),/[extract(v(DATA`CRAWLER`%q<upkeep_tech>),3,1)])].,ok)
+          @include %!/INC`NEED`KEEPER; think setqm(upkeep_tech,u(%!/FUN`CRAWLER`TECH),upkeep_cost,extract(v(DATA`CRAWLER`[u(%!/FUN`CRAWLER`TECH)]),2,1),upkeep_have,default({{store}}/CRAWLER`SCRAP`T[u(%!/FUN`CRAWLER`TECH)],0)); @break lt(%q<upkeep_have>,%q<upkeep_cost>)=@remit %l=notice(CRAWLER,The Union Crawler cannot pay its upkeep of %q<upkeep_cost> Tech %q<upkeep_tech> scrap%, having %q<upkeep_have>. It deteriorates: [u(%!/FUN`ROLL`TABLE,CRAWLER-DETERIORATION,)],warn); think u(%!/FUN`CRAWLER`ADDSCRAP,%q<upkeep_tech>,-%q<upkeep_cost>,upkeep,)[u(%!/FUN`CRAWLER`ADDPOOL,%q<upkeep_cost>,upkeep)]; @remit %l=notice(CRAWLER,The Union Crawler pays its dues: %q<upkeep_cost> Tech %q<upkeep_tech> scrap. Upgrade pool [u(%!/FUN`CRAWLER`POOL)][if(extract(v(DATA`CRAWLER`%q<upkeep_tech>),3,1),/[extract(v(DATA`CRAWLER`%q<upkeep_tech>),3,1)])].,ok)
         flags: [cmdsyntax]
       # +crawler/upgrade: with the pool at the upgrade value, the next Tech Level.
       INC`CRAWLER`UPGRADE:
         value: |-
-          @include %!/INC`NEED`KEEPER; think setqm(upgrade_tech,u(%!/FUN`CRAWLER`TECH),upgrade_value,extract(v(DATA`CRAWLER`[u(%!/FUN`CRAWLER`TECH)]),3,1)); @assert %q<upgrade_value>=@pemit %#=notice(CRAWLER,A Tech 6 Union Crawler is as big as they come.,warn); @assert gte(u(%!/FUN`CRAWLER`POOL),%q<upgrade_value>)=@pemit %#=notice(CRAWLER,The upgrade pool has [u(%!/FUN`CRAWLER`POOL)] of the %q<upgrade_value> it needs.,warn); @include/args %!/INC`DO`CRAWLER=leaf,TECH,value,inc(%q<upgrade_tech>); @include/args %!/INC`DO`CRAWLER=leaf,POOL,value,if(sub(u(%!/FUN`CRAWLER`POOL),%q<upgrade_value>),sub(u(%!/FUN`CRAWLER`POOL),%q<upgrade_value>)); @include/args %!/INC`DO`CRAWLER=leaf,SP,value,; @remit %l=notice(CRAWLER,The Union Crawler grows into a Tech [inc(%q<upgrade_tech>)] [rest(rest(rest(v(DATA`CRAWLER`[inc(%q<upgrade_tech>)]))))] with [u(%!/FUN`CRAWLER`MAX)] SP.,ok)
+          @include %!/INC`NEED`KEEPER; think setqm(upgrade_tech,u(%!/FUN`CRAWLER`TECH),upgrade_value,extract(v(DATA`CRAWLER`[u(%!/FUN`CRAWLER`TECH)]),3,1)); @assert %q<upgrade_value>=@pemit %#=notice(CRAWLER,A Tech 6 Union Crawler is as big as they come.,warn); @assert gte(u(%!/FUN`CRAWLER`POOL),%q<upgrade_value>)=@pemit %#=notice(CRAWLER,The upgrade pool has [u(%!/FUN`CRAWLER`POOL)] of the %q<upgrade_value> it needs.,warn); think u(%!/FUN`CRAWLER`ADDPOOL,-%q<upgrade_value>,upgrade)[u(%!/FUN`CRAWLER`SETTECH,inc(%q<upgrade_tech>),upgraded)]; @include/args %!/INC`DO`CRAWLER=leaf,SP,value,; @remit %l=notice(CRAWLER,The Union Crawler grows into a Tech [inc(%q<upgrade_tech>)] [rest(rest(rest(v(DATA`CRAWLER`[inc(%q<upgrade_tech>)]))))] with [u(%!/FUN`CRAWLER`MAX)] SP.,ok)
         flags: [cmdsyntax]
       # +crawler/bay [<bay>]: a bay's text, or the list.
       INC`CRAWLER`BAY:
         value: |-
           @assert strlen(%q<cmd_argument>)=@pemit %#=notice(CRAWLER,The bays: [itemize(iter(get({{data}}/LIST`BAY),get({{data}}/BAY`%i0),%b,|),|)]. +crawler/bay <bay> reads one.); @include/args %!/INC`NEED`FOUND=kind,BAY,typed,%q<cmd_argument>,among,; @assert strlen(%q<found_key>); @pemit %#=box(get({{data}}/BAY`%q<found_key>`TEXT),get({{data}}/BAY`%q<found_key>))
+        flags: [cmdsyntax]
+      # +crawler/ledger: every change to the hold, the upgrade pool and the Tech Level.
+      INC`CRAWLER`LEDGER:
+        value: |-
+          @pemit %#=u(%!/FUN`SCREEN`CRAWLERLEDGER)
+        flags: [cmdsyntax]
+      # +crawler/trade <n> <tech>=<tech>: the Trading Bay swaps scrap at its value, a piece worth its Tech Level.
+      INC`CRAWLER`TRADE:
+        value: |-
+          @assert cor(%q<viewer_keeper>,isapproved(%#))=@pemit %#=notice(CRAWLER,Approved pilots and staff trade the Union Crawler's scrap.,error); @assert cand(%q<cmd_has_equals>,eq(words(%q<cmd_left_side>),2))=@pemit %#=notice(CRAWLER,+crawler/trade <n> <tech>=<tech> trades scrap at the Trading Bay: +crawler/trade 4 1=2 makes 4 Tech 1 scrap into 2 Tech 2.,warn); think setqm(trade_n,first(%q<cmd_left_side>),trade_from,u(%!/FUN`TECH,last(%q<cmd_left_side>)),trade_to,u(%!/FUN`TECH,%q<cmd_right_side>)); @assert cand(isint(%q<trade_n>),gt(%q<trade_n>,0),strlen(%q<trade_from>),strlen(%q<trade_to>),neq(%q<trade_from>,%q<trade_to>))=@pemit %#=notice(CRAWLER,Give how many pieces%, their Tech Level and another Tech Level: +crawler/trade 4 1=2.,warn); @assert gte(default({{store}}/CRAWLER`SCRAP`T%q<trade_from>,0),%q<trade_n>)=@pemit %#=notice(CRAWLER,The Union Crawler has [default({{store}}/CRAWLER`SCRAP`T%q<trade_from>,0)] Tech %q<trade_from> scrap.,warn); think setq(trade_value,mul(%q<trade_n>,%q<trade_from>)); @assert not(mod(%q<trade_value>,%q<trade_to>))=@pemit %#=notice(CRAWLER,%q<trade_n> Tech %q<trade_from> scrap is worth %q<trade_value>%, which is no whole number of Tech %q<trade_to> pieces.,warn); think setq(trade_get,div(%q<trade_value>,%q<trade_to>))[u(%!/FUN`CRAWLER`ADDSCRAP,%q<trade_from>,-%q<trade_n>,traded for %q<trade_get> Tech %q<trade_to>,%#)][u(%!/FUN`CRAWLER`ADDSCRAP,%q<trade_to>,%q<trade_get>,traded for %q<trade_n> Tech %q<trade_from>,%#)]; @remit %l=notice(CRAWLER,tone(strong,name(%#)) trades %q<trade_n> Tech %q<trade_from> scrap for %q<trade_get> Tech %q<trade_to> at the Trading Bay.)
         flags: [cmdsyntax]
 
       # ---- writes -----------------------------------------------------------------
@@ -746,7 +770,7 @@ objects:
       # meter_new.
       INC`DO`METER:
         value: |-
-          think setqm(meter_now,u(%!/API`METER,%<who>,%<meter>),meter_max,u(%!/FUN`METER`MAX,%<who>,%<meter>),meter_to,u(%!/FUN`METER`TO,u(%!/API`METER,%<who>,%<meter>),%<typed>,if(strmatch(v(DATA`METER`%<meter>`START),max),u(%!/FUN`METER`MAX,%<who>,%<meter>),0))); @assert isint(%q<meter_to>)=@pemit %#=notice(%<tag>,'%<typed>' is not a number. Give +<n>%, -<n>%, <n> or reset.,warn); think setq(meter_new,u(%!/API`ADJUST,%<who>,%<meter>,sub(%q<meter_to>,%q<meter_now>))); @pemit %#=notice(%<tag>,[name(%<who>)]'s [v(DATA`METER`%<meter>)] is %q<meter_new>[if(comp(%<meter>,TP),/%q<meter_max>)][if(neq(%q<meter_new>,%q<meter_to>),%b%(it runs from 0 to %q<meter_max>%))].[if(cand(strmatch(%<meter>,HP),not(%q<meter_new>)),%b[name(%<who>)] is down: +check/table critical injury.)][if(cand(strmatch(%<meter>,SP),not(%q<meter_new>)),%bThe mech is at 0 SP: +check/table critical damage.)],ok)
+          think setqm(meter_now,u(%!/API`METER,%<who>,%<meter>),meter_max,u(%!/FUN`METER`MAX,%<who>,%<meter>),meter_to,u(%!/FUN`METER`TO,u(%!/API`METER,%<who>,%<meter>),%<typed>,if(strmatch(v(DATA`METER`%<meter>`START),max),u(%!/FUN`METER`MAX,%<who>,%<meter>),0))); @assert isint(%q<meter_to>)=@pemit %#=notice(%<tag>,'%<typed>' is not a number. Give +<n>%, -<n>%, <n> or reset.,warn); think setq(meter_new,u(%!/API`ADJUST,%<who>,%<meter>,sub(%q<meter_to>,%q<meter_now>),%q<meter_note>)); @pemit %#=notice(%<tag>,[name(%<who>)]'s [v(DATA`METER`%<meter>)] is %q<meter_new>[if(comp(%<meter>,TP),/%q<meter_max>)][if(neq(%q<meter_new>,%q<meter_to>),%b%(it runs from 0 to %q<meter_max>%))].[if(cand(strmatch(%<meter>,HP),not(%q<meter_new>)),%b[name(%<who>)] is down: +check/table critical injury.)][if(cand(strmatch(%<meter>,SP),not(%q<meter_new>)),%bThe mech is at 0 SP: +check/table critical damage.)],ok)
         flags: [cmdsyntax]
 
       # ---- finding the Core Book's content -------------------------------------------
@@ -1286,6 +1310,56 @@ objects:
         value: |-
           default({{store}}/CRAWLER`POOL,0)
         flags: [funsyntax]
+      # ---- the Union Crawler's ledger -------------------------------------------------
+      # Every change to the crawler's scrap, upgrade pool and Tech Level is an entry CRAWLER`LEDGER`<n> on the store:
+      # JSON with kind (scrap, pool or tech), n, by (objid), at (secs), for (the pilot it was for, or nothing), note,
+      # and tech and amount (scrap), amount (pool) or tech (tech). The amounts are the change made, so the ledger
+      # adds up to the hold. Nothing rewrites or removes an entry; a mistake is put right with another.
+      FUN`CRAWLER`NS:
+        value: |-
+          sort(iter(lattr({{store}}/CRAWLER`LEDGER`*),last(%i0,`)),n)
+        flags: [funsyntax]
+      # %0 an entry, %1 a field.
+      FUN`CRAWLER`FIELD:
+        value: |-
+          json_query(get({{store}}/CRAWLER`LEDGER`%0),extract,$.%1)
+        flags: [funsyntax]
+      # %0 the entry's JSON (kind and its fields), %1 a note, %2 the pilot it was for: writes it, and returns its
+      # number.
+      FUN`CRAWLER`ENTRY:
+        value: |-
+          setq(centry_n,inc(lmax(0 [u(%!/FUN`CRAWLER`NS)])))[null(attrib_set({{store}}/CRAWLER`LEDGER`%q<centry_n>,json_mod(%0,patch,json(object,n,%q<centry_n>,by,json(string,objid(%#)),at,secs(),for,json(string,if(strlen(%2),objid(%2))),note,json(string,%1)))))]%q<centry_n>
+        flags: [funsyntax]
+      # %0 a Tech Level, %1 scrap to add (below 0 takes it, never below none), %2 a note, %3 the pilot it is for:
+      # changes the hold, writes the entry for what changed, and returns the hold's new amount.
+      FUN`CRAWLER`ADDSCRAP:
+        value: |-
+          setqm(cscrap_old,default({{store}}/CRAWLER`SCRAP`T%0,0),
+          cscrap_new,max(0,add(default({{store}}/CRAWLER`SCRAP`T%0,0),%1)))[if(neq(%q<cscrap_new>,%q<cscrap_old>),[null(u(%!/FUN`CRAWLER`ENTRY,json(object,kind,"scrap",tech,%0,amount,sub(%q<cscrap_new>,%q<cscrap_old>)),%2,%3))][null(if(%q<cscrap_new>,attrib_set({{store}}/CRAWLER`SCRAP`T%0,%q<cscrap_new>),attrib_set({{store}}/CRAWLER`SCRAP`T%0)))])]%q<cscrap_new>
+        flags: [funsyntax]
+      # %0 to add to the upgrade pool (below 0 takes it), %1 a note: the pool's new amount.
+      FUN`CRAWLER`ADDPOOL:
+        value: |-
+          setqm(cpool_old,u(%!/FUN`CRAWLER`POOL),
+          cpool_new,max(0,add(u(%!/FUN`CRAWLER`POOL),%0)))[if(neq(%q<cpool_new>,%q<cpool_old>),[null(u(%!/FUN`CRAWLER`ENTRY,json(object,kind,"pool",amount,sub(%q<cpool_new>,%q<cpool_old>)),%1,))][null(if(%q<cpool_new>,attrib_set({{store}}/CRAWLER`POOL,%q<cpool_new>),attrib_set({{store}}/CRAWLER`POOL)))])]%q<cpool_new>
+        flags: [funsyntax]
+      # %0 a Tech Level, %1 a note: sets the crawler's, with an entry when it changes.
+      FUN`CRAWLER`SETTECH:
+        value: |-
+          if(neq(%0,u(%!/FUN`CRAWLER`TECH)),[null(u(%!/FUN`CRAWLER`ENTRY,json(object,kind,"tech",tech,%0),%1,))][null(if(neq(%0,1),attrib_set({{store}}/CRAWLER`TECH,%0),attrib_set({{store}}/CRAWLER`TECH)))])
+        flags: [funsyntax]
+      # %0 an entry: what it did, "+3 Tech 1 scrap: unloaded".
+      FUN`CRAWLER`TEXT:
+        value: |-
+          setqm(ctext_kind,u(%!/FUN`CRAWLER`FIELD,%0,kind),
+          ctext_amount,u(%!/FUN`CRAWLER`FIELD,%0,amount),
+          ctext_note,u(%!/FUN`CRAWLER`FIELD,%0,note))[switch(%q<ctext_kind>,scrap,[if(gt(%q<ctext_amount>,0),+)]%q<ctext_amount> Tech [u(%!/FUN`CRAWLER`FIELD,%0,tech)] scrap,pool,[if(gt(%q<ctext_amount>,0),+)]%q<ctext_amount> upgrade pool,tech,Tech [u(%!/FUN`CRAWLER`FIELD,%0,tech)],%q<ctext_kind>)][if(strlen(%q<ctext_note>),: %q<ctext_note>)]
+        flags: [funsyntax]
+      # The newest 40 entries, oldest first.
+      FUN`SCREEN`CRAWLERLEDGER:
+        value: |-
+          setq(cledger_ns,u(%!/FUN`CRAWLER`NS))[setq(cledger_show,extract(%q<cledger_ns>,max(1,sub(words(%q<cledger_ns>),39)),40))][box(if(words(%q<cledger_ns>),[ldatatable(lit({"nowrap":"1|3|4|5","rule":""}),>#|Change|For|By|When,iter(%q<cledger_show>,%i0|[u(%!/FUN`CRAWLER`TEXT,%i0)]|[if(strlen(setr(cledger_for,u(%!/FUN`CRAWLER`FIELD,%i0,for))),name(%q<cledger_for>),-)]|[name(u(%!/FUN`CRAWLER`FIELD,%i0,by))]|[timefmt($Y-$m-$d,u(%!/FUN`CRAWLER`FIELD,%i0,at))],,%*<^>),%*<^>)]%r[rule()]%r[tone(muted,[if(gt(words(%q<cledger_ns>),40),The 40 newest of [words(%q<cledger_ns>)] entries.%b)]Every change to the hold%, the upgrade pool and the Tech Level is here.)],tone(muted,No changes yet.)),The Union Crawler's ledger)]
+        flags: [funsyntax]
 
       # ---- the sheet API ------------------------------------------------------------
       # What other packages call: u({{sheet-salvage-union/sheet}}/API`<NAME>,...). Every sheet package has these
@@ -1341,18 +1415,18 @@ objects:
         value: |-
           setq(meter_api,ucstr(%1))[if(hasattr(%!,DATA`METER`%q<meter_api>),[setq(meter_value,u(%!/FUN`PLAY`GET,%0,v(DATA`METER`%q<meter_api>`LEAF)))][if(strlen(%q<meter_value>),%q<meter_value>,if(strmatch(v(DATA`METER`%q<meter_api>`START),max),u(%!/FUN`METER`MAX,%0,%q<meter_api>),0))],#-1 NO SUCH METER)]
         flags: [VISUAL]
-      # %0 a character, %1 a meter, %2 how much to add (or take, below 0): writes it within 0 and its most and
-      # returns the new value.
+      # %0 a character, %1 a meter, %2 how much to add (or take, below 0), %3 a note for a TP ledger entry: writes
+      # it within 0 and its most and returns the new value.
       API`ADJUST:
         value: |-
           setqm(adjust_key,ucstr(%1),
           adjust_new,bound(add(u(%!/API`METER,%0,%1),%2),0,u(%!/FUN`METER`MAX,%0,%1)))[if(strmatch(%q<adjust_key>,TP),[null(if(sub(%q<adjust_new>,u(%!/API`METER,%0,TP)),u(%!/FUN`LEDGER`TP,%0,sub(%q<adjust_new>,u(%!/API`METER,%0,TP)),%3)))]%q<adjust_new>,if(hasattr(%!,DATA`METER`%q<adjust_key>),[null(u(%!/FUN`DO`SET,%0,v(DATA`METER`%q<adjust_key>`LEAF),if(neq(%q<adjust_new>,if(strmatch(v(DATA`METER`%q<adjust_key>`START),max),u(%!/FUN`METER`MAX,%0,%q<adjust_key>),0)),%q<adjust_new>)))]%q<adjust_new>,#-1 NO SUCH METER))]
         flags: [VISUAL]
-      # %0 a Tech Level, %1 how much scrap to add to the Union Crawler's (or take, below 0): the new amount, never
-      # below 0.
+      # %0 a Tech Level, %1 how much scrap to add to the Union Crawler's (or take, below 0), %2 a note for its ledger,
+      # %3 the pilot it is for: the new amount, never below 0.
       API`SCRAP:
         value: |-
-          setq(api_scrap,max(0,add(default({{store}}/CRAWLER`SCRAP`T%0,0),%1)))[if(cand(isint(%0),gte(%0,1),lte(%0,6)),[if(%q<api_scrap>,attrib_set({{store}}/CRAWLER`SCRAP`T%0,%q<api_scrap>),attrib_set({{store}}/CRAWLER`SCRAP`T%0))]%q<api_scrap>,#-1 NO SUCH TECH LEVEL)]
+          if(cand(isint(%0),gte(%0,1),lte(%0,6),isint(%1)),u(%!/FUN`CRAWLER`ADDSCRAP,%0,%1,%2,%3),#-1 NO SUCH TECH LEVEL)
         flags: [VISUAL]
       # Named: %<roller> an objid, %<trait> a trait key or typed text (empty for the bare die), %<spend> the cost of
       # an X ability or system, %<mech> 1 to make it a mech roll. Spends the AP, EP and heat the trait costs, rolls
@@ -1523,7 +1597,7 @@ objects:
         - `+sheet/ability <ability>` reads one.
         - `+sheet/learn <ability>` learns one; `+sheet/unlearn <ability>` forgets the last of a tree.
 
-        Once approved, learning costs training points (TP): 1 for a core ability, 2 for an Advanced or Hybrid one, 3 for a Legendary one. Forgetting costs 1. Staff award TP.
+        Once approved, learning costs training points (TP): 1 for a core ability, 2 for an Advanced or Hybrid one, 3 for a Legendary one. Forgetting costs 1. Staff award TP with `+sheet/tp <name>=+<n> <reason>`, and the ledger keeps each award.
 
         With 6 core abilities and all three of one tree, you may advance down the tree it leads to: your class's Advanced tree, or a Hybrid Class, which opens two more core trees. Only one. With all three of that tree, one Legendary ability.
 
@@ -1538,7 +1612,8 @@ objects:
         - `+sheet/hp` and `+sheet/ap` take `+<n>`, `-<n>`, `<n>`, or `reset` for full: `+sheet/hp -2`.
         - `+check <ability>` spends the ability's AP for you.
         - `+sheet/use <equipment>` spends one use of a piece of equipment with uses, such as a grenade. `+sheet` shows the uses left.
-        - `+sheet/downtime` brings back your HP, AP, uses, and background, motto and keepsake re-rolls, and repairs, recharges and cools your mech.
+        - After a week of downtime, staff run `+sheet/downtime <name>`: it brings back your HP, AP, uses, the Armoury's pick, and background, motto and keepsake re-rolls, and repairs, recharges and cools your mech.
+        - Once approved, `+sheet/take <equipment>` takes one piece from the Union Crawler's Armoury each downtime, of the crawler's Tech Level or lower. Staff give what you find in the wastes.
 
         In an encounter these are the encounter's copy (`+help encounter`).
 
@@ -1558,6 +1633,8 @@ objects:
         - `+mech/name <pattern name>` and `+mech/quirk <text>` make it yours.
 
         A new pilot builds from Tech 1 parts whose salvage values add up to 20 scrap or less.
+
+        Once approved, `+mech/craft <chassis, system or module>\[=<scrap tech>\]` gets a new part from the Union Crawler's Crafting or Trading Bay. It must be of the crawler's Tech Level or lower, and costs its Salvage Value in scrap of its Tech Level, or of the higher one given, from the crawler's hold. A new chassis replaces your mech's, and must hold its parts. Staff install salvage found in the wastes.
 
         For example:
 
@@ -1610,9 +1687,12 @@ objects:
       HELP`CRAWLER: |-
         `+crawler` shows the Union Crawler the pilots share: its Tech Level, SP, upkeep, upgrade pool, weapon and scrap.
 
-        - `+crawler/unload` moves the scrap your mech carries into the crawler's.
-        - `+crawler/scrap <tech>=+<n>` or `-<n>` changes the crawler's scrap, once you are approved.
+        - `+crawler/unload` moves the scrap your mech carries into the crawler's hold.
+        - `+crawler/trade <n> <tech>=<tech>` trades scrap at the Trading Bay, each piece worth its Tech Level: `+crawler/trade 4 1=2` makes 4 Tech 1 into 2 Tech 2.
         - `+crawler/bay \[<bay>\]` reads one of its bays.
+        - `+crawler/ledger` lists every change to the hold, the upgrade pool and the Tech Level: what changed, for whom, by whom and when.
+
+        The hold pays for parts (`+mech/craft`) and the crawler's upkeep. Staff add scrap with `+crawler/scrap <tech>=+<n> <reason>`.
 
         For example:
 
@@ -1666,7 +1746,9 @@ objects:
         - The `+sheet` and `+mech` switches take `<name>/` first: `+sheet/learn Alice/jury rig`, `+mech/install Alice/red laser`.
         - The meters and texts take `<name>=` first: `+sheet/tp Alice=+1` awards a training point.
         - `+sheet/max <name>/<hp, ap or slots>=<n>` changes a pilot's most.
-        - `+crawler/name`, `/type`, `/weapon <system>`, `/tech <n>`, `/sp` and `/pool` run the Union Crawler. `+crawler/upkeep` pays 5 scrap of its Tech Level into the upgrade pool, or rolls on the deterioration table; `+crawler/upgrade` raises its Tech Level when the pool is full.
+        - `+sheet/tp <name>=+<n> <reason>` awards Training Points, such as the one a week of training in the Pilot Bay gives. `+sheet/downtime <name>` runs a pilot's downtime.
+        - `+sheet/take <name>/<equipment>` and `+mech/install <name>/<part>` give what a pilot found, free; the ledger shows who gave it.
+        - `+crawler/name`, `/type`, `/weapon <system>`, `/tech <n>`, `/sp` and `/pool` run the Union Crawler, and `+crawler/scrap <tech>=+<n> <reason>` adds scrap to its hold; `+crawler/ledger` keeps every change. `+crawler/upkeep` pays 5 scrap of its Tech Level into the upgrade pool, or rolls on the deterioration table; `+crawler/upgrade` raises its Tech Level when the pool is full.
 
         - `+sheet/revoke <name>/<n>` takes back entry `<n>` of their ledger; `+sheet/clear <name>` takes back all of it, so they build the sheet again.
         - `+encounter/end`, `/keep`, `/add` and `/remove` work on any encounter.
