@@ -1,0 +1,50 @@
+format: "1.16"
+package: fate-system-toolkit-wiki
+title: "Fate System Toolkit rules (unofficial)"
+version: 1.0.0
+wiki_landing_page: category:fate_system_toolkit_start_here
+wiki_collection_name: Fate System Toolkit (unofficial)
+authors: [SharpMUSH]
+description: "Rules reference for the Fate System Toolkit pack as wiki pages: conditions, Wealth and Stormcallers, with the commands that play them. Based on the Fate System Toolkit SRD under CC BY 3.0. An unofficial fan package, not affiliated with or endorsed by Evil Hat Productions."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [fate, rules, wiki, conditions, magic]
+category: Characters
+requires_server: ">=0.1"
+
+# A content pack: wiki pages only. Its pages link to the Fate rules pages, so it brings those too.
+depends:
+  - package: sheet-fate-wiki
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH.Packages
+      path: sheet-fate-wiki/
+      branch: main
+
+wiki:
+  - page: category:fate_system_toolkit_start_here
+    title: Start here — Fate System Toolkit
+    pin: true
+    file: wiki/category/fate_system_toolkit_start_here.md
+
+  - page: help:fate_system_toolkit_license_notice
+    title: Fate System Toolkit License Notice
+    requires:
+      edit: [wiki.admin]
+      delete: [wiki.admin]
+    file: wiki/help/fate_system_toolkit_license_notice.md
+
+  - page: main:fate_conditions
+    title: Conditions
+    categories: [fate_system_toolkit_start_here]
+    file: wiki/main/fate_conditions.md
+
+  - page: main:fate_wealth
+    title: Wealth
+    categories: [fate_system_toolkit_start_here]
+    file: wiki/main/fate_wealth.md
+
+  - page: main:fate_stormcallers
+    title: Stormcallers
+    categories: [fate_system_toolkit_start_here]
+    file: wiki/main/fate_stormcallers.md

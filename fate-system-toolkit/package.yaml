@@ -1,0 +1,1282 @@
+format: "1.16"
+package: fate-system-toolkit
+title: "Fate System Toolkit (unofficial)"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Rules from the Fate System Toolkit for the Fate sheet: conditions that soak stress in place of consequences (fleeting, sticky and lasting, treated before they heal), a Wealth track for money that a player checks for a bonus on a roll and staff refill with audited parcels of loot, and Stormcallers, magic drawn from five great storms at a cost in refresh, with barriers and each storm's own attacks. Based on the Fate System Toolkit SRD under CC BY 3.0. An unofficial fan package, not affiliated with or endorsed by Evil Hat Productions."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [sheet, fate, conditions, wealth, magic]
+category: Characters
+requires_server: ">=0.1"
+
+# It keeps conditions in the Fate sheet's play (encounter copies hold them through PLAY`CONDITION), counts them
+# against a hit through the sheet's SOAK` hooks (sheet-fate 1.5), adds a Wealth option to +sheet/advance, and
+# charges a storm's refresh through the sheet's grant ledger. Sheet keepers (softcode.fate.admin) keep this too;
+# there is no permission of its own.
+depends:
+  - package: sheet-fate
+    version: ">=1.5 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH.Packages
+      path: sheet-fate/
+      branch: main
+
+objects:
+  # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook), writes
+  # under each character's FATE` tree (wizard-flagged) through the Fate sheet's FUN`DO`WRITE and API`PLAYSET, and
+  # calls the sheet's functions.
+  #
+  # What it keeps on a character, beside the sheet's own leaves: FATE`CONDITION`<KEY> the boxes checked on a
+  # condition (play: an encounter holds its own copy), FATE`WEALTH`ASPECTS the aspect slots about wealth (build),
+  # FATE`WEALTH`LEDGER`<n> the Wealth ledger ("spend <box>" or "gain <parcel>", with BY, AT, WHY, CLEARED and VOID
+  # beneath), FATE`WEALTH`MARKED the boxes checked, worked out from the ledger, and FATE`STORM`<KEY> a storm the
+  # character is attuned to (build), charged as a refresh grant from source STORM_<KEY>.
+  #
+  # +condition, +wealth and +storm are added with /noparse/rsnoparse and hooked to CMD`<word>, so what a player
+  # types reaches the code exactly as typed and nothing a player wrote is ever evaluated.
+  #
+  # Trees: CMD` the hooked commands, INC`COMMAND` the parse and dispatch, INC`COND`, INC`WEALTH` and INC`STORM` one
+  # routine per switch, INC`NEED` the guards. FUN`LIST` the store's lists, FUN`COND`, FUN`WEALTH` and FUN`STORM` the
+  # rules, FUN`SCREEN` the screens.
+  - ref: toolkit
+    type: thing
+    name: Fate System Toolkit
+    location: "{{$master_room}}"
+    flags: [WIZARD]
+    attributes:
+      # ---- settings ---------------------------------------------------------------
+      # +config toolkit shows and changes them (fate-system-toolkit-config).
+      DATA`CONFIG: |-
+        Settings for conditions, Wealth and Stormcallers on the Fate sheet. One leaf per setting.
+      DATA`CONFIG`LABEL: |-
+        Fate System Toolkit
+      DATA`CONFIG`TREAT: |-
+        4
+      DATA`CONFIG`TREAT`TYPE: |-
+        integer
+      DATA`CONFIG`TREAT`DEFAULT: |-
+        4
+      DATA`CONFIG`TREAT`MIN: |-
+        0
+      DATA`CONFIG`TREAT`MAX: |-
+        8
+      DATA`CONFIG`TREAT`LABEL: |-
+        Treatment
+      DATA`CONFIG`TREAT`DESCRIPTION: |-
+        The passive opposition someone overcomes to start a lasting condition's recovery.
+      DATA`CONFIG`TREAT`EXAMPLE: |-
+        4
+      DATA`CONFIG`WEALTH_BOXES: |-
+        2
+      DATA`CONFIG`WEALTH_BOXES`TYPE: |-
+        integer
+      DATA`CONFIG`WEALTH_BOXES`DEFAULT: |-
+        2
+      DATA`CONFIG`WEALTH_BOXES`MIN: |-
+        0
+      DATA`CONFIG`WEALTH_BOXES`MAX: |-
+        10
+      DATA`CONFIG`WEALTH_BOXES`LABEL: |-
+        Starting Wealth
+      DATA`CONFIG`WEALTH_BOXES`DESCRIPTION: |-
+        The Wealth boxes every character has before aspects about wealth add more.
+      DATA`CONFIG`WEALTH_BOXES`EXAMPLE: |-
+        2
+      DATA`CONFIG`WEALTH_EXTRA: |-
+        3
+      DATA`CONFIG`WEALTH_EXTRA`TYPE: |-
+        integer
+      DATA`CONFIG`WEALTH_EXTRA`DEFAULT: |-
+        3
+      DATA`CONFIG`WEALTH_EXTRA`MIN: |-
+        0
+      DATA`CONFIG`WEALTH_EXTRA`MAX: |-
+        5
+      DATA`CONFIG`WEALTH_EXTRA`LABEL: |-
+        Wealth from aspects
+      DATA`CONFIG`WEALTH_EXTRA`DESCRIPTION: |-
+        How many aspects about how well off a character is add a Wealth box each.
+      DATA`CONFIG`WEALTH_EXTRA`EXAMPLE: |-
+        3
+      DATA`CONFIG`PARCEL_MAX: |-
+        10
+      DATA`CONFIG`PARCEL_MAX`TYPE: |-
+        integer
+      DATA`CONFIG`PARCEL_MAX`DEFAULT: |-
+        10
+      DATA`CONFIG`PARCEL_MAX`MIN: |-
+        1
+      DATA`CONFIG`PARCEL_MAX`MAX: |-
+        50
+      DATA`CONFIG`PARCEL_MAX`LABEL: |-
+        Largest parcel
+      DATA`CONFIG`PARCEL_MAX`DESCRIPTION: |-
+        The most a parcel of Wealth from +wealth/gain is worth.
+      DATA`CONFIG`PARCEL_MAX`EXAMPLE: |-
+        10
+      DATA`CONFIG`STORM_COST: |-
+        2
+      DATA`CONFIG`STORM_COST`TYPE: |-
+        integer
+      DATA`CONFIG`STORM_COST`DEFAULT: |-
+        2
+      DATA`CONFIG`STORM_COST`MIN: |-
+        1
+      DATA`CONFIG`STORM_COST`MAX: |-
+        3
+      DATA`CONFIG`STORM_COST`LABEL: |-
+        Refresh per storm
+      DATA`CONFIG`STORM_COST`DESCRIPTION: |-
+        The refresh each storm costs: 2 when the game has no Weapon and Armor ratings, 1 when it does.
+      DATA`CONFIG`STORM_COST`EXAMPLE: |-
+        1
+      DATA`CONFIG`STORM_SKILL: |-
+        stormcaller
+      DATA`CONFIG`STORM_SKILL`TYPE: |-
+        text
+      DATA`CONFIG`STORM_SKILL`DEFAULT: |-
+        stormcaller
+      DATA`CONFIG`STORM_SKILL`PATTERN: |-
+        ^[A-Za-z0-9_-]+$
+      DATA`CONFIG`STORM_SKILL`LABEL: |-
+        Storm skill
+      DATA`CONFIG`STORM_SKILL`DESCRIPTION: |-
+        The skill a Stormcaller rolls on a game of skills. On a game of approaches they name one.
+      DATA`CONFIG`STORM_SKILL`EXAMPLE: |-
+        stormcaller
+      DATA`CONFIG`CONDITIONS`TYPE: |-
+        table
+      DATA`CONFIG`CONDITIONS`LABEL: |-
+        Conditions
+      DATA`CONFIG`CONDITIONS`DESCRIPTION: |-
+        The conditions every character has: fleeting ones soak 1 shift, sticky ones 2, lasting ones 4. The toolkit keeps their total at 14.
+      DATA`CONFIG`CONDITIONS`STORE: |-
+        {{store}}
+      DATA`CONFIG`CONDITIONS`PATH: |-
+        COND
+      DATA`CONFIG`CONDITIONS`ENTRY: |-
+        label
+      DATA`CONFIG`CONDITIONS`FIELDS: |-
+        label kind clears order
+      DATA`CONFIG`CONDITIONS`KEYPATTERN: |-
+        ^[A-Za-z0-9-]{1,30}$
+      DATA`CONFIG`CONDITIONS`FIELD`LABEL`TYPE: |-
+        text
+      DATA`CONFIG`CONDITIONS`FIELD`LABEL`MIN: |-
+        1
+      DATA`CONFIG`CONDITIONS`FIELD`LABEL`MAX: |-
+        30
+      DATA`CONFIG`CONDITIONS`FIELD`LABEL`PATTERN: |-
+        ^[A-Za-z][A-Za-z0-9 '-]*$
+      DATA`CONFIG`CONDITIONS`FIELD`LABEL`LABEL: |-
+        Name
+      DATA`CONFIG`CONDITIONS`FIELD`LABEL`DESCRIPTION: |-
+        Its name, which is also the aspect a character has while they suffer it.
+      DATA`CONFIG`CONDITIONS`FIELD`KIND`TYPE: |-
+        choice
+      DATA`CONFIG`CONDITIONS`FIELD`KIND`CHOICES: |-
+        fleeting sticky lasting
+      DATA`CONFIG`CONDITIONS`FIELD`KIND`DEFAULT: |-
+        fleeting
+      DATA`CONFIG`CONDITIONS`FIELD`KIND`LABEL: |-
+        Kind
+      DATA`CONFIG`CONDITIONS`FIELD`KIND`DESCRIPTION: |-
+        Fleeting (soaks 1, gone once you catch your breath), sticky (soaks 2, gone after an event) or lasting (soaks 4, two boxes, treated before it heals).
+      DATA`CONFIG`CONDITIONS`FIELD`CLEARS`TYPE: |-
+        text
+      DATA`CONFIG`CONDITIONS`FIELD`CLEARS`MAX: |-
+        120
+      DATA`CONFIG`CONDITIONS`FIELD`CLEARS`LABEL: |-
+        Clears when
+      DATA`CONFIG`CONDITIONS`FIELD`CLEARS`DESCRIPTION: |-
+        What ends it, as +condition shows it.
+      DATA`CONFIG`CONDITIONS`FIELD`ORDER`TYPE: |-
+        integer
+      DATA`CONFIG`CONDITIONS`FIELD`ORDER`DEFAULT: |-
+        50
+      DATA`CONFIG`CONDITIONS`FIELD`ORDER`MIN: |-
+        0
+      DATA`CONFIG`CONDITIONS`FIELD`ORDER`MAX: |-
+        999
+      DATA`CONFIG`CONDITIONS`FIELD`ORDER`LABEL: |-
+        Order
+      DATA`CONFIG`CONDITIONS`FIELD`ORDER`DESCRIPTION: |-
+        Where it comes in the list: lower first, then by key.
+      DATA`CONFIG`STORMS`TYPE: |-
+        table
+      DATA`CONFIG`STORMS`LABEL: |-
+        Storms
+      DATA`CONFIG`STORMS`DESCRIPTION: |-
+        The storms a Stormcaller attunes to, with what each does.
+      DATA`CONFIG`STORMS`STORE: |-
+        {{store}}
+      DATA`CONFIG`STORMS`PATH: |-
+        STORM
+      DATA`CONFIG`STORMS`ENTRY: |-
+        label
+      DATA`CONFIG`STORMS`FIELDS: |-
+        label aspect passive invoke compel create attack defend overcome fade barriermod defendmod overcomemod zone spread chain surround seal lengths freeze order
+      DATA`CONFIG`STORMS`KEYPATTERN: |-
+        ^[A-Za-z0-9-]{1,30}$
+      DATA`CONFIG`STORMS`FIELD`LABEL`TYPE: |-
+        text
+      DATA`CONFIG`STORMS`FIELD`LABEL`MIN: |-
+        1
+      DATA`CONFIG`STORMS`FIELD`LABEL`MAX: |-
+        30
+      DATA`CONFIG`STORMS`FIELD`LABEL`PATTERN: |-
+        ^[A-Za-z][A-Za-z0-9 '-]*$
+      DATA`CONFIG`STORMS`FIELD`LABEL`LABEL: |-
+        Name
+      DATA`CONFIG`STORMS`FIELD`LABEL`DESCRIPTION: |-
+        The storm's name.
+      DATA`CONFIG`STORMS`FIELD`ASPECT`TYPE: |-
+        text
+      DATA`CONFIG`STORMS`FIELD`ASPECT`MAX: |-
+        60
+      DATA`CONFIG`STORMS`FIELD`ASPECT`LABEL: |-
+        Aspect
+      DATA`CONFIG`STORMS`FIELD`ASPECT`DESCRIPTION: |-
+        An aspect that names the storm, offered to a character who attunes to it.
+      DATA`CONFIG`STORMS`FIELD`PASSIVE`TYPE: |-
+        text
+      DATA`CONFIG`STORMS`FIELD`PASSIVE`MAX: |-
+        300
+      DATA`CONFIG`STORMS`FIELD`PASSIVE`LABEL: |-
+        Passive effect
+      DATA`CONFIG`STORMS`FIELD`PASSIVE`DESCRIPTION: |-
+        What the storm's aspect always does.
+      DATA`CONFIG`STORMS`FIELD`INVOKE`TYPE: |-
+        text
+      DATA`CONFIG`STORMS`FIELD`INVOKE`MAX: |-
+        300
+      DATA`CONFIG`STORMS`FIELD`INVOKE`LABEL: |-
+        Invoke
+      DATA`CONFIG`STORMS`FIELD`INVOKE`DESCRIPTION: |-
+        What its aspect is invoked for.
+      DATA`CONFIG`STORMS`FIELD`COMPEL`TYPE: |-
+        text
+      DATA`CONFIG`STORMS`FIELD`COMPEL`MAX: |-
+        300
+      DATA`CONFIG`STORMS`FIELD`COMPEL`LABEL: |-
+        Compel
+      DATA`CONFIG`STORMS`FIELD`COMPEL`DESCRIPTION: |-
+        What its aspect is compelled for.
+      DATA`CONFIG`STORMS`FIELD`CREATE`TYPE: |-
+        text
+      DATA`CONFIG`STORMS`FIELD`CREATE`MAX: |-
+        300
+      DATA`CONFIG`STORMS`FIELD`CREATE`LABEL: |-
+        Create
+      DATA`CONFIG`STORMS`FIELD`CREATE`DESCRIPTION: |-
+        How its barriers and other advantages work, in words.
+      DATA`CONFIG`STORMS`FIELD`ATTACK`TYPE: |-
+        text
+      DATA`CONFIG`STORMS`FIELD`ATTACK`MAX: |-
+        300
+      DATA`CONFIG`STORMS`FIELD`ATTACK`LABEL: |-
+        Attack
+      DATA`CONFIG`STORMS`FIELD`ATTACK`DESCRIPTION: |-
+        How it attacks, in words; shown after an attack.
+      DATA`CONFIG`STORMS`FIELD`DEFEND`TYPE: |-
+        text
+      DATA`CONFIG`STORMS`FIELD`DEFEND`MAX: |-
+        300
+      DATA`CONFIG`STORMS`FIELD`DEFEND`LABEL: |-
+        Defend
+      DATA`CONFIG`STORMS`FIELD`DEFEND`DESCRIPTION: |-
+        How it defends, in words; shown after a defence.
+      DATA`CONFIG`STORMS`FIELD`OVERCOME`TYPE: |-
+        text
+      DATA`CONFIG`STORMS`FIELD`OVERCOME`MAX: |-
+        300
+      DATA`CONFIG`STORMS`FIELD`OVERCOME`LABEL: |-
+        Overcome
+      DATA`CONFIG`STORMS`FIELD`OVERCOME`DESCRIPTION: |-
+        How it overcomes a physical barrier, in words; shown after +storm/overcome barrier.
+      DATA`CONFIG`STORMS`FIELD`FADE`TYPE: |-
+        text
+      DATA`CONFIG`STORMS`FIELD`FADE`MAX: |-
+        300
+      DATA`CONFIG`STORMS`FIELD`FADE`LABEL: |-
+        Barrier lasts
+      DATA`CONFIG`STORMS`FIELD`FADE`DESCRIPTION: |-
+        How long its barrier lasts; shown after +storm/barrier.
+      DATA`CONFIG`STORMS`FIELD`BARRIERMOD`TYPE: |-
+        text
+      DATA`CONFIG`STORMS`FIELD`BARRIERMOD`PATTERN: |-
+        ^(-?[0-9])?$
+      DATA`CONFIG`STORMS`FIELD`BARRIERMOD`LABEL: |-
+        Barrier bonus
+      DATA`CONFIG`STORMS`FIELD`BARRIERMOD`DESCRIPTION: |-
+        Added to a roll to raise a barrier: 1 for Earthquake and Glacier.
+      DATA`CONFIG`STORMS`FIELD`DEFENDMOD`TYPE: |-
+        text
+      DATA`CONFIG`STORMS`FIELD`DEFENDMOD`PATTERN: |-
+        ^(-?[0-9])?$
+      DATA`CONFIG`STORMS`FIELD`DEFENDMOD`LABEL: |-
+        Defence bonus
+      DATA`CONFIG`STORMS`FIELD`DEFENDMOD`DESCRIPTION: |-
+        Added to a defence: -1 for Earthquake.
+      DATA`CONFIG`STORMS`FIELD`OVERCOMEMOD`TYPE: |-
+        text
+      DATA`CONFIG`STORMS`FIELD`OVERCOMEMOD`PATTERN: |-
+        ^(-?[0-9])?$
+      DATA`CONFIG`STORMS`FIELD`OVERCOMEMOD`LABEL: |-
+        Barrier overcome bonus
+      DATA`CONFIG`STORMS`FIELD`OVERCOMEMOD`DESCRIPTION: |-
+        Added to overcoming a physical barrier: 1 for Flood.
+      DATA`CONFIG`STORMS`FIELD`ZONE`TYPE: |-
+        text
+      DATA`CONFIG`STORMS`FIELD`ZONE`PATTERN: |-
+        ^(-?[0-9])?$
+      DATA`CONFIG`STORMS`FIELD`ZONE`LABEL: |-
+        Whole zone
+      DATA`CONFIG`STORMS`FIELD`ZONE`DESCRIPTION: |-
+        Added to an attack on everyone in a zone; empty when the storm cannot.
+      DATA`CONFIG`STORMS`FIELD`SPREAD`TYPE: |-
+        text
+      DATA`CONFIG`STORMS`FIELD`SPREAD`PATTERN: |-
+        ^(-?[0-9])?$
+      DATA`CONFIG`STORMS`FIELD`SPREAD`LABEL: |-
+        Each zone more
+      DATA`CONFIG`STORMS`FIELD`SPREAD`DESCRIPTION: |-
+        Added for each zone past the first that an attack on a zone reaches; empty when it cannot.
+      DATA`CONFIG`STORMS`FIELD`CHAIN`TYPE: |-
+        text
+      DATA`CONFIG`STORMS`FIELD`CHAIN`PATTERN: |-
+        ^(-?[0-9])?$
+      DATA`CONFIG`STORMS`FIELD`CHAIN`LABEL: |-
+        Each target more
+      DATA`CONFIG`STORMS`FIELD`CHAIN`DESCRIPTION: |-
+        Added for each target past the first a chained attack hits; empty when it cannot.
+      DATA`CONFIG`STORMS`FIELD`SURROUND`TYPE: |-
+        text
+      DATA`CONFIG`STORMS`FIELD`SURROUND`PATTERN: |-
+        ^(-?[0-9])?$
+      DATA`CONFIG`STORMS`FIELD`SURROUND`LABEL: |-
+        Surround
+      DATA`CONFIG`STORMS`FIELD`SURROUND`DESCRIPTION: |-
+        Added to raise a barrier around a whole zone; empty when the storm cannot.
+      DATA`CONFIG`STORMS`FIELD`SEAL`TYPE: |-
+        text
+      DATA`CONFIG`STORMS`FIELD`SEAL`PATTERN: |-
+        ^(-?[0-9])?$
+      DATA`CONFIG`STORMS`FIELD`SEAL`LABEL: |-
+        Seal the top
+      DATA`CONFIG`STORMS`FIELD`SEAL`DESCRIPTION: |-
+        Added again to close a surrounding barrier over the top; empty when the storm cannot.
+      DATA`CONFIG`STORMS`FIELD`LENGTHS`TYPE: |-
+        boolean
+      DATA`CONFIG`STORMS`FIELD`LENGTHS`DEFAULT: |-
+        0
+      DATA`CONFIG`STORMS`FIELD`LENGTHS`LABEL: |-
+        Long barriers
+      DATA`CONFIG`STORMS`FIELD`LENGTHS`DESCRIPTION: |-
+        Whether its barrier runs several lengths, each past the first taking 1 off its rating.
+      DATA`CONFIG`STORMS`FIELD`FREEZE`TYPE: |-
+        boolean
+      DATA`CONFIG`STORMS`FIELD`FREEZE`DEFAULT: |-
+        0
+      DATA`CONFIG`STORMS`FIELD`FREEZE`LABEL: |-
+        Freezes
+      DATA`CONFIG`STORMS`FIELD`FREEZE`DESCRIPTION: |-
+        Whether an attack may freeze its target in place for half the damage.
+      DATA`CONFIG`STORMS`FIELD`ORDER`TYPE: |-
+        integer
+      DATA`CONFIG`STORMS`FIELD`ORDER`DEFAULT: |-
+        50
+      DATA`CONFIG`STORMS`FIELD`ORDER`MIN: |-
+        0
+      DATA`CONFIG`STORMS`FIELD`ORDER`MAX: |-
+        999
+      DATA`CONFIG`STORMS`FIELD`ORDER`LABEL: |-
+        Order
+      DATA`CONFIG`STORMS`FIELD`ORDER`DESCRIPTION: |-
+        Where it comes in the list: lower first, then by key.
+      # Which INC` routine each switch runs: DATA`ROUTE`<table>`<switch>. BARE is the command alone, ARG the
+      # command with something after it and no switch.
+      DATA`ROUTE: |-
+        Which routine each switch runs. One leaf per switch.
+      DATA`ROUTE`CONDITION`BARE: |-
+        COND`SHOW
+      DATA`ROUTE`CONDITION`ARG: |-
+        COND`SHOW
+      DATA`ROUTE`CONDITION`LIST: |-
+        COND`LIST
+      DATA`ROUTE`CONDITION`TAKE: |-
+        COND`TAKE
+      DATA`ROUTE`CONDITION`RECOVER: |-
+        COND`RECOVER
+      DATA`ROUTE`CONDITION`TREAT: |-
+        COND`TREAT
+      DATA`ROUTE`CONDITION`GIVE: |-
+        COND`GIVE
+      DATA`ROUTE`CONDITION`CLEAR: |-
+        COND`CLEAR
+      DATA`ROUTE`WEALTH`BARE: |-
+        WEALTH`SHOW
+      DATA`ROUTE`WEALTH`ARG: |-
+        WEALTH`SHOW
+      DATA`ROUTE`WEALTH`LOG: |-
+        WEALTH`LOG
+      DATA`ROUTE`WEALTH`SPEND: |-
+        WEALTH`SPEND
+      DATA`ROUTE`WEALTH`ROLL: |-
+        WEALTH`ROLL
+      DATA`ROUTE`WEALTH`GAIN: |-
+        WEALTH`GAIN
+      DATA`ROUTE`WEALTH`VOID: |-
+        WEALTH`VOID
+      DATA`ROUTE`WEALTH`ASPECT: |-
+        WEALTH`ASPECT
+      DATA`ROUTE`STORM`BARE: |-
+        STORM`MINE
+      DATA`ROUTE`STORM`ARG: |-
+        STORM`SHOW
+      DATA`ROUTE`STORM`LIST: |-
+        STORM`LIST
+      DATA`ROUTE`STORM`ATTUNE: |-
+        STORM`ATTUNE
+      DATA`ROUTE`STORM`UNATTUNE: |-
+        STORM`UNATTUNE
+      DATA`ROUTE`STORM`ATTACK: |-
+        STORM`ROLL
+      DATA`ROUTE`STORM`DEFEND: |-
+        STORM`ROLL
+      DATA`ROUTE`STORM`BARRIER: |-
+        STORM`ROLL
+      DATA`ROUTE`STORM`OVERCOME: |-
+        STORM`ROLL
+      DATA`ROUTE`STORM`ADVANTAGE: |-
+        STORM`ROLL
+
+      # ---- commands ---------------------------------------------------------------
+      # %1 the switches and %2 what follows, exactly as typed.
+      CMD`CONDITION:
+        value: |-
+          $(?is)^\+condition(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,condition,table,CONDITION,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`WEALTH:
+        value: |-
+          $(?is)^\+wealth(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,wealth,table,WEALTH,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      # A storm roll may go straight on to its opposition: +storm/attack=fair.
+      CMD`STORM:
+        value: |-
+          $(?is)^\+storm(/[^\s=]*)?(?\:\s+(.*)|(=.*))?$:@include/args %!/INC`COMMAND`RUN=word,storm,table,STORM,switches,%1,argument,%2%3
+        flags: [regexp, cmdsyntax]
+      # A line a bridge adds to one of this object's messages: HINT`<message>, set by a bridge such as
+      # fate-system-toolkit-help. Nothing when no bridge set one.
+      FUN`HINT:
+        value: |-
+          if(hasattr(%!,HINT`%0),%b[u(%!/HINT`%0,%1,%2)])
+        flags: [funsyntax]
+      INC`COMMAND`RUN:
+        value: |-
+          @assert hastype(%#,player)=@pemit %#=notice(ucstr(%<word>),Only players use +%<word>.,warn); think u(%!/FUN`COMMAND`PARSE,%<word>,%<table>,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(%q<cmd_tag>,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(%q<cmd_tag>,+%q<cmd_word> has no /%q<cmd_switch> switch.[u(%!/FUN`HINT,SWITCHES,%q<cmd_word>)],warn); @include %!/INC`%q<cmd_route>
+        flags: [cmdsyntax]
+      # %0 the word, %1 its route table, %2 the switches and %3 the argument, as typed. Sets cmd_word, cmd_tag,
+      # cmd_switch_list, cmd_switch, cmd_argument, cmd_has_equals, cmd_left_side and cmd_right_side around the
+      # first =, cmd_route (the INC` routine to run), viewer_objid and viewer_keeper.
+      FUN`COMMAND`PARSE:
+        value: |-
+          setqm(cmd_word,lcstr(%0),
+          cmd_tag,ucstr(%0),
+          cmd_switch_list,lcstr(trim(edit(%2,/,%b))),
+          cmd_switch,first(%q<cmd_switch_list>),
+          cmd_argument,trim(%3),
+          cmd_has_equals,strmatch(%3,*=*),
+          cmd_left_side,trim(before(%3,=)),
+          cmd_right_side,trim(after(%3,=)),
+          cmd_route,get(%!/DATA`ROUTE`%1`[if(strlen(%q<cmd_switch>),ucstr(%q<cmd_switch>),if(strlen(%q<cmd_argument>),ARG,BARE))]),
+          viewer_objid,objid(%#),
+          viewer_keeper,u({{sheet-fate/sheet}}/FUN`PERM`KEEPER,%#))
+        flags: [funsyntax]
+
+      # ---- guards -----------------------------------------------------------------
+      # The left of =: <name>/<what> for a sheet keeper, else <what> on your own sheet. sheet_who and sheet_what.
+      INC`NEED`WHO:
+        value: |-
+          think if(strmatch(%q<cmd_left_side>,*/*),setqm(sheet_who,u({{sheet-fate/sheet}}/FUN`PLAYER`MATCH,setr(sheet_name,trim(before(%q<cmd_left_side>,/)))),sheet_what,trim(after(%q<cmd_left_side>,/))),setqm(sheet_name,,sheet_who,%q<viewer_objid>,sheet_what,%q<cmd_left_side>)); @assert strlen(%q<sheet_who>)=@pemit %#=notice(%q<cmd_tag>,There is no player called '%q<sheet_name>'.,warn); @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(%q<cmd_tag>,Only sheet keepers change another character's sheet.,error)
+        flags: [cmdsyntax]
+      # %<name> a player's name, or nothing for yourself: sheet_who.
+      INC`NEED`TARGET:
+        value: |-
+          think setq(sheet_who,if(strlen(%<name>),u({{sheet-fate/sheet}}/FUN`PLAYER`MATCH,%<name>),%q<viewer_objid>)); @assert strlen(%q<sheet_who>)=@pemit %#=notice(%q<cmd_tag>,There is no player called '%<name>'.,warn)
+        flags: [cmdsyntax]
+      # Choices a player makes before approval, as the Fate sheet's own ratings and aspects are.
+      INC`NEED`EDITABLE:
+        value: |-
+          @assert cor(%q<viewer_keeper>,not(isapproved(%#)))=@pemit %#=notice(%q<cmd_tag>,Your character is approved%, so staff change your sheet now.[if(strmatch(%q<cmd_tag>,WEALTH),%b+sheet/advance wealth <slot>=<aspect> spends a milestone on one more aspect about wealth.)],error); @assert cor(%q<viewer_keeper>,not(strlen(setr(edit_gate,u({{sheet-fate/sheet}}/FUN`GATE`EDIT,%#)))))=@pemit %#=notice(%q<cmd_tag>,%q<edit_gate>,warn)
+        flags: [cmdsyntax]
+      INC`NEED`KEEPER:
+        value: |-
+          @assert %q<viewer_keeper>=@pemit %#=notice(%q<cmd_tag>,Only sheet keepers do that.,error)
+        flags: [cmdsyntax]
+      INC`NEED`VIEW:
+        value: |-
+          @assert u({{sheet-fate/sheet}}/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(%q<cmd_tag>,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error)
+        flags: [cmdsyntax]
+      # sheet_who's conditions: a sheet keeper, or the GM of the encounter their play goes to.
+      INC`NEED`RUNS:
+        value: |-
+          think setq(runs_enc,u({{sheet-fate/sheet}}/FUN`ENC`ACTIVE,%q<sheet_who>)); @assert cor(%q<viewer_keeper>,cand(strlen(%q<runs_enc>),u({{sheet-fate/sheet}}/FUN`ENC`ISGM,%q<runs_enc>,%#)))=@pemit %#=notice(%q<cmd_tag>,Only sheet keepers%, and the GM of an encounter [name(%q<sheet_who>)] is in%, do that.,error)
+        flags: [cmdsyntax]
+      # %<typed> a skill or approach, with a modifier at its end: trait_key and check_modifier.
+      INC`NEED`TRAIT:
+        value: |-
+          think u({{sheet-fate/sheet}}/FUN`CHECK`READ,%<typed>); @assert isint(%q<check_modifier>)=@pemit %#=notice(%q<cmd_tag>,'%<typed>' ends in something that is not a number to add.,warn); @assert strlen(setr(trait_key,u({{sheet-fate/sheet}}/API`FIND,%q<check_typed>)))=@pemit %#=notice(%q<cmd_tag>,There is no [u({{sheet-fate/sheet}}/FUN`TRAIT`NOUN)] '%q<check_typed>'. +sheet/traits lists them.,warn)
+        flags: [cmdsyntax]
+
+      # ---- lists ------------------------------------------------------------------
+      # %0 COND or STORM: the keys on Fate System Toolkit Store, by ORDER and then key.
+      FUN`LIST`ALL:
+        value: |-
+          iter(sort(iter(lattr({{store}}/%0`*),[rjust(default({{store}}/%i0`ORDER,50),3,0)]~[after(%i0,`)])),after(%i0,~))
+        flags: [funsyntax]
+      # %0 COND or STORM, %1 typed: its key, an entry named that, or the only one whose name starts that way.
+      FUN`LIST`FIND:
+        value: |-
+          setqm(lf_typed,trim(%1),lf_all,u(%!/FUN`LIST`ALL,%0))[cond(not(strlen(%q<lf_typed>)),,member(%q<lf_all>,ucstr(%q<lf_typed>)),ucstr(%q<lf_typed>),words(setr(lf_exact,squish(iter(%q<lf_all>,if(strmatch(get({{store}}/%0`%i0),%q<lf_typed>),%i0))))),first(%q<lf_exact>),eq(words(setr(lf_start,squish(iter(%q<lf_all>,if(strmatch(get({{store}}/%0`%i0),%q<lf_typed>*),%i0))))),1),%q<lf_start>)]
+        flags: [funsyntax]
+      # %0 COND or STORM, %1 keys: their names, "Angry and Hungry", or %2 to join the last two.
+      FUN`LIST`NAMES:
+        value: |-
+          itemize(iter(%1,get({{store}}/%0`%i0),%b,|),|,firstof(%2,and))
+        flags: [funsyntax]
+
+      # ---- conditions ---------------------------------------------------------------
+      # A condition is COND`<KEY> on the store, its name, with KIND (fleeting, sticky or lasting), CLEARS and ORDER
+      # beneath. A character's FATE`CONDITION`<KEY> is the boxes checked: 1, or 2 on a lasting one, which treatment
+      # brings down to 1.
+      FUN`COND`KIND:
+        value: |-
+          default({{store}}/COND`%0`KIND,fleeting)
+        flags: [funsyntax]
+      FUN`COND`SOAK:
+        value: |-
+          switch(u(%!/FUN`COND`KIND,%0),sticky,2,lasting,4,1)
+        flags: [funsyntax]
+      FUN`COND`FULL:
+        value: |-
+          if(strmatch(u(%!/FUN`COND`KIND,%0),lasting),2,1)
+        flags: [funsyntax]
+      # %0 a character, %1 a key: the boxes checked, from their encounter copy while they are in one.
+      FUN`COND`MARKED:
+        value: |-
+          firstof(u({{sheet-fate/sheet}}/API`PLAY,%0,CONDITION`%1),0)
+        flags: [funsyntax]
+      FUN`COND`TAKEN:
+        value: |-
+          squish(iter(u(%!/FUN`LIST`ALL,COND),if(u(%!/FUN`COND`MARKED,%0,%i0),%i0)))
+        flags: [funsyntax]
+      # %0 a key, %1 the boxes checked: [x] or [ ], twice for a lasting condition.
+      FUN`COND`BOXES:
+        value: |-
+          [if(gte(%1,1),\[x\],\[ \])][if(strmatch(u(%!/FUN`COND`KIND,%0),lasting),if(gte(%1,2),\[x\],\[ \]))]
+        flags: [funsyntax]
+      # %0 what was typed: cond_keys, the conditions named (spaces or commas between), and cond_bad, words that are none.
+      FUN`COND`READ:
+        value: |-
+          setqm(cond_keys,,cond_bad,)[null(iter(edit(%0,%,,%b),if(strlen(setr(cond_one,u(%!/FUN`LIST`FIND,COND,%i0))),setq(cond_keys,%q<cond_keys> %q<cond_one>),setq(cond_bad,%q<cond_bad> %i0))))][setqm(cond_keys,squish(%q<cond_keys>),cond_bad,squish(%q<cond_bad>))]
+        flags: [funsyntax]
+      # cond_keys from %<typed>: one or more conditions, each named once.
+      INC`NEED`CONDS:
+        value: |-
+          think u(%!/FUN`COND`READ,%<typed>); @assert not(words(%q<cond_bad>))=@pemit %#=notice(CONDITION,There is no condition [itemize(iter(%q<cond_bad>,'%i0',%b,|),|,or)]. +condition/list shows them.,warn); @assert words(%q<cond_keys>)=@pemit %#=notice(CONDITION,Name a condition. +condition/list shows them.,warn); @assert eq(words(%q<cond_keys>),words(setunion(%q<cond_keys>,)))=@pemit %#=notice(CONDITION,Name each condition once.,warn)
+        flags: [cmdsyntax]
+      # cond_keys on sheet_who, all clear: checks them off. Sets cond_soaked, the shifts they soak.
+      INC`DO`TAKE:
+        value: |-
+          think setq(cond_full,squish(iter(%q<cond_keys>,if(u(%!/FUN`COND`MARKED,%q<sheet_who>,%i0),%i0)))); @assert not(words(%q<cond_full>))=@pemit %#=notice(CONDITION,[if(comp(%q<sheet_who>,%q<viewer_objid>),[name(%q<sheet_who>)] is,You are)] [u(%!/FUN`LIST`NAMES,COND,%q<cond_full>)] already: a condition is taken only while [if(strmatch(u(%!/FUN`COND`KIND,first(%q<cond_full>)),lasting),both its boxes are,it is)] clear.,warn); think null(iter(%q<cond_keys>,u({{sheet-fate/sheet}}/API`PLAYSET,%q<sheet_who>,CONDITION`%i0,u(%!/FUN`COND`FULL,%i0))))[setq(cond_soaked,ladd(iter(%q<cond_keys>,u(%!/FUN`COND`SOAK,%i0))))]
+        flags: [cmdsyntax]
+      FUN`COND`ASPECT:
+        value: |-
+          [if(eq(words(%0),1),It is an aspect,Each is an aspect)] on [poss(%1)] sheet now%, and someone else may invoke [if(eq(words(%0),1),it,each)] once for free.
+        flags: [funsyntax]
+      INC`COND`SHOW:
+        value: |-
+          @include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>; @include %!/INC`NEED`VIEW; @pemit %#=u(%!/FUN`SCREEN`CONDITIONS,%q<sheet_who>)
+        flags: [cmdsyntax]
+      INC`COND`LIST:
+        value: |-
+          @pemit %#=u(%!/FUN`SCREEN`CONDLIST)
+        flags: [cmdsyntax]
+      # +condition/take <condition>[ <condition>...]: you check them off to soak a hit.
+      INC`COND`TAKE:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(CONDITION,+condition/take <condition>%[ <condition>...%] checks conditions off to soak stress. +condition/list shows them.,warn); @include/args %!/INC`NEED`CONDS=typed,%q<cmd_argument>; think setq(sheet_who,%q<viewer_objid>); @include %!/INC`DO`TAKE; @remit %l=notice(CONDITION,tone(strong,name(%#)) takes [u(%!/FUN`LIST`NAMES,COND,%q<cond_keys>)][u({{sheet-fate/sheet}}/FUN`PLAY`IN,%q<viewer_objid>)]%, soaking [u({{sheet-fate/sheet}}/FUN`DISPLAY`SHIFTS,%q<cond_soaked>)]. [u(%!/FUN`COND`ASPECT,%q<cond_keys>,%#)])
+        flags: [cmdsyntax]
+      # +condition/recover <condition>: you are over it. A lasting one is treated first.
+      INC`COND`RECOVER:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(CONDITION,+condition/recover <condition> clears a condition you are over.,warn); @assert strlen(setr(cond_key,u(%!/FUN`LIST`FIND,COND,%q<cmd_argument>)))=@pemit %#=notice(CONDITION,There is no condition '%q<cmd_argument>'. +condition/list shows them.,warn); think setq(cond_marked,u(%!/FUN`COND`MARKED,%q<viewer_objid>,%q<cond_key>)); @assert %q<cond_marked>=@pemit %#=notice(CONDITION,You are not [get({{store}}/COND`%q<cond_key>)].,warn); @assert lt(%q<cond_marked>,2)=@pemit %#=notice(CONDITION,[get({{store}}/COND`%q<cond_key>)] is lasting: it is treated first%, by someone who overcomes [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,get(%!/DATA`CONFIG`TREAT))] with +condition/treat [name(%#)]/[lcstr(%q<cond_key>)]=<skill>.,warn); think u({{sheet-fate/sheet}}/API`PLAYSET,%q<viewer_objid>,CONDITION`%q<cond_key>,); @remit %l=notice(CONDITION,tone(strong,name(%#)) recovers from [get({{store}}/COND`%q<cond_key>)][u({{sheet-fate/sheet}}/FUN`PLAY`IN,%q<viewer_objid>)].)
+        flags: [cmdsyntax]
+      # +condition/treat [<name>/]<condition>=<skill>[+<n>]: you roll against the treatment difficulty, and a tie or
+      # better clears one box of a lasting condition, so recovery begins.
+      INC`COND`TREAT:
+        value: |-
+          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>),strlen(%q<cmd_right_side>))=@pemit %#=notice(CONDITION,+condition/treat <name>/<condition>=<skill> starts someone's recovery from a lasting condition%, such as +condition/treat Pat/wounded=lore. Leave out <name>/ to treat your own.,warn); think if(strmatch(%q<cmd_left_side>,*/*),setqm(sheet_who,u({{sheet-fate/sheet}}/FUN`PLAYER`MATCH,setr(sheet_name,trim(before(%q<cmd_left_side>,/)))),sheet_what,trim(after(%q<cmd_left_side>,/))),setqm(sheet_name,,sheet_who,%q<viewer_objid>,sheet_what,%q<cmd_left_side>)); @assert strlen(%q<sheet_who>)=@pemit %#=notice(CONDITION,There is no player called '%q<sheet_name>'.,warn); @assert strlen(setr(cond_key,u(%!/FUN`LIST`FIND,COND,%q<sheet_what>)))=@pemit %#=notice(CONDITION,There is no condition '%q<sheet_what>'. +condition/list shows them.,warn); @assert strmatch(u(%!/FUN`COND`KIND,%q<cond_key>),lasting)=@pemit %#=notice(CONDITION,[get({{store}}/COND`%q<cond_key>)] is [u(%!/FUN`COND`KIND,%q<cond_key>)]: it needs no treatment%, and +condition/recover clears it.,warn); think setq(cond_marked,u(%!/FUN`COND`MARKED,%q<sheet_who>,%q<cond_key>)); @assert eq(%q<cond_marked>,2)=@pemit %#=notice(CONDITION,if(%q<cond_marked>,[name(%q<sheet_who>)]'s recovery from [get({{store}}/COND`%q<cond_key>)] has begun already.,[name(%q<sheet_who>)] is not [get({{store}}/COND`%q<cond_key>)].),warn); @include/args %!/INC`NEED`TRAIT=typed,%q<cmd_right_side>; think setq(treat_result,uargs({{sheet-fate/sheet}}/API`CHECK,roller,%q<viewer_objid>,trait,%q<trait_key>,modifier,%q<check_modifier>,target,get(%!/DATA`CONFIG`TREAT))); @assert not(strmatch(%q<treat_result>,#-*))=@pemit %#=notice(CONDITION,%q<treat_result>,error); think setq(treat_tier,json_query(%q<treat_result>,extract,$.tier)); @if not(strmatch(%q<treat_tier>,fail))={think u({{sheet-fate/sheet}}/API`PLAYSET,%q<sheet_who>,CONDITION`%q<cond_key>,1)}; @remit %l=notice(CONDITION,tone(strong,name(%#)) treats [if(comp(%q<sheet_who>,%q<viewer_objid>),name(%q<sheet_who>)'s,[poss(%#)] own)] [get({{store}}/COND`%q<cond_key>)]: [u({{sheet-fate/sheet}}/FUN`DISPLAY`CHECK,%q<treat_result>)] [switch(%q<treat_tier>,fail,It needs more treatment before it can heal.,partial,Recovery begins at a minor cost: one box clears%, and the other after one more full session.,Recovery begins: one box clears%, and the other after one more full session.)])
+        flags: [cmdsyntax]
+      # +condition/give <name>=<condition>[ <condition>...]: the GM says they suffer it.
+      INC`COND`GIVE:
+        value: |-
+          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>),strlen(%q<cmd_right_side>))=@pemit %#=notice(CONDITION,+condition/give <name>=<condition> says someone suffers a condition.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; @include %!/INC`NEED`RUNS; @include/args %!/INC`NEED`CONDS=typed,%q<cmd_right_side>; @include %!/INC`DO`TAKE; @remit loc(%q<sheet_who>)=notice(CONDITION,tone(strong,name(%#)) gives [name(%q<sheet_who>)] [u(%!/FUN`LIST`NAMES,COND,%q<cond_keys>)][u({{sheet-fate/sheet}}/FUN`PLAY`IN,%q<sheet_who>)]. [u(%!/FUN`COND`ASPECT,%q<cond_keys>,%q<sheet_who>)]); @if comp(loc(%#),loc(%q<sheet_who>))={@pemit %#=notice(CONDITION,[name(%q<sheet_who>)] is [u(%!/FUN`LIST`NAMES,COND,%q<cond_keys>)] now.,ok)}
+        flags: [cmdsyntax]
+      # +condition/clear <name>=<condition>[ <condition>...]|all: the GM clears them, as a session's end does.
+      INC`COND`CLEAR:
+        value: |-
+          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>),strlen(%q<cmd_right_side>))=@pemit %#=notice(CONDITION,+condition/clear <name>=<condition> clears one%, and =all clears every one.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; @include %!/INC`NEED`RUNS; @break strmatch(%q<cmd_right_side>,all)={think setq(cond_keys,u(%!/FUN`COND`TAKEN,%q<sheet_who>)); @assert words(%q<cond_keys>)=@pemit %#=notice(CONDITION,[name(%q<sheet_who>)] has no conditions.,warn); @include %!/INC`COND`CLEARED}; @include/args %!/INC`NEED`CONDS=typed,%q<cmd_right_side>; think setq(cond_clear,squish(iter(%q<cond_keys>,if(u(%!/FUN`COND`MARKED,%q<sheet_who>,%i0),,%i0)))); @assert not(words(%q<cond_clear>))=@pemit %#=notice(CONDITION,[name(%q<sheet_who>)] is not [u(%!/FUN`LIST`NAMES,COND,%q<cond_clear>,or)].,warn); @include %!/INC`COND`CLEARED
+        flags: [cmdsyntax]
+      INC`COND`CLEARED:
+        value: |-
+          think null(iter(%q<cond_keys>,u({{sheet-fate/sheet}}/API`PLAYSET,%q<sheet_who>,CONDITION`%i0,))); @remit loc(%q<sheet_who>)=notice(CONDITION,tone(strong,name(%#)) clears [name(%q<sheet_who>)]'s [u(%!/FUN`LIST`NAMES,COND,%q<cond_keys>)][u({{sheet-fate/sheet}}/FUN`PLAY`IN,%q<sheet_who>)].); @if comp(loc(%#),loc(%q<sheet_who>))={@pemit %#=notice(CONDITION,[name(%q<sheet_who>)]'s [u(%!/FUN`LIST`NAMES,COND,%q<cond_keys>)] [if(eq(words(%q<cond_keys>),1),is,are)] clear.,ok)}
+        flags: [cmdsyntax]
+
+      # ---- wealth -------------------------------------------------------------------
+      # Wealth is a stress track a character checks for a bonus on a roll, box N for +N, and only a parcel of
+      # Wealth clears. Boxes: the game's start, and one for each aspect about wealth up to the most aspects add.
+      FUN`WEALTH`HELD:
+        value: |-
+          squish(iter(get(%0/FATE`WEALTH`ASPECTS),if(strlen(get(%0/FATE`ASPECT`%i0)),%i0)))
+        flags: [funsyntax]
+      FUN`WEALTH`BOXES:
+        value: |-
+          add(get(%!/DATA`CONFIG`WEALTH_BOXES),min(get(%!/DATA`CONFIG`WEALTH_EXTRA),words(u(%!/FUN`WEALTH`HELD,%0))))
+        flags: [funsyntax]
+      FUN`WEALTH`MARKED:
+        value: |-
+          get(%0/FATE`WEALTH`MARKED)
+        flags: [funsyntax]
+      # %0 a character: their boxes, 1[ ] 2[x] 3[ ], or none.
+      FUN`WEALTH`TRACK:
+        value: |-
+          setqm(wt_boxes,u(%!/FUN`WEALTH`BOXES,%0),wt_marked,u(%!/FUN`WEALTH`MARKED,%0))[if(%q<wt_boxes>,iter(lnum(1,%q<wt_boxes>),%i0[if(member(%q<wt_marked>,%i0),tone(warning,\[x\]),\[ \])]),none)]
+        flags: [funsyntax]
+      FUN`WEALTH`ENTRIES:
+        value: |-
+          sort(iter(lattr(%0/FATE`WEALTH`LEDGER`*),last(%i0,`)),n)
+        flags: [funsyntax]
+      # %0 a character: works FATE`WEALTH`MARKED out from the ledger, entry by entry, leaving out void ones.
+      FUN`WEALTH`REPLAY:
+        value: |-
+          setq(wr_marked,)[null(iter(u(%!/FUN`WEALTH`ENTRIES,%0),if(hasattr(%0,FATE`WEALTH`LEDGER`%i0`VOID),,switch(first(get(%0/FATE`WEALTH`LEDGER`%i0)),spend,setq(wr_marked,sort(setunion(%q<wr_marked>,rest(get(%0/FATE`WEALTH`LEDGER`%i0))),n)),gain,setq(wr_marked,sort(setdiff(%q<wr_marked>,get(%0/FATE`WEALTH`LEDGER`%i0`CLEARED)),n))))))][u({{sheet-fate/sheet}}/FUN`DO`WRITE,%0,WEALTH`MARKED,%q<wr_marked>)]
+        flags: [funsyntax]
+      # %0 a character, %1 the entry (spend <box> or gain <parcel>), %2 who, %3 why, %4 the boxes a gain clears: writes
+      # the next entry, works the boxes out again, and returns its number.
+      FUN`WEALTH`LOG:
+        value: |-
+          setq(wl_n,inc(lmath(max,0 [u(%!/FUN`WEALTH`ENTRIES,%0)])))[u({{sheet-fate/sheet}}/FUN`DO`WRITE,%0,WEALTH`LEDGER`%q<wl_n>,%1)][u({{sheet-fate/sheet}}/FUN`DO`WRITE,%0,WEALTH`LEDGER`%q<wl_n>`BY,%2)][u({{sheet-fate/sheet}}/FUN`DO`WRITE,%0,WEALTH`LEDGER`%q<wl_n>`AT,secs())][u({{sheet-fate/sheet}}/FUN`DO`WRITE,%0,WEALTH`LEDGER`%q<wl_n>`WHY,%3)][u({{sheet-fate/sheet}}/FUN`DO`WRITE,%0,WEALTH`LEDGER`%q<wl_n>`CLEARED,%4)][u(%!/FUN`WEALTH`REPLAY,%0)]%q<wl_n>
+        flags: [funsyntax]
+      # %0 the boxes checked, %1 a parcel: the boxes it clears, worth the most it covers. Box N is worth N.
+      FUN`WEALTH`BEST:
+        value: |-
+          setqm(wb_n,words(%0),wb_best,,wb_sum,0)[if(%q<wb_n>,null(iter(lnum(1,dec(power(2,%q<wb_n>))),[setq(wb_pick,squish(iter(lnum(0,dec(%q<wb_n>)),if(band(%i1,shl(1,%i0)),extract(%0,inc(%i0),1)))))][setq(wb_total,ladd(%q<wb_pick>))][if(cand(lte(%q<wb_total>,%1),gt(%q<wb_total>,%q<wb_sum>)),setqm(wb_sum,%q<wb_total>,wb_best,%q<wb_pick>))])))]%q<wb_best>
+        flags: [funsyntax]
+      FUN`WEALTH`CLEARS:
+        value: |-
+          if(words(%0),it clears [if(eq(words(%0),1),box,boxes)] [itemize(%0)],no checked box is worth %1 or less%, so it clears nothing)
+        flags: [funsyntax]
+      # %0 a character, %1 an entry: what it was, in words.
+      FUN`WEALTH`WHAT:
+        value: |-
+          setq(ww_entry,get(%0/FATE`WEALTH`LEDGER`%1))[switch(first(%q<ww_entry>),spend,Checked box [rest(%q<ww_entry>)],gain,A parcel of [rest(%q<ww_entry>)]%, clearing [if(words(setr(ww_cleared,get(%0/FATE`WEALTH`LEDGER`%1`CLEARED))),[if(eq(words(%q<ww_cleared>),1),box,boxes)] [itemize(%q<ww_cleared>)],nothing)],%q<ww_entry>)][if(hasattr(%0,FATE`WEALTH`LEDGER`%1`VOID),%b[tone(warning,void)])]
+        flags: [funsyntax]
+      INC`WEALTH`SHOW:
+        value: |-
+          @include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>; @include %!/INC`NEED`VIEW; @pemit %#=u(%!/FUN`SCREEN`WEALTH,%q<sheet_who>)
+        flags: [cmdsyntax]
+      INC`WEALTH`LOG:
+        value: |-
+          @include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>; @include %!/INC`NEED`VIEW; @pemit %#=u(%!/FUN`SCREEN`WEALTHLOG,%q<sheet_who>)
+        flags: [cmdsyntax]
+      # %<box> typed: spend_box, a clear box of yours.
+      INC`NEED`BOX:
+        value: |-
+          think setqm(spend_box,trim(%<box>),spend_boxes,u(%!/FUN`WEALTH`BOXES,%q<viewer_objid>)); @assert cand(isint(%q<spend_box>),gte(%q<spend_box>,1),lte(%q<spend_box>,%q<spend_boxes>))=@pemit %#=notice(WEALTH,if(%q<spend_boxes>,You have Wealth boxes 1 to %q<spend_boxes>.,You have no Wealth boxes.),warn); @assert not(member(u(%!/FUN`WEALTH`MARKED,%q<viewer_objid>),%q<spend_box>))=@pemit %#=notice(WEALTH,Box %q<spend_box> is checked already: only a parcel of Wealth clears it. [u(%!/FUN`WEALTH`TRACK,%q<viewer_objid>)],warn)
+        flags: [cmdsyntax]
+      # +wealth/spend <box>[=<what for>]: you check a box for +<box> on a roll you made or are about to make.
+      INC`WEALTH`SPEND:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(WEALTH,+wealth/spend <box>%[=<what for>%] checks a Wealth box for its value on a roll: box 2 is +2.,warn); @include/args %!/INC`NEED`BOX=box,%q<cmd_left_side>; @assert lte(strlen(%q<cmd_right_side>),200)=@pemit %#=notice(WEALTH,Keep what it is for to 200 characters.,warn); think u(%!/FUN`WEALTH`LOG,%q<viewer_objid>,spend %q<spend_box>,%q<viewer_objid>,%q<cmd_right_side>,); @remit %l=notice(WEALTH,tone(strong,name(%#)) checks Wealth box %q<spend_box> for +%q<spend_box> on a roll[if(strlen(%q<cmd_right_side>),: %q<cmd_right_side>,.)])
+        flags: [cmdsyntax]
+      # +wealth/roll <box>=<skill>[+<n>][=<opposition>]: checks the box and rolls with it.
+      INC`WEALTH`ROLL:
+        value: |-
+          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>),strlen(%q<cmd_right_side>))=@pemit %#=notice(WEALTH,+wealth/roll <box>=<skill>%[=<opposition>%] checks a Wealth box and rolls with it%, such as +wealth/roll 2=rapport=fair.,warn); @include/args %!/INC`NEED`BOX=box,%q<cmd_left_side>; think setqm(roll_typed,trim(before(%q<cmd_right_side>,=)),roll_opposition,trim(after(%q<cmd_right_side>,=))); @include/args %!/INC`NEED`TRAIT=typed,%q<roll_typed>; think setq(roll_target,u({{sheet-fate/sheet}}/API`TARGET,%q<roll_opposition>)); @assert cor(not(strlen(%q<roll_opposition>)),isint(%q<roll_target>))=@pemit %#=notice(WEALTH,'%q<roll_opposition>' is not an opposition. Give a number%, a ladder word such as Fair%, or a difficulty such as hard.,warn); think setq(roll_result,uargs({{sheet-fate/sheet}}/API`CHECK,roller,%q<viewer_objid>,trait,%q<trait_key>,modifier,add(%q<check_modifier>,%q<spend_box>),target,%q<roll_target>)); @assert not(strmatch(%q<roll_result>,#-*))=@pemit %#=notice(WEALTH,%q<roll_result>,error); think u(%!/FUN`WEALTH`LOG,%q<viewer_objid>,spend %q<spend_box>,%q<viewer_objid>,[json_query(%q<roll_result>,extract,$.label)]%, roll [json_query(%q<roll_result>,extract,$.roll)],); @remit %l=notice(WEALTH,tone(strong,name(%#)) checks Wealth box %q<spend_box> and rolls %(+%q<spend_box>%) [u({{sheet-fate/sheet}}/FUN`DISPLAY`CHECK,%q<roll_result>)])
+        flags: [cmdsyntax]
+      # +wealth/gain <name>=<parcel>[ <why>]: a sheet keeper gives a parcel of Wealth, which clears the checked boxes
+      # worth the most it covers.
+      INC`WEALTH`GAIN:
+        value: |-
+          @include %!/INC`NEED`KEEPER; @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>),strlen(%q<cmd_right_side>))=@pemit %#=notice(WEALTH,+wealth/gain <name>=<parcel> <why> gives a parcel of Wealth%, such as +wealth/gain Pat=3 The dragon's hoard.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; think setqm(gain_parcel,first(%q<cmd_right_side>),gain_why,rest(%q<cmd_right_side>)); @assert cand(isint(%q<gain_parcel>),gte(%q<gain_parcel>,1),lte(%q<gain_parcel>,get(%!/DATA`CONFIG`PARCEL_MAX)))=@pemit %#=notice(WEALTH,A parcel of Wealth is worth 1 to [get(%!/DATA`CONFIG`PARCEL_MAX)]%, written first: +wealth/gain %q<cmd_left_side>=3 The dragon's hoard.,warn); @assert lte(strlen(%q<gain_why>),200)=@pemit %#=notice(WEALTH,Keep a reason to 200 characters.,warn); think setq(gain_cleared,u(%!/FUN`WEALTH`BEST,u(%!/FUN`WEALTH`MARKED,%q<sheet_who>),%q<gain_parcel>)); think setq(gain_n,u(%!/FUN`WEALTH`LOG,%q<sheet_who>,gain %q<gain_parcel>,%q<viewer_objid>,%q<gain_why>,%q<gain_cleared>)); @pemit %#=notice(WEALTH,[name(%q<sheet_who>)] gets a parcel of %q<gain_parcel> Wealth%, entry %q<gain_n>: [u(%!/FUN`WEALTH`CLEARS,%q<gain_cleared>,%q<gain_parcel>)]. [u(%!/FUN`WEALTH`TRACK,%q<sheet_who>)],ok); @pemit %q<sheet_who>=notice(WEALTH,tone(strong,name(%#)) gives you a parcel of %q<gain_parcel> Wealth[if(strlen(%q<gain_why>),%b%(%q<gain_why>%))]: [u(%!/FUN`WEALTH`CLEARS,%q<gain_cleared>,%q<gain_parcel>)]. Your boxes: [u(%!/FUN`WEALTH`TRACK,%q<sheet_who>)])
+        flags: [cmdsyntax]
+      # +wealth/void <name>/<entry>=<reason>: a sheet keeper takes an entry back. It stays on the ledger, marked void.
+      INC`WEALTH`VOID:
+        value: |-
+          @include %!/INC`NEED`KEEPER; @assert cand(strmatch(%q<cmd_left_side>,*/*),isint(setr(void_n,trim(after(%q<cmd_left_side>,/)))),strlen(%q<cmd_right_side>))=@pemit %#=notice(WEALTH,+wealth/void <name>/<entry>=<reason>%, an entry from +wealth/log <name>.,warn); @include/args %!/INC`NEED`TARGET=name,trim(before(%q<cmd_left_side>,/)); @assert hasattr(%q<sheet_who>,FATE`WEALTH`LEDGER`%q<void_n>)=@pemit %#=notice(WEALTH,[name(%q<sheet_who>)] has no Wealth entry %q<void_n>.,warn); @assert not(hasattr(%q<sheet_who>,FATE`WEALTH`LEDGER`%q<void_n>`VOID))=@pemit %#=notice(WEALTH,Entry %q<void_n> is void already.,warn); @assert lte(strlen(%q<cmd_right_side>),200)=@pemit %#=notice(WEALTH,Keep a reason to 200 characters.,warn); think u({{sheet-fate/sheet}}/FUN`DO`WRITE,%q<sheet_who>,WEALTH`LEDGER`%q<void_n>`VOID,%q<viewer_objid> [secs()] %q<cmd_right_side>)[u(%!/FUN`WEALTH`REPLAY,%q<sheet_who>)]; @pemit %#=notice(WEALTH,Entry %q<void_n> on [name(%q<sheet_who>)]'s Wealth is void. [u(%!/FUN`WEALTH`TRACK,%q<sheet_who>)],ok); @pemit %q<sheet_who>=notice(WEALTH,tone(strong,name(%#)) voids your Wealth entry %q<void_n>: %q<cmd_right_side>)
+        flags: [cmdsyntax]
+      # +wealth/aspect [<name>/]<slot>: says an aspect is about how well off the character is, or no longer; before
+      # approval, as the sheet's other choices are.
+      INC`WEALTH`ASPECT:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(WEALTH,+wealth/aspect <slot> says one of your aspects is about how well off you are%, for one more Wealth box. Again takes it back.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @assert strlen(setr(wa_slot,u({{sheet-fate/sheet}}/FUN`ASPECT`SLOT,%q<sheet_what>)))=@pemit %#=notice(WEALTH,There is no aspect '%q<sheet_what>'. Use concept%, trouble%, or 1 to [sub(get({{sheet-fate/sheet}}/DATA`CONFIG`ASPECTS),2)].,warn); @assert strlen(get(%q<sheet_who>/FATE`ASPECT`%q<wa_slot>))=@pemit %#=notice(WEALTH,Write the aspect first: +sheet/aspect [lcstr(%q<wa_slot>)]=<aspect>.,warn); think setq(wa_held,get(%q<sheet_who>/FATE`WEALTH`ASPECTS)); @break member(%q<wa_held>,%q<wa_slot>)={think u({{sheet-fate/sheet}}/FUN`DO`WRITE,%q<sheet_who>,WEALTH`ASPECTS,remove(%q<wa_held>,%q<wa_slot>)); @pemit %#=notice(WEALTH,[u({{sheet-fate/sheet}}/FUN`ASPECT`LABEL,%q<wa_slot>)] no longer adds a Wealth box: [name(%q<sheet_who>)] has [u(%!/FUN`WEALTH`BOXES,%q<sheet_who>)].,ok)}; @assert lt(words(u(%!/FUN`WEALTH`HELD,%q<sheet_who>)),get(%!/DATA`CONFIG`WEALTH_EXTRA))=@pemit %#=notice(WEALTH,[if(get(%!/DATA`CONFIG`WEALTH_EXTRA),Only [get(%!/DATA`CONFIG`WEALTH_EXTRA)] aspects add Wealth boxes%, and [name(%q<sheet_who>)] has that many.,No aspect adds Wealth boxes on this game.)],warn); think u({{sheet-fate/sheet}}/FUN`DO`WRITE,%q<sheet_who>,WEALTH`ASPECTS,squish(%q<wa_held> %q<wa_slot>)); @pemit %#=notice(WEALTH,[u({{sheet-fate/sheet}}/FUN`ASPECT`LABEL,%q<wa_slot>)]%, [get(%q<sheet_who>/FATE`ASPECT`%q<wa_slot>)]%, is about wealth: [name(%q<sheet_who>)] has [u(%!/FUN`WEALTH`BOXES,%q<sheet_who>)] Wealth boxes.,ok)
+        flags: [cmdsyntax]
+
+      # ---- storms -------------------------------------------------------------------
+      # A storm is STORM`<KEY> on the store, its name, with the fields +config toolkit/storms lists beneath. A
+      # character's FATE`STORM`<KEY> says they are attuned, and a refresh grant from STORM_<KEY> charges for it.
+      FUN`STORM`HELD:
+        value: |-
+          squish(iter(u(%!/FUN`LIST`ALL,STORM),if(hasattr(%0,FATE`STORM`%i0),%i0)))
+        flags: [funsyntax]
+      FUN`STORM`GET:
+        value: |-
+          get({{store}}/STORM`%0`%1)
+        flags: [funsyntax]
+      # %0 a number: +1, 0 or -1.
+      FUN`SIGNED:
+        value: |-
+          if(gt(%0,0),+%0,%0)
+        flags: [funsyntax]
+      INC`STORM`MINE:
+        value: |-
+          think setq(storm_held,u(%!/FUN`STORM`HELD,%q<viewer_objid>)); @assert words(%q<storm_held>)=@pemit %#=notice(STORM,You are attuned to no storm. +storm/list shows them%, and +storm <storm> shows one.,warn); @dolist/inline %q<storm_held>={@pemit %#=u(%!/FUN`SCREEN`STORM,##)}
+        flags: [cmdsyntax]
+      INC`STORM`SHOW:
+        value: |-
+          @assert strlen(setr(storm_key,u(%!/FUN`LIST`FIND,STORM,%q<cmd_argument>)))=@pemit %#=notice(STORM,There is no storm '%q<cmd_argument>'. The storms are [u(%!/FUN`LIST`NAMES,STORM,u(%!/FUN`LIST`ALL,STORM))].,warn); @pemit %#=u(%!/FUN`SCREEN`STORM,%q<storm_key>)
+        flags: [cmdsyntax]
+      INC`STORM`LIST:
+        value: |-
+          @pemit %#=u(%!/FUN`SCREEN`STORMS)
+        flags: [cmdsyntax]
+      # +storm/attune [<name>/]<storm>: attunes to a storm for its refresh, before approval or by a sheet keeper.
+      INC`STORM`ATTUNE:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(STORM,+storm/attune <storm> attunes you to a storm for [get(%!/DATA`CONFIG`STORM_COST)] refresh. +storm/list shows them.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @assert strlen(setr(storm_key,u(%!/FUN`LIST`FIND,STORM,%q<sheet_what>)))=@pemit %#=notice(STORM,There is no storm '%q<sheet_what>'. The storms are [u(%!/FUN`LIST`NAMES,STORM,u(%!/FUN`LIST`ALL,STORM))].,warn); @assert not(hasattr(%q<sheet_who>,FATE`STORM`%q<storm_key>))=@pemit %#=notice(STORM,[name(%q<sheet_who>)] is attuned to the [get({{store}}/STORM`%q<storm_key>)] already.,warn); think setqm(storm_cost,get(%!/DATA`CONFIG`STORM_COST),storm_refresh,u({{sheet-fate/sheet}}/FUN`POINTS`REFRESH,%q<sheet_who>)); @assert gt(%q<storm_refresh>,%q<storm_cost>)=@pemit %#=notice(STORM,The [get({{store}}/STORM`%q<storm_key>)] costs %q<storm_cost> refresh%, and [name(%q<sheet_who>)] has %q<storm_refresh>: refresh never goes below 1.,warn); think setq(storm_grant,uargs({{sheet-fate/sheet}}/API`GRANT,who,%q<sheet_who>,source,STORM_%q<storm_key>,target,REFRESH,key,ALL,kind,add,value,-%q<storm_cost>)); @assert not(strmatch(%q<storm_grant>,#-*))=@pemit %#=notice(STORM,%q<storm_grant>,error); think u({{sheet-fate/sheet}}/FUN`DO`WRITE,%q<sheet_who>,STORM`%q<storm_key>,1)[u({{sheet-fate/sheet}}/API`REBUILD,%q<sheet_who>)]; @pemit %#=notice(STORM,[name(%q<sheet_who>)] is attuned to the [get({{store}}/STORM`%q<storm_key>)]: refresh [u({{sheet-fate/sheet}}/FUN`POINTS`REFRESH,%q<sheet_who>)]. Write an aspect that names the storm%, such as [get({{store}}/STORM`%q<storm_key>`ASPECT)]%, with +sheet/aspect <slot>=<aspect>. [if(strmatch(get({{sheet-fate/sheet}}/DATA`CONFIG`MODE),approaches),Its rolls use an approach: +storm/attack with forceful.,[u({{sheet-fate/sheet}}/API`LABEL,get(%!/DATA`CONFIG`STORM_SKILL))] is the skill its rolls use.)],ok)
+        flags: [cmdsyntax]
+      INC`STORM`UNATTUNE:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(STORM,+storm/unattune <storm> gives a storm up and its refresh back.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @assert strlen(setr(storm_key,u(%!/FUN`LIST`FIND,STORM,%q<sheet_what>)))=@pemit %#=notice(STORM,There is no storm '%q<sheet_what>'.,warn); @assert hasattr(%q<sheet_who>,FATE`STORM`%q<storm_key>)=@pemit %#=notice(STORM,[name(%q<sheet_who>)] is not attuned to the [get({{store}}/STORM`%q<storm_key>)].,warn); think uargs({{sheet-fate/sheet}}/API`REVOKE,who,%q<sheet_who>,source,STORM_%q<storm_key>)[u({{sheet-fate/sheet}}/FUN`DO`WRITE,%q<sheet_who>,STORM`%q<storm_key>,)][u({{sheet-fate/sheet}}/API`REBUILD,%q<sheet_who>)]; @pemit %#=notice(STORM,[name(%q<sheet_who>)] gives up the [get({{store}}/STORM`%q<storm_key>)]: refresh [u({{sheet-fate/sheet}}/FUN`POINTS`REFRESH,%q<sheet_who>)].,ok)
+        flags: [cmdsyntax]
+      # %0 what came before =: the words of a storm roll. Sets st_storm (a storm named), st_far, st_spread,
+      # st_chain and st_length (numbers after their word), st_zone, st_surround, st_seal, st_freeze, st_barrier and
+      # st_held (1 when given), st_with (an approach), st_mod (+<n> and -<n> added up) and st_bad (words that are none).
+      FUN`STORM`READ:
+        value: |-
+          setqm(st_pending,,st_storm,,st_far,0,st_spread,0,st_chain,0,st_length,1,st_zone,0,st_surround,0,st_seal,0,st_freeze,0,st_barrier,0,st_held,0,st_with,,st_mod,0,st_bad,,st_used,)[null(iter(lcstr(%0),cond(strlen(%q<st_pending>),setq(st_%q<st_pending>,%i0)[setq(st_pending,)],member(far spread chain length with,%i0),setq(st_pending,%i0)[setq(st_used,%q<st_used> %i0)],member(zone surround seal freeze barrier held,%i0),setq(st_%i0,1)[setq(st_used,%q<st_used> %i0)],regmatch(%i0,^\[+-\]\[0-9\]+$),setq(st_mod,add(%q<st_mod>,if(strmatch(%i0,+*),after(%i0,+),%i0))),strlen(setr(st_found,u(%!/FUN`LIST`FIND,STORM,%i0))),setq(st_storm,%q<st_found>),1,setq(st_bad,%q<st_bad> %i0))))][if(strlen(%q<st_pending>),setq(st_bad,%q<st_bad> %q<st_pending>))][setqm(st_bad,squish(%q<st_bad>),st_used,squish(%q<st_used>))]
+        flags: [funsyntax]
+      # The words each roll takes, besides a storm, with, held and +<n>.
+      DATA`STORM`WORDS`ATTACK: |-
+        far zone spread chain freeze
+      DATA`STORM`WORDS`DEFEND: |-
+
+      DATA`STORM`WORDS`BARRIER: |-
+        surround seal length
+      DATA`STORM`WORDS`OVERCOME: |-
+        barrier
+      DATA`STORM`WORDS`ADVANTAGE: |-
+
+      # %0 the roll (attack, defend, barrier, overcome or advantage), %1 the storm: sets st_parts, the modifiers as
+      # "<n> for <why>" with | between, and st_error, why the roll cannot be made, or nothing.
+      FUN`STORM`PLAN:
+        value: |-
+          setqm(st_parts,,st_error,,st_label,get({{store}}/STORM`%1))[if(words(setr(st_wrong,setdiff(%q<st_used>,with held [get(%!/DATA`STORM`WORDS`[ucstr(%0)])]))),u(%!/FUN`STORM`FAIL,+storm/%0 takes no [itemize(%q<st_wrong>,%b,or)].))][if(cor(not(cand(isint(%q<st_far>),isint(%q<st_spread>),isint(%q<st_chain>),isint(%q<st_length>))),lt(%q<st_far>,0),gt(%q<st_far>,10),lt(%q<st_spread>,0),gt(%q<st_spread>,10),lt(%q<st_chain>,0),gt(%q<st_chain>,10),lt(%q<st_length>,1),gt(%q<st_length>,10)),u(%!/FUN`STORM`FAIL,Far%, spread and chain take a number from 0 to 10%, and length one from 1 to 10.))][switch(%0,attack,[if(%q<st_far>,setq(st_parts,%q<st_parts>|-%q<st_far> for range))][if(%q<st_zone>,if(strlen(setr(st_z,u(%!/FUN`STORM`GET,%1,ZONE))),setq(st_parts,%q<st_parts>|%q<st_z> for the whole zone),u(%!/FUN`STORM`FAIL,The %q<st_label> does not strike a whole zone.)))][if(%q<st_spread>,cond(not(%q<st_zone>),u(%!/FUN`STORM`FAIL,Spread goes with zone: +storm/attack zone spread 1.),strlen(setr(st_s,u(%!/FUN`STORM`GET,%1,SPREAD))),setq(st_parts,%q<st_parts>|[mul(%q<st_s>,%q<st_spread>)] for [%q<st_spread>] more zone[if(gt(%q<st_spread>,1),s)]),1,u(%!/FUN`STORM`FAIL,The %q<st_label> strikes no further than one zone.)))][if(%q<st_chain>,if(strlen(setr(st_c,u(%!/FUN`STORM`GET,%1,CHAIN))),setq(st_parts,%q<st_parts>|[mul(%q<st_c>,%q<st_chain>)] for [%q<st_chain>] more target[if(gt(%q<st_chain>,1),s)]),u(%!/FUN`STORM`FAIL,The %q<st_label> does not chain from target to target.)))][if(cand(%q<st_freeze>,not(u(%!/FUN`STORM`GET,%1,FREEZE))),u(%!/FUN`STORM`FAIL,The %q<st_label> does not freeze what it hits.))],defend,[if(setr(st_d,u(%!/FUN`STORM`GET,%1,DEFENDMOD)),setq(st_parts,%q<st_parts>|[u(%!/FUN`SIGNED,%q<st_d>)] for the %q<st_label>))],barrier,[if(setr(st_b,u(%!/FUN`STORM`GET,%1,BARRIERMOD)),setq(st_parts,%q<st_parts>|[u(%!/FUN`SIGNED,%q<st_b>)] for the %q<st_label>))][if(%q<st_surround>,if(strlen(setr(st_r,u(%!/FUN`STORM`GET,%1,SURROUND))),setq(st_parts,%q<st_parts>|%q<st_r> to surround a zone),u(%!/FUN`STORM`FAIL,The %q<st_label> does not surround a zone.)))][if(%q<st_seal>,cond(not(%q<st_surround>),u(%!/FUN`STORM`FAIL,Seal goes with surround: +storm/barrier surround seal.),strlen(setr(st_e,u(%!/FUN`STORM`GET,%1,SEAL))),setq(st_parts,%q<st_parts>|%q<st_e> to seal the top),1,u(%!/FUN`STORM`FAIL,The %q<st_label> does not close over the top.)))][if(cand(gt(%q<st_length>,1),not(u(%!/FUN`STORM`GET,%1,LENGTHS))),u(%!/FUN`STORM`FAIL,The %q<st_label> raises a barrier one length long.))],overcome,[if(cand(%q<st_barrier>,setr(st_o,u(%!/FUN`STORM`GET,%1,OVERCOMEMOD))),setq(st_parts,%q<st_parts>|[u(%!/FUN`SIGNED,%q<st_o>)] against a physical barrier))])][if(%q<st_held>,setq(st_parts,%q<st_parts>|-1 for holding a barrier))][if(%q<st_mod>,setq(st_parts,%q<st_parts>|[u(%!/FUN`SIGNED,%q<st_mod>)] more))][setq(st_parts,trim(%q<st_parts>,|,b))]
+        flags: [funsyntax]
+      # %0 a reason a storm roll cannot be made: kept unless an earlier one was.
+      FUN`STORM`FAIL:
+        value: |-
+          if(strlen(%q<st_error>),,setq(st_error,%0))
+        flags: [funsyntax]
+      FUN`STORM`TOTAL:
+        value: |-
+          ladd(iter(%0,edit(first(%i0),+,),|,%b))
+        flags: [funsyntax]
+      FUN`STORM`WHY:
+        value: |-
+          if(strlen(%0),%b%([itemize(iter(%0,%i0,|,|),|)]%))
+        flags: [funsyntax]
+      DATA`STORM`VERB`ATTACK: |-
+        attack
+      DATA`STORM`VERB`DEFEND: |-
+        defend
+      DATA`STORM`VERB`BARRIER: |-
+        raise a barrier
+      DATA`STORM`VERB`OVERCOME: |-
+        overcome
+      DATA`STORM`VERB`ADVANTAGE: |-
+        create an advantage
+      # %0 the roll, %1 the storm, %2 the check: what follows it, from the storm's own rules.
+      FUN`STORM`AFTER:
+        value: |-
+          switch(%0,barrier,[setq(st_rating,sub(json_query(%2,extract,$.total),dec(%q<st_length>)))][if(gte(%q<st_rating>,1),[capstr(art(u({{sheet-fate/sheet}}/FUN`LADDER`WORD,%q<st_rating>)))] [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,%q<st_rating>)] barrier stands[if(%q<st_surround>,%baround the zone[if(%q<st_seal>,%, sealed over the top)])][if(gt(%q<st_length>,1),%b%q<st_length> lengths long%, 1 off for each past the first)]: getting past it takes %q<st_rating>%, and a defender behind it may take %q<st_rating> in place of a defence roll. [u(%!/FUN`STORM`GET,%1,FADE)],No barrier stands: it takes Average %(+1%) or better.)],attack,if(%q<st_freeze>,Half the damage%, rounded up%, freezes the target in place: a barrier to its moving as high as the damage dealt.,u(%!/FUN`STORM`GET,%1,ATTACK)),defend,u(%!/FUN`STORM`GET,%1,DEFEND),overcome,if(%q<st_barrier>,u(%!/FUN`STORM`GET,%1,OVERCOME)))
+        flags: [funsyntax]
+      # +storm/<roll> [<storm>] [<words>][=<opposition>]: rolls the storm skill (or an approach given with with) with the
+      # storm's modifiers.
+      INC`STORM`ROLL:
+        value: |-
+          think setq(storm_held,u(%!/FUN`STORM`HELD,%q<viewer_objid>)); @assert words(%q<storm_held>)=@pemit %#=notice(STORM,You are attuned to no storm. +storm/list shows them.,warn); think u(%!/FUN`STORM`READ,%q<cmd_left_side>); @assert not(words(%q<st_bad>))=@pemit %#=notice(STORM,'[first(%q<st_bad>)]' means nothing to +storm/%q<cmd_switch>. It takes [firstof(itemize(get(%!/DATA`STORM`WORDS`[ucstr(%q<cmd_switch>)])),no words)] besides a storm%, with <approach>%, held and +<n>.[u(%!/FUN`HINT,STORM)],warn); think setq(storm_key,firstof(%q<st_storm>,if(eq(words(%q<storm_held>),1),%q<storm_held>))); @assert strlen(%q<storm_key>)=@pemit %#=notice(STORM,You are attuned to [u(%!/FUN`LIST`NAMES,STORM,%q<storm_held>)]: name the one you call%, such as +storm/%q<cmd_switch> [lcstr(first(%q<storm_held>))].,warn); @assert member(%q<storm_held>,%q<storm_key>)=@pemit %#=notice(STORM,You are not attuned to the [get({{store}}/STORM`%q<storm_key>)].,warn); think u(%!/FUN`STORM`PLAN,%q<cmd_switch>,%q<storm_key>); @assert not(strlen(%q<st_error>))=@pemit %#=notice(STORM,%q<st_error>,warn); think setq(storm_approaches,strmatch(get({{sheet-fate/sheet}}/DATA`CONFIG`MODE),approaches)); @assert cor(not(%q<storm_approaches>),strlen(%q<st_with>))=@pemit %#=notice(STORM,Name the approach you call it with: +storm/%q<cmd_switch> with forceful.,warn); @assert cor(%q<storm_approaches>,not(strlen(%q<st_with>)))=@pemit %#=notice(STORM,Stormcalling rolls [u({{sheet-fate/sheet}}/API`LABEL,get(%!/DATA`CONFIG`STORM_SKILL))] on this game%, so leave with out.,warn); @assert strlen(setr(trait_key,u({{sheet-fate/sheet}}/API`FIND,firstof(%q<st_with>,get(%!/DATA`CONFIG`STORM_SKILL)))))=@pemit %#=notice(STORM,There is no [u({{sheet-fate/sheet}}/FUN`TRAIT`NOUN)] '[firstof(%q<st_with>,get(%!/DATA`CONFIG`STORM_SKILL))]'.,warn); think setq(storm_target,if(strmatch(%q<cmd_switch>,barrier),,u({{sheet-fate/sheet}}/API`TARGET,%q<cmd_right_side>))); @assert cor(strmatch(%q<cmd_switch>,barrier),not(strlen(%q<cmd_right_side>)),isint(%q<storm_target>))=@pemit %#=notice(STORM,'%q<cmd_right_side>' is not an opposition. Give a number%, a ladder word such as Fair%, or a difficulty such as hard.,warn); think setq(storm_result,uargs({{sheet-fate/sheet}}/API`CHECK,roller,%q<viewer_objid>,trait,%q<trait_key>,modifier,u(%!/FUN`STORM`TOTAL,%q<st_parts>),target,%q<storm_target>)); @assert not(strmatch(%q<storm_result>,#-*))=@pemit %#=notice(STORM,%q<storm_result>,error); @remit %l=notice(STORM,tone(strong,name(%#)) calls the [get({{store}}/STORM`%q<storm_key>)] to [get(%!/DATA`STORM`VERB`[ucstr(%q<cmd_switch>)])][u(%!/FUN`STORM`WHY,%q<st_parts>)]: [u({{sheet-fate/sheet}}/FUN`DISPLAY`CHECK,%q<storm_result>)][if(strlen(setr(storm_after,u(%!/FUN`STORM`AFTER,%q<cmd_switch>,%q<storm_key>,%q<storm_result>))),%b%q<storm_after>)])
+        flags: [cmdsyntax]
+
+      # ---- screens ------------------------------------------------------------------
+      # %0 a character: their conditions.
+      FUN`SCREEN`CONDITIONS:
+        value: |-
+          setq(sc_all,u(%!/FUN`LIST`ALL,COND))[box(ldatatable(lit({"nowrap":"1|2|3|4","grow":"||||1"}),Condition|Kind|Soaks|Boxes|Clears when,iter(%q<sc_all>,[get({{store}}/COND`%i0)]|[u(%!/FUN`COND`KIND,%i0)]|[u(%!/FUN`COND`SOAK,%i0)]|[u(%!/FUN`COND`BOXES,%i0,u(%!/FUN`COND`MARKED,%0,%i0))]|[firstof(get({{store}}/COND`%i0`CLEARS),-)],%b,%*<^>),%*<^>)%r[rule()]%r[tone(muted,+condition/take <condition> soaks a hit: fleeting 1%, sticky 2%, lasting 4. +condition/recover <condition> clears one you are over.)],Conditions: [name(%0)][u({{sheet-fate/sheet}}/FUN`PLAY`IN,%0)])]
+        flags: [funsyntax]
+      FUN`SCREEN`CONDLIST:
+        value: |-
+          setq(sc_all,u(%!/FUN`LIST`ALL,COND))[box(ldatatable(lit({"nowrap":"1|2|3","grow":"|||1"}),Condition|Kind|Soaks|Clears when,iter(%q<sc_all>,[get({{store}}/COND`%i0)]|[u(%!/FUN`COND`KIND,%i0)]|[u(%!/FUN`COND`SOAK,%i0)]|[firstof(get({{store}}/COND`%i0`CLEARS),-)],%b,%*<^>),%*<^>)%r[rule()]%r[tone(muted,A condition soaks stress when you take it%, and it is an aspect until you recover. A lasting one has two boxes and needs treatment against [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,get(%!/DATA`CONFIG`TREAT))] before it heals.)],Conditions)]
+        flags: [funsyntax]
+      FUN`SCREEN`WEALTH:
+        value: |-
+          setq(sw_held,u(%!/FUN`WEALTH`HELD,%0))[box(lfields(,Boxes%*<|>Aspects about wealth%*<|>Last entries,[u(%!/FUN`WEALTH`TRACK,%0)]%*<|>[firstof(itemize(iter(%q<sw_held>,get(%0/FATE`ASPECT`%i0),%b,|),|),none)]%*<|>[firstof(iter(revwords(extract(revwords(u(%!/FUN`WEALTH`ENTRIES,%0)),1,3)),%i0. [u(%!/FUN`WEALTH`WHAT,%0,%i0)],%b,;%b),none)],%*<|>)%r[rule()]%r[tone(muted,+wealth/spend <box> checks a box for its value on a roll%, and +wealth/roll <box>=<skill> rolls with it. Only a parcel of Wealth from staff clears a box. +wealth/log shows every entry.)],Wealth: [name(%0)])]
+        flags: [funsyntax]
+      FUN`SCREEN`WEALTHLOG:
+        value: |-
+          setq(sl_all,u(%!/FUN`WEALTH`ENTRIES,%0))[box(if(words(%q<sl_all>),ldatatable(,#|Entry|By|Why,iter(%q<sl_all>,%i0|[u(%!/FUN`WEALTH`WHAT,%0,%i0)]|[name(get(%0/FATE`WEALTH`LEDGER`%i0`BY))]%, [timefmt($Y-$m-$d,get(%0/FATE`WEALTH`LEDGER`%i0`AT))]|[firstof(get(%0/FATE`WEALTH`LEDGER`%i0`WHY),-)][if(hasattr(%0,FATE`WEALTH`LEDGER`%i0`VOID),%b%(void by [name(first(get(%0/FATE`WEALTH`LEDGER`%i0`VOID)))]: [rest(rest(get(%0/FATE`WEALTH`LEDGER`%i0`VOID)))]%))],%b,%*<^>),%*<^>),tone(muted,No entries yet.))%r[rule()]%r[tone(muted,Boxes: [u(%!/FUN`WEALTH`TRACK,%0)]. Staff give parcels with +wealth/gain and void an entry with +wealth/void. Nothing is taken off this log.)],Wealth ledger: [name(%0)])]
+        flags: [funsyntax]
+      FUN`SCREEN`STORM:
+        value: |-
+          setq(ss_at,{{store}}/STORM`%0)[box(lfields(,Aspect%*<|>Passive%*<|>Invoke%*<|>Compel%*<|>Create%*<|>Attack%*<|>Defend%*<|>Overcome,[firstof(get(%q<ss_at>`ASPECT),-)]%*<|>[firstof(get(%q<ss_at>`PASSIVE),-)]%*<|>[firstof(get(%q<ss_at>`INVOKE),-)]%*<|>[firstof(get(%q<ss_at>`COMPEL),-)]%*<|>[firstof(get(%q<ss_at>`CREATE),-)] [get(%q<ss_at>`FADE)]%*<|>[firstof(get(%q<ss_at>`ATTACK),-)]%*<|>[firstof(get(%q<ss_at>`DEFEND),No special rules.)]%*<|>[firstof(get(%q<ss_at>`OVERCOME),No special rules.)],%*<|>)%r[rule()]%r[tone(muted,+storm/attack%, /defend%, /barrier%, /overcome and /advantage roll it: +storm/attack far 1=fair. Attuning costs [get(%!/DATA`CONFIG`STORM_COST)] refresh.)],The [get(%q<ss_at>)])]
+        flags: [funsyntax]
+      FUN`SCREEN`STORMS:
+        value: |-
+          setq(ss_all,u(%!/FUN`LIST`ALL,STORM))[box(ldatatable(lit({"nowrap":"1|2","grow":"||1"}),Storm|Aspect|Passive,iter(%q<ss_all>,[get({{store}}/STORM`%i0)]|[firstof(get({{store}}/STORM`%i0`ASPECT),-)]|[firstof(get({{store}}/STORM`%i0`PASSIVE),-)],%b,%*<^>),%*<^>)%r[rule()]%r[tone(muted,+storm <storm> shows one. +storm/attune <storm> attunes you for [get(%!/DATA`CONFIG`STORM_COST)] refresh before approval.)],Storms)]
+        flags: [funsyntax]
+
+      # ---- lifecycle ----------------------------------------------------------------
+      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
+      STARTUP:
+        value: |-
+          @command/add/noparse/rsnoparse +condition; @hook/override/inline +condition=%!,CMD`CONDITION; @command/add/noparse/rsnoparse +wealth; @hook/override/inline +wealth=%!,CMD`WEALTH; @command/add/noparse/rsnoparse +storm; @hook/override/inline +storm=%!,CMD`STORM
+        flags: [cmdsyntax]
+      AINSTALL:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+      AUPDATE:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+
+  # The lists: conditions COND`<KEY> and storms STORM`<KEY>, each entry's own attribute its name and every field
+  # a leaf beneath it. +config toolkit/conditions and toolkit/storms change them. The six conditions are the toolkit's
+  # own, 14 shifts in all; the storms and their rules are the toolkit's Stormcallers.
+  - ref: store
+    type: thing
+    name: Fate System Toolkit Store
+    location: "{{toolkit}}"
+    flags: [no_command]
+    attributes:
+      COND: |-
+        The conditions, COND`<KEY> each. +config toolkit/conditions changes them.
+      STORM: |-
+        The storms, STORM`<KEY> each. +config toolkit/storms changes them.
+      COND`ANGRY: |-
+        Angry
+      COND`ANGRY`KIND: |-
+        fleeting
+      COND`ANGRY`CLEARS: |-
+        You catch your breath and calm down.
+      COND`ANGRY`ORDER: |-
+        10
+      COND`FRIGHTENED: |-
+        Frightened
+      COND`FRIGHTENED`KIND: |-
+        fleeting
+      COND`FRIGHTENED`CLEARS: |-
+        You catch your breath and calm down.
+      COND`FRIGHTENED`ORDER: |-
+        11
+      COND`EXHAUSTED: |-
+        Exhausted
+      COND`EXHAUSTED`KIND: |-
+        sticky
+      COND`EXHAUSTED`CLEARS: |-
+        You get some sleep.
+      COND`EXHAUSTED`ORDER: |-
+        20
+      COND`HUNGRY: |-
+        Hungry
+      COND`HUNGRY`KIND: |-
+        sticky
+      COND`HUNGRY`CLEARS: |-
+        You get a good meal.
+      COND`HUNGRY`ORDER: |-
+        21
+      COND`BROKEN: |-
+        Broken
+      COND`BROKEN`KIND: |-
+        lasting
+      COND`BROKEN`CLEARS: |-
+        Treatment, then one more full session.
+      COND`BROKEN`ORDER: |-
+        30
+      COND`WOUNDED: |-
+        Wounded
+      COND`WOUNDED`KIND: |-
+        lasting
+      COND`WOUNDED`CLEARS: |-
+        Treatment, then one more full session.
+      COND`WOUNDED`ORDER: |-
+        31
+      STORM`EARTHQUAKE: |-
+        Earthquake
+      STORM`EARTHQUAKE`ASPECT: |-
+        Earthcaller
+      STORM`EARTHQUAKE`PASSIVE: |-
+        You never lose your footing, however precarious, unless something knocks you down.
+      STORM`EARTHQUAKE`INVOKE: |-
+        Endure: anything that rests on patience, resolve or endurance.
+      STORM`EARTHQUAKE`COMPEL: |-
+        Delay: when quick action is called for, the Earthquake holds you back.
+      STORM`EARTHQUAKE`CREATE: |-
+        +1 to raise a barrier; -4 more to raise one around a whole zone, and -1 more again to seal its top.
+      STORM`EARTHQUAKE`FADE: |-
+        It stays.
+      STORM`EARTHQUAKE`ATTACK: |-
+        Only what is on or near the ground: anything a standing person could reach.
+      STORM`EARTHQUAKE`DEFEND: |-
+        Earth is slow to answer: -1 to defend.
+      STORM`EARTHQUAKE`OVERCOME: |-
+        Beat a physical barrier by 2 and it is gone.
+      STORM`EARTHQUAKE`BARRIERMOD: |-
+        1
+      STORM`EARTHQUAKE`DEFENDMOD: |-
+        -1
+      STORM`EARTHQUAKE`ZONE: |-
+        -1
+      STORM`EARTHQUAKE`SPREAD: |-
+        -2
+      STORM`EARTHQUAKE`SURROUND: |-
+        -4
+      STORM`EARTHQUAKE`SEAL: |-
+        -1
+      STORM`EARTHQUAKE`ORDER: |-
+        10
+      STORM`FLOOD: |-
+        Flood
+      STORM`FLOOD`ASPECT: |-
+        Floodcaller
+      STORM`FLOOD`PASSIVE: |-
+        Wherever swimming is possible, you stay afloat as long as you need, even asleep.
+      STORM`FLOOD`INVOKE: |-
+        Flexibility: doing something outside the box, such as using a skill for something bizarre.
+      STORM`FLOOD`COMPEL: |-
+        Messy: you leave traces of where you went when it is least convenient.
+      STORM`FLOOD`CREATE: |-
+        Barriers of water, and other advantages.
+      STORM`FLOOD`FADE: |-
+        It loses 1 each exchange unless you hold it, at -1 to everything else you do (held).
+      STORM`FLOOD`ATTACK: |-
+        Its damage ignores armor.
+      STORM`FLOOD`OVERCOME: |-
+        +1 to overcome a physical barrier.
+      STORM`FLOOD`OVERCOMEMOD: |-
+        1
+      STORM`FLOOD`ZONE: |-
+        -2
+      STORM`FLOOD`ORDER: |-
+        20
+      STORM`GLACIER: |-
+        Glacier
+      STORM`GLACIER`ASPECT: |-
+        Icecaller
+      STORM`GLACIER`PASSIVE: |-
+        Cold within the normal range does not bother you.
+      STORM`GLACIER`INVOKE: |-
+        Push: moving forward and pushing things out of your path.
+      STORM`GLACIER`COMPEL: |-
+        Overcommit: you stay too long with a course of action.
+      STORM`GLACIER`CREATE: |-
+        +1 to raise a barrier, which may run several lengths, each past the first taking 1 off its rating.
+      STORM`GLACIER`FADE: |-
+        It stays.
+      STORM`GLACIER`ATTACK: |-
+        You may deal half the damage, rounded up, to freeze the target in place (freeze).
+      STORM`GLACIER`DEFEND: |-
+        Succeed with style and you may give up the boost to raise one of your barriers by 1.
+      STORM`GLACIER`OVERCOME: |-
+        Beat a physical barrier by 2 and it is gone.
+      STORM`GLACIER`BARRIERMOD: |-
+        1
+      STORM`GLACIER`LENGTHS: |-
+        1
+      STORM`GLACIER`FREEZE: |-
+        1
+      STORM`GLACIER`ORDER: |-
+        30
+      STORM`INFERNO: |-
+        Inferno
+      STORM`INFERNO`ASPECT: |-
+        Infernocaller
+      STORM`INFERNO`PASSIVE: |-
+        Heat within the normal range does not bother you.
+      STORM`INFERNO`INVOKE: |-
+        Destroy: not fight or hurt, destroy.
+      STORM`INFERNO`COMPEL: |-
+        Consume: you use up resources, food, good opinions and fortune without thinking.
+      STORM`INFERNO`CREATE: |-
+        Barriers of fire, and other advantages.
+      STORM`INFERNO`FADE: |-
+        It loses 2 each exchange unless you hold it, at -1 to everything else you do (held). Someone who fails to get through may force their way, taking harm equal to the shifts they fell short by.
+      STORM`INFERNO`ATTACK: |-
+        A whole zone at -1 (zone).
+      STORM`INFERNO`OVERCOME: |-
+        A physical barrier you overcome loses 1.
+      STORM`INFERNO`ZONE: |-
+        -1
+      STORM`INFERNO`ORDER: |-
+        40
+      STORM`THUNDER: |-
+        Thunder
+      STORM`THUNDER`ASPECT: |-
+        Thundercaller
+      STORM`THUNDER`PASSIVE: |-
+        Your voice carries: anyone you can see well enough to know can hear you, whatever the noise.
+      STORM`THUNDER`INVOKE: |-
+        Act decisively: when circumstances change and quick action is called for.
+      STORM`THUNDER`COMPEL: |-
+        Overwhelm: delicacy, restraint and precision are called for, and you do not see it.
+      STORM`THUNDER`CREATE: |-
+        Barriers of force, and other advantages.
+      STORM`THUNDER`FADE: |-
+        It is gone after one exchange unless you hold it, at -1 to everything else you do (held).
+      STORM`THUNDER`ATTACK: |-
+        Chain lightning takes -1 for each target past the first (chain), range from the farthest; a thunderbolt at one target that earns a boost earns a boost of Stunned as well.
+      STORM`THUNDER`CHAIN: |-
+        -1
+      STORM`THUNDER`ORDER: |-
+        50
+
+  # The help topics. fate-system-toolkit-help registers this object with +help.
+  - ref: toolkit_help
+    type: thing
+    name: Fate System Toolkit Help
+    location: "{{toolkit}}"
+    attributes:
+      HELP: |-
+        Rules from the Fate System Toolkit for the Fate sheet: +condition, +wealth and +storm.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`CONDITION: |-
+        wealth storm encounter sheet
+      SEE`WEALTH: |-
+        condition storm sheet
+      SEE`STORM: |-
+        condition wealth sheet
+      SEE`TOOLKIT: |-
+        condition wealth storm
+      HELP`CONDITION: |-
+        Conditions are set hurts, such as Angry or Wounded, that soak stress the way consequences do. Each is an aspect while you suffer it, and someone else may invoke it once for free.
+
+        - **fleeting** conditions soak 1 shift and clear once you catch your breath.
+        - **sticky** ones soak 2 and clear after something happens: Exhausted until you sleep.
+        - **lasting** ones soak 4, have two boxes, and heal only after treatment: `+help condition treat`.
+
+        - `+condition` shows yours; `+condition <name>` someone else's, where you may read their sheet.
+        - `+condition/list` lists this game's conditions.
+        - `+condition/take <condition> \[<condition>...\]` checks them off to soak a hit.
+        - `+condition/recover <condition>` clears one you are over.
+
+        In an encounter, conditions change its copy of your sheet, as stress does: they stay only if the GM keeps it. `+encounter/harm` counts your clear conditions in what you can take.
+
+        For example:
+
+        `+condition/take angry hungry`
+
+        Output: `\[CONDITION\] Pat takes Angry and Hungry, soaking 3 shifts. Each is an aspect on their sheet now, and someone else may invoke each once for free.`
+
+        `+help condition gm` is for GMs and staff.
+      HELP`CONDITION`TREAT: |-
+        A lasting condition has two boxes, and you take it only while both are clear. It heals in two steps:
+
+        1. Someone treats it, overcoming the treatment difficulty \(Great \(+4\) unless the game sets another\): `+condition/treat <name>/<condition>=<skill>`. A tie or better clears one box.
+        2. After one more full session, `+condition/recover <condition>` clears the other.
+
+        Leave out `<name>/` to treat your own.
+
+        For example:
+
+        `+condition/treat Pat/wounded=lore+1`
+      HELP`CONDITION`GM: |-
+        The GM says when someone suffers a condition. The GM of the encounter a player's play goes to, and sheet keepers anywhere, use:
+
+        - `+condition/give <name>=<condition> \[<condition>...\]` to check conditions off for them.
+        - `+condition/clear <name>=<condition>` to clear one, or `=all` for every one, as a session's end does for a lasting condition.
+
+        Staff change the list with `+config toolkit/conditions`: each has a name, a kind \(fleeting, sticky or lasting\), when it clears and an order. The toolkit keeps the total at 14 shifts, and a game that uses conditions in place of consequences takes the consequence slots away with `+config/remove fate/consequences/<slot>`.
+      HELP`WEALTH: |-
+        Wealth is money as a stress track. When cash would help, check a box for a bonus on your roll: box 1 adds +1, box 2 adds +2. A checked box stays checked until a parcel of Wealth comes in.
+
+        - `+wealth` shows your boxes; `+wealth <name>` someone else's, where you may read their sheet.
+        - `+wealth/spend <box>\[=<what for>\]` checks a box for a roll you made or are making.
+        - `+wealth/roll <box>=<skill>\[+<n>\]\[=<opposition>\]` checks a box and rolls with it.
+        - `+wealth/log \[<name>\]` shows every entry on the ledger.
+        - `+wealth/aspect <slot>` says one of your aspects is about how well off you are, for one more box. Before approval only; after it, `+sheet/advance wealth <slot>=<aspect>` spends a milestone to rewrite an aspect as one about wealth.
+
+        You start with 2 boxes, and each aspect about wealth adds one, up to 3 more \(`+help toolkit settings`\).
+
+        For example:
+
+        `+wealth/roll 2=rapport=fair`
+
+        Output: `\[WEALTH\] Pat checks Wealth box 2 and rolls (+2) Rapport: 4dF\[-1, 1, 1, -1\] + 2 = 2 (Fair) against Fair (+2): a tie, no shifts (roll 11)`
+
+        `+help wealth staff` covers parcels.
+      HELP`WEALTH`STAFF: |-
+        Sheet keepers give Wealth and take entries back. Every change is an entry on the character's ledger, with who made it, when and why; nothing is taken off it.
+
+        - `+wealth/gain <name>=<parcel> <why>` gives a parcel worth 1 to 10. It clears the checked boxes worth the most it covers: a parcel of 3 clears box 3, or boxes 1 and 2, but never box 4.
+        - `+wealth/void <name>/<entry>=<reason>` takes an entry back. The boxes are worked out again without it.
+
+        For example:
+
+        `+wealth/gain Pat=3 The dragon's hoard`
+
+        Output: `\[WEALTH\] Done: Pat gets a parcel of 3 Wealth, entry 3: it clears boxes 1 and 2. 1\[ \] 2\[ \] 3\[ \]`
+      LOCK`WEALTH`STAFF: |-
+        perm^softcode.fate.admin
+      HELP`STORM: |-
+        A Stormcaller draws magic from one of five great storms: Earthquake, Flood, Glacier, Inferno and Thunder. The power works outside you: you hit something hard with a rock, not with the strength of the earth.
+
+        - `+storm/list` lists the storms, and `+storm <storm>` shows one: its aspect's passive effect, invoke and compel, and how it attacks, defends and raises barriers.
+        - `+storm/attune <storm>` attunes you, before approval, for 2 refresh \(`+help toolkit settings`\). Write an aspect that names the storm, such as Earthcaller.
+        - `+storm/unattune <storm>` gives it up and its refresh back.
+        - `+storm` shows the storms you are attuned to.
+
+        Stormcalling rolls the Stormcaller skill, or on a game of approaches the approach you name: `+help storm rolls`.
+      HELP`STORM`ROLLS: |-
+        `+storm/<roll> \[<storm>\] \[<words>\]\[=<opposition>\]` calls your storm. Name the storm when you have more than one.
+
+        - `/attack`: `far <n>` takes -1 for each zone away; `zone` hits everyone in a zone \(Earthquake -1, Flood -2, Inferno -1\); `spread <n>` reaches more zones \(Earthquake, -2 each\); `chain <n>` hits more targets \(Thunder, -1 each\); `freeze` holds the target in place for half the damage \(Glacier\).
+        - `/barrier`: rolled against 0, the result is the barrier's rating. `surround` and `seal` close a zone \(Earthquake\); `length <n>` runs it further, 1 off for each length past the first \(Glacier\).
+        - `/defend`, `/overcome` \(`barrier` against a physical barrier\) and `/advantage`.
+
+        Every roll takes `held` \(-1 while you hold a barrier\), `with <approach>` on a game of approaches, and `+<n>` or `-<n>` for invokes.
+
+        For example:
+
+        `+storm/barrier length 3 +4`
+
+        Output: `\[STORM\] Kim calls the Glacier to raise a barrier (+1 for the Glacier and +4 more): Stormcaller: 4dF\[0, 0, 1, 1\] + 5 = 7 (Epic) (roll 23) A Superb (+5) barrier stands 3 lengths long, 1 off for each past the first: getting past it takes 5, and a defender behind it may take 5 in place of a defence roll. It stays.`
+      HELP`TOOLKIT: |-
+        The Fate System Toolkit package adds three of the toolkit's rules to the Fate sheet: conditions \(`+help condition`\), Wealth \(`+help wealth`\) and Stormcallers \(`+help storm`\). `+help toolkit settings` covers what staff change, and `+help toolkit credits` names the source.
+      HELP`TOOLKIT`SETTINGS: |-
+        `+config toolkit` lists the settings and `+config toolkit/<setting>=<value>` changes one \(`config.admin`\):
+
+        - `treat`: the difficulty to start a lasting condition's recovery \(4\).
+        - `wealth_boxes`: the Wealth boxes everyone starts with \(2\).
+        - `wealth_extra`: how many aspects about wealth add a box each \(3\).
+        - `parcel_max`: the most a parcel of Wealth is worth \(10\).
+        - `storm_cost`: the refresh each storm costs \(2; 1 on a game that uses Weapon and Armor ratings\).
+        - `storm_skill`: the skill Stormcallers roll \(stormcaller\).
+        - `conditions` and `storms`: the lists. `+config toolkit/storms/<storm>` shows a storm's fields.
+      LOCK`TOOLKIT`SETTINGS: |-
+        perm^config.admin
+      HELP`TOOLKIT`CREDITS: |-
+        Conditions, Wealth and Stormcallers are from the Fate System Toolkit SRD.
+
+        This work is based on the Fate System Toolkit \(found at http://www.faterpg.com/\), a product of Evil Hat Productions, LLC, developed, authored, and edited by Robert Donoghue, Brian Engard, Brennan Taylor, Mike Olson, Mark Diaz Truman, Fred Hicks, and Matthew Gandy, and licensed for our use under the Creative Commons Attribution 3.0 Unported license \(http://creativecommons.org/licenses/by/3.0/\).
+
+        Fate is a trademark of Evil Hat Productions, LLC. This is an unofficial package: this game is not affiliated with or endorsed by Evil Hat Productions.
+
+  # The Stormcaller skill, on a game of skills.
+  - ref: skills
+    target: "{{sheet-fate/store}}"
+    attributes:
+      SKILL`STORMCALLER: |-
+        Stormcaller
+      SKILL`STORMCALLER`ORDER: |-
+        60
+
+  # The Fate sheet's hooks: an encounter copies conditions, a hit counts the clear ones, +sheet shows conditions,
+  # Wealth and storms, +chargen offers Wealth and a storm, +sheet/clear takes the build's parts away, and
+  # +sheet/advance spends a milestone on an aspect about wealth. Each runs as the Fate Sheet, which is WIZARD and so
+  # may call this object.
+  - ref: sheet_hooks
+    target: "{{sheet-fate/sheet}}"
+    attributes:
+      PLAY`CONDITION: |-
+        CONDITION`*
+      BUILD`TOOLKIT: |-
+        WEALTH`ASPECTS STORM
+      # %0 the player, %1 their encounter copy: the shifts their clear conditions soak, and how to take them.
+      SOAK`CONDITION:
+        value: |-
+          ladd(iter(u({{toolkit}}/FUN`LIST`ALL,COND),if(strlen(get(%1`CONDITION`%i0)),0,u({{toolkit}}/FUN`COND`SOAK,%i0))))
+        flags: [funsyntax]
+      SOAK`CONDITION`TEXT:
+        value: |-
+          setq(soak_open,squish(iter(u({{toolkit}}/FUN`LIST`ALL,COND),if(strlen(get(%1`CONDITION`%i0)),,%i0))))[if(words(%q<soak_open>),+condition/take <condition> %(clear: [itemize(iter(%q<soak_open>,[lcstr(get({{store}}/COND`%i0))] [u({{toolkit}}/FUN`COND`SOAK,%i0)],%b,|),|)]%))]
+        flags: [funsyntax]
+      SECTION`CONDITIONS:
+        value: |-
+          if(words(setr(section_taken,u({{toolkit}}/FUN`COND`TAKEN,%0))),lfields(,iter(%q<section_taken>,get({{store}}/COND`%i0),%b,%*<|>),iter(%q<section_taken>,[u({{toolkit}}/FUN`COND`BOXES,%i0,u({{toolkit}}/FUN`COND`MARKED,%0,%i0))] [u({{toolkit}}/FUN`COND`KIND,%i0)]: [firstof(get({{store}}/COND`%i0`CLEARS),-)],%b,%*<|>),%*<|>))
+        flags: [funsyntax]
+      SECTION`CONDITIONS`TITLE: |-
+        Conditions
+      SECTION`CONDITIONS`ORDER: |-
+        60
+      SECTION`WEALTH:
+        value: |-
+          if(hasattr(%0,FATE),lfields(,Boxes%*<|>About wealth,[u({{toolkit}}/FUN`WEALTH`TRACK,%0)]%*<|>[firstof(itemize(iter(u({{toolkit}}/FUN`WEALTH`HELD,%0),get(%0/FATE`ASPECT`%i0),%b,|),|),none)],%*<|>))
+        flags: [funsyntax]
+      SECTION`WEALTH`TITLE: |-
+        Wealth
+      SECTION`WEALTH`ORDER: |-
+        61
+      SECTION`STORMS:
+        value: |-
+          if(words(setr(section_storms,u({{toolkit}}/FUN`STORM`HELD,%0))),lfields(,iter(%q<section_storms>,get({{store}}/STORM`%i0),%b,%*<|>),iter(%q<section_storms>,get({{store}}/STORM`%i0`PASSIVE),%b,%*<|>),%*<|>))
+        flags: [funsyntax]
+      SECTION`STORMS`TITLE: |-
+        Storms
+      SECTION`STORMS`ORDER: |-
+        62
+      CHARGEN`WEALTH: |-
+        Wealth
+      CHARGEN`WEALTH`ORDER: |-
+        12
+      CHARGEN`WEALTH`OPTIONAL: |-
+        1
+      CHARGEN`WEALTH`DONE:
+        value: |-
+          words(u({{toolkit}}/FUN`WEALTH`HELD,%0))
+        flags: [funsyntax]
+      CHARGEN`WEALTH`TEXT:
+        value: |-
+          Wealth is a stress track you check for a bonus on a roll: box 2 adds +2. You start with [get({{toolkit}}/DATA`CONFIG`WEALTH_BOXES)] boxes%, and each aspect about how well off you are adds one%, up to [get({{toolkit}}/DATA`CONFIG`WEALTH_EXTRA)] more: +wealth/aspect <slot> says which.%r%rYour boxes: [u({{toolkit}}/FUN`WEALTH`TRACK,%0)].
+        flags: [funsyntax]
+      CHARGEN`STORM: |-
+        Storm
+      CHARGEN`STORM`ORDER: |-
+        36
+      CHARGEN`STORM`OPTIONAL: |-
+        1
+      CHARGEN`STORM`DONE:
+        value: |-
+          words(u({{toolkit}}/FUN`STORM`HELD,%0))
+        flags: [funsyntax]
+      CHARGEN`STORM`TEXT:
+        value: |-
+          A Stormcaller draws magic from one of five great storms: [u({{toolkit}}/FUN`LIST`NAMES,STORM,u({{toolkit}}/FUN`LIST`ALL,STORM))]. Each costs [get({{toolkit}}/DATA`CONFIG`STORM_COST)] refresh and needs an aspect that names it. +storm/list shows them%, +storm <storm> shows one%, and +storm/attune <storm> attunes you.%r%r[if(words(setr(chargen_storms,u({{toolkit}}/FUN`STORM`HELD,%0))),You are attuned to [u({{toolkit}}/FUN`LIST`NAMES,STORM,%q<chargen_storms>)].,You are attuned to no storm.)]
+        flags: [funsyntax]
+      ADVANCE`WEALTH: |-
+        Rewrite an aspect as one about your wealth, for one more Wealth box
+      ADVANCE`WEALTH`TOKEN: |-
+        M
+      ADVANCE`WEALTH`USAGE: |-
+        wealth <slot>=<aspect>
+      ADVANCE`WEALTH`SKIP:
+        value: |-
+          gte(words(u({{toolkit}}/FUN`WEALTH`HELD,%0)),get({{toolkit}}/DATA`CONFIG`WEALTH_EXTRA))
+        flags: [funsyntax]
+      ADVANCE`WEALTH`RUN:
+        value: |-
+          setq(r_slot,u(%!/FUN`ASPECT`SLOT,%1))[cond(not(strlen(%q<r_slot>)),#-1 There is no aspect '%1'. Use trouble%, or 1 to [sub(get(%!/DATA`CONFIG`ASPECTS),2)].,strmatch(%q<r_slot>,CONCEPT),#-1 A new high concept takes a breakthrough: +sheet/advance aspect concept=<aspect>%, then +wealth/aspect concept asks staff.,member(get(%0/FATE`WEALTH`ASPECTS),%q<r_slot>),#-1 [u(%!/FUN`ASPECT`LABEL,%q<r_slot>)] is about wealth already.,not(strlen(%2)),#-1 Write the new aspect after =: one about how well off you are.,gt(strlen(%2),200),#-1 Keep an aspect to 200 characters.,1,[u(%!/FUN`DO`WRITE,%0,ASPECT`%q<r_slot>,%2)][u(%!/FUN`DO`WRITE,%0,WEALTH`ASPECTS,squish(get(%0/FATE`WEALTH`ASPECTS) %q<r_slot>))][u(%!/FUN`ASPECT`LABEL,%q<r_slot>)] is now: %2. [name(%0)] has [u({{toolkit}}/FUN`WEALTH`BOXES,%0)] Wealth boxes.)]
+        flags: [funsyntax]
