@@ -210,6 +210,9 @@ why) change how it rolls and takes harm. Atomic Robo uses them for scale, Weapon
 Any number of `` AFTER`NPC`<NAME> `` hooks (%0 the copy's object/attribute) run after an NPC's
 stress changes in an encounter; what each returns is added to the message. The Adversary Toolkit
 pack uses one to thin a filler mob as its members go down.
+Any number of `` SOAK`<NAME> `` hooks (%0 the player, %1 their encounter copy's object/attribute)
+return more shifts a player can take before a hit takes them out, and `` SOAK`<NAME>`TEXT `` how,
+which `+encounter/harm` adds to what it tells the player. The System Toolkit pack's conditions use one.
 
 The lists are `+config` tables on **Fate Sheet Store**: `SKILL`, `APPROACH`, `TRACK` (with `BOXES`)
 and `CONSEQUENCE` (with `SHIFTS`).
