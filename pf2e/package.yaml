@@ -1796,7 +1796,7 @@ objects:
           @@(%1 one prerequisite {value}, %3 1 to give it when it is read and not met, 0 when it cannot be read)[
           setq(prereq_text,trim(json_query(%1,extract,$.value)))][
           setq(prereq_state,u(%!/FUN`BUILD`PREREQ`MET,lcstr(%q<prereq_text>)))][
-          if(switch(%3,1,strmatch(%q<prereq_state>,0),strmatch(%q<prereq_state>,?)),%q<prereq_text>)]
+          if(switch(%3,1,strmatch(%q<prereq_state>,0),not(comp(%q<prereq_state>,?))),%q<prereq_text>)]
         flags: [funsyntax]
       FUN`BUILD`PREREQ`MET:
         value: |-
