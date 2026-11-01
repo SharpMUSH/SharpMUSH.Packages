@@ -280,6 +280,8 @@ objects:
         SHEET`SET
       DATA`ROUTE`SHEET`TRAITS: |-
         SHEET`TRAITS
+      DATA`ROUTE`SHEET`GEAR: |-
+        SHEET`GEAR
       DATA`ROUTE`CHECK`BARE: |-
         CHECK`USAGE
       DATA`ROUTE`CHECK`ARG: |-
@@ -347,10 +349,10 @@ objects:
         value: |-
           @assert strlen(setr(sheet_who,u(%!/FUN`PLAYER`MATCH,%<name>)))=@pemit %#=notice(SHEET,There is no player called '%<name>'.,warn)
         flags: [cmdsyntax]
-      # %<key> as typed: trait_key, the trait it names, and trait_kind.
+      # %<key> as typed: trait_key, the trait it names (or LEVEL or COIN), and trait_kind.
       INC`NEED`TRAIT:
         value: |-
-          @assert strlen(%<key>)=@pemit %#=notice(SHEET,Which trait? +sheet/traits lists them.,warn); @assert strlen(setr(trait_key,if(strmatch(%<key>,level),LEVEL,u(%!/FUN`TRAIT`FIND,%<key>))))=@pemit %#=notice(SHEET,There is no trait '%<key>'. +sheet/traits lists them.,warn); think setq(trait_kind,u(%!/FUN`TRAIT`KIND,%q<trait_key>))
+          @assert strlen(%<key>)=@pemit %#=notice(SHEET,Which trait? +sheet/traits lists them.,warn); @assert strlen(setr(trait_key,switch(lcstr(trim(%<key>)),level,LEVEL,coin,COIN,u(%!/FUN`TRAIT`FIND,%<key>))))=@pemit %#=notice(SHEET,There is no trait '%<key>'. +sheet/traits lists them.,warn); think setq(trait_kind,u(%!/FUN`TRAIT`KIND,%q<trait_key>))
         flags: [cmdsyntax]
 
       # ---- +sheet -----------------------------------------------------------------
@@ -363,12 +365,23 @@ objects:
       # An empty value clears the trait.
       INC`SHEET`SET:
         value: |-
-          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/set <trait>=<value>%, such as +sheet/set str=14 or +sheet/set athletics=trained.,warn); @if strmatch(%q<cmd_left_side>,*/*)={@include/args %!/INC`NEED`TARGET=name,before(%q<cmd_left_side>,/); think setq(set_typed,after(%q<cmd_left_side>,/))},{think setqm(sheet_who,%q<viewer_objid>,set_typed,%q<cmd_left_side>)}; think setq(set_keeper,u(%!/FUN`PERM`KEEPER,%#)); @assert cor(%q<set_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error); @assert cor(%q<set_keeper>,not(isapproved(%#)))=@pemit %#=notice(SHEET,Your character is approved%, so staff change your sheet now.,error); @assert cor(%q<set_keeper>,not(strlen(setr(set_gate,u(%!/FUN`GATE`EDIT,%#)))))=@pemit %#=notice(SHEET,%q<set_gate>,warn); @include %!/INC`SHEET`SET`VALUE
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/set <trait>=<value>%, such as +sheet/set str=14 or +sheet/set athletics=trained.,warn); @include %!/INC`NEED`EDITOR; @include %!/INC`SHEET`SET`VALUE
+        flags: [cmdsyntax]
+      # cmd_left_side as [<name>/]<what>: sheet_who, set_typed (<what>) and set_keeper, once they may change
+      # that sheet now.
+      INC`NEED`EDITOR:
+        value: |-
+          @if strmatch(%q<cmd_left_side>,*/*)={@include/args %!/INC`NEED`TARGET=name,before(%q<cmd_left_side>,/); think setq(set_typed,after(%q<cmd_left_side>,/))},{think setqm(sheet_who,%q<viewer_objid>,set_typed,%q<cmd_left_side>)}; think setq(set_keeper,u(%!/FUN`PERM`KEEPER,%#)); @assert cor(%q<set_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error); @assert cor(%q<set_keeper>,not(isapproved(%#)))=@pemit %#=notice(SHEET,Your character is approved%, so staff change your sheet now.,error); @assert cor(%q<set_keeper>,not(strlen(setr(set_gate,u(%!/FUN`GATE`EDIT,%#)))))=@pemit %#=notice(SHEET,%q<set_gate>,warn)
         flags: [cmdsyntax]
       # The trait and value: set_value, what is stored, after each kind's own check.
       INC`SHEET`SET`VALUE:
         value: |-
-          @include/args %!/INC`NEED`TRAIT=key,%q<set_typed>; @break not(strlen(%q<cmd_right_side>))={@include/args %!/INC`DO`SET=who,%q<sheet_who>,key,%q<trait_key>,value,; @pemit %#=notice(SHEET,u(%!/FUN`TRAIT`LABEL,%q<trait_key>) is cleared on [name(%q<sheet_who>)]'s sheet.,ok)}; think setq(set_value,u(%!/FUN`VALUE`[if(strmatch(%q<trait_key>,LEVEL),LEVEL,ucstr(%q<trait_kind>))],%q<cmd_right_side>,%q<set_keeper>)); @assert not(strmatch(%q<set_value>,#-1 *))=@pemit %#=notice(SHEET,after(%q<set_value>,#-1%b),warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,key,%q<trait_key>,value,%q<set_value>; @pemit %#=notice(SHEET,u(%!/FUN`TRAIT`LABEL,%q<trait_key>) is [u(%!/FUN`DISPLAY`VALUE,%q<sheet_who>,%q<trait_key>)] on [name(%q<sheet_who>)]'s sheet.[if(not(comp(%q<sheet_who>,%q<viewer_objid>)),u(%!/FUN`HINT,SET))],ok)
+          @include/args %!/INC`NEED`TRAIT=key,%q<set_typed>; @break not(strlen(%q<cmd_right_side>))={@include/args %!/INC`DO`SET=who,%q<sheet_who>,key,%q<trait_key>,value,; @pemit %#=notice(SHEET,u(%!/FUN`TRAIT`LABEL,%q<trait_key>) is cleared on [name(%q<sheet_who>)]'s sheet.,ok)}; think setq(set_value,u(%!/FUN`VALUE`[if(member(LEVEL COIN,%q<trait_key>),%q<trait_key>,ucstr(%q<trait_kind>))],%q<cmd_right_side>,%q<set_keeper>)); @assert not(strmatch(%q<set_value>,#-1 *))=@pemit %#=notice(SHEET,after(%q<set_value>,#-1%b),warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,key,%q<trait_key>,value,%q<set_value>; @pemit %#=notice(SHEET,u(%!/FUN`TRAIT`LABEL,%q<trait_key>) is [u(%!/FUN`DISPLAY`VALUE,%q<sheet_who>,%q<trait_key>)] on [name(%q<sheet_who>)]'s sheet.[if(not(comp(%q<sheet_who>,%q<viewer_objid>)),u(%!/FUN`HINT,SET))],ok)
+        flags: [cmdsyntax]
+      # +sheet/gear [<name>/]<item>=<count> sets how many of an item the sheet lists; 0 takes it off.
+      INC`SHEET`GEAR:
+        value: |-
+          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>))=@pemit %#=notice(SHEET,+sheet/gear <item>=<count>%, such as +sheet/gear Rope=1. A count of 0 takes it off.,warn); @include %!/INC`NEED`EDITOR; @assert strlen(setr(gear_key,u(%!/FUN`GEAR`KEY,%q<set_typed>)))=@pemit %#=notice(SHEET,An item's name needs a letter or a digit.,warn); @assert cand(isint(%q<cmd_right_side>),gte(%q<cmd_right_side>,0),lte(%q<cmd_right_side>,9999))=@pemit %#=notice(SHEET,A count is a whole number from 0 to 9999.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,key,GEAR`%q<gear_key>,value,if(%q<cmd_right_side>,%q<cmd_right_side>|[firstof(after(get(%q<sheet_who>/D20`GEAR`%q<gear_key>),|),trim(%q<set_typed>))]); @pemit %#=notice(SHEET,if(%q<cmd_right_side>,[name(%q<sheet_who>)]'s sheet lists %q<cmd_right_side> [after(get(%q<sheet_who>/D20`GEAR`%q<gear_key>),|)].,[trim(%q<set_typed>)] is off [name(%q<sheet_who>)]'s sheet.),ok)
         flags: [cmdsyntax]
       # +sheet/traits: every trait, and what a skill adds.
       INC`SHEET`TRAITS:
@@ -417,6 +430,10 @@ objects:
         value: |-
           switch(lcstr(%0),untrained,0,0,0,trained,1,1,1,expert,2,2,2,#-1 Training is untrained%, trained or expert.)
         flags: [funsyntax]
+      FUN`VALUE`COIN:
+        value: |-
+          if(cand(isint(%0),gte(%0,0)),%0,#-1 Coin is a whole number%, 0 or more.)
+        flags: [funsyntax]
       FUN`VALUE`LEVEL:
         value: |-
           if(cand(isint(%0),gte(%0,1),lte(%0,get(%!/DATA`CONFIG`LEVEL-MAX))),%0,#-1 A level is a whole number from 1 to [get(%!/DATA`CONFIG`LEVEL-MAX)].)
@@ -447,7 +464,7 @@ objects:
         flags: [funsyntax]
       FUN`TRAIT`LABEL:
         value: |-
-          if(strmatch(%0,LEVEL),Level,firstof(get({{store}}/TRAIT`%0),lcstr(%0)))
+          switch(%0,LEVEL,Level,COIN,Coin,firstof(get({{store}}/TRAIT`%0),lcstr(%0)))
         flags: [funsyntax]
       # %0 typed text: the key it names, by key, by label, or by the start of one, or nothing.
       FUN`TRAIT`FIND:
@@ -462,7 +479,7 @@ objects:
       # %0 a character, %1 a key: what is stored, or the default.
       FUN`RATING`STORED:
         value: |-
-          default(%0/D20`%1,switch(%1,LEVEL,1,if(strmatch(u(%!/FUN`TRAIT`KIND,%1),ability),get(%!/DATA`CONFIG`SCORE-DEFAULT),0)))
+          default(%0/D20`%1,switch(%1,LEVEL,1,COIN,0,if(strmatch(u(%!/FUN`TRAIT`KIND,%1),ability),get(%!/DATA`CONFIG`SCORE-DEFAULT),0)))
         flags: [funsyntax]
       # %0 a score: what it adds, (score - 10) / 2 rounded down.
       FUN`RATING`MODIFIER:
@@ -509,7 +526,7 @@ objects:
       # %0 a character, %1 a key: the value as the sheet writes it.
       FUN`DISPLAY`VALUE:
         value: |-
-          setq(display_stored,u(%!/FUN`RATING`STORED,%0,%1))[cond(strmatch(%1,LEVEL),%q<display_stored>,strmatch(u(%!/FUN`TRAIT`KIND,%1),ability),%q<display_stored>,v(DATA`TRAINING`%q<display_stored>))]
+          setq(display_stored,u(%!/FUN`RATING`STORED,%0,%1))[cond(member(LEVEL COIN,%1),%q<display_stored>,strmatch(u(%!/FUN`TRAIT`KIND,%1),ability),%q<display_stored>,v(DATA`TRAINING`%q<display_stored>))]
         flags: [funsyntax]
       # %0 a check's JSON: "Athletics: 1d20[14] + 5 = 19 vs DC 15: success (roll 42)".
       FUN`DISPLAY`CHECK:
@@ -530,7 +547,7 @@ objects:
         value: |-
           setqm(screen_level,u(%!/FUN`RATING`STORED,%0,LEVEL),
           screen_abilities,u(%!/FUN`TRAIT`OFKIND,ability),
-          screen_skills,u(%!/FUN`TRAIT`OFKIND,skill))[box(lfields(lit({"cols":2}),Level%*<|>Training bonus,%q<screen_level>%*<|>[u(%!/FUN`DISPLAY`SIGNED,u(%!/FUN`RATING`BONUS,%q<screen_level>))],%*<|>)%r[rule(Abilities)]%r[ldatatable(lit({"nowrap":"1|2|3","rule":""}),Ability|>Score|>Adds,iter(%q<screen_abilities>,u(%!/FUN`TRAIT`LABEL,%i0)|[u(%!/FUN`RATING`STORED,%0,%i0)]|[u(%!/FUN`DISPLAY`SIGNED,u(%!/API`RATING,%0,%i0))],,%*<^>),%*<^>)]%r[rule(Skills)]%r[ldatatable(lit({"nowrap":"2|3|4","rule":""}),Skill|Ability|Training|>Adds,iter(%q<screen_skills>,u(%!/FUN`TRAIT`LABEL,%i0)|[lcstr(get({{store}}/TRAIT`%i0`ABILITY))]|[v(DATA`TRAINING`[u(%!/FUN`RATING`STORED,%0,%i0)])]|[u(%!/FUN`DISPLAY`SIGNED,u(%!/API`RATING,%0,%i0))],,%*<^>),%*<^>)]%r[rule()]%r[tone(muted,u(%!/FUN`DISPLAY`FOOTER,%0,%1))],name(%0))]
+          screen_skills,u(%!/FUN`TRAIT`OFKIND,skill))[box(lfields(lit({"cols":2}),Level%*<|>Training bonus%*<|>Coin,%q<screen_level>%*<|>[u(%!/FUN`DISPLAY`SIGNED,u(%!/FUN`RATING`BONUS,%q<screen_level>))]%*<|>[u(%!/FUN`RATING`STORED,%0,COIN)],%*<|>)%r[rule(Abilities)]%r[ldatatable(lit({"nowrap":"1|2|3","rule":""}),Ability|>Score|>Adds,iter(%q<screen_abilities>,u(%!/FUN`TRAIT`LABEL,%i0)|[u(%!/FUN`RATING`STORED,%0,%i0)]|[u(%!/FUN`DISPLAY`SIGNED,u(%!/API`RATING,%0,%i0))],,%*<^>),%*<^>)]%r[rule(Skills)]%r[ldatatable(lit({"nowrap":"2|3|4","rule":""}),Skill|Ability|Training|>Adds,iter(%q<screen_skills>,u(%!/FUN`TRAIT`LABEL,%i0)|[lcstr(get({{store}}/TRAIT`%i0`ABILITY))]|[v(DATA`TRAINING`[u(%!/FUN`RATING`STORED,%0,%i0)])]|[u(%!/FUN`DISPLAY`SIGNED,u(%!/API`RATING,%0,%i0))],,%*<^>),%*<^>)][if(words(lattr(%0/D20`GEAR`*)),%r[rule(Gear)]%r[u(%!/FUN`GEAR`LIST,%0)])]%r[rule()]%r[tone(muted,u(%!/FUN`DISPLAY`FOOTER,%0,%1))],name(%0))]
         flags: [funsyntax]
       # %0 the character, %1 who reads it: what they can do next.
       FUN`DISPLAY`FOOTER:
@@ -541,6 +558,16 @@ objects:
         value: |-
           setq(screen_all,u(%!/FUN`TRAIT`ALL))[box(ldatatable(lit({"nowrap":"1|3"}),Key|Trait|Kind|Adds,iter(%q<screen_all>,lcstr(%i0)|[u(%!/FUN`TRAIT`LABEL,%i0)]|[u(%!/FUN`TRAIT`KIND,%i0)]|[if(strmatch(u(%!/FUN`TRAIT`KIND,%i0),ability),its score's modifier,lcstr(get({{store}}/TRAIT`%i0`ABILITY)) and training)],,%*<^>),%*<^>)%r[rule()]%r[tone(muted,Training is [itemize([v(DATA`TRAINING`0)] [v(DATA`TRAINING`1)] [v(DATA`TRAINING`2)],,or)]: a trained skill adds the training bonus%, an expert twice that.)],D20 traits)]
         flags: [funsyntax]
+      # %0 a character: their gear, "2 Rope, 1 Healing potion and 3 Torches".
+      FUN`GEAR`LIST:
+        value: |-
+          itemize(iter(lattr(%0/D20`GEAR`*),[before(get(%0/%i0),|)] [after(get(%0/%i0),|)],%b,|),|)
+        flags: [funsyntax]
+      # %0 an item's name: the key it is kept under, its letters and digits in upper case with - between.
+      FUN`GEAR`KEY:
+        value: |-
+          left(trim(regeditall(ucstr(trim(%0)),\[^A-Z0-9\]+,-),-,b),40)
+        flags: [funsyntax]
       FUN`PLAYER`MATCH:
         value: |-
           if(isdbref(setr(found_player,pmatch(%0))),objid(%q<found_player>))
@@ -548,7 +575,7 @@ objects:
 
       # ---- the sheet API ------------------------------------------------------------
       # What other packages call: u({{sheet-d20/sheet}}/API`<NAME>,...). Every sheet package has these names.
-      # They read and roll, and change nothing on the sheet.
+      # They read and roll, and change nothing on the sheet, except API`COIN and API`GEAR, which add rewards.
       API:
         value: |-
           The d20 sheet's functions for other packages. See the package README.
@@ -600,6 +627,23 @@ objects:
         value: |-
           cond(cand(get(%!/DATA`CONFIG`CRITS),eq(%1,20)),crit-success,cand(get(%!/DATA`CONFIG`CRITS),eq(%1,1)),crit-fail,not(strlen(%2)),,gte(%0,%2),success,fail)
         flags: [VISUAL]
+      # %0 a character, %1 coin to add (less than 0 takes it away): their coin after, never below 0.
+      API`COIN:
+        value: |-
+          setq(coin_new,max(0,add(u(%!/FUN`RATING`STORED,%0,COIN),%1)))[u(%!/FUN`API`ROOT,%0)][attrib_set(%0/D20`COIN,%q<coin_new>)]%q<coin_new>
+        flags: [VISUAL]
+      # %0 a character, %1 an item's name, %2 how many to add (less than 0 takes some away): how many they
+      # have after. The item is off the sheet at 0.
+      API`GEAR:
+        value: |-
+          setqm(gear_key,u(%!/FUN`GEAR`KEY,%1),
+          gear_had,get(%0/D20`GEAR`%q<gear_key>),
+          gear_new,max(0,add(first(before(%q<gear_had>,|)),%2)))[if(strlen(%q<gear_key>),[u(%!/FUN`API`ROOT,%0)][if(%q<gear_new>,attrib_set(%0/D20`GEAR`%q<gear_key>,%q<gear_new>|[firstof(after(%q<gear_had>,|),trim(%1))]),if(strlen(%q<gear_had>),attrib_set(%0/D20`GEAR`%q<gear_key>)))]%q<gear_new>,#-1 An item's name needs a letter or a digit.)]
+        flags: [VISUAL]
+      FUN`API`ROOT:
+        value: |-
+          if(hasattr(%0,D20),,attrib_set(%0/D20,This character's d20 sheet. +sheet shows it.)[set(%0/D20,wizard)][set(%0/D20,no_command)])
+        flags: [funsyntax]
       # Named: %<roller> an objid, %<trait> a key, %<modifier> a number to add, %<target> a DC or nothing,
       # %<dice> 1d20, 2d20kh or 2d20kl. Rolls and keeps the roll (roll() record), and returns
       # {"tier","total","natural","target","margin","label","text","roll","formula"}; tier and margin are empty
@@ -791,6 +835,7 @@ objects:
 
         - `+sheet` shows your own; `+sheet <name>` shows another character's, when the game lets you read it.
         - `+sheet/set <trait>=<value>` fills in your sheet until your character is approved: `+sheet/set str=14`, `+sheet/set athletics=trained`, `+sheet/set level=3`. Leave the value out to clear it.
+        - `+sheet/gear <item>=<count>` lists what you carry: `+sheet/gear Rope=1`. A count of 0 takes it off. `+sheet/set coin=<n>` sets your coin.
         - `+sheet/traits` lists every ability and skill, with the key you type for each.
 
         An ability adds its modifier to a roll: the score less 10, halved and rounded down, so 14 adds +2 and 9 adds -1. A skill adds its ability's modifier, plus the training bonus when you are trained, twice it when you are an expert. The bonus is +2 at level 1 and grows as you level.
@@ -823,7 +868,8 @@ objects:
         Sheet keepers \(`softcode.d20.admin`, or the D20 Sheet Keeper role\) read every sheet and change any character's at any time:
 
         - `+sheet <name>` shows a character's sheet.
-        - `+sheet/set <name>/<trait>=<value>` changes it: `+sheet/set Alice/level=4`. A keeper may set a score up to 30.
+        - `+sheet/set <name>/<trait>=<value>` changes it: `+sheet/set Alice/level=4`, `+sheet/set Alice/coin=50`. A keeper may set a score up to 30.
+        - `+sheet/gear <name>/<item>=<count>` changes their gear: `+sheet/gear Alice/Healing potion=2`.
 
         `@role/assign <player>=d20-sheet-keeper` makes someone a keeper.
       LOCK`SHEET`SETTINGS: |-

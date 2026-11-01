@@ -10,7 +10,8 @@ A Duties roll provider called `fate`, over [`sheet-fate`](../sheet-fate/). Pick 
 | `` FN`DUTIES`DC `` | `Fair (+2)`: the sheet's opposition for the difficulty word, a ladder word, or a number |
 | `` FN`DUTIES`FALLBACK `` | the roller's highest-rated skill or approach |
 | `` FN`DUTIES`CHECK `` | 4dF plus the rating against the opposition. Teamwork: each helper in `%<mods>` (`{"helpers":[...]}`) rated Average or better in the skill adds +1. Invokes: `{"invokes":<n>}` spends that many fate points, as many as the roller has, for +2 each. `system` holds `shifts`, `opposition`, `ladder`, `teamwork` and `invokes` |
-| `` FN`DUTIES`GRANT `` | `{"kind":"fate-point","amount":<n>}` gives fate points; other kinds are left to Duties |
+| `` FN`DUTIES`REWARDS `` | `fate-point` (`amount`) |
+| `` ON`DUTIES`GRANT `` | `{"kind":"fate-point","amount":<n>}` gives the fate points and tells the player |
 
 No `FN`DUTIES`TRAINED`: Fate has no training. The provider is **Duties Fate Provider**, inside the
 Fate Sheet, WIZARD so it may call the sheet's API; its only writes are fate points, through the

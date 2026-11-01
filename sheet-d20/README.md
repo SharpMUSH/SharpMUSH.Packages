@@ -1,6 +1,6 @@
 # sheet-d20
 
-A d20 character sheet: six ability scores, a level, and a skill list the game edits, each skill
+A d20 character sheet: six ability scores, a level, coin, gear, and a skill list the game edits, each skill
 untrained, trained or expert. Players fill in their own sheet until they are approved, and roll
 against it with `+check`, which the whole room sees and the game keeps as a recorded roll.
 
@@ -22,8 +22,10 @@ Depends on nothing. Bridges add the rest:
 | Command | Who | What |
 |---|---|---|
 | `+sheet [<name>]` | all | Your sheet, or another character's when you may read it |
-| `+sheet/set <trait>=<value>` | unapproved player | Set a score (`str=14`), a skill's training (`athletics=trained`) or `level=3`; an empty value clears it |
+| `+sheet/set <trait>=<value>` | unapproved player | Set a score (`str=14`), a skill's training (`athletics=trained`), `level=3` or `coin=20`; an empty value clears it |
+| `+sheet/gear <item>=<count>` | unapproved player | List an item on the sheet (`Rope=1`); a count of 0 takes it off |
 | `+sheet/set <name>/<trait>=<value>` | keeper | The same on anyone's sheet, at any time; scores up to 30 |
+| `+sheet/gear <name>/<item>=<count>` | keeper | The same for anyone's gear |
 | `+sheet/traits` | all | Every trait, its key, and what it adds |
 | `+check[/private][/advantage\|/disadvantage] <trait>[+<n>\|-<n>][=<DC or difficulty>]` | all | Roll 1d20 plus the trait for the room: `Alice checks Athletics: 1d20[13] + 6 = 19 vs DC 15: success (roll 13)` |
 
@@ -48,6 +50,8 @@ A character's sheet is their own attributes, wizard-flagged so only the sheet ob
 D20                 the root: wizard, no_command
 D20`<TRAIT>         an ability's score, or a skill's training (0, 1 or 2)
 D20`LEVEL           the level
+D20`COIN            the coin
+D20`GEAR`<KEY>      an item: <count>|<name>, the key its name in upper case
 ```
 
 The traits are a `+config` table on **D20 Sheet Store**: `TRAIT`<KEY>` holds the label, with `KIND`
@@ -71,6 +75,8 @@ attributes are VISUAL on a WIZARD object, so only code at least that privileged 
 | `` API`HAS `` | character | 1 when anything is set on their sheet |
 | `` API`TARGET `` | DC or difficulty word | the DC, or nothing |
 | `` API`TIER `` | total, natural die, DC | `crit-fail`, `fail`, `success`, `crit-success`, or nothing without a DC |
+| `` API`COIN `` | character, amount | adds coin (less than 0 takes it), returns the new total; a write |
+| `` API`GEAR `` | character, item, amount | adds that many of an item, returns how many now; a write |
 | `` API`CHECK `` | named: `roller`, `trait`, `modifier`, `target`, `dice` (`1d20`, `2d20kh`, `2d20kl`) | `{"tier","total","natural","target","margin","label","text","roll","formula"}`, the roll kept with `roll(...,record)` |
 
 ## What a bridge may set

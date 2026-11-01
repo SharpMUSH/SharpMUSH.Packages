@@ -81,13 +81,17 @@ objects:
         value: |-
           if(cor(%q<provider_teamwork>,%q<provider_invokes>),%b%([trim(if(%q<provider_teamwork>,+%q<provider_teamwork> from teamwork)[if(cand(%q<provider_teamwork>,%q<provider_invokes>),%,%b)][if(%q<provider_invokes>,+[mul(2,%q<provider_invokes>)] from [%q<provider_invokes>] invoke[if(neq(%q<provider_invokes>,1),s)])])]%))
         flags: [funsyntax]
-      # %<roller>, %<reward> a JSON object. A fate-point reward ({"kind":"fate-point","amount":<n>}, 1 when no
-      # amount) gives that many; any other kind is not this provider's, and returns nothing.
-      FN`DUTIES`GRANT:
+      # The rewards a duty may give on this sheet, for Duties' editor.
+      FN`DUTIES`REWARDS:
         value: |-
-          setqm(grant_kind,json_query(%<reward>,extract,$.kind),
-          grant_amount,firstof(json_query(%<reward>,extract,$.amount),1))[if(cand(strmatch(%q<grant_kind>,fate-point),isint(%q<grant_amount>),gt(%q<grant_amount>,0)),You gain %q<grant_amount> fate point[if(neq(%q<grant_amount>,1),s)]. You have [u({{sheet-fate/sheet}}/API`AWARD,%<roller>,%q<grant_amount>)].)]
+          lit([{"kind":"fate-point","label":"Fate points","fields":[{"key":"amount","type":"integer"}]}])
         flags: [funsyntax]
+      # Queued once for each reward and member: %<roller>, %<reward> {"kind","amount"}, %<context>. Gives the
+      # fate points and tells the player.
+      ON`DUTIES`GRANT:
+        value: |-
+          @assert strmatch(json_query(%<reward>,extract,$.kind),fate-point); think setq(grant_amount,firstof(json_query(%<reward>,extract,$.amount),1)); @assert cand(isint(%q<grant_amount>),gt(%q<grant_amount>,0),hastype(%<roller>,player)); @pemit %<roller>=notice(DUTIES,You gain %q<grant_amount> fate point[if(neq(%q<grant_amount>,1),s)]. You have [u({{sheet-fate/sheet}}/API`AWARD,%<roller>,%q<grant_amount>)].,ok)
+        flags: [cmdsyntax]
 
       # %0 %<mods>, %1 the trait: +1 for each helper rated Average (+1) or better in it.
       FUN`MODS`TEAMWORK:
