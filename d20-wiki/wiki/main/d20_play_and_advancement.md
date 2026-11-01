@@ -14,10 +14,12 @@ You have 8 hit points for each level, plus your Constitution modifier for each l
 Once you are approved, staff, or the GM of an encounter you are in, add coin and gear. Staff give XP the
 same way, with a reason.
 
-## The log
+## The ledgers
 
-`+sheet/log` lists every change to your XP, and to the coin and gear on your sheet: how much, what you had
-after, why, and who made it. Changes in an encounter appear when its GM keeps them.
+XP, coin and gear each have a ledger of their own, apart from the ledger your sheet is built from. Every
+change is an entry: how much, the total after it, why, and who made it. `+sheet/log` shows the latest entries
+of each, and `+sheet/log xp`, `coin` or `gear` more of one. Changes in an encounter appear when its GM keeps
+them. The totals on your sheet are the latest entry's total.
 
 ## Advances
 

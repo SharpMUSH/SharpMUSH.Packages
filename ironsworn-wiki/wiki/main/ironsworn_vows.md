@@ -16,7 +16,7 @@ An iron vow is a promise your character swears, with a progress track of ten box
 | epic | 1 | 5 |
 
 A strong hit on the progress roll fulfils the vow and marks its experience; a weak hit fulfils it for one less.
-On a miss the vow stands. Fulfilled experience goes in your log.
+On a miss the vow stands. Fulfilled experience is an entry on your experience ledger.
 
 Vows stay on your sheet, whatever encounter you are in.
 

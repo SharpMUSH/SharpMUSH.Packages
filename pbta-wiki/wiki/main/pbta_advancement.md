@@ -7,4 +7,5 @@ Your game may change the cost and the highest stat. Each advance is an entry on 
 `+sheet/ledger` shows how your character grew. Staff can take one back with `+sheet/revoke`, or clear a sheet
 so character creation starts again with `+sheet/clear`.
 
-`+sheet/log` lists every change to your XP: how much, what you had after, why, and who gave or spent it.
+XP has a ledger of its own, apart from your sheet's: `+sheet/log` lists every change to your XP, how much,
+what you had after, why, and who gave or spent it.

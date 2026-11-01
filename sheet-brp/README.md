@@ -4,8 +4,8 @@ A percentile character sheet on the Basic Roleplaying rules: seven characteristi
 INT, POW, DEX, CHA), hit points, power points and coin, the six characteristic rolls, and a skill list
 with base chances that the game edits. The sheet is built from a ledger. Players share out
 characteristic and skill points until they are approved, then raise skills with experience checks, and
-keep their own hit points, power points and coin in play. Every change to coin and every skill gain is
-logged, and encounters play from copies of the sheets. `+check` rolls 1d100 under a skill or characteristic roll,
+keep their own hit points, power points and coin in play. Coin has an audited ledger of its own, every skill gain is
+an entry on the sheet's ledger, and encounters play from copies of the sheets. `+check` rolls 1d100 under a skill or characteristic roll,
 which the whole room sees and the game keeps as a recorded roll.
 
 The characteristics, characteristic rolls, skill list, base chances and categories are ORC Licensed
@@ -36,7 +36,7 @@ Every sheet package answers `+sheet` and `+check`. Install one sheet package per
 | `+sheet/set <skill>=<percent>` | unapproved player | Spends `skillpoints` (300) above the base, up to `skillcap` (75%); empty puts it back to its base |
 | `+sheet/improve` | approved player | Rolls the marked experience checks: over the percentage adds 1d`improve` (1d6) |
 | `+sheet/ledger [<name>]` | all | Every entry the sheet is built from |
-| `+sheet/log [<name>]` | all | Every change to coin and every skill gain, who made it and why |
+| `+sheet/log [<name>]` | all | The latest 30 coin ledger entries, who made them and why |
 | `+sheet/hp`, `+sheet/pp` `-<n>\|+<n>\|<n>\|full` | player | Hit points and power points left |
 | `+sheet/coin -<n> [<reason>]` | player | Spend coin |
 | `+sheet/traits` | all | The characteristics, and the skills with their base chances |
@@ -54,6 +54,7 @@ and 999%, without points) and use `<name>=<n>` with `/hp`, `/pp` and `/coin`. Th
 | `+sheet/mark <name>/<skill>[=remove]` | Marks an experience check by hand, or takes one off |
 | `+sheet/improve <name>` | Rolls their experience checks, approved or not |
 | `+sheet/revoke <name>/<n>` | Takes back one ledger entry |
+| `+sheet/rebuild <name>` | Works their coin out again from their ledger |
 | `+sheet/clear <name>` | Revokes every entry; character creation starts again. Hit points, power points, coin and checks stay |
 
 The GM of an encounter changes the hit points, power points, coin and marks of anyone playing from its
@@ -93,14 +94,22 @@ Before approval a player's change rewrites their own `chargen` entry of the same
 other change is a new entry. A ledger holds at most 200 entries. A skill's percentage is its base
 chance from the characteristics in force, plus its points, plus every `improve`.
 
-## The log
+## The coin ledger
 
-Every change to the coin on the sheet itself, and every skill gain, is an entry in the character's
-log, `BRP`LOG`<n>`, with the `wizard` attribute flag: `kind` (`coin` or `improve`), `delta`, `total`
-after, `item` (the skill), `reason`, `by` and `at`. A keeper's `/coin` takes a reason after the
-number; `/improve` logs each gain with its roll, `API`RAISE` and `API`AWARD` (Duties rewards) log
-`Reward`, and `/keep` logs how the copy's coin differs from the sheet's. A log keeps the latest 500
-entries.
+Coin has a ledger of its own, apart from the sheet's: `BRP`MONEYLEDGER`<n>`, each entry with the `wizard`
+attribute flag: `n`, `delta`, `total` (the running total after it), `item` and `label` (both empty),
+`reason`, `by` and `at`. A keeper's `/coin` takes a reason after the number, `API`AWARD` (Duties rewards)
+records `Reward`, and `/keep` records how the copy's coin differs from the sheet's. Skill gains, from
+`/improve` or `API`RAISE`, are `improve` entries on the sheet's ledger. Changes to an encounter's copy are
+entered only when they are kept. The ledger keeps 500 entries; past that, the oldest goes, and the latest
+total always stays.
+
+## Caches
+
+`BRP`COIN` holds the latest entry's total, and `BRP`MERGED` the sheet ledger's entries in force, once
+something has worked them out. Only ledger writes touch a cache: a new entry rewrites its total, and a sheet
+ledger entry drops `BRP`MERGED` until the next read. `+sheet/rebuild <name>` (keepers) works every cache out
+again from the ledgers.
 
 ## Encounters
 
@@ -121,9 +130,10 @@ The Duties provider and every `API`` function always use the sheet itself.
 BRP                     the root: wizard, no_command
 BRP`LEDGER`<n>          a ledger entry
 BRP`HP, BRP`PP          what is left; unset is the most
-BRP`COIN                coin; unset is 0
+BRP`MERGED              cache: the ledger entries in force
+BRP`MONEYLEDGER`<n>     a coin ledger entry
+BRP`COIN                cache: coin; unset is 0
 BRP`MARKS               the skills marked for an experience check
-BRP`LOG`<n>             a log entry
 BRP`ENCOUNTERS          the encounters they are in, in the order they joined
 BRP`USING               the encounter /use picked
 ```
@@ -143,9 +153,9 @@ rolls and every skill with a base above 0), `ALWAYS`, `FIND`, `LABEL`, `RATING` 
 (a success level: the tier) and `CHECK` (named `roller`, `trait`, `modifier` in percent, `target`;
 returns `{"tier","level","total","rating","chance","target","label","text","roll","formula"}`). BRP
 adds `MOST` and `LEFT` (a character's most and remaining HP or PP), `RAISE` (`%0` a character, `%1`
-a skill, `%2` percent to add, `%3` why: an `improve` entry, logged, returning the new percentage),
+a skill, `%2` percent to add, `%3` why: an `improve` entry, returning the new percentage),
 `HEAL` (gives back HP or PP, never past the most), `COIN` and `AWARD` (`%0` a character, `%1` coin to
-give or take, `%2` why: never below 0, logged, returning the new count). `RAISE`, `HEAL` and `AWARD`
+give or take, `%2` why: never below 0, a coin ledger entry, returning the new count). `RAISE`, `HEAL` and `AWARD`
 are the ones that write.
 
 Bridges may set `` HINT`<message> ``, `` GATE`EDIT `` and `` ALLOW`VIEW`<name> `` on the **BRP

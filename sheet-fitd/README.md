@@ -1,8 +1,8 @@
 # sheet-fitd
 
 A Forged in the Dark character sheet: twelve actions rated 0 to 4 under Insight, Prowess and
-Resolve, built from a ledger, with XP for each attribute, stress, trauma, harm and coin, an audited
-log of XP and coin, encounters that play from copies of the sheets, and the game's progress clocks.
+Resolve, built from a ledger, with XP for each attribute, stress, trauma, harm and coin, separate
+audited ledgers for XP and coin, encounters that play from copies of the sheets, and the game's progress clocks.
 Players share out their starting dots until they are approved, then spend XP on advances, and keep
 their own stress, trauma, harm and coin in play. `+check` rolls one six-sided die per point of an
 action and reads the highest against a position, which the whole room sees and the game keeps as a
@@ -33,7 +33,7 @@ Every sheet package answers `+sheet` and `+check`. Install one sheet package per
 | `+sheet/set <action>=<rating>` | unapproved player | Shares out the starting dots (`dots`, 7), at most `cap` (2) in one action |
 | `+sheet/advance <action>` | approved player | Spends `advance` (6) XP of the action's attribute on +1, up to 4 |
 | `+sheet/ledger [<name>]` | all | Every entry the ratings are built from |
-| `+sheet/log [<name>]` | all | Every change to XP and coin, who made it and why |
+| `+sheet/log [<name>]` | all | The latest 10 entries of the XP and coin ledgers, who made them and why. `[<name>=]xp` or `coin` shows 30 of one |
 | `+sheet/stress +<n>\|-<n>\|<n>\|clear` | player | Past the most (9) stress clears and a trauma is due |
 | `+sheet/trauma <trauma>` | player | Mark a trauma; at the fourth the character retires |
 | `+sheet/harm <level>=<harm>` | player | Level 1 to 3; a full level pushes harm up one. Empty clears the level |
@@ -57,6 +57,7 @@ XP, and have three more switches:
 |---|---|
 | `+sheet/xp <name>/<attribute>=+<n> [<reason>]` | Gives XP in that attribute; `-<n>` takes, `<n>` sets |
 | `+sheet/revoke <name>/<n>` | Takes back one ledger entry |
+| `+sheet/rebuild <name>` | Works their XP and coin out again from their ledgers |
 | `+sheet/clear <name>` | Revokes every entry; character creation starts again. XP, stress, trauma, harm and coin stay |
 
 The GM of an encounter changes the stress, trauma, harm and coin of anyone playing from its copies.
@@ -86,14 +87,22 @@ Every entry also has `n`, `phase` (`chargen`, `play` or `staff`), `by` (an objid
 Before approval a player's change rewrites their own `chargen` entry for that action; every other
 change is a new entry. A ledger holds at most 200 entries.
 
-## The log
+## The XP and money ledgers
 
-Every change to XP, and to the coin on the sheet itself, is an entry in the character's log,
-`FITD`LOG`<n>`, with the `wizard` attribute flag: `kind` (`xp` or `coin`), `delta`, `total` after,
-`item` (the attribute, for XP), `reason`, `by` and `at`. A keeper's `/xp` and `/coin` take a reason
-after the number; an advance logs the XP it spends, `API`AWARD` (Duties rewards) logs `Reward`, and
-`/keep` logs how the copy's coin differs from the sheet's. Changes to an encounter's copy are not
-logged until they are kept. A log keeps the latest 500 entries.
+XP and coin each have a ledger of their own, apart from the sheet's: `FITD`XPLEDGER`<n>` and
+`FITD`MONEYLEDGER`<n>`, each entry with the `wizard` attribute flag: `n`, `delta`, `total` (the running
+total after it), `item` and `label` (the attribute and its name, for XP), `reason`, `by` and `at`. A
+keeper's `/xp` and `/coin` take a reason after the number; an advance records the XP it spends, `API`AWARD`
+(Duties rewards) records `Reward`, and `/keep` records how the copy's coin differs from the sheet's. Changes
+to an encounter's copy are entered only when they are kept. Each ledger keeps 500 entries; past that, the
+oldest entry that a later one for the same item replaces goes, so every latest total stays.
+
+## Caches
+
+`FITD`XP`<ATTRIBUTE>` and `FITD`COIN` hold the latest entry's total, and `FITD`MERGED` the sheet ledger's
+entries in force, once something has worked them out. Only ledger writes touch a cache: a new entry rewrites
+its total, and a sheet ledger entry drops `FITD`MERGED` until the next read. `+sheet/rebuild <name>`
+(keepers) works every cache out again from the ledgers.
 
 ## Encounters
 
@@ -112,12 +121,14 @@ The Duties provider and every `API`` function always use the sheet itself.
 ```
 FITD                    the root: wizard, no_command
 FITD`LEDGER`<n>         a ledger entry
-FITD`XP`<ATTRIBUTE>     an attribute's XP; unset is 0
+FITD`MERGED             cache: the ledger entries in force
+FITD`XPLEDGER`<n>       an XP ledger entry
+FITD`MONEYLEDGER`<n>    a coin ledger entry
+FITD`XP`<ATTRIBUTE>     cache: an attribute's XP; unset is 0
 FITD`STRESS             stress marked; unset is 0
 FITD`TRAUMA             traumas, a |-list
 FITD`HARM`<SLOT>        harm in slot 1A, 1B, 2A, 2B or 3A
-FITD`COIN               coin; unset is 0
-FITD`LOG`<n>            a log entry
+FITD`COIN               cache: coin; unset is 0
 FITD`ENCOUNTERS         the encounters they are in, in the order they joined
 FITD`USING              the encounter /use picked
 ```
@@ -138,7 +149,7 @@ The same `API` tree as every sheet package (see [sheet-d20](../sheet-d20/README.
 `{"tier","total","sixes","dice","target","label","text","roll","formula"}`). FitD adds `ATTRIBUTE`
 (a character's dice in an attribute), `STRESSED` (stress marked), `STRESS` (marks or clears stress and
 returns `{"stress","trauma"}`, trauma 1 when one is due), `COIN` and `AWARD` (`%0` a character, `%1`
-coin to give or take, `%2` why, `Reward` when empty: never below 0, logged, returns the new count).
+coin to give or take, `%2` why, `Reward` when empty: never below 0, a coin ledger entry, returns the new count).
 `STRESS` and `AWARD` are the ones that write.
 
 Bridges may set `` HINT`<message> ``, `` GATE`EDIT `` and `` ALLOW`VIEW`<name> `` on the **FitD
