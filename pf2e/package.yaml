@@ -74,6 +74,8 @@ objects:
       DATA`CONFIG`BRANCH`LABEL: Feed branch
       DATA`CONFIG`BRANCH`DESCRIPTION: The branch the updater reads. Each run reads every file from the commit the branch is on when the run starts.
       DATA`STATISTICS: acrobatics arcana athletics crafting deception diplomacy intimidation medicine nature occultism performance religion society stealth survival thievery perception fortitude reflex will
+      # Every domain of a statistic's check: FUN`STAT`DOMAINS of each statistic, together.
+      DATA`CHECK`DOMAINS: acrobatics acrobatics-check all arcana arcana-check athletics athletics-check cha-based cha-skill-check check con-based crafting crafting-check deception deception-check dex-based dex-skill-check diplomacy diplomacy-check fortitude fortitude-check int-based int-skill-check intimidation intimidation-check medicine medicine-check nature nature-check occultism occultism-check perception perception-check performance performance-check reflex reflex-check religion religion-check saving-throw skill-check society society-check stealth stealth-check str-based str-skill-check survival survival-check thievery thievery-check will will-check wis-based wis-skill-check
       DATA`STATISTIC: Each statistic's kind (skill, perception or save) and the attribute it is based on.
       DATA`STATISTIC`ACROBATICS: skill dex
       DATA`STATISTIC`ARCANA: skill int
@@ -230,7 +232,12 @@ objects:
           @@(%1 one modifier object, %3 the roll options)[
           if(cand(not(json_query(%1,extract,$.ignored)),
             u(FUN`PREDICATE`TEST,firstof(json_query(%1,get,predicate),\[\]),%3)),
-            [u(FUN`MODIFIER`TYPE,json_query(%1,extract,$.type))]~[add(0,json_query(%1,extract,$.modifier))]~[firstof(json_query(%1,extract,$.slug),modifier)]~[t(json_query(%1,extract,$.force))])]
+            u(FUN`MODIFIER`ENTRY,%1))]
+        flags: [funsyntax]
+      FUN`MODIFIER`ENTRY:
+        value: |-
+          @@(%0 one modifier object: type~value~slug~force)[
+          u(FUN`MODIFIER`TYPE,json_query(%0,extract,$.type))]~[add(0,json_query(%0,extract,$.modifier))]~[firstof(json_query(%0,extract,$.slug),modifier)]~[t(json_query(%0,extract,$.force))]
         flags: [funsyntax]
       FUN`MODIFIER`TYPE:
         value: |-
@@ -376,15 +383,16 @@ objects:
       FUN`ITEM: Items from the data objects. An item is the feed's ITEM` JSON, which is Foundry's item less its description.
       # What a sheet needs from an item, worked out once when the updater stores it, as ITEM`<id>`PREP:
       # kind, name, slug, valued (a valued condition's own badge), options (the roll options it gives,
-      # less its badge's), unapplied (its rule kinds other than FlatModifier), dynamic (the indices of the
-      # FlatModifiers that read the roll data or are ability modifiers) and synth (the synthetics of the
-      # other FlatModifiers, which come out the same on every sheet).
+      # less its badge's), unapplied (its rule kinds other than FlatModifier), and of its FlatModifiers
+      # whose selectors reach a check: dynamic (the indices of those that read the roll data or are
+      # ability modifiers) and synth (the synthetics of the others, which come out the same on every
+      # sheet, each with its modifier's type~value~slug~force as flat).
       FUN`ITEM`PREPARE:
         value: |-
           @@(%0 an item: its ITEM`<id>`PREP)[
           setqm(synthetic_item,%0,synthetic_rules,firstof(json_query(%0,extract,$.system.rules),json(array)),synthetic_slug,u(FUN`ITEM`SLUG,%0))][
           setq(synthetic_data,json(object,item,u(FUN`ITEM`DATA,%0,)))][
-          setq(prepare_flat,iter(lnum(0,dec(json_query(%q<synthetic_rules>,size))),if(strmatch(json_query(%q<synthetic_rules>,extract,$\[%i0\].key),FlatModifier),%i0)))][
+          setq(prepare_flat,iter(lnum(0,dec(json_query(%q<synthetic_rules>,size))),if(u(FUN`RULE`FOR`CHECKS,json_query(%q<synthetic_rules>,extract,$\[%i0\])),%i0)))][
           setq(prepare_dynamic,iter(%q<prepare_flat>,if(u(FUN`RULE`DYNAMIC,json_query(%q<synthetic_rules>,extract,$\[%i0\])),%i0)))][
           json(object,
             kind,json(string,json_query(%0,extract,$.type)),
@@ -394,7 +402,12 @@ objects:
             options,json(string,u(FUN`ITEM`OPTIONS,%0,)),
             unapplied,json(string,setdiff(json_map(me/FUN`RULE`KEY,%q<synthetic_rules>,%b),FlatModifier)),
             dynamic,json(string,%q<prepare_dynamic>),
-            synth,fold(me/FUN`SYNTHETICS`RULE,iter(%q<prepare_flat>,if(member(%q<prepare_dynamic>,%i0),,%i0)),json(array)))]
+            synth,\[[json_map(me/FUN`ITEM`PREPARE`FLAT,fold(me/FUN`SYNTHETICS`RULE,iter(%q<prepare_flat>,if(member(%q<prepare_dynamic>,%i0),,%i0)),json(array)),\,)]\])]
+        flags: [funsyntax]
+      FUN`ITEM`PREPARE`FLAT:
+        value: |-
+          @@(%1 a synthetic: it with its modifier's type~value~slug~force as flat)[
+          json_mod(%1,set,$.flat,json(string,u(FUN`MODIFIER`ENTRY,json_query(%1,get,modifier))))]
         flags: [funsyntax]
       FUN`ITEM`GET:
         value: |-
@@ -540,6 +553,13 @@ objects:
             modifier,%q<rule_value>,
             predicate,u(FUN`FORMULA`INJECT,firstof(json_query(%0,get,predicate),json(array)),%1))]
         flags: [funsyntax]
+      # A FlatModifier whose selectors reach a check's domains, or are injected and so might.
+      FUN`RULE`FOR`CHECKS:
+        value: |-
+          @@(%0 the rule)[
+          cand(strmatch(json_query(%0,extract,$.key),FlatModifier),
+            cor(regmatch(json_query(%0,get,selector),\\x7B),words(setinter(u(FUN`RULE`SELECTORS,%0,),v(DATA`CHECK`DOMAINS)))))]
+        flags: [funsyntax]
       # A FlatModifier that reads the roll data (a formula with @, or an injected {actor|...},
       # {item|...} or {rule|...}) or that is an ability modifier comes out differently on each sheet.
       FUN`RULE`DYNAMIC:
@@ -620,7 +640,19 @@ objects:
           setq(check_actor,u(FUN`ACTOR`DATA,%q<check_entries>,%q<check_level>,%q<check_conditions>))][
           setq(check_synthetics,u(FUN`SYNTHETICS`MODIFIERS,%q<check_actor>,%q<check_static>,%q<check_dynamic>))][
           setq(check_index,u(FUN`SYNTHETICS`INDEX,%q<check_synthetics>))][
-          setq(check_flats,iter(lnum(0,dec(json_query(%q<check_synthetics>,size))),firstof(u(FUN`MODIFIER`FLAT,,json_query(%q<check_synthetics>,extract,$\[%i0\].modifier),,%q<check_options>),-)))]
+          setq(check_flats,iter(lnum(0,dec(json_query(%q<check_synthetics>,size))),u(FUN`CHECK`FLAT,%i0)))]
+        flags: [funsyntax]
+      # A synthetic's type~value~slug~force when its predicate holds, else -: a prepared synthetic's flat,
+      # its predicate tested only when it has one.
+      FUN`CHECK`FLAT:
+        value: |-
+          @@(%0 the synthetic's index in check_synthetics)[
+          setq(flat_entry,json_query(%q<check_synthetics>,extract,$\[%0\].flat))][
+          firstof(
+            if(strlen(%q<flat_entry>),
+              if(cor(strmatch(setr(flat_predicate,json_query(%q<check_synthetics>,extract,$\[%0\].modifier.predicate)),\[\]),u(FUN`PREDICATE`TEST,%q<flat_predicate>,%q<check_options>)),%q<flat_entry>),
+              u(FUN`MODIFIER`FLAT,,json_query(%q<check_synthetics>,extract,$\[%0\].modifier),,%q<check_options>)),
+            -)]
         flags: [funsyntax]
       # One grant's part of the check_ registers, from its item's ITEM`<id>`PREP: its roll options,
       # the condition it is, its synthetics, its name for the sheet and the rules it brings that are
@@ -628,14 +660,15 @@ objects:
       FUN`CHECK`GRANT:
         value: |-
           @@(%0 a grant n~pack~id~badge)[
-          setq(grant_prep,get(u(DATA`PACK`[elements(%0,2,~)])/ITEM`[elements(%0,3,~)]`PREP))][
+          setqm(grant_pack,elements(%0,2,~),grant_id,elements(%0,3,~),grant_own,elements(%0,4,~))][
+          setq(grant_prep,get(u(DATA`PACK`%q<grant_pack>)/ITEM`%q<grant_id>`PREP))][
           setqm(grant_kind,json_query(%q<grant_prep>,extract,$.kind),grant_options,json_query(%q<grant_prep>,extract,$.options),grant_name,json_query(%q<grant_prep>,extract,$.name),grant_synth,json_query(%q<grant_prep>,get,synth),grant_dynamic,json_query(%q<grant_prep>,extract,$.dynamic),grant_unapplied,json_query(%q<grant_prep>,extract,$.unapplied))][
-          setq(grant_badge,firstof(elements(%0,4,~),json_query(%q<grant_prep>,extract,$.valued)))][
+          setq(grant_badge,firstof(%q<grant_own>,json_query(%q<grant_prep>,extract,$.valued)))][
           setq(check_options,%q<check_options> %q<grant_options>[if(cand(strlen(%q<grant_badge>),match(condition effect,%q<grant_kind>)),%b[first(%q<grant_options>)]:%q<grant_badge>)])][
           if(strmatch(%q<grant_kind>,condition),setq(check_conditions,%q<check_conditions> [json_query(%q<grant_prep>,extract,$.slug)]~%q<grant_badge>))][
           if(gt(strlen(%q<grant_synth>),2),setq(check_static,[if(strlen(%q<check_static>),%q<check_static>\,)][mid(%q<grant_synth>,1,sub(strlen(%q<grant_synth>),2))]))][
-          if(words(%q<grant_dynamic>),setq(check_dynamic,%q<check_dynamic> [elements(%0,2,~)]~[elements(%0,3,~)]~%q<grant_badge>~[edit(%q<grant_dynamic>,%b,.)]))][
-          setq(check_names,[if(strlen(%q<check_names>),%q<check_names>|)]%q<grant_name>[if(strlen(elements(%0,4,~)),%b[elements(%0,4,~)])])][
+          if(words(%q<grant_dynamic>),setq(check_dynamic,%q<check_dynamic> %q<grant_pack>~%q<grant_id>~%q<grant_badge>~[edit(%q<grant_dynamic>,%b,.)]))][
+          setq(check_names,[if(strlen(%q<check_names>),%q<check_names>|)]%q<grant_name>[if(strlen(%q<grant_own>),%b%q<grant_own>)])][
           if(words(%q<grant_unapplied>),setq(check_unapplied,[if(strlen(%q<check_unapplied>),%q<check_unapplied>|)]%q<grant_name> %([itemize(%q<grant_unapplied>)]%)))]
         flags: [funsyntax]
       # The modifiers that count on a statistic's check, type~value~slug~force: its attribute modifier,
