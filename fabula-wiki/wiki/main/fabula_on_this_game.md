@@ -3,7 +3,7 @@ This game keeps your JRPG character sheet for you. `+help sheet`, `+help check` 
 ## Your sheet
 
 - `+sheet` shows your sheet; `+sheet/traits` lists the attributes, classes, difficulties, status effects and emotions.
-- `+sheet/set <attribute>=<die>`, `+sheet/class <class>=<levels>` and `+sheet/skill <class>:<skill>=<level>` build your hero until staff approve them.
+- `+sheet/set <attribute>=<die>`, `+sheet/class <class>=<levels>`, `+sheet/benefit <class>=<hp|mp>` and `+sheet/skill <class>:<skill>=<level>` build your hero until staff approve them.
 - `+sheet/identity`, `/theme`, `/origin` and `+sheet/bond <who>=<emotions>` set your traits and bonds.
 - `+sheet/bonus <bonus>=<n> <source>` adds what a skill or a piece of equipment gives, such as `+sheet/bonus def=1 Bronze shield`.
 - `+sheet/hp`, `/mp`, `/ip`, `/fp`, `/status` and `/rest` keep count in play.

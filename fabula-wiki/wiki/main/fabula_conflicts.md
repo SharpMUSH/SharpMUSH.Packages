@@ -41,10 +41,11 @@ This game's bestiary holds foes of its own, from knee-high Bramble Imps at level
 
 `+help encounter conflict` and `+help encounter attack` cover the players' commands, `+help encounter foes` and `+help encounter villains` the GM's. In short:
 
+- `+encounter` draws the battle screen: the battlefield with each side's pictures, the foes' and the party's windows with HP and MP bars, and on your turn the commands you can use. `+help encounter screen` covers it.
 - `+encounter/initiative` rolls for the heroes before the conflict starts.
 - `+attack <target>=<attribute>+<attribute>[+<n>]` attacks, and `+attack/damage <n> [<type>]` deals a hit's damage. `+check/invoke` works on an attack like any other check.
 - `+encounter/guard`, `+encounter/turn` and `+encounter/surrender` guard, end a turn and surrender.
-- `+foe` lists the bestiary; the GM brings foes in with `+encounter/foe`, attacks with `+foe/attack` and spends a villain's Ultima Points with `+foe/ultima`.
+- `+foe` lists the bestiary; the GM brings foes in with `+encounter/foe`, attacks with `+foe/attack` and spends a villain's Ultima Points with `+foe/ultima`. `+foe/picture` and `+foe/art` set what the battle screen draws for a foe.
 
 ---
 

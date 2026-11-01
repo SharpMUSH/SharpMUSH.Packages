@@ -6,7 +6,7 @@
 | MP | five times the Willpower die, plus the level |
 | IP | 6 |
 
-Each class whose first level gives HP or MP adds 5 to that resource, and each that gives IP adds 2. Some skills add more. The dice here are the attribute's own size, before status effects.
+Each class whose first level gives HP or MP adds 5 to that resource, and each that gives IP adds 2. A few classes let the player pick HP or MP. Some skills add more. The dice here are the attribute's own size, before status effects.
 
 A hero with HP at half the most or less is in **crisis**. At 0 HP they are down.
 

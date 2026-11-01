@@ -18,7 +18,7 @@ A class reaches its highest level at 10, and is then mastered. Each mastered cla
 
 ## 3. Skills
 
-Spend each class's skill levels on that class's skills. A skill can take several levels when the rulebook allows it. The sheet records each skill's name and level; its rules are in the Core Rulebook.
+Spend each class's skill levels on that class's skills. A skill can take several levels when the rulebook allows it. The sheet records each skill's name and level; its rules are in the book its class comes from.
 
 ## 4. Identity, theme and origin
 

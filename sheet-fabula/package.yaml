@@ -1,7 +1,7 @@
 format: "1.16"
 package: sheet-fabula
 title: "JRPG sheet"
-version: 1.1.0
+version: 1.2.0
 authors: [SharpMUSH]
 description: "A JRPG character sheet compatible with Fabula Ultima: four attributes as die sizes, classes and their skill levels, HP, MP, IP, Fabula Points, status effects and bonds. +check rolls two attribute dice against a Difficulty Level, with rerolls and bond invokes paid in Fabula Points. Requires the Fabula Ultima Core Rulebook; see NOTICE.md."
 license: MIT
@@ -207,13 +207,13 @@ objects:
       DATA`CONFIG`CLASSES`FIELD`BENEFIT`TYPE: |-
         choice
       DATA`CONFIG`CLASSES`FIELD`BENEFIT`CHOICES: |-
-        hp mp ip none
+        hp mp either ip none
       DATA`CONFIG`CLASSES`FIELD`BENEFIT`DEFAULT: |-
         none
       DATA`CONFIG`CLASSES`FIELD`BENEFIT`LABEL: |-
         Resource
       DATA`CONFIG`CLASSES`FIELD`BENEFIT`DESCRIPTION: |-
-        hp or mp adds 5 to the maximum HP or MP, ip adds 2 to the maximum IP.
+        hp or mp adds 5 to the maximum HP or MP, either adds 5 to the one the player picks with +sheet/benefit, ip adds 2 to the maximum IP.
       DATA`CONFIG`CLASSES`FIELD`MARTIAL`TYPE: |-
         list
       DATA`CONFIG`CLASSES`FIELD`MARTIAL`CHOICES: |-
@@ -284,7 +284,7 @@ objects:
       DATA`CONFIG`FOES`ENTRY: |-
         label
       DATA`CONFIG`FOES`FIELDS: |-
-        label level rank champion villain species role dex ins mig wlp hp mp def mdef init affinities immune attacks notes
+        label level rank champion villain species role dex ins mig wlp hp mp def mdef init affinities immune attacks notes picture art
       DATA`CONFIG`FOES`KEYPATTERN: |-
         ^[A-Za-z0-9-]{1,20}$
       DATA`CONFIG`FOES`FIELD`LABEL`TYPE: |-
@@ -499,6 +499,28 @@ objects:
         Notes
       DATA`CONFIG`FOES`FIELD`NOTES`DESCRIPTION: |-
         What the GM should know: how it fights, what it wants, what its skills do.
+      DATA`CONFIG`FOES`FIELD`PICTURE`TYPE: |-
+        text
+      DATA`CONFIG`FOES`FIELD`PICTURE`MAX: |-
+        400
+      DATA`CONFIG`FOES`FIELD`PICTURE`CHECK: |-
+        CHECK`PICTURE
+      DATA`CONFIG`FOES`FIELD`PICTURE`LABEL: |-
+        Picture
+      DATA`CONFIG`FOES`FIELD`PICTURE`DESCRIPTION: |-
+        The address of its picture on the battle screen, https:// or a site path such as /assets/foes/imp.png. A client that cannot show it gets the art, or the foe's name.
+      DATA`CONFIG`FOES`FIELD`ART`TYPE: |-
+        text
+      DATA`CONFIG`FOES`FIELD`ART`MAX: |-
+        400
+      DATA`CONFIG`FOES`FIELD`ART`LABEL: |-
+        Text art
+      DATA`CONFIG`FOES`FIELD`ART`DESCRIPTION: |-
+        What a client that cannot show pictures draws for it on the battle screen, lines separated by %r. Without it, that client gets the foe's name.
+      CHECK`PICTURE: |-
+        if(u(%!/FUN`IS`PICTURE,%0),,Give an address that starts with https:// or /%, with no spaces.)
+      FUN`IS`PICTURE: |-
+        cor(not(strlen(%0)),cand(not(strmatch(%0,* *)),cor(strmatch(%0,https://?*),cand(strmatch(%0,/?*),not(strmatch(%0,//*))))))
       CHECK`ATTACKS: |-
         if(cor(not(strlen(trim(%0))),every(%!/FUN`ATTACK`OK,%0,;)),,Write each attack as <name>: <attribute>+<attribute> <accuracy> <damage> <type>%, with magic at the end for one against Magic Defense%, and a semicolon between attacks. Such as Claw: dex+mig 0 5 physical.)
 
@@ -522,6 +544,8 @@ objects:
         SHEET`RAISE
       DATA`ROUTE`SHEET`BONUS: |-
         SHEET`BONUS
+      DATA`ROUTE`SHEET`BENEFIT: |-
+        SHEET`BENEFIT
       DATA`ROUTE`SHEET`IDENTITY: |-
         SHEET`TRAIT
       DATA`ROUTE`SHEET`THEME: |-
@@ -622,6 +646,10 @@ objects:
         FOE`ULTIMA
       DATA`ROUTE`FOE`REMOVE: |-
         FOE`REMOVE
+      DATA`ROUTE`FOE`PICTURE: |-
+        FOE`PICTURE
+      DATA`ROUTE`FOE`ART: |-
+        FOE`ART
       DATA`ROUTE`CHECK`BARE: |-
         CHECK`USAGE
       DATA`ROUTE`CHECK`ARG: |-
@@ -738,7 +766,7 @@ objects:
       DATA`PURSE`PAGE: |-
         50
       DATA`LEDGER`KINDS: |-
-        die class skill
+        die class skill benefit
       DATA`BONUSES`EQUIPMENT: |-
         DEF MDEF INIT MARTIAL
       # What an encounter copies, under FABULA`: the rest of the sheet stays live.
@@ -899,16 +927,24 @@ objects:
         value: |-
           @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/set <attribute>=<die>%, such as +sheet/set dex=d10.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_left_side>; @include %!/INC`NEED`EDITABLE; @include/args %!/INC`NEED`ATTR=key,%q<sheet_what>; think setq(set_size,u(%!/FUN`SIZE`READ,firstof(%q<cmd_right_side>,8))); @assert u(%!/FUN`IS`SIZE,%q<set_size>)=@pemit %#=notice(SHEET,An attribute is d6%, d8%, d10 or d12.,warn); think setqm(lp_who,%q<sheet_who>,lp_kind,die,lp_key,%q<attr_key>,lp_to,%q<set_size>,lp_now,u(%!/FUN`ATTR`BASE,%q<sheet_who>,%q<attr_key>),lp_class,,lp_name,,lp_source,); @include %!/INC`LEDGER`PUT; @pemit %#=notice(SHEET,[v(DATA`ATTR`%q<attr_key>)] is d[u(%!/FUN`ATTR`BASE,%q<sheet_who>,%q<attr_key>)] on [name(%q<sheet_who>)]'s sheet.[if(not(u(%!/FUN`SPREAD`OK,%q<sheet_who>)),%b[u(%!/FUN`SPREAD`WARN,%q<sheet_who>)])][if(not(comp(%q<sheet_who>,%q<viewer_objid>)),u(%!/FUN`HINT,SET))],ok)
         flags: [cmdsyntax]
+      # +sheet/benefit [<name>/]<class>=<hp|mp>: for a class whose first level gives +5 HP or MP, which one. A player
+      # picks once; after approval only staff change a pick. A ledger
+      # entry, 1 for HP and 3 for MP, so a change after approval (2 or -2) reads apart from
+      # either; FABULA`BENEFIT`<KEY> holds the sum.
+      INC`SHEET`BENEFIT:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/benefit <class>=hp or =mp picks what a class's first level adds 5 to%, for the classes that let you choose: [itemize(iter(u(%!/FUN`CLASS`EITHER),u(%!/FUN`LIST`LABEL,CLASS,%i0),%b,|),|)].,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_left_side>; @include/args %!/INC`NEED`CLASS=key,%q<sheet_what>; @assert cor(%q<viewer_keeper>,not(isapproved(%#)),not(match(1 3,default(%q<sheet_who>/FABULA`BENEFIT`%q<class_key>,0))))=@pemit %#=notice(SHEET,Your character is approved and has picked for [u(%!/FUN`LIST`LABEL,CLASS,%q<class_key>)]%, so staff change it now.,error); @include %!/INC`NEED`UNGATED; @assert strmatch(get({{store}}/CLASS`%q<class_key>`BENEFIT),either)=@pemit %#=notice(SHEET,[u(%!/FUN`LIST`LABEL,CLASS,%q<class_key>)] gives [firstof(u(%!/FUN`CLASS`GIVES,%q<class_key>),nothing)] with no choice to make.,warn); think setq(benefit_to,extract(1 3,match(hp mp,trim(%q<cmd_right_side>)),1)); @assert strlen(%q<benefit_to>)=@pemit %#=notice(SHEET,Give hp or mp.,warn); think setqm(lp_who,%q<sheet_who>,lp_kind,benefit,lp_key,%q<class_key>,lp_to,%q<benefit_to>,lp_now,default(%q<sheet_who>/FABULA`BENEFIT`%q<class_key>,0),lp_class,,lp_name,,lp_source,); @include %!/INC`LEDGER`PUT; @pemit %#=notice(SHEET,[u(%!/FUN`LIST`LABEL,CLASS,%q<class_key>)] adds 5 to [name(%q<sheet_who>)]'s maximum [if(eq(%q<benefit_to>,1),HP,MP)][if(not(u(%!/FUN`CLASS`LEVEL,%q<sheet_who>,%q<class_key>)),%bwhen [name(%q<sheet_who>)] has a level in it)].[if(not(comp(%q<sheet_who>,%q<viewer_objid>)),u(%!/FUN`HINT,SET))],ok)
+        flags: [cmdsyntax]
       # +sheet/class [<name>/]<class>=<levels>: a class's level while the sheet is being filled in, 0 taking it off.
       # A player's classes add up to the starting level at most; a keeper's to the highest level.
       INC`SHEET`CLASS:
         value: |-
-          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/class <class>=<levels>%, such as +sheet/class guardian=3. Your classes share [get(%!/DATA`CONFIG`START)] levels.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_left_side>; @include %!/INC`NEED`EDITABLE; @include/args %!/INC`NEED`CLASS=key,%q<sheet_what>; think setqm(class_levels,firstof(%q<cmd_right_side>,0),class_old,u(%!/FUN`CLASS`LEVEL,%q<sheet_who>,%q<class_key>),class_most,if(%q<viewer_keeper>,get(%!/DATA`CONFIG`MAXLEVEL),get(%!/DATA`CONFIG`START))); @assert cand(isint(%q<class_levels>),gte(%q<class_levels>,0),lte(%q<class_levels>,10))=@pemit %#=notice(SHEET,A class has 0 to 10 levels.,warn); @assert cor(not(u(%!/FUN`CLASS`OPEN,%q<class_levels>)),u(%!/FUN`CLASS`OPEN,%q<class_old>),lt(u(%!/FUN`CLASS`UNMASTERED,%q<sheet_who>,%q<class_key>),v(DATA`UNMASTERED`MOST)))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has [v(DATA`UNMASTERED`MOST)] classes below level 10%, the most at once. Master one first.,warn); think setqm(class_spent,u(%!/FUN`SKILL`USED,%q<sheet_who>,%q<class_key>),class_mastered,u(%!/FUN`CLASS`MASTERED,%q<sheet_who>),class_heroics,u(%!/FUN`SKILL`USED,%q<sheet_who>,HEROIC)); @assert gte(%q<class_levels>,%q<class_spent>)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<class_spent> skill level[if(neq(%q<class_spent>,1),s)] in [u(%!/FUN`LIST`LABEL,CLASS,%q<class_key>)]. Take skills off first.,warn); @assert cor(gte(%q<class_levels>,10),lt(%q<class_old>,10),gt(%q<class_mastered>,%q<class_heroics>))=@pemit %#=notice(SHEET,Each class mastered at level 10 gives one heroic skill%, and [name(%q<sheet_who>)] has %q<class_heroics> for %q<class_mastered> mastered. Take a heroic skill off first.,warn); think setq(class_total,add(sub(u(%!/API`LEVEL,%q<sheet_who>),%q<class_old>),%q<class_levels>)); @assert lte(%q<class_total>,%q<class_most>)=@pemit %#=notice(SHEET,That makes level %q<class_total>%, and [if(%q<viewer_keeper>,the highest level is,a new character's classes share)] %q<class_most>.,warn); think setqm(lp_who,%q<sheet_who>,lp_kind,class,lp_key,%q<class_key>,lp_to,%q<class_levels>,lp_now,%q<class_old>,lp_class,,lp_name,,lp_source,); @include %!/INC`LEDGER`PUT; @pemit %#=notice(SHEET,[if(%q<class_levels>,[u(%!/FUN`LIST`LABEL,CLASS,%q<class_key>)] is level %q<class_levels> on [name(%q<sheet_who>)]'s sheet,[name(%q<sheet_who>)] no longer has [u(%!/FUN`LIST`LABEL,CLASS,%q<class_key>)])]: level %q<class_total> in all.[if(not(comp(%q<sheet_who>,%q<viewer_objid>)),u(%!/FUN`HINT,SET))],ok)
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/class <class>=<levels>%, such as +sheet/class guardian=3. Your classes share [get(%!/DATA`CONFIG`START)] levels.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_left_side>; @include %!/INC`NEED`EDITABLE; @include/args %!/INC`NEED`CLASS=key,%q<sheet_what>; think setqm(class_levels,firstof(%q<cmd_right_side>,0),class_old,u(%!/FUN`CLASS`LEVEL,%q<sheet_who>,%q<class_key>),class_most,if(%q<viewer_keeper>,get(%!/DATA`CONFIG`MAXLEVEL),get(%!/DATA`CONFIG`START))); @assert cand(isint(%q<class_levels>),gte(%q<class_levels>,0),lte(%q<class_levels>,10))=@pemit %#=notice(SHEET,A class has 0 to 10 levels.,warn); @assert cor(not(u(%!/FUN`CLASS`OPEN,%q<class_levels>)),u(%!/FUN`CLASS`OPEN,%q<class_old>),lt(u(%!/FUN`CLASS`UNMASTERED,%q<sheet_who>,%q<class_key>),v(DATA`UNMASTERED`MOST)))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has [v(DATA`UNMASTERED`MOST)] classes below level 10%, the most at once. Master one first.,warn); think setqm(class_spent,u(%!/FUN`SKILL`USED,%q<sheet_who>,%q<class_key>),class_mastered,u(%!/FUN`CLASS`MASTERED,%q<sheet_who>),class_heroics,u(%!/FUN`SKILL`USED,%q<sheet_who>,HEROIC)); @assert gte(%q<class_levels>,%q<class_spent>)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<class_spent> skill level[if(neq(%q<class_spent>,1),s)] in [u(%!/FUN`LIST`LABEL,CLASS,%q<class_key>)]. Take skills off first.,warn); @assert cor(gte(%q<class_levels>,10),lt(%q<class_old>,10),gt(%q<class_mastered>,%q<class_heroics>))=@pemit %#=notice(SHEET,Each class mastered at level 10 gives one heroic skill%, and [name(%q<sheet_who>)] has %q<class_heroics> for %q<class_mastered> mastered. Take a heroic skill off first.,warn); think setq(class_total,add(sub(u(%!/API`LEVEL,%q<sheet_who>),%q<class_old>),%q<class_levels>)); @assert lte(%q<class_total>,%q<class_most>)=@pemit %#=notice(SHEET,That makes level %q<class_total>%, and [if(%q<viewer_keeper>,the highest level is,a new character's classes share)] %q<class_most>.,warn); think setqm(lp_who,%q<sheet_who>,lp_kind,class,lp_key,%q<class_key>,lp_to,%q<class_levels>,lp_now,%q<class_old>,lp_class,,lp_name,,lp_source,); @include %!/INC`LEDGER`PUT; @pemit %#=notice(SHEET,[if(%q<class_levels>,[u(%!/FUN`LIST`LABEL,CLASS,%q<class_key>)] is level %q<class_levels> on [name(%q<sheet_who>)]'s sheet,[name(%q<sheet_who>)] no longer has [u(%!/FUN`LIST`LABEL,CLASS,%q<class_key>)])]: level %q<class_total> in all.[if(cand(%q<class_levels>,strmatch(get({{store}}/CLASS`%q<class_key>`BENEFIT),either),not(match(1 3,default(%q<sheet_who>/FABULA`BENEFIT`%q<class_key>,0)))),%b[u(%!/FUN`LIST`LABEL,CLASS,%q<class_key>)] adds 5 to HP or MP: pick one with +sheet/benefit [lcstr(%q<class_key>)]=hp or =mp.)][if(not(comp(%q<sheet_who>,%q<viewer_objid>)),u(%!/FUN`HINT,SET))],ok)
         flags: [cmdsyntax]
       # +sheet/levelup [<name>/]<class>: spends 10 experience on one more level in a class.
       INC`SHEET`LEVELUP:
         value: |-
-          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/levelup <class> spends [v(DATA`LEVELUP`COST)] experience on one more level in that class.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_argument>; @assert cor(%q<viewer_keeper>,isapproved(%#))=@pemit %#=notice(SHEET,Until your character is approved%, +sheet/class sets your class levels.,warn); @include/args %!/INC`NEED`CLASS=key,%q<sheet_what>; think setqm(levelup_xp,u(%!/API`METER,%q<sheet_who>,XP),levelup_level,u(%!/API`LEVEL,%q<sheet_who>),levelup_class,inc(u(%!/FUN`CLASS`LEVEL,%q<sheet_who>,%q<class_key>)),levelup_label,u(%!/FUN`LIST`LABEL,CLASS,%q<class_key>)); @assert gte(%q<levelup_xp>,v(DATA`LEVELUP`COST))=@pemit %#=notice(SHEET,A level costs [v(DATA`LEVELUP`COST)] experience%, and [name(%q<sheet_who>)] has %q<levelup_xp>.,warn); @assert lt(%q<levelup_level>,get(%!/DATA`CONFIG`MAXLEVEL))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] is at the highest level%, [get(%!/DATA`CONFIG`MAXLEVEL)].,warn); @assert lte(%q<levelup_class>,10)=@pemit %#=notice(SHEET,%q<levelup_label> is mastered at level 10. Take a level in another class.,warn); @assert cor(gt(%q<levelup_class>,1),lt(u(%!/FUN`CLASS`UNMASTERED,%q<sheet_who>,%q<class_key>),v(DATA`UNMASTERED`MOST)))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has [v(DATA`UNMASTERED`MOST)] classes below level 10%, the most at once. Master one first.,warn); @assert cand(lt(u(%!/FUN`LEDGER`COUNT,%q<sheet_who>),v(DATA`LEDGER`MOST)),lt(u(%!/FUN`LEDGER`COUNT,%q<sheet_who>,EXPERIENCE),v(DATA`PURSE`MOST)))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s ledger has no room for a level and its cost. Staff take old entries off with +sheet/revoke.,warn); think setqm(lp_who,%q<sheet_who>,lp_kind,class,lp_key,%q<class_key>,lp_to,%q<levelup_class>,lp_now,dec(%q<levelup_class>),lp_class,,lp_name,,lp_source,Level [inc(%q<levelup_level>)]); @include %!/INC`LEDGER`PUT; think u(%!/FUN`WALLET`PUT,%q<sheet_who>,XP,-[v(DATA`LEVELUP`COST)],%q<lp_source>,%q<lp_phase>,%q<viewer_objid>,levelup); think setq(levelup_level,inc(%q<levelup_level>)); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] reaches level %q<levelup_level>: %q<levelup_label> %q<levelup_class>. One skill level to spend: +sheet/skill [lcstr(%q<class_key>)]:<skill>=<level>.[if(eq(%q<levelup_class>,10),%b%q<levelup_label> is mastered: +sheet/skill heroic:<skill>=1 takes a heroic skill.)][if(member(v(DATA`RAISE`LEVELS),%q<levelup_level>),%bAt level %q<levelup_level> an attribute grows one die size: +sheet/raise <attribute>.)],ok)
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/levelup <class> spends [v(DATA`LEVELUP`COST)] experience on one more level in that class.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_argument>; @assert cor(%q<viewer_keeper>,isapproved(%#))=@pemit %#=notice(SHEET,Until your character is approved%, +sheet/class sets your class levels.,warn); @include/args %!/INC`NEED`CLASS=key,%q<sheet_what>; think setqm(levelup_xp,u(%!/API`METER,%q<sheet_who>,XP),levelup_level,u(%!/API`LEVEL,%q<sheet_who>),levelup_class,inc(u(%!/FUN`CLASS`LEVEL,%q<sheet_who>,%q<class_key>)),levelup_label,u(%!/FUN`LIST`LABEL,CLASS,%q<class_key>)); @assert gte(%q<levelup_xp>,v(DATA`LEVELUP`COST))=@pemit %#=notice(SHEET,A level costs [v(DATA`LEVELUP`COST)] experience%, and [name(%q<sheet_who>)] has %q<levelup_xp>.,warn); @assert lt(%q<levelup_level>,get(%!/DATA`CONFIG`MAXLEVEL))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] is at the highest level%, [get(%!/DATA`CONFIG`MAXLEVEL)].,warn); @assert lte(%q<levelup_class>,10)=@pemit %#=notice(SHEET,%q<levelup_label> is mastered at level 10. Take a level in another class.,warn); @assert cor(gt(%q<levelup_class>,1),lt(u(%!/FUN`CLASS`UNMASTERED,%q<sheet_who>,%q<class_key>),v(DATA`UNMASTERED`MOST)))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has [v(DATA`UNMASTERED`MOST)] classes below level 10%, the most at once. Master one first.,warn); @assert cand(lt(u(%!/FUN`LEDGER`COUNT,%q<sheet_who>),v(DATA`LEDGER`MOST)),lt(u(%!/FUN`LEDGER`COUNT,%q<sheet_who>,EXPERIENCE),v(DATA`PURSE`MOST)))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s ledger has no room for a level and its cost. Staff take old entries off with +sheet/revoke.,warn); think setqm(lp_who,%q<sheet_who>,lp_kind,class,lp_key,%q<class_key>,lp_to,%q<levelup_class>,lp_now,dec(%q<levelup_class>),lp_class,,lp_name,,lp_source,Level [inc(%q<levelup_level>)]); @include %!/INC`LEDGER`PUT; think u(%!/FUN`WALLET`PUT,%q<sheet_who>,XP,-[v(DATA`LEVELUP`COST)],%q<lp_source>,%q<lp_phase>,%q<viewer_objid>,levelup); think setq(levelup_level,inc(%q<levelup_level>)); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] reaches level %q<levelup_level>: %q<levelup_label> %q<levelup_class>.[if(cand(eq(%q<levelup_class>,1),strmatch(get({{store}}/CLASS`%q<class_key>`BENEFIT),either),not(match(1 3,default(%q<sheet_who>/FABULA`BENEFIT`%q<class_key>,0)))),%b%q<levelup_label> adds 5 to HP or MP: pick one with +sheet/benefit [lcstr(%q<class_key>)]=hp or =mp.)] One skill level to spend: +sheet/skill [lcstr(%q<class_key>)]:<skill>=<level>.[if(eq(%q<levelup_class>,10),%b%q<levelup_label> is mastered: +sheet/skill heroic:<skill>=1 takes a heroic skill.)][if(member(v(DATA`RAISE`LEVELS),%q<levelup_level>),%bAt level %q<levelup_level> an attribute grows one die size: +sheet/raise <attribute>.)],ok)
         flags: [cmdsyntax]
       # +sheet/raise [<name>/]<attribute>: one die size more, once at level 20 and once at 40.
       INC`SHEET`RAISE:
@@ -1131,7 +1167,7 @@ objects:
       # %<who>: rebuilds their attributes, classes, skills, raises and bonuses from the ledger.
       INC`LEDGER`APPLY:
         value: |-
-          @wipe %<who>/FABULA`ATTR; @wipe %<who>/FABULA`CLASS; @wipe %<who>/FABULA`SKILL; @wipe %<who>/FABULA`BONUS; @wipe %<who>/FABULA`RAISES; @wipe %<who>/FABULA`AFFINITY; think u(%!/FUN`LEDGER`BUILD,%<who>)
+          @wipe %<who>/FABULA`ATTR; @wipe %<who>/FABULA`CLASS; @wipe %<who>/FABULA`SKILL; @wipe %<who>/FABULA`BONUS; @wipe %<who>/FABULA`RAISES; @wipe %<who>/FABULA`AFFINITY; @wipe %<who>/FABULA`BENEFIT; think u(%!/FUN`LEDGER`BUILD,%<who>)
         flags: [cmdsyntax]
       # %0 a character: writes what their entries add up to. Each entry is one or two tokens, <leaf>~<how>~<n>.
       FUN`LEDGER`BUILD:
@@ -1141,7 +1177,7 @@ objects:
         flags: [funsyntax]
       FUN`LEDGER`TOKEN:
         value: |-
-          setqm(token_kind,json_query(%0,extract,$.kind),token_key,json_query(%0,extract,$.key),token_n,json_query(%0,extract,$.n))[switch(%q<token_kind>,die,ATTR`%q<token_key>~set~%q<token_n>,raise,ATTR`%q<token_key>~add~2|RAISES~add~1,class,CLASS`%q<token_key>~add~%q<token_n>,skill,SKILL`%q<token_key>`LEVEL~add~%q<token_n>,bonus,BONUS`%q<token_key>~[if(strmatch(%q<token_key>,MARTIAL),max,add)]~%q<token_n>,affinity,AFFINITY`%q<token_key>~max~1)]
+          setqm(token_kind,json_query(%0,extract,$.kind),token_key,json_query(%0,extract,$.key),token_n,json_query(%0,extract,$.n))[switch(%q<token_kind>,die,ATTR`%q<token_key>~set~%q<token_n>,raise,ATTR`%q<token_key>~add~2|RAISES~add~1,class,CLASS`%q<token_key>~add~%q<token_n>,skill,SKILL`%q<token_key>`LEVEL~add~%q<token_n>,bonus,BONUS`%q<token_key>~[if(strmatch(%q<token_key>,MARTIAL),max,add)]~%q<token_n>,affinity,AFFINITY`%q<token_key>~max~1,benefit,BENEFIT`%q<token_key>~add~%q<token_n>)]
         flags: [funsyntax]
       # %0 the tokens, %1 a leaf: its value. The last die sets the base (8 when none), then the adds; martial the largest.
       FUN`LEDGER`VALUE:
@@ -1161,7 +1197,7 @@ objects:
       # %0 an entry: what it gives, "Guardian +2", "Fortress, Guardian +1", "Defense +2", "Zenit -150".
       FUN`LEDGER`TEXT:
         value: |-
-          setqm(text_kind,json_query(%0,extract,$.kind),text_key,json_query(%0,extract,$.key),text_n,json_query(%0,extract,$.n),text_class,json_query(%0,extract,$.class))[switch(%q<text_kind>,die,[v(DATA`ATTR`%q<text_key>)] d%q<text_n>,raise,[v(DATA`ATTR`%q<text_key>)] one die larger,class,[u(%!/FUN`CLASS`LABEL,%q<text_key>)] [u(%!/FUN`SIGNED,%q<text_n>)],skill,[json_query(%0,extract,$.name)][if(strmatch(%q<text_class>,HEROIC),%, heroic,%, [u(%!/FUN`CLASS`LABEL,%q<text_class>)] [u(%!/FUN`SIGNED,%q<text_n>)])],bonus,[u(%!/FUN`BONUS`LABEL,%q<text_key>)] [if(strmatch(%q<text_key>,MARTIAL),%q<text_n>,u(%!/FUN`SIGNED,%q<text_n>))],affinity,[capstr(v(DATA`AFFINITY`[after(%q<text_key>,`)]))] to [lcstr(before(%q<text_key>,`))],xp,Experience [u(%!/FUN`SIGNED,%q<text_n>)],zenit,Zenit [u(%!/FUN`SIGNED,%q<text_n>)],%q<text_kind>)]
+          setqm(text_kind,json_query(%0,extract,$.kind),text_key,json_query(%0,extract,$.key),text_n,json_query(%0,extract,$.n),text_class,json_query(%0,extract,$.class))[switch(%q<text_kind>,die,[v(DATA`ATTR`%q<text_key>)] d%q<text_n>,raise,[v(DATA`ATTR`%q<text_key>)] one die larger,class,[u(%!/FUN`CLASS`LABEL,%q<text_key>)] [u(%!/FUN`SIGNED,%q<text_n>)],skill,[json_query(%0,extract,$.name)][if(strmatch(%q<text_class>,HEROIC),%, heroic,%, [u(%!/FUN`CLASS`LABEL,%q<text_class>)] [u(%!/FUN`SIGNED,%q<text_n>)])],bonus,[u(%!/FUN`BONUS`LABEL,%q<text_key>)] [if(strmatch(%q<text_key>,MARTIAL),%q<text_n>,u(%!/FUN`SIGNED,%q<text_n>))],affinity,[capstr(v(DATA`AFFINITY`[after(%q<text_key>,`)]))] to [lcstr(before(%q<text_key>,`))],benefit,[u(%!/FUN`CLASS`LABEL,%q<text_key>)] adds 5 to [switch(%q<text_n>,1,HP,3,MP,2,MP instead of HP,HP instead of MP)],xp,Experience [u(%!/FUN`SIGNED,%q<text_n>)],zenit,Zenit [u(%!/FUN`SIGNED,%q<text_n>)],%q<text_kind>)]
         flags: [funsyntax]
       FUN`BONUS`LABEL:
         value: |-
@@ -1170,7 +1206,7 @@ objects:
       # %0 a character: what their build breaks, as sentences, or nothing. A revoke can leave these for staff.
       FUN`BUILD`PROBLEMS:
         value: |-
-          squish(trim([iter(setunion(u(%!/FUN`CLASS`MINE,%0),iter(u(%!/FUN`SKILL`ALL,%0),get(%0/FABULA`SKILL`%i0`CLASS))),if(cand(comp(%i0,HEROIC),gt(setr(problem_spent,u(%!/FUN`SKILL`USED,%0,%i0)),u(%!/FUN`CLASS`LEVEL,%0,%i0))),[u(%!/FUN`CLASS`LABEL,%i0)] has %q<problem_spent> skill levels for [u(%!/FUN`CLASS`LEVEL,%0,%i0)] class levels.))] [if(gt(setr(problem_heroic,u(%!/FUN`SKILL`USED,%0,HEROIC)),u(%!/FUN`CLASS`MASTERED,%0)),There are %q<problem_heroic> heroic skills for [u(%!/FUN`CLASS`MASTERED,%0)] mastered classes.)] [if(gt(setr(problem_open,u(%!/FUN`CLASS`UNMASTERED,%0,)),v(DATA`UNMASTERED`MOST)),There are %q<problem_open> classes below level 10.)] [iter(v(DATA`WALLET),if(lt(setr(problem_wallet,u(%!/API`METER,%0,%i0)),0),[v(DATA`METER`%i0)] is %q<problem_wallet>.))]))
+          squish(trim([iter(u(%!/FUN`CLASS`MINE,%0),if(cand(strmatch(get({{store}}/CLASS`%i0`BENEFIT),either),not(match(1 3,default(%0/FABULA`BENEFIT`%i0,0)))),[u(%!/FUN`CLASS`LABEL,%i0)] adds 5 to HP or MP: pick one with +sheet/benefit [lcstr(%i0)]=hp or =mp.))] [iter(setunion(u(%!/FUN`CLASS`MINE,%0),iter(u(%!/FUN`SKILL`ALL,%0),get(%0/FABULA`SKILL`%i0`CLASS))),if(cand(comp(%i0,HEROIC),gt(setr(problem_spent,u(%!/FUN`SKILL`USED,%0,%i0)),u(%!/FUN`CLASS`LEVEL,%0,%i0))),[u(%!/FUN`CLASS`LABEL,%i0)] has %q<problem_spent> skill levels for [u(%!/FUN`CLASS`LEVEL,%0,%i0)] class levels.))] [if(gt(setr(problem_heroic,u(%!/FUN`SKILL`USED,%0,HEROIC)),u(%!/FUN`CLASS`MASTERED,%0)),There are %q<problem_heroic> heroic skills for [u(%!/FUN`CLASS`MASTERED,%0)] mastered classes.)] [if(gt(setr(problem_open,u(%!/FUN`CLASS`UNMASTERED,%0,)),v(DATA`UNMASTERED`MOST)),There are %q<problem_open> classes below level 10.)] [iter(v(DATA`WALLET),if(lt(setr(problem_wallet,u(%!/API`METER,%0,%i0)),0),[v(DATA`METER`%i0)] is %q<problem_wallet>.))]))
         flags: [funsyntax]
       # +sheet/ledger [<name>]: the entries the sheet adds up from.
       INC`SHEET`LEDGER:
@@ -1362,10 +1398,58 @@ objects:
         value: |-
           think setq(enc_typed,%q<cmd_argument>); @include %!/INC`ENC`NEEDGM; think setqm(enc_title,u(%!/FUN`ENC`TITLE,%q<enc_n>),enc_room,get({{encounters}}/ENC`%q<enc_n>`ROOM),enc_up,default({{encounters}}/ENC`%q<enc_n>`UPSPENT,0)); think iter(get({{encounters}}/ENC`%q<enc_n>`MEMBERS),u(%!/FUN`ENC`DROP,%q<enc_n>,%i0),%b,); @wipe {{encounters}}/ENC`%q<enc_n>; think setq(enc_left,remove(get({{encounters}}/ROOM`[after(num(%q<enc_room>),#)]),%q<enc_n>)); think if(words(%q<enc_left>),attrib_set({{encounters}}/ROOM`[after(num(%q<enc_room>),#)],%q<enc_left>),attrib_set({{encounters}}/ROOM`[after(num(%q<enc_room>),#)])); @remit %q<enc_room>=notice(SHEET,%q<enc_title> ends. The sheets keep only what the GM kept.); @pemit %#=notice(SHEET,%q<enc_title> is over.[if(%q<enc_up>,%bIts villains spent %q<enc_up> Ultima Points%, each worth a point of experience at the end of the session.)],ok)
         flags: [cmdsyntax]
-      # %0 n: the encounter's characters, their copies.
+      # %0 n: the battle screen. A window with whose turn it is and the battlefield, the foes' and the party's
+      # windows side by side, and for whoever has a turn now, a window of the commands they can use.
       FUN`SCREEN`ENCOUNTER:
         value: |-
-          setqm(screen_members,get({{encounters}}/ENC`%0`MEMBERS),screen_foes,get({{encounters}}/ENC`%0`FOES),screen_gm,u(%!/FUN`ENC`GM,%#,%0),state_enc_force,%0)[box([lfields(lit({"cols":2}),GM%*<|>Started,[name(get({{encounters}}/ENC`%0`GM))]%*<|>[timefmt($Y-$m-$d,get({{encounters}}/ENC`%0`AT))],%*<|>)]%r[tone(muted,u(%!/FUN`FIGHT`UP,%0))]%r[rule(Characters)]%r[if(words(%q<screen_members>),ldatatable(lit({"rule":""}),Character|HP|MP|IP|Status|Turn,iter(%q<screen_members>,[name(%i0)]|[u(%!/FUN`DISPLAY`METERVALUE,%i0,HP)]|[u(%!/FUN`DISPLAY`METERVALUE,%i0,MP)]|[u(%!/FUN`DISPLAY`METERVALUE,%i0,IP)]|[firstof(itemize(get({{encounters}}/ENC`%0`COPY`[after(num(%i0),#)]`STATUS)),-)]|[u(%!/FUN`FIGHT`TURNTEXT,%0,%i0)],%b,%*<^>),%*<^>),tone(muted,No one has joined yet.))]%r[rule(Foes)]%r[if(words(%q<screen_foes>),u(%!/FUN`SCREEN`FOES,%0),tone(muted,No foes. The GM brings them in with +encounter/foe <foe>.))]%r[rule()]%r[tone(muted,These are the encounter's copies: a sheet changes only when the GM keeps one with +encounter/keep <name>. +encounter/join takes part. +attack <target>=<attribute>+<attribute> attacks.[if(cand(%q<screen_gm>,default({{encounters}}/ENC`%0`UPSPENT,0)),%bUltima Points spent: [get({{encounters}}/ENC`%0`UPSPENT)].)])],u(%!/FUN`ENC`TITLE,%0))][setq(state_enc_force,)]
+          setqm(screen_members,get({{encounters}}/ENC`%0`MEMBERS),screen_foes,get({{encounters}}/ENC`%0`FOES),screen_gm,u(%!/FUN`ENC`GM,%#,%0),state_enc_force,%0)[box([tone(muted,GM [name(get({{encounters}}/ENC`%0`GM))] · started [timefmt($Y-$m-$d,get({{encounters}}/ENC`%0`AT))])]%r[u(%!/FUN`FIGHT`UP,%0)][if(strlen(setr(screen_field,u(%!/FUN`SCREEN`FIELD,%0))),%r[rule()]%r%q<screen_field>)],u(%!/FUN`ENC`TITLE,%0))]%r[flex(,item(box(if(words(%q<screen_foes>),u(%!/FUN`SCREEN`FOES,%0),tone(muted,No foes. The GM brings them in with +encounter/foe <foe>.)),Foes),40,30,1),item(box(if(words(%q<screen_members>),u(%!/FUN`SCREEN`PARTY,%0),tone(muted,No one has joined yet.)),Party),66,48,1))][if(strlen(setr(screen_menu,u(%!/FUN`SCREEN`MENU,%0))),%r%q<screen_menu>)]%r[tone(muted,These are the encounter's copies: a sheet changes only when the GM keeps one with +encounter/keep <name>. +encounter/join takes part.[if(cand(%q<screen_gm>,default({{encounters}}/ENC`%0`UPSPENT,0)),%bUltima Points spent: [get({{encounters}}/ENC`%0`UPSPENT)].)])][setq(state_enc_force,)]
+        flags: [funsyntax]
+      # %0 n: the battlefield, foes on the left and the party on the right, each a picture where the client shows
+      # pictures, else the foe's text art, else its name. Foes out of the fight leave it. Nothing when no one on it
+      # has a picture or art.
+      FUN`SCREEN`FIELD:
+        value: |-
+          setq(field_foes,iter(%q<screen_foes>,if(not(u(%!/FUN`FIGHT`OUT,%0,F%i0)),F%i0)))[if(cor(words(iter(%q<field_foes>,if(strlen(get({{encounters}}/ENC`%0`FOE`[after(%i0,F)]`PICTURE)[get({{encounters}}/ENC`%0`FOE`[after(%i0,F)]`ART)]),x))),words(iter(%q<screen_members>,if(strlen(get(%i0/IMAGE)),x)))),[if(words(%q<field_foes>),u(%!/FUN`SCREEN`ROWS,iter(%q<field_foes>,u(%!/FUN`SCREEN`SLOT,%0,%i0),%b,~),0))][if(cand(words(%q<field_foes>),words(%q<screen_members>)),%r)][u(%!/FUN`SCREEN`ROWS,iter(%q<screen_members>,u(%!/FUN`SCREEN`SLOT,%0,%i0),%b,~),1)])]
+        flags: [funsyntax]
+      # %0 places on the battlefield separated by ~, %1 1 to put them on the right: rows of four, so a row fits a
+      # client 80 columns wide.
+      FUN`SCREEN`ROWS:
+        value: |-
+          setq(rows_n,words(%0,~))[iter(lnum(0,div(dec(%q<rows_n>),4)),lflex(,[if(%1,[item(,1,1,1)]~)][extract(%0,inc(mul(%i0,4)),4,~)],~),%b,%r)]
+        flags: [funsyntax]
+      # %0 n, %1 F<k> or a character: one place on the battlefield, as an item() of a flex().
+      # Without a picture or art it is the name in brackets, so a text client still sees who is there.
+      FUN`SCREEN`SLOT:
+        value: |-
+          setqm(slot_foe,strmatch(%1,F*),slot_at,ENC`%0`FOE`[after(%1,F)])[setqm(slot_name,if(%q<slot_foe>,get({{encounters}}/%q<slot_at>),name(%1)),slot_picture,if(%q<slot_foe>,get({{encounters}}/%q<slot_at>`PICTURE),get(%1/IMAGE)),slot_art,if(%q<slot_foe>,edit(get({{encounters}}/%q<slot_at>`ART),\%r,%r)),slot_width,16)][item(if(cor(strlen(%q<slot_picture>),strlen(%q<slot_art>)),figure(%q<slot_picture>,if(%q<slot_foe>,%q<slot_name>,firstof(get(%1/IMAGE`ALT),%q<slot_name>)),firstof(%q<slot_art>,%b),none,%q<slot_name>),%[%q<slot_name>%]),%q<slot_width>,8,0)]
+        flags: [funsyntax]
+      # %0 n: the party's window, one row each: a pointer at those who can act now, HP and MP bars, IP, status
+      # effects and their turn.
+      FUN`SCREEN`PARTY:
+        value: |-
+          iter(%q<screen_members>,flex(,item([if(u(%!/FUN`SCREEN`ACTS,%0,%i0),>,%b)] [name(%i0)],12,8,0),item(u(%!/FUN`SCREEN`BAR,HP,u(%!/FUN`FIGHT`HP,%0,%i0),u(%!/FUN`FIGHT`MAX,%0,%i0)),18,14,0),item(u(%!/FUN`SCREEN`BAR,MP,u(%!/API`METER,%i0,MP),u(%!/API`MAX,%i0,MP)),18,14,0),item(iter(trim(squish(IP [u(%!/API`METER,%i0,IP)]/[u(%!/API`MAX,%i0,IP)]|[itemize(get({{encounters}}/ENC`%0`COPY`[after(num(%i0),#)]`STATUS))]|[u(%!/FUN`FIGHT`TURNTEXT,%0,%i0)],|),|),%i0,|,%b·%b),14,6,1)),%b,%r)
+        flags: [funsyntax]
+      # %0 n: the foes' window. Its GM sees HP and MP bars and Ultima Points; everyone else each one's level, rank
+      # and whether it is in crisis.
+      FUN`SCREEN`FOES:
+        value: |-
+          iter(%q<screen_foes>,setq(foes_name,[if(u(%!/FUN`SCREEN`ACTS,%0,F%i0),>,%b)] [get({{encounters}}/ENC`%0`FOE`%i0)])[setq(foes_rest,iter(trim(squish([if(not(%q<screen_gm>),tone(muted,lv [get({{encounters}}/ENC`%0`FOE`%i0`LEVEL)] [u(%!/FUN`FOE`RANKTEXT,%0,%i0,1)]))]|[if(cand(%q<screen_gm>,strlen(get({{encounters}}/ENC`%0`FOE`%i0`UP))),[get({{encounters}}/ENC`%0`FOE`%i0`UP)] UP)]|[if(cand(not(%q<screen_gm>),strmatch(u(%!/FUN`FOE`STANDING,%0,%i0),crisis)),crisis)]|[itemize(get({{encounters}}/ENC`%0`FOE`%i0`STATUS))]|[u(%!/FUN`FIGHT`TURNTEXT,%0,F%i0)],|),|),%i0,|,%b·%b))][if(%q<screen_gm>,flex(,item(%q<foes_name>,18,8,0),item(u(%!/FUN`SCREEN`BAR,HP,default({{encounters}}/ENC`%0`FOE`%i0`HP,0),get({{encounters}}/ENC`%0`FOE`%i0`HPMAX)),18,14,0),item(u(%!/FUN`SCREEN`BAR,MP,default({{encounters}}/ENC`%0`FOE`%i0`MP,0),get({{encounters}}/ENC`%0`FOE`%i0`MPMAX)),18,14,0),item(%q<foes_rest>,10,6,1)),flex(,item(%q<foes_name>,18,8,0),item(%q<foes_rest>,10,6,1)))],%b,%r)
+        flags: [funsyntax]
+      # %0 HP or MP, %1 now, %2 its maximum: a bar with the figures after it. HP runs red to green.
+      FUN`SCREEN`BAR:
+        value: |-
+          gauge(%1,max(1,%2),%0,if(strmatch(%0,HP),lit({"bar":8,"show":"value","gradient":"error|warning|success","shade":"value"}),lit({"bar":8,"show":"value"})))
+        flags: [funsyntax]
+      # %0 n, %1 an id: whether it can act now: the conflict has begun, its side is up and it has a turn left.
+      FUN`SCREEN`ACTS:
+        value: |-
+          cand(default({{encounters}}/ENC`%0`ROUND,0),not(comp(get({{encounters}}/ENC`%0`SIDE),u(%!/FUN`FIGHT`SIDE,%1))),u(%!/FUN`FIGHT`LEFT,%0,%1))
+        flags: [funsyntax]
+      # %0 n: the commands window, for whoever can act now: a character with a turn left on the characters' turn,
+      # or the GM on the foes' turn. Nothing for anyone else.
+      FUN`SCREEN`MENU:
+        value: |-
+          setq(menu_me,first(iter(%q<screen_members>,if(not(comp(num(%i0),%#)),%i0))))[cond(cand(strlen(%q<menu_me>),u(%!/FUN`SCREEN`ACTS,%0,%q<menu_me>)),box(lfields(,Attack|Spell|Skill|Guard|Done[if(not(u(%!/FUN`FIGHT`HP,%0,%q<menu_me>)),|Surrender)],+attack <foe>=<attribute>+<attribute>|+attack/magic <foe>=<attribute>+<attribute>|+check <attribute>+<attribute>|[cmdlink(+encounter/guard,+encounter/guard,Guard until your next turn)]|[cmdlink(+encounter/turn,+encounter/turn,End your turn)][if(not(u(%!/FUN`FIGHT`HP,%0,%q<menu_me>)),|[cmdlink(+encounter/surrender,+encounter/surrender,Surrender)])],|),[name(%q<menu_me>)]'s turn),cand(%q<screen_gm>,default({{encounters}}/ENC`%0`ROUND,0),strmatch(get({{encounters}}/ENC`%0`SIDE),foes),words(u(%!/FUN`FIGHT`READY,%0,foes))),box(lfields(,Attack|Hurt|Guard|Done,+foe/attack <foe>=<target>%[/<attack>%]|+encounter/damage <target>=<n> %[<type>%]|+encounter/guard <foe>|+encounter/turn <foe>,|),The foes' turn),)]
         flags: [funsyntax]
 
       # ---- conflicts ------------------------------------------------------------------
@@ -1628,7 +1712,7 @@ objects:
           setqm(add_k,default({{encounters}}/ENC`%0`FOENEXT,1),
           add_same,words(iter(get({{encounters}}/ENC`%0`FOES),if(not(comp(get({{encounters}}/ENC`%0`FOE`%i0`KEY),%1)),%i0))),
           add_label,[get({{store}}/FOE`%1)][if(cor(gt(%2,1),%q<add_same>),%b[extract(A B C D E F G H I J K L M N O P Q R S T U V W X Y Z,inc(mod(%q<add_same>,26)),1)])],
-          add_at,ENC`%0`FOE`%q<add_k>)[attrib_set({{encounters}}/ENC`%0`FOENEXT,inc(%q<add_k>))][attrib_set({{encounters}}/%q<add_at>,%q<add_label>)][null(iter(KEY~%1|LEVEL~%q<foe_level>|RANK~%q<foe_rank>|SOLDIERS~%q<foe_soldiers>|VILLAIN~%q<foe_villain>|DEX~%q<foe_dex>|INS~%q<foe_ins>|MIG~%q<foe_mig>|WLP~%q<foe_wlp>|HPMAX~%q<foe_hp>|MPMAX~%q<foe_mp>|HP~%q<foe_hp>|MP~%q<foe_mp>|DEFB~%q<foe_def>|MDEFB~%q<foe_mdef>|INIT~%q<foe_init>|UP~[if(gt(%q<foe_up>,0),%q<foe_up>)]|SPECIES~[lcstr(default({{store}}/FOE`%1`SPECIES,monster))]|AFF~[lcstr(get({{store}}/FOE`%1`AFFINITIES))]|IMMUNE~[lcstr(get({{store}}/FOE`%1`IMMUNE))],if(strlen(after(%i0,~)),attrib_set({{encounters}}/%q<add_at>`[before(%i0,~)],after(%i0,~))),|))][if(strlen(setr(add_attacks,get({{store}}/FOE`%1`ATTACKS))),attrib_set({{encounters}}/%q<add_at>`ATTACKS,%q<add_attacks>))][attrib_set({{encounters}}/ENC`%0`FOES,trim(get({{encounters}}/ENC`%0`FOES) %q<add_k>))]%q<add_label>
+          add_at,ENC`%0`FOE`%q<add_k>)[attrib_set({{encounters}}/ENC`%0`FOENEXT,inc(%q<add_k>))][attrib_set({{encounters}}/%q<add_at>,%q<add_label>)][null(iter(KEY~%1|LEVEL~%q<foe_level>|RANK~%q<foe_rank>|SOLDIERS~%q<foe_soldiers>|VILLAIN~%q<foe_villain>|DEX~%q<foe_dex>|INS~%q<foe_ins>|MIG~%q<foe_mig>|WLP~%q<foe_wlp>|HPMAX~%q<foe_hp>|MPMAX~%q<foe_mp>|HP~%q<foe_hp>|MP~%q<foe_mp>|DEFB~%q<foe_def>|MDEFB~%q<foe_mdef>|INIT~%q<foe_init>|UP~[if(gt(%q<foe_up>,0),%q<foe_up>)]|SPECIES~[lcstr(default({{store}}/FOE`%1`SPECIES,monster))]|AFF~[lcstr(get({{store}}/FOE`%1`AFFINITIES))]|IMMUNE~[lcstr(get({{store}}/FOE`%1`IMMUNE))],if(strlen(after(%i0,~)),attrib_set({{encounters}}/%q<add_at>`[before(%i0,~)],after(%i0,~))),|))][if(strlen(setr(add_attacks,get({{store}}/FOE`%1`ATTACKS))),attrib_set({{encounters}}/%q<add_at>`ATTACKS,%q<add_attacks>))][if(strlen(setr(add_picture,get({{store}}/FOE`%1`PICTURE))),attrib_set({{encounters}}/%q<add_at>`PICTURE,%q<add_picture>))][if(strlen(setr(add_art,get({{store}}/FOE`%1`ART))),attrib_set({{encounters}}/%q<add_at>`ART,%q<add_art>))][attrib_set({{encounters}}/ENC`%0`FOES,trim(get({{encounters}}/ENC`%0`FOES) %q<add_k>))]%q<add_label>
         flags: [funsyntax]
       # %0 n: the best Initiative among its foes still in the fight, 0 when none.
       FUN`FOE`BESTINIT:
@@ -1769,6 +1853,16 @@ objects:
         value: |-
           @include %!/INC`FIGHT`NEED; @include %!/INC`FIGHT`GM; @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>),strlen(%q<cmd_right_side>))=@pemit %#=notice(SHEET,+foe/%q<cmd_switch> <foe>=+<n> adds%, -<n> takes away and <n> sets it.,warn); @include/args %!/INC`FIGHT`TARGET=typed,%q<cmd_left_side>; @include %!/INC`FIGHT`FOE; think setqm(meter_key,ucstr(%q<cmd_switch>),meter_now,default({{encounters}}/%q<foe_at>`[ucstr(%q<cmd_switch>)],0),meter_typed,%q<cmd_right_side>,meter_to,cond(strmatch(%q<meter_typed>,+*),add(%q<meter_now>,rest(%q<meter_typed>,+)),strmatch(%q<meter_typed>,-*),add(%q<meter_now>,%q<meter_typed>),1,%q<meter_typed>)); @assert isint(%q<meter_to>)=@pemit %#=notice(SHEET,'%q<meter_typed>' is not a number. Give +<n>%, -<n> or <n>.,warn); think setq(meter_new,u(%!/FUN`FIGHT`ADD,%q<enc_n>,%q<fight_target>,%q<meter_key>,sub(%q<meter_to>,%q<meter_now>))); @pemit %#=notice(SHEET,[get({{encounters}}/%q<foe_at>)] has %q<meter_key> %q<meter_new> of [get({{encounters}}/%q<foe_at>`%q<meter_key>MAX)][if(strmatch(%q<meter_key>,HP),u(%!/FUN`FIGHT`STANDING,%q<enc_n>,%q<fight_target>))].,ok)
         flags: [cmdsyntax]
+      # +foe/picture <foe>=[<address>] and +foe/art <foe>=[<text>]: the GM sets what the battle screen draws for one
+      # foe in the encounter, or with nothing after = takes it off.
+      INC`FOE`PICTURE:
+        value: |-
+          @include %!/INC`FIGHT`NEED; @include %!/INC`FIGHT`GM; @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>))=@pemit %#=notice(SHEET,+foe/picture <foe>=<address> gives a foe in the encounter a picture on the battle screen%, https:// or a site path. Nothing after = takes it off.,warn); @include/args %!/INC`FIGHT`TARGET=typed,%q<cmd_left_side>; @include %!/INC`FIGHT`FOE; think setq(picture_to,trim(%q<cmd_right_side>)); @assert cand(lte(strlen(%q<picture_to>),400),u(%!/FUN`IS`PICTURE,%q<picture_to>))=@pemit %#=notice(SHEET,A picture's address starts with https:// or /%, has no spaces and is 400 characters at most.,warn); think u(%!/FUN`ENC`PUT,%q<foe_at>`PICTURE,%q<picture_to>); @pemit %#=notice(SHEET,[get({{encounters}}/%q<foe_at>)] [if(strlen(%q<picture_to>),has that picture on the battle screen.,has no picture on the battle screen.)][if(not(strlen(get({{encounters}}/%q<foe_at>`ART))),%bA client that cannot show pictures draws its name: +foe/art <foe>=<text> gives it art.)],ok)
+        flags: [cmdsyntax]
+      INC`FOE`ART:
+        value: |-
+          @include %!/INC`FIGHT`NEED; @include %!/INC`FIGHT`GM; @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>))=@pemit %#=notice(SHEET,+foe/art <foe>=<text> gives a foe in the encounter text art on the battle screen%, lines separated by %%r%, for a client that cannot show its picture. Nothing after = takes it off.,warn); @include/args %!/INC`FIGHT`TARGET=typed,%q<cmd_left_side>; @include %!/INC`FIGHT`FOE; @assert lte(strlen(%q<cmd_right_side>),400)=@pemit %#=notice(SHEET,Text art is 400 characters at most.,warn); think u(%!/FUN`ENC`PUT,%q<foe_at>`ART,%q<cmd_right_side>); @pemit %#=notice(SHEET,[get({{encounters}}/%q<foe_at>)] [if(strlen(trim(%q<cmd_right_side>)),has that art on the battle screen.,draws as its name on the battle screen.)],ok)
+        flags: [cmdsyntax]
       # +foe/status <foe>=<effect>|clear: the GM puts a status effect on a foe's copy or takes it off.
       INC`FOE`STATUS:
         value: |-
@@ -1814,11 +1908,6 @@ objects:
       FUN`FOE`LIVE:
         value: |-
           setq(live_at,ENC`%0`FOE`%1)[notice(SHEET,In [u(%!/FUN`ENC`TITLE,%0)]%, [get({{encounters}}/%q<live_at>)] has HP [default({{encounters}}/%q<live_at>`HP,0)] of [get({{encounters}}/%q<live_at>`HPMAX)]%, MP [default({{encounters}}/%q<live_at>`MP,0)] of [get({{encounters}}/%q<live_at>`MPMAX)]%, Defense [u(%!/FUN`FIGHT`DEFENSE,%0,F%1,DEF)]%, Magic Defense [u(%!/FUN`FIGHT`DEFENSE,%0,F%1,MDEF)][if(member(v(DATA`VILLAINS),get({{encounters}}/%q<live_at>`VILLAIN)),%, [default({{encounters}}/%q<live_at>`UP,0)] Ultima Points)] and [firstof(itemize(get({{encounters}}/%q<live_at>`STATUS)),no status effects)]. Its turn: [u(%!/FUN`FIGHT`TURNTEXT,%0,F%1)].)]
-        flags: [funsyntax]
-      # %0 n: its foes, with HP, MP and defences for its GM, and how they stand for everyone else.
-      FUN`SCREEN`FOES:
-        value: |-
-          ldatatable(lit({"rule":""}),Foe|Lv|Rank|[if(%q<screen_gm>,HP|MP|UP|,Standing|)]Status|Turn,iter(%q<screen_foes>,[get({{encounters}}/ENC`%0`FOE`%i0)]|[get({{encounters}}/ENC`%0`FOE`%i0`LEVEL)]|[u(%!/FUN`FOE`RANKTEXT,%0,%i0,not(%q<screen_gm>))]|[if(%q<screen_gm>,[default({{encounters}}/ENC`%0`FOE`%i0`HP,0)]/[get({{encounters}}/ENC`%0`FOE`%i0`HPMAX)]|[default({{encounters}}/ENC`%0`FOE`%i0`MP,0)]/[get({{encounters}}/ENC`%0`FOE`%i0`MPMAX)]|[firstof(get({{encounters}}/ENC`%0`FOE`%i0`UP),-)]|,[u(%!/FUN`FOE`STANDING,%0,%i0)]|)][firstof(itemize(get({{encounters}}/ENC`%0`FOE`%i0`STATUS)),-)]|[u(%!/FUN`FIGHT`TURNTEXT,%0,F%i0)],%b,%*<^>),%*<^>)
         flags: [funsyntax]
 
       # ---- lists ------------------------------------------------------------------
@@ -1935,15 +2024,21 @@ objects:
         value: |-
           cand(gt(%0,0),lt(%0,10))
         flags: [funsyntax]
+      # The keys of the classes whose first level gives +5 HP or MP, the player's pick.
+      FUN`CLASS`EITHER:
+        value: |-
+          iter(u(%!/FUN`LIST`ALL,CLASS),if(strmatch(get({{store}}/CLASS`%i0`BENEFIT),either),%i0))
+        flags: [funsyntax]
       # %0 a character, %1 hp, mp or ip: how many of their classes give that resource.
       FUN`CLASS`BENEFITS:
         value: |-
-          words(iter(lattr(%0/FABULA`CLASS`*),if(strmatch(get({{store}}/CLASS`[after(%i0,FABULA`CLASS`)]`BENEFIT),%1),x)))
+          words(iter(lattr(%0/FABULA`CLASS`*),if(cor(strmatch(setr(benefits_of,get({{store}}/CLASS`[after(%i0,FABULA`CLASS`)]`BENEFIT)),%1),cand(match(hp mp,%1),strmatch(%q<benefits_of>,either),eq(default(%0/FABULA`BENEFIT`[after(%i0,FABULA`CLASS`)],0),extract(1 3,match(hp mp,%1),1)))),x)))
         flags: [funsyntax]
-      # %0 a class key: what its first level gives, "+5 HP, armour, shields".
+      # %0 a class key, %1 a character or nothing: what its first level gives, "+5 HP, armour, shields". For a
+      # class that gives +5 HP or MP, the character's pick when there is one.
       FUN`CLASS`GIVES:
         value: |-
-          setqm(gives_benefit,get({{store}}/CLASS`%0`BENEFIT),gives_martial,get({{store}}/CLASS`%0`MARTIAL))[itemize(trim(squish([switch(%q<gives_benefit>,hp,+5 HP,mp,+5 MP,ip,+2 IP)]|[iter(%q<gives_martial>,switch(%i0,melee,martial melee weapons,ranged,martial ranged weapons,armour,martial armour,shields,martial shields,%i0),%b,|)]|[if(get({{store}}/CLASS`%0`RITUALS),rituals)],|),|),|)]
+          setqm(gives_benefit,get({{store}}/CLASS`%0`BENEFIT),gives_martial,get({{store}}/CLASS`%0`MARTIAL),gives_pick,if(strlen(%1),default(%1/FABULA`BENEFIT`%0,0),0))[itemize(trim(squish([switch(%q<gives_benefit>,hp,+5 HP,mp,+5 MP,ip,+2 IP,either,switch(%q<gives_pick>,1,+5 HP,3,+5 MP,+5 HP or MP))]|[iter(%q<gives_martial>,switch(%i0,melee,martial melee weapons,ranged,martial ranged weapons,armour,martial armour,shields,martial shields,%i0),%b,|)]|[if(get({{store}}/CLASS`%0`RITUALS),rituals)],|),|),|)]
         flags: [funsyntax]
       # %0 a character: their skills' keys, by name.
       FUN`SKILL`ALL:
@@ -2064,7 +2159,7 @@ objects:
       # %0 the character: their classes as a table, or a line saying there are none.
       FUN`SCREEN`CLASSES:
         value: |-
-          if(words(%q<screen_classes>),ldatatable(lit({"nowrap":"1|2","rule":""}),Class|>Level|Gives|Skills,iter(%q<screen_classes>,[u(%!/FUN`LIST`LABEL,CLASS,%i0)]|[u(%!/FUN`CLASS`LEVEL,%0,%i0)]|[firstof(u(%!/FUN`CLASS`GIVES,%i0),-)]|[firstof(u(%!/FUN`SKILL`LINE,%0,%i0),-)],,%*<^>)[if(u(%!/FUN`SKILL`USED,%0,HEROIC),%*<^>Heroic||-|[u(%!/FUN`SKILL`LINE,%0,HEROIC)])],%*<^>),tone(muted,No classes yet.))
+          if(words(%q<screen_classes>),ldatatable(lit({"nowrap":"1|2","rule":""}),Class|>Level|Gives|Skills,iter(%q<screen_classes>,[u(%!/FUN`LIST`LABEL,CLASS,%i0)]|[u(%!/FUN`CLASS`LEVEL,%0,%i0)]|[firstof(u(%!/FUN`CLASS`GIVES,%i0,%0),-)]|[firstof(u(%!/FUN`SKILL`LINE,%0,%i0),-)],,%*<^>)[if(u(%!/FUN`SKILL`USED,%0,HEROIC),%*<^>Heroic||-|[u(%!/FUN`SKILL`LINE,%0,HEROIC)])],%*<^>),tone(muted,No classes yet.))
         flags: [funsyntax]
       FUN`SCREEN`BONDS:
         value: |-
@@ -2252,9 +2347,9 @@ objects:
         flags: [cmdsyntax]
 
   # The class list. Inside the JRPG Sheet, so no player can reach it, and no_command, so nothing kept on it is ever
-  # matched as a command. CLASS`<KEY> a class's label, with BENEFIT (hp, mp, ip or none), MARTIAL, RITUALS and ORDER
-  # beneath. Staff change it with +config fabula/classes. These are the Core Rulebook's classes and what their first
-  # level gives; a game adds the classes of other books the same way.
+  # matched as a command. CLASS`<KEY> a class's label, with BENEFIT (hp, mp, either, ip or none), MARTIAL, RITUALS and ORDER
+  # beneath. Staff change it with +config fabula/classes. These are the classes of the Core Rulebook, the High,
+  # Techno and Natural Fantasy Atlases and the two bonus classes, and what their first level gives.
   - ref: store
     type: thing
     name: JRPG Sheet Store
@@ -2371,6 +2466,88 @@ objects:
         melee shields
       CLASS`WEAPONMASTER`ORDER: |-
         15
+      CLASS`CHANTER: |-
+        Chanter
+      CLASS`CHANTER`BENEFIT: |-
+        mp
+      CLASS`CHANTER`ORDER: |-
+        16
+      CLASS`COMMANDER: |-
+        Commander
+      CLASS`COMMANDER`BENEFIT: |-
+        hp
+      CLASS`COMMANDER`MARTIAL: |-
+        melee ranged
+      CLASS`COMMANDER`ORDER: |-
+        17
+      CLASS`DANCER: |-
+        Dancer
+      CLASS`DANCER`BENEFIT: |-
+        either
+      CLASS`DANCER`ORDER: |-
+        18
+      CLASS`SYMBOLIST: |-
+        Symbolist
+      CLASS`SYMBOLIST`BENEFIT: |-
+        ip
+      CLASS`SYMBOLIST`ORDER: |-
+        19
+      CLASS`ESPER: |-
+        Esper
+      CLASS`ESPER`BENEFIT: |-
+        mp
+      CLASS`ESPER`ORDER: |-
+        20
+      CLASS`MUTANT: |-
+        Mutant
+      CLASS`MUTANT`BENEFIT: |-
+        hp
+      CLASS`MUTANT`ORDER: |-
+        21
+      CLASS`PILOT: |-
+        Pilot
+      CLASS`PILOT`BENEFIT: |-
+        hp
+      CLASS`PILOT`MARTIAL: |-
+        melee ranged
+      CLASS`PILOT`ORDER: |-
+        22
+      CLASS`FLORALIST: |-
+        Floralist
+      CLASS`FLORALIST`BENEFIT: |-
+        either
+      CLASS`FLORALIST`ORDER: |-
+        23
+      CLASS`GOURMET: |-
+        Gourmet
+      CLASS`GOURMET`BENEFIT: |-
+        ip
+      CLASS`GOURMET`ORDER: |-
+        24
+      CLASS`INVOKER: |-
+        Invoker
+      CLASS`INVOKER`BENEFIT: |-
+        either
+      CLASS`INVOKER`ORDER: |-
+        25
+      CLASS`MERCHANT: |-
+        Merchant
+      CLASS`MERCHANT`BENEFIT: |-
+        ip
+      CLASS`MERCHANT`ORDER: |-
+        26
+      CLASS`ACE-OF-CARDS: |-
+        Ace of Cards
+      CLASS`ACE-OF-CARDS`BENEFIT: |-
+        either
+      CLASS`ACE-OF-CARDS`ORDER: |-
+        27
+      CLASS`NECROMANCER: |-
+        Necromancer
+      CLASS`NECROMANCER`BENEFIT: |-
+        either
+      CLASS`NECROMANCER`ORDER: |-
+        28
 
   # The encounters, inside the JRPG Sheet and no_command. Each keeps its own copy of its characters' HP, MP, IP and
   # status effects for as long as it runs, so what happens in one never reaches another, or the sheet, until its GM
@@ -2713,13 +2890,14 @@ objects:
         Your level is your class levels added up. A new character shares 5 levels among their classes, up to 10 in one, and at most 3 classes may be below level 10 at once.
 
         - `+sheet/class <class>=<levels>` sets a class's level while you fill in your sheet; 0 takes it off.
+        - `+sheet/benefit <class>=hp` or `=mp` picks what a class adds 5 to, for the classes that let you choose: Dancer, Floralist, Invoker, Ace of Cards and Necromancer. You pick once; after approval staff change it.
         - `+sheet/skill <class>:<skill>=<level>` writes down a skill. Each level in a class is one skill level to spend on its skills. 0 takes a skill off.
         - `+sheet/skill heroic:<skill>=1` writes down a heroic skill, one for each class at level 10.
         - `+sheet/levelup <class>` spends 10 experience on one more level in a class, once you are approved.
         - `+sheet/raise <attribute>` makes an attribute one die larger, once at level 20 and once at 40.
         - `+sheet/bonus hp=<n>`, and `mp` and `ip`, adds what your skills give to your maximum HP, MP or IP.
 
-        The skills' rules are in the rulebook; the sheet keeps their names and levels.
+        The classes are those of the Core Rulebook, the High, Techno and Natural Fantasy Atlases and the two bonus classes. The skills' rules are in those books; the sheet keeps their names and levels.
 
         For example:
 
@@ -2882,7 +3060,7 @@ objects:
         A conflict is an encounter run in turns. The two sides, the characters and the foes, take turns one creature at a time: a character acts, then a foe, then a character, until one side has no turns left and the other takes the rest. A round ends when everyone has acted. An elite foe takes two turns a round, a champion as many as its number.
 
         - `+encounter/initiative`, before the GM begins, rolls Dexterity + Insight with your Initiative modifier against the foes' best Initiative. On a success the characters act first.
-        - `+encounter` shows the round, whose turn it is and who has a turn left.
+        - `+encounter` shows the battle screen: the round, whose turn it is, the foes, the party and, on your turn, your commands. See `+help encounter screen`.
         - `+encounter/turn` ends your turn after an action other than an attack. `+encounter/guard` guards: resistant to every damage type and +2 to opposed checks until your next turn.
 
         See `+help encounter attack` for attacks and damage, `+help encounter foes` and `+help encounter villains` for the GM.
@@ -2896,6 +3074,25 @@ objects:
         `+encounter/guard`
 
         Output: `\[SHEET\] Finn guards: resistant to every damage type and +2 to opposed checks until their next turn. Round 1: the foes' turn. Bramble Imp A and Bramble Imp B have turns left.`
+      HELP`ENCOUNTER`SCREEN: |-
+        `+encounter` draws the battle screen:
+
+        - The top window has the GM, whose turn it is, and the battlefield: foes above, the party below on the right.
+        - The Foes window has each foe's level, rank and whether it is in crisis. Its GM sees HP and MP bars and Ultima Points instead.
+        - The Party window has each member's HP and MP bars, IP, status effects and turn. `>` marks whoever can act now.
+        - On your turn a window lists your commands. On the foes' turn the GM gets theirs.
+
+        On the battlefield a character is drawn as their `IMAGE` picture and a foe as its picture. A client that cannot show pictures gets the foe's text art, else the name. Anyone with no picture and no art is their name in brackets. Foes out of the fight leave the battlefield.
+
+        - `+foe/picture <foe>=<address>` gives a foe in the encounter a picture, an https:// address or a site path. Nothing after `=` takes it off.
+        - `+foe/art <foe>=<text>` gives it text art, with `%%r` between lines.
+        - Staff set both for a bestiary entry with `+config fabula/foes/<key>/picture=<address>` and `/art=<text>`.
+
+        For example:
+
+        `+foe/picture imp b=/assets/foes/imp.png`
+
+        Output: `\[SHEET\] Done: Bramble Imp B has that picture on the battle screen. A client that cannot show pictures draws its name: +foe/art <foe>=<text> gives it art.`
       HELP`ENCOUNTER`ATTACK: |-
         - `+attack <target>=<attribute>+<attribute>\[+<n>\]` rolls against the target's Defense, and `+attack/magic` against its Magic Defense. It is your last check, so `+check/invoke` and `+check/bond` change it. On your side's turn it takes your turn.
         - `+attack/damage <n> \[<type>\]` deals a hit's high roll plus `<n>`: physical, air, bolt, dark, earth, fire, ice, light or poison.
@@ -2927,6 +3124,7 @@ objects:
         - `+foe/hp <foe>=-<n>`, `/mp` and `/status <foe>=<effect>` change a foe's copy; `/status` with an effect it has takes it off, `=clear` all of them. `+foe/remove <foe>` takes it out.
         - `+encounter/damage <who>=<n> \[<type>\]` deals damage by hand, after affinities.
         - `+encounter/turn <who>` and `/guard <who>` act for anyone, `+encounter/undo <who>` gives a turn back and `+encounter/round` starts the next round.
+        - `+foe/picture` and `+foe/art` set what the battle screen draws for a foe: see `+help encounter screen`.
 
         For example:
 
