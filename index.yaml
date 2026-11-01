@@ -168,3 +168,29 @@ packages:
     package: duties-ironsworn
     version: 1.0.0
     description: Duties roll provider "ironsworn" on the Ironsworn sheet
+  - path: sheet-salvage-union/
+    name: Salvage Union Sheet
+    package: sheet-salvage-union
+    version: 1.0.0
+    description: Salvage Union pilots, mechs and the Union Crawler (class ability trees, chassis, systems, modules, scrap, heat) with d20 +check on the Core Mechanic table; Salvage Union Open Game Licence 1.0b, unofficial
+  - path: sheet-salvage-union-help/
+    package: sheet-salvage-union-help
+    version: 1.0.0
+    description: Puts the Salvage Union sheet topics into +help
+  - path: sheet-salvage-union-config/
+    package: sheet-salvage-union-config
+    version: 1.0.0
+    description: Puts the Salvage Union sheet settings into +config
+  - path: sheet-salvage-union-chargen/
+    package: sheet-salvage-union-chargen
+    version: 1.0.0
+    description: Joins the Salvage Union sheet to +app character applications
+  - path: duties-salvage-union/
+    package: duties-salvage-union
+    version: 1.0.0
+    description: Duties roll provider "salvage" on the Salvage Union sheet
+  - path: salvage-union-wiki/
+    name: Salvage Union rules
+    package: salvage-union-wiki
+    version: 1.0.0
+    description: Salvage Union rules as wiki pages (core rules, Pilot Bay, Mech Workshop, chassis, Union Crawler, salvaging, denizens, and every ability, system, module, equipment and table); Salvage Union Open Game Licence 1.0b, unofficial

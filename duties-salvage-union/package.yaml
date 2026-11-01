@@ -1,0 +1,99 @@
+format: "1.16"
+package: duties-salvage-union
+title: "Duties: Salvage Union rolls"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Lets Duties roll on the Salvage Union sheet: a roll provider called salvage, so a duty's checks roll the d20 on the Core Mechanic table with one of the pilot's abilities or the mech's systems and modules, and Training Points or scrap for the Union Crawler as rewards. Pick it with +config duties/system=salvage."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [duties, salvage-union, sheet, dice, bridge]
+category: Characters
+requires_server: ">=0.1"
+
+# A bridge: it joins two packages that do not know about each other. Duties asks the game's one active roll
+# provider for every check, and sheet-salvage-union holds the sheet and rolls against it. This package is a
+# provider that answers Duties' questions with the sheet's API, and the one leaf that registers it.
+depends:
+  - package: duties
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/duties/
+      branch: main
+  - package: sheet-salvage-union
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH.Packages
+      path: sheet-salvage-union/
+      branch: main
+
+objects:
+  # The provider. Duties calls each FN`DUTIES` attribute with u() and named arguments, so it runs as this
+  # object; WIZARD because the sheet's API is on a WIZARD object, which a lesser one may not call. Its writes
+  # are what a check spends (through the sheet's API`CHECK) and rewards.
+  - ref: provider
+    type: thing
+    name: Duties Salvage Union Provider
+    location: "{{sheet-salvage-union/sheet}}"
+    flags: [WIZARD, no_command]
+    attributes:
+      # The bare die, which everyone rolls, and every ability, system and module that is not passive. A check
+      # with one needs the pilot to have it.
+      FN`DUTIES`TRAITS:
+        value: |-
+          u({{sheet-salvage-union/sheet}}/API`TRAITS)
+        flags: [funsyntax]
+      # 1 Cascade Failure, 2-5 Failure, 6-10 Tough Choice, 11-19 Success, 20 Nailed It.
+      FN`DUTIES`TIERS:
+        value: |-
+          crit-fail fail partial success crit-success
+        flags: [funsyntax]
+      # %<difficulty>: the die is never modified, so a difficulty only names how hard it is.
+      FN`DUTIES`DC:
+        value: |-
+          if(isint(u({{sheet-salvage-union/sheet}}/API`TARGET,%<difficulty>)),[capstr(lcstr(%<difficulty>))] %(the die is never modified%),#-1 NO SUCH DIFFICULTY)
+        flags: [funsyntax]
+      # Improvise rolls the bare die.
+      FN`DUTIES`FALLBACK:
+        value: |-
+          die
+        flags: [funsyntax]
+      # %<roller>, %<trait>: 1 when the pilot has the ability, or their mech the system or module.
+      FN`DUTIES`CAN:
+        value: |-
+          u({{sheet-salvage-union/sheet}}/API`RATING,%<roller>,%<trait>)
+        flags: [funsyntax]
+      # %<roller>, %<trait>, %<difficulty>, %<mods>, %<context>. Salvage Union has no rule for helping, so
+      # helpers in %<mods> change nothing. An ability or system that costs X spends 1. A duty uses the sheet
+      # itself, never an encounter's copy. Returns {"tier","text","roll","margin","system"}: margin is the die
+      # less 11, the lowest Success; system holds die, kind, heatcheck and overload.
+      FN`DUTIES`CHECK:
+        value: |-
+          setq(provider_rolled,if(isint(u({{sheet-salvage-union/sheet}}/API`TARGET,%<difficulty>)),uargs({{sheet-salvage-union/sheet}}/API`CHECK,roller,%<roller>,trait,%<trait>,spend,1,live,1),#-1 NO SUCH DIFFICULTY))[if(strmatch(%q<provider_rolled>,#-*),%q<provider_rolled>,u(%!/FUN`CHECK`RESULT,%q<provider_rolled>))]
+        flags: [funsyntax]
+      # %0 the sheet's check JSON.
+      FUN`CHECK`RESULT:
+        value: |-
+          setqm(result_tier,json_query(%0,extract,$.tier),
+          result_die,json_query(%0,extract,$.die),
+          result_overload,json_query(%0,extract,$.overload))[json(object,tier,json(string,%q<result_tier>),text,json(string,[firstof(json_query(%0,extract,$.label),The die)]: %q<result_die>%, [u({{sheet-salvage-union/sheet}}/FUN`DISPLAY`TIER,%q<result_tier>)][if(strlen(%q<result_overload>),. The reactor overloads: %q<result_overload>)]),roll,json(string,json_query(%0,extract,$.roll)),margin,sub(%q<result_die>,11),system,json(object,die,%q<result_die>,kind,json(string,json_query(%0,extract,$.kind)),heatcheck,json_query(%0,extract,$.heatcheck),overload,json(string,%q<result_overload>)))]
+        flags: [funsyntax]
+      # The rewards a duty may give on this sheet, for Duties' editor.
+      FN`DUTIES`REWARDS:
+        value: |-
+          lit([{"kind":"tp","label":"Training Points","fields":[{"key":"amount","type":"integer"}]},{"kind":"scrap","label":"Scrap for the Union Crawler","fields":[{"key":"amount","type":"integer"},{"key":"tech","type":"integer"}]}])
+        flags: [funsyntax]
+      # Queued once for each reward and member: %<roller>, %<reward> {"kind","amount","tech"}, %<context>.
+      # Training Points go to the pilot; scrap goes into the Union Crawler's hold, where the crawler's keeper
+      # spends it. 1 when no amount, Tech 1 when no tech; "+duty/reward <duty>/<step>=scrap once 3 2" gives an
+      # amount of "3 2", which is 3 Tech 2 scrap.
+      ON`DUTIES`GRANT:
+        value: |-
+          @assert hastype(%<roller>,player); think setqm(grant_kind,json_query(%<reward>,extract,$.kind),grant_amount,first(firstof(json_query(%<reward>,extract,$.amount),1)),grant_tech,firstof(json_query(%<reward>,extract,$.tech),extract(json_query(%<reward>,extract,$.amount),2,1),1)); @assert cand(isint(%q<grant_amount>),gt(%q<grant_amount>,0)); @switch %q<grant_kind>=tp,{@pemit %<roller>=notice(DUTIES,You gain %q<grant_amount> Training Points. You have [u({{sheet-salvage-union/sheet}}/API`ADJUST,%<roller>,TP,%q<grant_amount>)].,ok)},scrap,{@assert cand(isint(%q<grant_tech>),gte(%q<grant_tech>,1),lte(%q<grant_tech>,6)); @pemit %<roller>=notice(DUTIES,You haul %q<grant_amount> Tech %q<grant_tech> scrap back to the Union Crawler. Its hold has [u({{sheet-salvage-union/sheet}}/API`SCRAP,%q<grant_tech>,%q<grant_amount>)].,ok)}
+        flags: [cmdsyntax]
+
+  - ref: provider_registration
+    target: "{{duties/duties}}"
+    attributes:
+      PROVIDER`SALVAGE: |-
+        {{provider}}

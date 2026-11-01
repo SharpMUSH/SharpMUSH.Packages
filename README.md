@@ -76,6 +76,12 @@ constraints checked before anything is planned.
 | [`duties-fitd/`](duties-fitd/) | 1.0.0 | Duties roll provider `fitd` on the FitD sheet: assists and pushes paid in stress, coin and stress relief as rewards |
 | [`duties-brp/`](duties-brp/) | 1.0.0 | Duties roll provider `brp` on the BRP sheet: help as an augment, skill increases and healing as rewards |
 | [`duties-ironsworn/`](duties-ironsworn/) | 1.0.0 | Duties roll provider `ironsworn` on the Ironsworn sheet: help adds 1, experience and momentum as rewards |
+| [`sheet-salvage-union/`](sheet-salvage-union/) | 1.0.0 | Salvage Union pilots, mechs and the Union Crawler: class ability trees, chassis, systems and modules, scrap by tech level, heat; `+check` rolls the d20 on the Core Mechanic table. Unofficial, under the Salvage Union Open Game Licence 1.0b (see its NOTICE) |
+| [`sheet-salvage-union-help/`](sheet-salvage-union-help/) | 1.0.0 | Bridge: the Salvage Union sheet's topics in `+help` |
+| [`sheet-salvage-union-config/`](sheet-salvage-union-config/) | 1.0.0 | Bridge: the Salvage Union sheet's settings in `+config` |
+| [`sheet-salvage-union-chargen/`](sheet-salvage-union-chargen/) | 1.0.0 | Bridge: sheet and mech edits follow the player's `+app` application; reviewers read the sheets they review |
+| [`duties-salvage-union/`](duties-salvage-union/) | 1.0.0 | Duties roll provider `salvage` on the Salvage Union sheet: abilities and mech parts as traits, Training Points and crawler scrap as rewards |
+| [`salvage-union-wiki/`](salvage-union-wiki/) | 1.0.0 | Salvage Union rules as wiki pages: the core rules, Pilot Bay, Mech Workshop, every chassis blueprint, the Union Crawler, salvaging, the denizens of the wasteland, and a page for every ability, system, module, piece of equipment and table. Unofficial, under the Salvage Union Open Game Licence 1.0b (see its NOTICE) |
 
 These currently double as the reference implementations for package authors —
 each README explains which manifest features it demonstrates. The curated
