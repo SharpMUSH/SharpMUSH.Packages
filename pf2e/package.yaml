@@ -208,12 +208,15 @@ objects:
         flags: [funsyntax]
       FUN`MODIFIER`STACK:
         value: |-
-          @@(%0 type~value~slug~force for each modifier whose predicate holds: the ones that count)[
-          setq(mod_types,setdiff(iter(%0,first(%i0,~)),untyped ability))][
-          squish(
-            [u(FUN`MODIFIER`OF`TYPE,untyped,%0)]%b[
-            u(FUN`MODIFIER`BEST`ABILITY,u(FUN`MODIFIER`OF`TYPE,ability,%0))]%b[
-            iter(%q<mod_types>,u(FUN`MODIFIER`BEST`OF`TYPE,u(FUN`MODIFIER`OF`TYPE,%i0,%0)))])]
+          @@(%0 type~value~slug~force for each modifier whose predicate holds: the ones that count, all of them when no two share a type)[
+          setq(mod_types,iter(%0,first(%i0,~)))][
+          if(eq(words(%q<mod_types>),words(setunion(%q<mod_types>,))),
+            %0,
+            [setq(mod_types,setdiff(%q<mod_types>,untyped ability))][
+            squish(
+              [u(FUN`MODIFIER`OF`TYPE,untyped,%0)]%b[
+              u(FUN`MODIFIER`BEST`ABILITY,u(FUN`MODIFIER`OF`TYPE,ability,%0))]%b[
+              iter(%q<mod_types>,u(FUN`MODIFIER`BEST`OF`TYPE,u(FUN`MODIFIER`OF`TYPE,%i0,%0)))])])]
         flags: [funsyntax]
       FUN`MODIFIER`TOTAL:
         value: |-
