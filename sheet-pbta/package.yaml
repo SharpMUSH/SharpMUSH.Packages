@@ -1,7 +1,7 @@
 format: "1.16"
 package: sheet-pbta
 title: "PbtA sheet"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "A Powered by the Apocalypse character sheet: stats, moves and playbooks the game edits, forward, ongoing, hold and XP. +sheet shows and fills it in, and +check rolls 2d6 plus a stat for a move, a full hit on 10+, a partial hit on 7-9. Ships the Dungeon World basic and special moves (CC BY 3.0) as its example set."
 license: MIT
@@ -417,12 +417,12 @@ objects:
       # The left of =: <name>/<what> for a sheet keeper, else <what> on your own sheet. sheet_who and sheet_what.
       INC`NEED`WHO:
         value: |-
-          @if strmatch(%q<cmd_left_side>,*/*)={@include/args %!/INC`NEED`TARGET=name,before(%q<cmd_left_side>,/); think setq(sheet_what,trim(after(%q<cmd_left_side>,/)))},{think setqm(sheet_who,%q<viewer_objid>,sheet_what,%q<cmd_left_side>)}; @include %!/INC`NEED`OWNSHEET
+          @if strmatch(%q<cmd_left_side>,*/*)={@include/args %!/INC`NEED`TARGET=name,before(%q<cmd_left_side>,/); think setq(sheet_what,trim(after(%q<cmd_left_side>,/)))},{think setqm(sheet_who,%q<viewer_objid>,sheet_what,%q<cmd_left_side>)}; @assert strlen(%q<sheet_who>); @include %!/INC`NEED`OWNSHEET
         flags: [cmdsyntax]
       # <name>=<value> for a sheet keeper, else <value> on your own sheet: sheet_who and sheet_value.
       INC`NEED`WHOVALUE:
         value: |-
-          @if %q<cmd_has_equals>={@include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; think setq(sheet_value,%q<cmd_right_side>)},{think setqm(sheet_who,%q<viewer_objid>,sheet_value,%q<cmd_argument>)}; @include %!/INC`NEED`OWNSHEET
+          @if %q<cmd_has_equals>={@include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; think setq(sheet_value,%q<cmd_right_side>)},{think setqm(sheet_who,%q<viewer_objid>,sheet_value,%q<cmd_argument>)}; @assert strlen(%q<sheet_who>); @include %!/INC`NEED`OWNSHEET
         flags: [cmdsyntax]
       INC`NEED`OWNSHEET:
         value: |-
@@ -446,7 +446,7 @@ objects:
       # ---- +sheet -----------------------------------------------------------------
       INC`SHEET`SHOW:
         value: |-
-          @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`SHEET,%q<sheet_who>,%#)
+          @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert strlen(%q<sheet_who>); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`SHEET,%q<sheet_who>,%#)
         flags: [cmdsyntax]
       # +sheet/set [<name>/]<stat>=<n>. Empty clears it back to +0.
       INC`SHEET`SET:
