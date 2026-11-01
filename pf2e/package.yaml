@@ -1891,8 +1891,8 @@ objects:
             u(%!/FUN`BUILD`TODO`ONE,boost-background,Background boosts,+build/boost background)]|[
             u(%!/FUN`BUILD`TODO`ONE,boost-class,Key attribute,+build/boost class=[first(u(%!/FUN`BUILD`LEVELS,keyAbility))])]|[
             u(%!/FUN`BUILD`TODO`ONE,boost-1,Four free boosts,+build/boost 1=str dex con wis)]|[
-            if(strlen(%q<build_class_item>),[if(gte(words(u(%!/FUN`BUILD`STEP,skills)),%q<todo_skills_need>),done,open)]~Skills ([words(u(%!/FUN`BUILD`STEP,skills))] of %q<todo_skills_need>)~+build/skills <skill> <skill> ...)]|[
-            if(gt(%q<todo_lang_need>,0),[if(gte(words(u(%!/FUN`BUILD`STEP,languages)),%q<todo_lang_need>),done,open)]~Languages ([words(u(%!/FUN`BUILD`STEP,languages))] of %q<todo_lang_need>)~+build/list languages)]|[
+            if(strlen(%q<build_class_item>),[if(gte(words(u(%!/FUN`BUILD`STEP,skills)),%q<todo_skills_need>),done,open)]~Skills %([words(u(%!/FUN`BUILD`STEP,skills))] of %q<todo_skills_need>%)~+build/skills <skill> <skill> ...)]|[
+            if(gt(%q<todo_lang_need>,0),[if(gte(words(u(%!/FUN`BUILD`STEP,languages)),%q<todo_lang_need>),done,open)]~Languages %([words(u(%!/FUN`BUILD`STEP,languages))] of %q<todo_lang_need>%)~+build/list languages)]|[
             iter(u(%!/FUN`BUILD`SLOTS),u(%!/FUN`BUILD`TODO`ONE,feat-%i0,[capstr(first(%i0,-))] feat%, level [last(%i0,-)],+build/list feats %i0),%b,|)]|[
             iter(u(%!/FUN`BUILD`LEVELS,skillIncreaseLevels),if(lte(%i0,%q<check_level>),u(%!/FUN`BUILD`TODO`ONE,increase-%i0,Skill increase%, level %i0,+build/increase %i0=<skill>)),%b,|)]|[
             iter(5 10 15 20,if(lte(%i0,%q<check_level>),u(%!/FUN`BUILD`TODO`ONE,boost-%i0,Four boosts%, level %i0,+build/boost %i0=str dex con wis)),%b,|)]|[
@@ -1916,11 +1916,11 @@ objects:
           box(
             [fields(,
               Level,%q<check_level>,
-              Picked,squish([iter(ancestry heritage background class,if(strlen(v(build_%i0_item)),json_query(v(build_%i0_item),extract,$.name)),%b,%b)]),
+              Picked,squish([iter(ancestry heritage background class,if(strlen(r(build_%i0_item)),json_query(r(build_%i0_item),extract,$.name)),%b,%b)]),
               Money,u(%!/FUN`SHOW`MONEY,u({{core}}/FUN`SHEET`MONEY,%q<check_entries>)),
               State,if(%q<build_locked>,Finished,In progress))]%r[
             rule()]%r[
-            ldatatable(,Step|Done|Next,iter(%q<show_todo>,[elements(%i0,2,~)]|[if(strmatch(first(%i0,~),done),yes,tone(warn,no))]|[elements(%i0,3,~)],|,%r),%r)]%r[
+            ldatatable(,Step|Done|Next,iter(%q<show_todo>,[elements(%i0,2,~)]|[if(strmatch(first(%i0,~),done),yes,tone(warning,no))]|[elements(%i0,3,~)],|,%r),%r)]%r[
             rule()]%r[
             tone(muted,u(%!/FUN`BUILD`NEXT`TEXT))],
             [name(%q<sheet_target>)]: building)]
@@ -1957,7 +1957,7 @@ objects:
         flags: [funsyntax]
       FUN`BUILD`LIST`PACK:
         value: |-
-          @@(%0 a pack, %1 a test of an item's PREP or nothing, %2 text the name holds: name (rarity when not common) for each item from a book the game uses, sorted)[
+          @@(%0 a pack, %1 a test of an item's PREP or nothing, %2 text the name holds: each item's name, with its rarity when not common, for each item from a book the game uses, sorted)[
           setq(list_store,u({{core}}/DATA`PACK`%0))][
           iter(sort(iter(get(%q<list_store>/OPT`TYPE`[ucstr(edit(%0,ies,y,ses,s,es,e))]),
             if(cand(member(u({{core}}/DATA`CONFIG`BOOKS),get(%q<list_store>/ITEM`%i0`BOOK)),cor(not(strlen(%1)),u(%!/%1,%i0)),cor(not(strlen(%2)),strmatch(json_query(get(%q<list_store>/ITEM`%i0`PREP),extract,$.name),*%2*))),
