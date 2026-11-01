@@ -1898,8 +1898,8 @@ objects:
           setq(match_options,u(%!/FUN`BUILD`CHOICE`OPTIONS,%0))][
           before(if(cand(isint(%1),gte(%1,1),lte(%1,words(%q<match_options>,|))),extract(%q<match_options>,%1,1,|),
             firstof(
-              first(iter(%q<match_options>,if(strmatch(after(%i0,^),%1),%i0,),|,|),|),
-              first(iter(%q<match_options>,if(strmatch(after(%i0,^),%1*),%i0,),|,|),|))),^)]
+              first(trim(squish(iter(%q<match_options>,if(strmatch(after(%i0,^),%1),%i0,),|,|),|),|),|),
+              first(trim(squish(iter(%q<match_options>,if(strmatch(after(%i0,^),%1*),%i0,),|,|),|),|),|))),^)]
         flags: [funsyntax]
       # What is left to choose, each state~label~next (state done or open; next what to type), separated by |.
       FUN`BUILD`TODO:
@@ -1941,11 +1941,11 @@ objects:
           box(
             [fields(,
               Level,%q<check_level>,
-              Picked,[edit(trim(squish(iter(ancestry heritage background class,if(strlen(r(build_%i0_item)),json_query(r(build_%i0_item),extract,$.name)),%b,|),|),b,|),|,%,%b)],
+              Picked,[edit(trim(squish(iter(ancestry heritage background class,if(strlen(r(build_%i0_item)),json_query(r(build_%i0_item),extract,$.name)),%b,|),|),|),|,%,%b)],
               Money,u(%!/FUN`SHOW`MONEY,u({{core}}/FUN`SHEET`MONEY,%q<check_entries>)),
               State,if(%q<build_locked>,Finished,In progress))]%r[
             rule()]%r[
-            ldatatable(,Step|Done|Next,iter(%q<show_todo>,[elements(%i0,2,~)]|[if(strmatch(first(%i0,~),done),yes,tone(warning,no))]|[elements(%i0,3,~)],|,%r),%r)]%r[
+            ldatatable(,Step|Done|Next,iter(%q<show_todo>,[elements(%i0,2,~)]|[if(strmatch(first(%i0,~),done),yes,tone(warning,no))]|[if(strmatch(first(%i0,~),done),,elements(%i0,3,~))],|,%r),%r)]%r[
             rule()]%r[
             tone(muted,u(%!/FUN`BUILD`NEXT`TEXT))],
             [name(%q<sheet_target>)]: building)]
