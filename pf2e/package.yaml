@@ -2081,7 +2081,7 @@ objects:
           switch(1,
             strmatch(%q<list_rows>,#-1), notice(PF2E,+build/list ancestries%, heritages%, backgrounds%, classes%, feats <slot>%, choice <number>%, languages%, skills or gear <text>.,warn),
             not(words(%q<list_rows>,|)), notice(PF2E,Nothing to list[if(strlen(%1),%bfor %1)].,warn),
-            box([table(trim(%q<list_rows>,|),if(gt(lmax(iter(%q<list_rows>,strlen(%i0),|,%b)),35),73,36),73,|)]%r[tone(muted,if(strlen(%q<list_cut>),There are too many to check at once, so these are only [words(%q<list_rows>,|)] of them. Add part of a name: +build/list %0 %1 <text>.,[words(%q<list_rows>,|)] in all. +build/info <name> describes one.))],capstr(%0)))]
+            box([table(trim(%q<list_rows>,|),if(gt(lmax(iter(%q<list_rows>,strlen(%i0),|,%b)),35),73,36),73,|)]%r[tone(muted,if(strlen(%q<list_cut>),There are too many to check at once%, so these are only [words(%q<list_rows>,|)] of them. Add part of a name: +build/list %0 %1 <text>.,[words(%q<list_rows>,|)] in all. +build/info <name> describes one.))],capstr(%0)))]
         flags: [funsyntax]
       FUN`BUILD`LIST`PACK:
         value: |-
