@@ -1,7 +1,7 @@
 format: "1.16"
 package: duties-salvage-union
 title: "Duties: Salvage Union rolls"
-version: 1.0.1
+version: 1.0.2
 authors: [SharpMUSH]
 description: "Lets Duties roll on the Salvage Union sheet: a roll provider called salvage, so a duty's checks roll the d20 on the Core Mechanic table with one of the pilot's abilities or the mech's systems and modules, and Training Points or scrap for the Union Crawler as rewards. Pick it with +config duties/system=salvage."
 license: MIT
@@ -89,7 +89,7 @@ objects:
       # amount of "3 2", which is 3 Tech 2 scrap.
       ON`DUTIES`GRANT:
         value: |-
-          @assert hastype(%<roller>,player); think setqm(grant_kind,json_query(%<reward>,extract,$.kind),grant_amount,first(firstof(json_query(%<reward>,extract,$.amount),1)),grant_tech,firstof(json_query(%<reward>,extract,$.tech),extract(json_query(%<reward>,extract,$.amount),2,1),1)); @assert cand(isint(%q<grant_amount>),gt(%q<grant_amount>,0)); @switch %q<grant_kind>=tp,{@pemit %<roller>=notice(DUTIES,You gain %q<grant_amount> Training Points. You have [u({{sheet-salvage-union/sheet}}/API`ADJUST,%<roller>,TP,%q<grant_amount>,a duty)].,ok)},scrap,{@assert cand(isint(%q<grant_tech>),gte(%q<grant_tech>,1),lte(%q<grant_tech>,6)); @pemit %<roller>=notice(DUTIES,You haul %q<grant_amount> Tech %q<grant_tech> scrap back to the Union Crawler. Its hold has [u({{sheet-salvage-union/sheet}}/API`SCRAP,%q<grant_tech>,%q<grant_amount>,a duty,%<roller>)].,ok)}
+          @assert hastype(%<roller>,player); think setqm(grant_kind,json_query(%<reward>,extract,$.kind),grant_amount,first(firstof(json_query(%<reward>,extract,$.amount),1)),grant_tech,firstof(json_query(%<reward>,extract,$.tech),extract(json_query(%<reward>,extract,$.amount),2,1),1)); @assert cand(isint(%q<grant_amount>),gt(%q<grant_amount>,0)); @switch %q<grant_kind>=tp,{@pemit %<roller>=notice(DUTIES,You gain %q<grant_amount> Training Point[if(neq(%q<grant_amount>,1),s)]. You have [u({{sheet-salvage-union/sheet}}/API`ADJUST,%<roller>,TP,%q<grant_amount>,a duty)].,ok)},scrap,{@assert cand(isint(%q<grant_tech>),gte(%q<grant_tech>,1),lte(%q<grant_tech>,6)); @pemit %<roller>=notice(DUTIES,You haul %q<grant_amount> Tech %q<grant_tech> scrap back to the Union Crawler. Its hold has [u({{sheet-salvage-union/sheet}}/API`SCRAP,%q<grant_tech>,%q<grant_amount>,a duty,%<roller>)].,ok)}
         flags: [cmdsyntax]
 
   - ref: provider_registration

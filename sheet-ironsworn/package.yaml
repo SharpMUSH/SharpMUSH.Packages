@@ -1,7 +1,7 @@
 format: "1.16"
 package: sheet-ironsworn
 title: "Ironsworn sheet"
-version: 2.2.0
+version: 2.2.1
 authors: [SharpMUSH]
 description: "An Ironsworn character sheet: five stats and assets built from a ledger, health, spirit, supply and momentum, experience spent on new assets and their abilities, with its own audited ledger, companion health, iron vows with progress tracks, and encounters that play from copies of the sheets. +check makes an action roll, a six-sided die plus a stat against two ten-sided challenge dice, for the room; +vow swears, marks and fulfils vows. Based on the Ironsworn SRD under CC BY 4.0."
 license: MIT
@@ -1484,7 +1484,7 @@ objects:
       # %0 the character, %1 who reads it: what they can do next.
       FUN`DISPLAY`FOOTER:
         value: |-
-          setq(footer_n,u(%!/FUN`ENC`JOINED,%0))[cond(cand(not(comp(objid(%1),%0)),not(isapproved(%1)),not(u(%!/FUN`PERM`KEEPER,%1))),u(%!/FUN`CHARGEN`NEXT,%0) +sheet/chargen shows the steps.[u(%!/FUN`HINT,FOOTER)],not(comp(objid(%1),%0)),+check <stat> rolls. +sheet/asset and +sheet/upgrade spend experience.,+check <stat> rolls a six-sided die plus the stat against two ten-sided dice.)][if(words(%q<footer_n>),%b[name(%0)] plays from a copy in encounter[if(gt(words(%q<footer_n>),1),s)] [itemize(%q<footer_n>)]: +encounter shows [if(gt(words(%q<footer_n>),1),them,it)].)]
+          setq(footer_n,u(%!/FUN`ENC`JOINED,%0))[cond(cand(not(comp(objid(%1),%0)),not(isapproved(%1)),not(u(%!/FUN`PERM`KEEPER,%1))),u(%!/FUN`CHARGEN`NEXT,%0) +sheet/chargen shows the steps.,not(comp(objid(%1),%0)),+check <stat> rolls. +sheet/asset and +sheet/upgrade spend experience.,+check <stat> rolls a six-sided die plus the stat against two ten-sided dice.)][if(words(%q<footer_n>),%b[name(%0)] plays from a copy in encounter[if(gt(words(%q<footer_n>),1),s)] [itemize(%q<footer_n>)]: +encounter shows [if(gt(words(%q<footer_n>),1),them,it)].)]
         flags: [funsyntax]
       # %0 the character, %1 who reads it: the steps of making a character.
       FUN`SCREEN`CHARGEN:

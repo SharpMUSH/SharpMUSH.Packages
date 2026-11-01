@@ -1,7 +1,7 @@
 format: "1.16"
 package: duties-pbta
 title: "Duties: PbtA sheet rolls"
-version: 1.0.1
+version: 1.0.2
 authors: [SharpMUSH]
 description: "Lets Duties roll on the PbtA sheet: a roll provider called pbta, so a duty's checks make a move or roll a stat, 2d6 plus the stat, with aid from helpers, forward and ongoing, and XP as a reward. Pick it with +config duties/system=pbta."
 license: MIT
@@ -57,10 +57,11 @@ objects:
         value: |-
           setq(provider_roller,%<roller>)[last(sortkey(%!/FUN`STAT`SORTKEY,revwords(u(%!/FUN`STAT`KEYS)),n))]
         flags: [funsyntax]
-      # %<roller>, %<trait>: a playbook move the roller does not have is refused; every stat and basic move is fine.
+      # %<roller>, %<trait>: 1 when the roller may roll it, 0 for a playbook move they do not have. Every stat
+      # and basic move is 1.
       FN`DUTIES`CAN:
         value: |-
-          if(cand(strmatch(%<trait>,move-*),not(u({{sheet-pbta/sheet}}/API`HAS,%<roller>,%<trait>))),You don't have [u({{sheet-pbta/sheet}}/API`LABEL,%<trait>)].)
+          if(strmatch(%<trait>,move-*),t(u({{sheet-pbta/sheet}}/API`HAS,%<roller>,%<trait>)),1)
         flags: [funsyntax]
       # %<roller>, %<trait>, %<difficulty>, %<mods>, %<context>. A trivial task is a success with no roll. Otherwise
       # 2d6 plus the stat, the difficulty's modifier, the roller's forward (spent) and ongoing, and +1 for each

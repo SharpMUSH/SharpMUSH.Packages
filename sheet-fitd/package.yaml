@@ -1,7 +1,7 @@
 format: "1.16"
 package: sheet-fitd
 title: "Forged in the Dark sheet"
-version: 2.2.0
+version: 2.2.1
 authors: [SharpMUSH]
 description: "A Forged in the Dark character sheet: twelve action ratings under three attributes, built from a ledger, with XP for each attribute spent on advances, stress, trauma, harm and coin, separate audited ledgers for XP and coin, encounters that play from copies of the sheets, with threats from a list the game edits and positions and effect, and progress clocks. +check rolls a pool of six-sided dice and reads the highest against a position for the room; +check/resist rolls an attribute to resist a consequence. Based on the Blades in the Dark SRD under CC BY 3.0."
 license: MIT
@@ -1340,7 +1340,7 @@ objects:
       # %0 the character, %1 who reads it: what they can do next.
       FUN`DISPLAY`FOOTER:
         value: |-
-          setq(footer_n,u(%!/FUN`ENC`JOINED,%0))[cond(cand(not(comp(objid(%1),%0)),not(isapproved(%1)),not(u(%!/FUN`PERM`KEEPER,%1))),u(%!/FUN`CHARGEN`NEXT,%0) +sheet/chargen shows the steps.[u(%!/FUN`HINT,FOOTER)],not(comp(objid(%1),%0)),+check <action>=<position> rolls. +sheet/advance <action> spends XP.,+check <action> rolls a die for each point of the rating.)][if(words(%q<footer_n>),%b[name(%0)] plays from a copy in encounter[if(gt(words(%q<footer_n>),1),s)] [itemize(%q<footer_n>)]: +encounter shows [if(gt(words(%q<footer_n>),1),them,it)].)]
+          setq(footer_n,u(%!/FUN`ENC`JOINED,%0))[cond(cand(not(comp(objid(%1),%0)),not(isapproved(%1)),not(u(%!/FUN`PERM`KEEPER,%1))),u(%!/FUN`CHARGEN`NEXT,%0) +sheet/chargen shows the steps.,not(comp(objid(%1),%0)),+check <action>=<position> rolls. +sheet/advance <action> spends XP.,+check <action> rolls a die for each point of the rating.)][if(words(%q<footer_n>),%b[name(%0)] plays from a copy in encounter[if(gt(words(%q<footer_n>),1),s)] [itemize(%q<footer_n>)]: +encounter shows [if(gt(words(%q<footer_n>),1),them,it)].)]
         flags: [funsyntax]
       # %0 the character, %1 who reads it: the steps of making a character.
       FUN`SCREEN`CHARGEN:

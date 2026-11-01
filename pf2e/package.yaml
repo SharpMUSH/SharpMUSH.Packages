@@ -1,7 +1,7 @@
 format: "1.16"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.3.0"
+version: "0.3.1"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, encounters that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -1415,6 +1415,14 @@ objects:
       INC`PURSE`PUT:
         value: |-
           @assert cand(match(money xp,%q<purse_kind>),isint(%q<purse_amount>))=@pemit %#=notice(PF2E,The [firstof(%q<purse_kind>,money)] entry could not be written: %q<purse_amount>,error); think setqm(purse_attr,PF2E`[ucstr(%q<purse_kind>)],purse_n,inc(lmax(0 [u({{commands}}/FUN`PURSE`ENTRIES,%q<sheet_target>,%q<purse_kind>)]))); &%q<purse_attr>`%q<purse_n> %q<sheet_target>=[json(object,switch(%q<purse_kind>,money,cp,xp),%q<purse_amount>,reason,json(string,%q<purse_reason>),by,json(string,objid(%#)),at,secs())]; @set %q<sheet_target>/%q<purse_attr>`%q<purse_n>=wizard; &PF2E`TOTAL`[ucstr(%q<purse_kind>)] %q<sheet_target>=[u({{commands}}/FUN`PURSE`SUM,%q<sheet_target>,%q<purse_kind>)]; @set %q<sheet_target>/PF2E`TOTAL`[ucstr(%q<purse_kind>)]=wizard
+        flags: [cmdsyntax]
+      # @trigger/args with target (a character), kind (money or xp), amount (copper pieces or XP), reason and
+      # shown (the amount as the character reads it, such as 5 gp): the entry INC`PURSE`PUT writes, for a
+      # package that cannot include it, such as a Duties provider; the character is told. Only an object that
+      # controls this one can trigger it.
+      TRIG`PURSE`PUT:
+        value: |-
+          @assert hastype(%<target>,player); think setqm(sheet_target,%<target>,purse_kind,%<kind>,purse_amount,%<amount>,purse_reason,%<reason>); @include %!/INC`PURSE`PUT; @pemit %<target>=notice(PF2E,You gain %<shown>: %q<purse_reason> %(entry %q<purse_n>%).[if(strmatch(%q<purse_kind>,xp),%b[u(%!/FUN`SHOW`XP,u(%!/FUN`PURSE`TOTAL,%<target>,xp))])],ok)
         flags: [cmdsyntax]
       # Revoke every entry of build_step; what came with them goes too.
       INC`BUILD`CLEAR:
