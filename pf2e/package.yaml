@@ -1741,7 +1741,7 @@ objects:
             not(u(%!/FUN`BUILD`FEAT`FITS,%q<why_kind>,%q<why_prep>)), %q<why_name> is not [art(%q<why_kind>)] %q<why_kind> feat you can take. +build/list feats %0 shows those you can.,
             gt(json_query(%q<why_prep>,extract,$.level),%q<why_level>), %q<why_name> is level [json_query(%q<why_prep>,extract,$.level)]%, above this level %q<why_level> slot.,
             cand(strlen(u(%!/FUN`BUILD`GRANT`N,feats,%1)),not(strmatch(u(%!/FUN`BUILD`STEP,feat-%0),u(%!/FUN`BUILD`GRANT`N,feats,%1))),lte(firstof(json_query(u({{core}}/FUN`ITEM`GET,feats,%1),extract,$.system.maxTakable),1),1)), The sheet has %q<why_name> already.,
-            words(setr(why_unmet,u(%!/FUN`BUILD`PREREQ`UNMET,%1)),|), %q<why_name> needs [itemize(%q<why_unmet>,|)].,
+            t(words(setr(why_unmet,u(%!/FUN`BUILD`PREREQ`UNMET,%1)),|)), %q<why_name> needs [itemize(%q<why_unmet>,|)].,
             )]
         flags: [funsyntax]
       FUN`BUILD`FEAT`FITS:
@@ -1827,8 +1827,8 @@ objects:
           setq(kind_choices,json_query(%0,get,choices))][
           switch(1,
             strmatch(left(%q<kind_choices>,1),\[),list,
-            strlen(json_query(%0,extract,$.choices.filter)),items,
-            strlen(u({{core}}/DATA`CHOICES`[ucstr(firstof(json_query(%0,extract,$.choices.config),json_query(%0,extract,$.choices)))])),config,
+            t(strlen(json_query(%0,extract,$.choices.filter))),items,
+            t(strlen(u({{core}}/DATA`CHOICES`[ucstr(firstof(json_query(%0,extract,$.choices.config),json_query(%0,extract,$.choices)))]))),config,
             none)]
         flags: [funsyntax]
       # The options of an open choice, each value^label, separated by |: value the JSON stored as the selection.
@@ -1966,7 +1966,7 @@ objects:
             backg*, u(%!/FUN`BUILD`LIST`PACK,backgrounds,,%1),
             class*, u(%!/FUN`BUILD`LIST`PACK,classes,,%1),
             feat*, u(%!/FUN`BUILD`LIST`FEATS,lcstr(first(%1)),rest(%1)),
-            choice*, iter(u(%!/FUN`BUILD`CHOICE`OPTIONS,extract(u(%!/FUN`BUILD`CHOICES`OPEN,0),first(%1),1,|)),[inc(#@)]. [after(%i0,^)],|,|),
+            choice*, iter(u(%!/FUN`BUILD`CHOICE`OPTIONS,extract(u(%!/FUN`BUILD`CHOICES`OPEN,0),first(%1),1,|)),#@. [after(%i0,^)],|,|),
             lang*, iter(u(%!/FUN`BUILD`LANGUAGES`OFFER),capstr(%i0),%b,|),
             skill*, iter(u({{core}}/DATA`STATISTICS),if(strmatch(u({{core}}/FUN`STAT`KIND,%i0),skill),u(%!/FUN`SHOW`STAT,%i0)),%b,|),
             gear, u(%!/FUN`BUILD`LIST`GEAR,%1),
