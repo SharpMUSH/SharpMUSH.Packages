@@ -1,18 +1,19 @@
 format: "1.16"
 package: sheet-ironsworn
 title: "Ironsworn sheet"
-version: 1.0.1
+version: 2.0.0
 authors: [SharpMUSH]
-description: "An Ironsworn character sheet: five stats, health, spirit, supply, momentum and experience, and iron vows with progress tracks. +check makes an action roll, a six-sided die plus a stat against two ten-sided challenge dice, for the room; +vow swears, marks and fulfils vows. Based on the Ironsworn SRD under CC BY 4.0."
+description: "An Ironsworn character sheet: five stats and assets built from a ledger, health, spirit, supply and momentum, experience spent on new assets and their abilities with an audited log, companion health, iron vows with progress tracks, and encounters that play from copies of the sheets. +check makes an action roll, a six-sided die plus a stat against two ten-sided challenge dice, for the room; +vow swears, marks and fulfils vows. Based on the Ironsworn SRD under CC BY 4.0."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
-keywords: [sheet, ironsworn, vows, progress, dice]
+keywords: [sheet, ironsworn, vows, assets, dice]
 category: Characters
 requires_server: ">=0.1"
 
-# One permission, for the people who keep sheets: change any character's sheet and vows at any time and read
-# every sheet. A player sets their own stats until they are approved, and keeps their own meters and vows at
-# any time. Changing the stat list and the settings is config.admin, as +config is.
+# One permission, for the people who keep sheets: change any character's sheet and vows at any time, read every
+# sheet, give experience, revoke and clear ledger entries, and run any encounter. A player builds their own sheet
+# until they are approved, then spends experience on assets, and keeps their own meters and vows at any time.
+# Changing the lists and the settings is config.admin, as +config is.
 categories:
   roles:
     - name: Ironsworn sheet
@@ -23,7 +24,7 @@ categories:
 permissions:
   - name: softcode.ironsworn.admin
     category: Ironsworn sheet
-    description: Read every Ironsworn sheet, and change any character's sheet and vows at any time.
+    description: Read every Ironsworn sheet, change any character's sheet and vows at any time, give experience, and run any encounter.
 roles:
   - slug: ironsworn-sheet-keeper
     name: Ironsworn Sheet Keeper
@@ -42,19 +43,24 @@ objects:
   # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook),
   # writes the sheet attributes on characters, and reads them for other packages.
   #
-  # A character's sheet is their own attributes under IRONSWORN`: IRONSWORN`STAT`<KEY> a stat (unset is 1),
-  # IRONSWORN`METER`<KEY> a meter (unset is its start), IRONSWORN`VOW`<KEY> a vow's name with RANK and TICKS
-  # beneath. The IRONSWORN root is wizard-flagged, so only this object writes them.
+  # A character's sheet is their own attributes under IRONSWORN`: IRONSWORN`LEDGER`<n> the entries their stats and
+  # assets are built from, IRONSWORN`METER`<KEY> a meter (unset is its start), IRONSWORN`COMPANION`<ASSET> a
+  # companion's health (unset is its most), IRONSWORN`XP the experience not yet spent, IRONSWORN`LOG`<n> the log of
+  # experience, IRONSWORN`VOW`<KEY> a vow's name with RANK and TICKS beneath, and IRONSWORN`ENCOUNTERS and
+  # IRONSWORN`USING the encounters they are in. The IRONSWORN root is wizard-flagged, so only this object writes
+  # them.
   #
-  # +sheet, +check and +vow are added with /noparse/rsnoparse and hooked to CMD`<word>, so what a player types
-  # reaches the code exactly as typed and nothing a player wrote is ever evaluated.
+  # +sheet, +check, +vow and +encounter are added with /noparse/rsnoparse and hooked to CMD`<word>, so what a
+  # player types reaches the code exactly as typed and nothing a player wrote is ever evaluated.
   #
-  # Trees: CMD` the hooked commands, INC`COMMAND` the parse and dispatch, INC`SHEET`, INC`CHECK` and INC`VOW`
-  # one routine per switch, INC`NEED` the guards they share, INC`DO` the writes. FUN`LIST` the stats, FUN`METER`
-  # the meters, FUN`VOW` the vows, FUN`ROLL` the dice, FUN`PERM` who may do what, FUN`SCREEN` and FUN`DISPLAY`
-  # the screens. API` the functions other packages call (VISUAL), the same names in every sheet package.
-  # Bridges add HINT`<message> lines, GATE`EDIT (a reason a player may not change their own sheet now) and
-  # ALLOW`VIEW`<name> (who else may read a sheet).
+  # Trees: CMD` the hooked commands, INC`COMMAND` the parse and dispatch, INC`SHEET`, INC`CHECK`, INC`VOW` and
+  # INC`ENCOUNTER` one routine per switch, INC`NEED` the guards they share, INC`DO` the writes. FUN`LEDGER` and
+  # FUN`BUILD` the ledger, FUN`STATS`, FUN`ASSETS` and FUN`R the build, FUN`P and FUN`PSET where play happens,
+  # FUN`METER` and FUN`COMPANION` the meters, FUN`XP` and FUN`LOG` experience, FUN`ENC` the encounters, FUN`LIST`
+  # the stats and assets, FUN`VOW` the vows, FUN`ROLL` the dice, FUN`PERM` who may do what, FUN`SCREEN` and
+  # FUN`DISPLAY` the screens. API` the functions other packages call (VISUAL), the same names in every sheet
+  # package. Bridges add HINT`<message> lines, GATE`EDIT (a reason a player may not change their own sheet now)
+  # and ALLOW`VIEW`<name> (who else may read a sheet).
   - ref: sheet
     type: thing
     name: Ironsworn Sheet
@@ -68,22 +74,70 @@ objects:
         Settings for the Ironsworn sheet. One leaf per setting.
       DATA`CONFIG`LABEL: |-
         Ironsworn sheet
-      DATA`CONFIG`CAP: |-
+      DATA`CONFIG`ARRAY: |-
+        3 2 2 1 1
+      DATA`CONFIG`ARRAY`TYPE: |-
+        text
+      DATA`CONFIG`ARRAY`DEFAULT: |-
+        3 2 2 1 1
+      DATA`CONFIG`ARRAY`MAX: |-
+        40
+      DATA`CONFIG`ARRAY`CHECK: |-
+        CHECK`ARRAY
+      DATA`CONFIG`ARRAY`LABEL: |-
+        Starting stats
+      DATA`CONFIG`ARRAY`DESCRIPTION: |-
+        The values a new character gives their stats, one each. Sheet keepers set any stat from 1 to 5.
+      DATA`CONFIG`ARRAY`EXAMPLE: |-
+        3 3 2 1 1
+      DATA`CONFIG`STARTING: |-
         3
-      DATA`CONFIG`CAP`TYPE: |-
+      DATA`CONFIG`STARTING`TYPE: |-
         integer
-      DATA`CONFIG`CAP`DEFAULT: |-
+      DATA`CONFIG`STARTING`DEFAULT: |-
         3
-      DATA`CONFIG`CAP`MIN: |-
-        1
-      DATA`CONFIG`CAP`MAX: |-
-        5
-      DATA`CONFIG`CAP`LABEL: |-
-        Highest stat
-      DATA`CONFIG`CAP`DESCRIPTION: |-
-        The highest a player sets a stat. Sheet keepers may go to 5.
-      DATA`CONFIG`CAP`EXAMPLE: |-
+      DATA`CONFIG`STARTING`MIN: |-
+        0
+      DATA`CONFIG`STARTING`MAX: |-
+        10
+      DATA`CONFIG`STARTING`LABEL: |-
+        Starting assets
+      DATA`CONFIG`STARTING`DESCRIPTION: |-
+        How many assets a new character takes, each with its first ability marked.
+      DATA`CONFIG`STARTING`EXAMPLE: |-
         4
+      DATA`CONFIG`NEWASSET: |-
+        3
+      DATA`CONFIG`NEWASSET`TYPE: |-
+        integer
+      DATA`CONFIG`NEWASSET`DEFAULT: |-
+        3
+      DATA`CONFIG`NEWASSET`MIN: |-
+        0
+      DATA`CONFIG`NEWASSET`MAX: |-
+        99
+      DATA`CONFIG`NEWASSET`LABEL: |-
+        Experience for a new asset
+      DATA`CONFIG`NEWASSET`DESCRIPTION: |-
+        What an approved character spends on a new asset, which comes with its first ability marked.
+      DATA`CONFIG`NEWASSET`EXAMPLE: |-
+        4
+      DATA`CONFIG`UPGRADE: |-
+        2
+      DATA`CONFIG`UPGRADE`TYPE: |-
+        integer
+      DATA`CONFIG`UPGRADE`DEFAULT: |-
+        2
+      DATA`CONFIG`UPGRADE`MIN: |-
+        0
+      DATA`CONFIG`UPGRADE`MAX: |-
+        99
+      DATA`CONFIG`UPGRADE`LABEL: |-
+        Experience for an ability
+      DATA`CONFIG`UPGRADE`DESCRIPTION: |-
+        What marking the next ability of an asset costs.
+      DATA`CONFIG`UPGRADE`EXAMPLE: |-
+        3
       DATA`CONFIG`ADDS: |-
         2 1 0 -1 -2
       DATA`CONFIG`ADDS`TYPE: |-
@@ -150,10 +204,102 @@ objects:
         Order
       DATA`CONFIG`STATS`FIELD`ORDER`DESCRIPTION: |-
         Where it comes in the list: lower first, then by name.
+      DATA`CONFIG`ASSETS`TYPE: |-
+        table
+      DATA`CONFIG`ASSETS`LABEL: |-
+        Assets
+      DATA`CONFIG`ASSETS`DESCRIPTION: |-
+        The assets a character may take: companions, paths, combat talents and rituals, each with three abilities.
+      DATA`CONFIG`ASSETS`STORE: |-
+        {{store}}
+      DATA`CONFIG`ASSETS`PATH: |-
+        ASSET
+      DATA`CONFIG`ASSETS`ENTRY: |-
+        label
+      DATA`CONFIG`ASSETS`FIELDS: |-
+        label type health first second third order
+      DATA`CONFIG`ASSETS`KEYPATTERN: |-
+        ^[A-Za-z0-9-]{1,20}$
+      DATA`CONFIG`ASSETS`FIELD`LABEL`TYPE: |-
+        text
+      DATA`CONFIG`ASSETS`FIELD`LABEL`MIN: |-
+        1
+      DATA`CONFIG`ASSETS`FIELD`LABEL`MAX: |-
+        30
+      DATA`CONFIG`ASSETS`FIELD`LABEL`LABEL: |-
+        Label
+      DATA`CONFIG`ASSETS`FIELD`LABEL`DESCRIPTION: |-
+        The name the sheet shows.
+      DATA`CONFIG`ASSETS`FIELD`TYPE`TYPE: |-
+        text
+      DATA`CONFIG`ASSETS`FIELD`TYPE`MIN: |-
+        1
+      DATA`CONFIG`ASSETS`FIELD`TYPE`MAX: |-
+        20
+      DATA`CONFIG`ASSETS`FIELD`TYPE`CHECK: |-
+        CHECK`ASSETTYPE
+      DATA`CONFIG`ASSETS`FIELD`TYPE`LABEL: |-
+        Type
+      DATA`CONFIG`ASSETS`FIELD`TYPE`DESCRIPTION: |-
+        companion, path, talent or ritual.
+      DATA`CONFIG`ASSETS`FIELD`HEALTH`TYPE: |-
+        integer
+      DATA`CONFIG`ASSETS`FIELD`HEALTH`DEFAULT: |-
+        0
+      DATA`CONFIG`ASSETS`FIELD`HEALTH`MIN: |-
+        0
+      DATA`CONFIG`ASSETS`FIELD`HEALTH`MAX: |-
+        10
+      DATA`CONFIG`ASSETS`FIELD`HEALTH`LABEL: |-
+        Health
+      DATA`CONFIG`ASSETS`FIELD`HEALTH`DESCRIPTION: |-
+        A companion's most health. 0 for an asset with no health of its own.
+      DATA`CONFIG`ASSETS`FIELD`FIRST`TYPE: |-
+        text
+      DATA`CONFIG`ASSETS`FIELD`FIRST`MAX: |-
+        300
+      DATA`CONFIG`ASSETS`FIELD`FIRST`LABEL: |-
+        First ability
+      DATA`CONFIG`ASSETS`FIELD`FIRST`DESCRIPTION: |-
+        The ability that comes with the asset.
+      DATA`CONFIG`ASSETS`FIELD`SECOND`TYPE: |-
+        text
+      DATA`CONFIG`ASSETS`FIELD`SECOND`MAX: |-
+        300
+      DATA`CONFIG`ASSETS`FIELD`SECOND`LABEL: |-
+        Second ability
+      DATA`CONFIG`ASSETS`FIELD`SECOND`DESCRIPTION: |-
+        The ability the first upgrade marks.
+      DATA`CONFIG`ASSETS`FIELD`THIRD`TYPE: |-
+        text
+      DATA`CONFIG`ASSETS`FIELD`THIRD`MAX: |-
+        300
+      DATA`CONFIG`ASSETS`FIELD`THIRD`LABEL: |-
+        Third ability
+      DATA`CONFIG`ASSETS`FIELD`THIRD`DESCRIPTION: |-
+        The ability the second upgrade marks.
+      DATA`CONFIG`ASSETS`FIELD`ORDER`TYPE: |-
+        integer
+      DATA`CONFIG`ASSETS`FIELD`ORDER`DEFAULT: |-
+        50
+      DATA`CONFIG`ASSETS`FIELD`ORDER`MIN: |-
+        0
+      DATA`CONFIG`ASSETS`FIELD`ORDER`MAX: |-
+        999
+      DATA`CONFIG`ASSETS`FIELD`ORDER`LABEL: |-
+        Order
+      DATA`CONFIG`ASSETS`FIELD`ORDER`DESCRIPTION: |-
+        Where it comes in the list: lower first, then by name.
       CHECK`ADDS: |-
         if(cand(eq(words(%0),5),every(%!/FUN`IS`ADD,%0)),,Give five numbers from -5 to 5%, trivial to extreme.)
+      CHECK`ARRAY: |-
+        if(cand(words(%0),every(%!/FUN`IS`STAT,%0)),,Give whole numbers from 1 to 5%, one for each stat.)
+      CHECK`ASSETTYPE: |-
+        if(member(companion path talent ritual,lcstr(%0)),,An asset is a companion%, path%, talent or ritual.)
       FUN`IS`ADD: |-
         cand(isint(%0),gte(%0,-5),lte(%0,5))
+      FUN`IS`STAT: |-
+        cand(isint(%0),gte(%0,1),lte(%0,5))
 
       # Which INC` routine each switch runs: DATA`ROUTE`<table>`<switch>. BARE is the command alone, ARG the
       # command with something after it and no switch.
@@ -165,6 +311,26 @@ objects:
         SHEET`SHOW
       DATA`ROUTE`SHEET`SET: |-
         SHEET`SET
+      DATA`ROUTE`SHEET`CHARGEN: |-
+        SHEET`CHARGEN
+      DATA`ROUTE`SHEET`ASSET: |-
+        SHEET`ASSET
+      DATA`ROUTE`SHEET`UPGRADE: |-
+        SHEET`UPGRADE
+      DATA`ROUTE`SHEET`ASSETS: |-
+        SHEET`ASSETS
+      DATA`ROUTE`SHEET`COMPANION: |-
+        SHEET`COMPANION
+      DATA`ROUTE`SHEET`XP: |-
+        SHEET`XP
+      DATA`ROUTE`SHEET`LEDGER: |-
+        SHEET`LEDGER
+      DATA`ROUTE`SHEET`LOG: |-
+        SHEET`LOG
+      DATA`ROUTE`SHEET`REVOKE: |-
+        SHEET`REVOKE
+      DATA`ROUTE`SHEET`CLEAR: |-
+        SHEET`CLEAR
       DATA`ROUTE`SHEET`HEALTH: |-
         SHEET`METER
       DATA`ROUTE`SHEET`SPIRIT: |-
@@ -172,8 +338,6 @@ objects:
       DATA`ROUTE`SHEET`SUPPLY: |-
         SHEET`METER
       DATA`ROUTE`SHEET`MOMENTUM: |-
-        SHEET`METER
-      DATA`ROUTE`SHEET`XP: |-
         SHEET`METER
       DATA`ROUTE`SHEET`TRAITS: |-
         SHEET`TRAITS
@@ -195,11 +359,31 @@ objects:
         VOW`FULFIL
       DATA`ROUTE`VOW`FORSAKE: |-
         VOW`FORSAKE
+      DATA`ROUTE`ENCOUNTER`BARE: |-
+        ENCOUNTER`SHOW
+      DATA`ROUTE`ENCOUNTER`ARG: |-
+        ENCOUNTER`SHOW
+      DATA`ROUTE`ENCOUNTER`START: |-
+        ENCOUNTER`START
+      DATA`ROUTE`ENCOUNTER`JOIN: |-
+        ENCOUNTER`JOIN
+      DATA`ROUTE`ENCOUNTER`USE: |-
+        ENCOUNTER`USE
+      DATA`ROUTE`ENCOUNTER`ADD: |-
+        ENCOUNTER`ADD
+      DATA`ROUTE`ENCOUNTER`REMOVE: |-
+        ENCOUNTER`REMOVE
+      DATA`ROUTE`ENCOUNTER`LEAVE: |-
+        ENCOUNTER`LEAVE
+      DATA`ROUTE`ENCOUNTER`KEEP: |-
+        ENCOUNTER`KEEP
+      DATA`ROUTE`ENCOUNTER`END: |-
+        ENCOUNTER`END
       DATA`DIFFICULTIES: |-
         trivial easy standard hard extreme
       # The meters: the switch that changes each, its label, and its range and start (unset counts as the start).
       DATA`METERS: |-
-        HEALTH SPIRIT SUPPLY MOMENTUM XP
+        HEALTH SPIRIT SUPPLY MOMENTUM
       DATA`METER`HEALTH: |-
         Health
       DATA`METER`HEALTH`RANGE: |-
@@ -216,10 +400,6 @@ objects:
         Momentum
       DATA`METER`MOMENTUM`RANGE: |-
         -6 10 2
-      DATA`METER`XP: |-
-        Experience
-      DATA`METER`XP`RANGE: |-
-        0 999 0
       # Vow ranks, easiest first: the ticks one mark of progress fills. Ten boxes of four ticks each.
       DATA`RANKS: |-
         troublesome dangerous formidable extreme epic
@@ -233,6 +413,15 @@ objects:
         2
       DATA`RANK`EPIC: |-
         1
+      # An asset's abilities, in the order they are marked.
+      DATA`ABILITIES: |-
+        FIRST SECOND THIRD
+      # The most entries a character's ledger holds; a sheet keeper's +sheet/clear starts it again.
+      DATA`LEDGER`MAX: |-
+        200
+      # The most entries a character's log keeps; past it the oldest goes.
+      DATA`LOG`MAX: |-
+        500
 
       # ---- commands ---------------------------------------------------------------
       # %1 the switches and %2 what follows, exactly as typed.
@@ -247,6 +436,10 @@ objects:
       CMD`VOW:
         value: |-
           $(?is)^\+vow(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,vow,table,VOW,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`ENCOUNTER:
+        value: |-
+          $(?is)^\+encounter(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,encounter,table,ENCOUNTER,switches,%1,argument,%2
         flags: [regexp, cmdsyntax]
       # A line a bridge adds to one of this object's messages: HINT`<message>, set here by a bridge such as
       # sheet-ironsworn-help. %1 on are passed to it. Nothing when no bridge set one, so the message stands without it.
@@ -281,20 +474,56 @@ objects:
         value: |-
           @assert strlen(setr(sheet_who,u(%!/FUN`PLAYER`MATCH,%<name>)))=@pemit %#=notice(SHEET,There is no player called '%<name>'.,warn)
         flags: [cmdsyntax]
-      # %<text>: <name>/<what> for a sheet keeper, else <what> on your own sheet. sheet_who and sheet_what.
+      # The left of =, or the whole argument when there is no =: <name>/<what> names someone else, else <what>
+      # is on your own sheet. sheet_who and sheet_what. The routine then says who may change it.
       INC`NEED`WHO:
         value: |-
-          @if strmatch(%<text>,*/*)={@include/args %!/INC`NEED`TARGET=name,before(%<text>,/); think setq(sheet_what,trim(after(%<text>,/)))},{think setqm(sheet_who,%q<viewer_objid>,sheet_what,%<text>)}; @assert strlen(%q<sheet_who>); @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error)
+          think setq(who_typed,if(%q<cmd_has_equals>,%q<cmd_left_side>,%q<cmd_argument>)); think setq(who_named,if(strmatch(%q<who_typed>,*/*),trim(before(%q<who_typed>,/)))); @include/args %!/INC`NEED`TARGET=name,firstof(%q<who_named>,%#); think setq(sheet_what,trim(if(strlen(%q<who_named>),after(%q<who_typed>,/),%q<who_typed>)))
         flags: [cmdsyntax]
-      # Changes only a keeper makes once a character is approved: stats.
-      INC`NEED`EDITABLE:
+      # <name>=<value> names someone else, else <value> is for your own sheet: sheet_who and sheet_value.
+      INC`NEED`WHOVALUE:
         value: |-
-          @assert cor(%q<viewer_keeper>,not(isapproved(%#)))=@pemit %#=notice(SHEET,Your character is approved%, so staff change your sheet now.,error); @assert cor(%q<viewer_keeper>,not(strlen(setr(set_gate,u(%!/FUN`GATE`EDIT,%#)))))=@pemit %#=notice(SHEET,%q<set_gate>,warn)
+          @include/args %!/INC`NEED`TARGET=name,if(%q<cmd_has_equals>,%q<cmd_left_side>,%#); think setq(sheet_value,if(%q<cmd_has_equals>,%q<cmd_right_side>,%q<cmd_argument>))
+        flags: [cmdsyntax]
+      # Changes to the build and the vows: only a sheet keeper names someone else.
+      INC`NEED`OWNSHEET:
+        value: |-
+          @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error)
+        flags: [cmdsyntax]
+      # Changes in play (meters, companions): yourself, a sheet keeper, or the GM of the encounter whose copy the
+      # character plays from.
+      INC`NEED`PLAY:
+        value: |-
+          think setq(play_runs,u(%!/FUN`PERM`RUNS,%#,%q<sheet_who>)); @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)),%q<play_runs>)=@pemit %#=notice(SHEET,Only sheet keepers%, and the GM of an encounter [name(%q<sheet_who>)] plays in%, change [poss(%q<sheet_who>)] sheet.,error)
+        flags: [cmdsyntax]
+      # A player making their own character: not stopped by a bridge's GATE`EDIT.
+      INC`NEED`GATE:
+        value: |-
+          @assert cor(%q<viewer_keeper>,not(strlen(setr(set_gate,u(%!/FUN`GATE`EDIT,%#)))))=@pemit %#=notice(SHEET,%q<set_gate>,warn)
+        flags: [cmdsyntax]
+      # Setting stats: a keeper at any time (phase staff), a player on their own sheet until they are approved
+      # (phase chargen). sheet_phase, and sheet_rows, the ledger's entries in force.
+      INC`NEED`BUILD:
+        value: |-
+          @include %!/INC`NEED`OWNSHEET; @assert cor(%q<viewer_keeper>,not(isapproved(%#)))=@pemit %#=notice(SHEET,Your character is approved%, so staff change your stats now. +sheet/asset and +sheet/upgrade spend experience.,error); @include %!/INC`NEED`GATE; @include %!/INC`NEED`ROOM; think setqm(sheet_phase,if(%q<viewer_keeper>,staff,chargen),sheet_rows,u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%q<sheet_who>)))
+        flags: [cmdsyntax]
+      INC`NEED`ROOM:
+        value: |-
+          @assert lt(words(lattr(%q<sheet_who>/IRONSWORN`LEDGER`*)),get(%!/DATA`LEDGER`MAX))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s ledger is full. A sheet keeper's +sheet/clear starts it again.,warn)
+        flags: [cmdsyntax]
+      INC`NEED`KEEPER:
+        value: |-
+          @assert %q<viewer_keeper>=@pemit %#=notice(SHEET,Only sheet keepers do that.,error)
         flags: [cmdsyntax]
       # %<key> typed text: trait_key, the stat it names.
       INC`NEED`STAT:
         value: |-
           @assert strlen(setr(trait_key,u(%!/FUN`LIST`FIND,STAT,%<key>)))=@pemit %#=notice(SHEET,There is no stat '%<key>'. Give [itemize(lcstr(u(%!/FUN`LIST`ALL,STAT)),,or)].,warn)
+        flags: [cmdsyntax]
+      # %<key> typed text: asset_key, the asset it names.
+      INC`NEED`ASSET:
+        value: |-
+          @assert strlen(setr(asset_key,u(%!/FUN`LIST`FIND,ASSET,%<key>)))=@pemit %#=notice(SHEET,There is no asset '%<key>'. +sheet/assets lists them.,warn)
         flags: [cmdsyntax]
       # %<name> typed text: vow_key, the vow of sheet_who it names.
       INC`NEED`VOW:
@@ -302,25 +531,84 @@ objects:
           @assert strlen(%<name>)=@pemit %#=notice(VOW,Name the vow.,warn); @assert strlen(setr(vow_key,u(%!/FUN`VOW`FIND,%q<sheet_who>,%<name>)))=@pemit %#=notice(VOW,[name(%q<sheet_who>)] has sworn no vow '%<name>'. +vow lists them.,warn)
         flags: [cmdsyntax]
 
-      # ---- +sheet -----------------------------------------------------------------
+      # ---- +sheet: the build ----------------------------------------------------------
       INC`SHEET`SHOW:
         value: |-
-          @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert strlen(%q<sheet_who>); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`SHEET,%q<sheet_who>,%#)
+          @include/args %!/INC`NEED`TARGET=name,firstof(%q<cmd_argument>,%#); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`SHEET,%q<sheet_who>,%#)
         flags: [cmdsyntax]
-      # +sheet/set [<name>/]<stat>=<n>: 1 up to the cap, or 5 for a keeper. Empty puts it back to 1.
+      # +sheet/set [<name>/]<stat>=<value>. A player gives each stat one of the starting values; a keeper sets any
+      # stat from 1 to 5. Empty leaves it unassigned, which counts as 1.
       INC`SHEET`SET:
         value: |-
-          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/set <stat>=<value>%, such as +sheet/set [lcstr(first(u(%!/FUN`LIST`ALL,STAT)))]=3.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_left_side>; @include %!/INC`NEED`EDITABLE; @include/args %!/INC`NEED`STAT=key,%q<sheet_what>; think setqm(set_value,firstof(%q<cmd_right_side>,1),set_high,if(%q<viewer_keeper>,5,get(%!/DATA`CONFIG`CAP))); @assert cand(isint(%q<set_value>),gte(%q<set_value>,1),lte(%q<set_value>,%q<set_high>))=@pemit %#=notice(SHEET,A stat is a whole number from 1 to %q<set_high>.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,STAT`%q<trait_key>,value,if(neq(%q<set_value>,1),%q<set_value>); @pemit %#=notice(SHEET,[u(%!/FUN`LIST`LABEL,STAT,%q<trait_key>)] is %q<set_value> on [name(%q<sheet_who>)]'s sheet.[if(not(comp(%q<sheet_who>,%q<viewer_objid>)),u(%!/FUN`HINT,SET))],ok)
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/set <stat>=<value>%, such as +sheet/set [lcstr(first(u(%!/FUN`LIST`ALL,STAT)))]=3.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`BUILD; @include/args %!/INC`NEED`STAT=key,%q<sheet_what>; think setqm(set_value,%q<cmd_right_side>,set_stats,u(%!/FUN`STATS`ROWS,%q<sheet_rows>),set_top,if(%q<viewer_keeper>,5,lmax(get(%!/DATA`CONFIG`ARRAY)))); think setq(set_others,squish(iter(%q<set_stats>,if(comp(before(%i0,=),%q<trait_key>),after(%i0,=))))); @assert cor(not(strlen(%q<set_value>)),cand(isint(%q<set_value>),gte(%q<set_value>,1),lte(%q<set_value>,%q<set_top>)))=@pemit %#=notice(SHEET,A stat is a whole number from 1 to %q<set_top>.,warn); @assert cor(%q<viewer_keeper>,not(strlen(%q<set_value>)),u(%!/FUN`FITS,%q<set_others> %q<set_value>,get(%!/DATA`CONFIG`ARRAY)))=@pemit %#=notice(SHEET,Your stats take [itemize(get(%!/DATA`CONFIG`ARRAY))]%, one value each. [u(%!/FUN`DISPLAY`ARRAYLEFT,%q<set_others>)],warn); @include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,stat,key,%q<trait_key>,value,%q<set_value>,phase,%q<sheet_phase>; @pemit %#=notice(SHEET,[u(%!/FUN`LIST`LABEL,STAT,%q<trait_key>)] is [firstof(%q<set_value>,unassigned)] on [name(%q<sheet_who>)]'s sheet.[u(%!/FUN`CHARGEN`AFTER,%q<sheet_who>)],ok)
         flags: [cmdsyntax]
-      # +sheet/<meter> [<name>=]+<n>|-<n>|<n>|reset: health, spirit, supply, momentum or xp, kept within its range.
-      # reset puts it back to its start: momentum to +2, the others to their most.
-      INC`SHEET`METER:
+      # +sheet/chargen [<name>]: the steps of making a character and how far they are.
+      INC`SHEET`CHARGEN:
         value: |-
-          think setqm(meter_key,ucstr(%q<cmd_switch>),meter_label,lcstr(v(DATA`METER`[ucstr(%q<cmd_switch>)])),meter_range,v(DATA`METER`[ucstr(%q<cmd_switch>)]`RANGE)); @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/%q<cmd_switch> +<n> adds%, -<n> takes away%, <n> sets it and reset puts it back to [last(%q<meter_range>)]. [capstr(%q<meter_label>)] runs from [first(%q<meter_range>)] to [extract(%q<meter_range>,2,1)].,warn); @if %q<cmd_has_equals>={@include/args %!/INC`NEED`WHO=text,%q<cmd_left_side>/; think setq(meter_typed,%q<cmd_right_side>)},{think setqm(sheet_who,%q<viewer_objid>,meter_typed,%q<cmd_argument>)}; @assert cand(strlen(%q<sheet_who>),cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))); think setqm(meter_now,u(%!/API`METER,%q<sheet_who>,%q<meter_key>),meter_to,cond(strmatch(%q<meter_typed>,reset),last(%q<meter_range>),strmatch(%q<meter_typed>,+*),add(%q<meter_now>,rest(%q<meter_typed>,+)),strmatch(%q<meter_typed>,-*),add(%q<meter_now>,%q<meter_typed>),%q<meter_typed>)); @assert isint(%q<meter_to>)=@pemit %#=notice(SHEET,'%q<meter_typed>' is not a number. Give +<n>%, -<n>%, <n> or reset.,warn); think setq(meter_new,u(%!/API`ADJUST,%q<sheet_who>,%q<meter_key>,sub(%q<meter_to>,%q<meter_now>))); @pemit %#=notice(SHEET,u(%!/FUN`DISPLAY`METER,%q<sheet_who>,%q<meter_key>,%q<meter_new>)[if(neq(%q<meter_new>,%q<meter_to>),%b%(it runs from [first(%q<meter_range>)] to [extract(%q<meter_range>,2,1)]%))].,ok)
+          @include/args %!/INC`NEED`TARGET=name,firstof(%q<cmd_argument>,%#); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`CHARGEN,%q<sheet_who>,%#)
+        flags: [cmdsyntax]
+      # +sheet/asset [<name>/]<asset>[=remove]. Making a character, a player takes their starting assets and gives
+      # them back with =remove. An approved player spends experience on a new one; a keeper gives or takes one free.
+      # A new asset comes with its first ability marked.
+      INC`SHEET`ASSET:
+        value: |-
+          @include %!/INC`NEED`WHO; @include %!/INC`NEED`OWNSHEET; @assert strlen(%q<sheet_what>)=@pemit %#=notice(SHEET,+sheet/asset <asset> takes an asset%, such as +sheet/asset [lcstr(first(u(%!/FUN`LIST`ALL,ASSET)))]. +sheet/assets lists them.,warn); @assert cor(not(%q<cmd_has_equals>),strmatch(%q<cmd_right_side>,remove))=@pemit %#=notice(SHEET,+sheet/asset <asset>=remove gives an asset back.,warn); @include %!/INC`NEED`ROOM; @include/args %!/INC`NEED`ASSET=key,%q<sheet_what>; think setqm(asset_phase,if(%q<viewer_keeper>,staff,if(isapproved(%#),play,chargen)),asset_held,u(%!/FUN`R`ASSET,u(%!/FUN`ASSETS`LIVE,%q<sheet_who>),%q<asset_key>),asset_label,u(%!/FUN`LIST`LABEL,ASSET,%q<asset_key>)); @if strmatch(%q<asset_phase>,chargen)={@include %!/INC`NEED`GATE}; @break %q<cmd_has_equals>={@assert %q<asset_held>=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] does not have %q<asset_label>.,warn); @assert comp(%q<asset_phase>,play)=@pemit %#=notice(SHEET,Only sheet keepers take an asset away once a character is approved.,error); @include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,asset,key,%q<asset_key>,value,0,phase,%q<asset_phase>; @pemit %#=notice(SHEET,[name(%q<sheet_who>)] no longer has %q<asset_label>.[u(%!/FUN`CHARGEN`AFTER,%q<sheet_who>)],ok)}; @assert not(%q<asset_held>)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<asset_label> already. +sheet/upgrade %q<asset_label> marks its next ability.,warn); think setqm(asset_cost,if(strmatch(%q<asset_phase>,play),get(%!/DATA`CONFIG`NEWASSET),0),asset_xp,u(%!/API`XP,%q<sheet_who>),asset_count,words(u(%!/FUN`ASSETS`LIVE,%q<sheet_who>))); @assert cor(comp(%q<asset_phase>,chargen),lt(%q<asset_count>,get(%!/DATA`CONFIG`STARTING)))=@pemit %#=notice(SHEET,You have your [get(%!/DATA`CONFIG`STARTING)] starting assets. +sheet/asset <asset>=remove gives one back.,warn); @assert gte(%q<asset_xp>,%q<asset_cost>)=@pemit %#=notice(SHEET,A new asset costs %q<asset_cost> experience%, and [name(%q<sheet_who>)] has %q<asset_xp>.,warn); @include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,asset,key,%q<asset_key>,value,1,phase,%q<asset_phase>; @if %q<asset_cost>={think u(%!/FUN`XP`ADD,%q<sheet_who>,-%q<asset_cost>,New asset: %q<asset_label>)}; @pemit %#=notice(SHEET,[name(%q<sheet_who>)] takes %q<asset_label>[if(%q<asset_cost>,%b%(%q<asset_cost> experience spent%))]: [get({{store}}/ASSET`%q<asset_key>`FIRST)][u(%!/FUN`CHARGEN`AFTER,%q<sheet_who>)],ok)
+        flags: [cmdsyntax]
+      # +sheet/upgrade [<name>/]<asset>: marks the asset's next ability. An approved player spends experience; a
+      # keeper marks it free.
+      INC`SHEET`UPGRADE:
+        value: |-
+          @include %!/INC`NEED`WHO; @include %!/INC`NEED`OWNSHEET; @assert strlen(%q<sheet_what>)=@pemit %#=notice(SHEET,+sheet/upgrade <asset> marks its next ability.,warn); @assert cor(%q<viewer_keeper>,isapproved(%#))=@pemit %#=notice(SHEET,Upgrades come after approval. +sheet/chargen shows what to do now.,warn); @include %!/INC`NEED`ROOM; @include/args %!/INC`NEED`ASSET=key,%q<sheet_what>; think setqm(up_label,u(%!/FUN`LIST`LABEL,ASSET,%q<asset_key>),up_now,u(%!/FUN`R`ASSET,u(%!/FUN`ASSETS`LIVE,%q<sheet_who>),%q<asset_key>),up_cost,if(%q<viewer_keeper>,0,get(%!/DATA`CONFIG`UPGRADE)),up_xp,u(%!/API`XP,%q<sheet_who>)); @assert %q<up_now>=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] does not have %q<up_label>. +sheet/asset %q<up_label> takes it.,warn); @assert lt(%q<up_now>,3)=@pemit %#=notice(SHEET,Every ability of %q<up_label> is marked.,warn); @assert gte(%q<up_xp>,%q<up_cost>)=@pemit %#=notice(SHEET,An ability costs %q<up_cost> experience%, and [name(%q<sheet_who>)] has %q<up_xp>.,warn); @include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,asset,key,%q<asset_key>,value,inc(%q<up_now>),phase,if(%q<viewer_keeper>,staff,play); @if %q<up_cost>={think u(%!/FUN`XP`ADD,%q<sheet_who>,-%q<up_cost>,Upgrade: %q<up_label> [inc(%q<up_now>)])}; @pemit %#=notice(SHEET,[name(%q<sheet_who>)] marks the [lcstr(extract(v(DATA`ABILITIES),inc(%q<up_now>),1))] ability of %q<up_label>[if(%q<up_cost>,%b%(%q<up_cost> experience spent%))]: [get({{store}}/ASSET`%q<asset_key>`[extract(v(DATA`ABILITIES),inc(%q<up_now>),1)])],ok)
+        flags: [cmdsyntax]
+      # +sheet/assets [<asset>]: the assets there are, or one asset's abilities.
+      INC`SHEET`ASSETS:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=u(%!/FUN`SCREEN`ASSETS); @include/args %!/INC`NEED`ASSET=key,%q<cmd_argument>; @pemit %#=u(%!/FUN`SCREEN`ASSET,%q<asset_key>,%q<viewer_objid>)
+        flags: [cmdsyntax]
+      # +sheet/xp <name>=<n> [<reason>] sets their experience; +<n> or -<n> gives or takes. Logged.
+      INC`SHEET`XP:
+        value: |-
+          @include %!/INC`NEED`KEEPER; @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/xp <name>=+<n> %[<reason>%] gives experience%, -<n> takes and <n> sets: +sheet/xp Alice=+2 Fulfilled a sworn oath.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; think setqm(xp_typed,first(%q<cmd_right_side>),xp_reason,rest(%q<cmd_right_side>),xp_old,u(%!/API`XP,%q<sheet_who>)); think setq(set_value,if(member(+ -,left(%q<xp_typed>,1)),add(%q<xp_old>,edit(%q<xp_typed>,+,)),%q<xp_typed>)); @assert cand(isint(%q<set_value>),gte(%q<set_value>,0),lte(%q<set_value>,999))=@pemit %#=notice(SHEET,Experience is a whole number from 0 to 999.,warn); think u(%!/FUN`XP`ADD,%q<sheet_who>,sub(%q<set_value>,%q<xp_old>),%q<xp_reason>); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<set_value> experience.,ok); @pemit %q<sheet_who>=notice(SHEET,[name(%#)] [if(lt(%q<set_value>,%q<xp_old>),takes [sub(%q<xp_old>,%q<set_value>)] experience from you,gives you [sub(%q<set_value>,%q<xp_old>)] experience)][if(strlen(%q<xp_reason>),: %q<xp_reason>)]. You have %q<set_value>.)
+        flags: [cmdsyntax]
+      # +sheet/ledger [<name>]: every entry the sheet is built from, oldest first.
+      INC`SHEET`LEDGER:
+        value: |-
+          @include/args %!/INC`NEED`TARGET=name,firstof(%q<cmd_argument>,%#); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`LEDGER,%q<sheet_who>)
+        flags: [cmdsyntax]
+      # +sheet/log [<name>]: the latest changes to experience, who made them and why.
+      INC`SHEET`LOG:
+        value: |-
+          @include/args %!/INC`NEED`TARGET=name,firstof(%q<cmd_argument>,%#); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`LOG,%q<sheet_who>)
+        flags: [cmdsyntax]
+      # +sheet/revoke <name>/<n>: takes back one entry.
+      INC`SHEET`REVOKE:
+        value: |-
+          @include %!/INC`NEED`KEEPER; @include %!/INC`NEED`WHO; @include %!/INC`NEED`ROOM; think setq(revoke_row,grab(u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%q<sheet_who>)),%q<sheet_what>~*)); @assert cand(isint(%q<sheet_what>),strlen(%q<revoke_row>))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has no entry '%q<sheet_what>' in force. +sheet/ledger [name(%q<sheet_who>)] lists them.,warn); @include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,revoke,key,,value,%q<sheet_what>,phase,staff; @pemit %#=notice(SHEET,Revoked [name(%q<sheet_who>)]'s entry %q<sheet_what>: [u(%!/FUN`DISPLAY`ENTRY,%q<revoke_row>)].,ok)
+        flags: [cmdsyntax]
+      # +sheet/clear <name>: revokes the whole build; character creation starts again. Experience, meters and vows
+      # stay.
+      INC`SHEET`CLEAR:
+        value: |-
+          @include %!/INC`NEED`KEEPER; @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/clear <name> revokes everything on their sheet's ledger.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>; @assert words(u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%q<sheet_who>)))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s sheet has nothing to clear.,warn); @include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,clear,key,,value,,phase,staff; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s build is cleared %(entry %q<entry_n>%). +sheet/chargen [name(%q<sheet_who>)] shows the steps.,ok)
         flags: [cmdsyntax]
       INC`SHEET`TRAITS:
         value: |-
           @pemit %#=u(%!/FUN`SCREEN`TRAITS)
+        flags: [cmdsyntax]
+
+      # ---- +sheet: play ---------------------------------------------------------------
+      # Meters and companion health change on the encounter's copy when the character plays from one, else on the
+      # sheet. FUN`P reads one of them and FUN`PSET writes it, wherever it is now.
+      # +sheet/<meter> [<name>=]+<n>|-<n>|<n>|reset: health, spirit, supply or momentum, kept within its range.
+      # reset puts it back to its start: momentum to +2, the others to their most.
+      INC`SHEET`METER:
+        value: |-
+          think setqm(meter_key,ucstr(%q<cmd_switch>),meter_label,lcstr(v(DATA`METER`[ucstr(%q<cmd_switch>)])),meter_range,v(DATA`METER`[ucstr(%q<cmd_switch>)]`RANGE)); @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/%q<cmd_switch> +<n> adds%, -<n> takes away%, <n> sets it and reset puts it back to [last(%q<meter_range>)]. [capstr(%q<meter_label>)] runs from [first(%q<meter_range>)] to [extract(%q<meter_range>,2,1)].,warn); @include %!/INC`NEED`WHOVALUE; @include %!/INC`NEED`PLAY; think setqm(meter_now,u(%!/FUN`METER`NOW,%q<sheet_who>,%q<meter_key>,),meter_typed,%q<sheet_value>); think setq(meter_to,cond(strmatch(%q<meter_typed>,reset),last(%q<meter_range>),strmatch(%q<meter_typed>,+*),add(%q<meter_now>,rest(%q<meter_typed>,+)),strmatch(%q<meter_typed>,-*),add(%q<meter_now>,%q<meter_typed>),%q<meter_typed>)); @assert isint(%q<meter_to>)=@pemit %#=notice(SHEET,'%q<meter_typed>' is not a number. Give +<n>%, -<n>%, <n> or reset.,warn); think setq(meter_new,u(%!/FUN`METER`SET,%q<sheet_who>,%q<meter_key>,%q<meter_to>,)); @pemit %#=notice(SHEET,u(%!/FUN`DISPLAY`METER,%q<sheet_who>,%q<meter_key>,%q<meter_new>)[if(neq(%q<meter_new>,%q<meter_to>),%b%(it runs from [first(%q<meter_range>)] to [extract(%q<meter_range>,2,1)]%))][u(%!/FUN`DISPLAY`WHERE,%q<sheet_who>)].,ok)
+        flags: [cmdsyntax]
+      # +sheet/companion [<name>/]<asset>=+<n>|-<n>|<n>|reset: a companion's health, 0 up to its most.
+      INC`SHEET`COMPANION:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/companion <asset>=-<n> hurts a companion%, +<n> heals it%, <n> sets its health and reset puts it back to its most.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`PLAY; @include/args %!/INC`NEED`ASSET=key,%q<sheet_what>; think setqm(comp_label,u(%!/FUN`LIST`LABEL,ASSET,%q<asset_key>),comp_max,default({{store}}/ASSET`%q<asset_key>`HEALTH,0)); @assert gt(%q<comp_max>,0)=@pemit %#=notice(SHEET,%q<comp_label> has no health of its own.,warn); @assert u(%!/FUN`R`ASSET,u(%!/FUN`ASSETS,%q<sheet_who>),%q<asset_key>)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] does not have %q<comp_label>.,warn); think setqm(comp_now,u(%!/FUN`COMPANION`NOW,%q<sheet_who>,%q<asset_key>,),comp_typed,%q<cmd_right_side>); think setq(comp_to,cond(strmatch(%q<comp_typed>,reset),%q<comp_max>,strmatch(%q<comp_typed>,+*),add(%q<comp_now>,rest(%q<comp_typed>,+)),strmatch(%q<comp_typed>,-*),add(%q<comp_now>,%q<comp_typed>),%q<comp_typed>)); @assert isint(%q<comp_to>)=@pemit %#=notice(SHEET,'%q<comp_typed>' is not a number. Give +<n>%, -<n>%, <n> or reset.,warn); think setq(comp_new,bound(%q<comp_to>,0,%q<comp_max>)); think u(%!/FUN`PSET,%q<sheet_who>,COMPANION`%q<asset_key>,if(neq(%q<comp_new>,%q<comp_max>),%q<comp_new>),); @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s %q<comp_label> has %q<comp_new> of %q<comp_max> health[u(%!/FUN`DISPLAY`WHERE,%q<sheet_who>)].[if(not(%q<comp_new>),%bIt is out of action.)],ok)
         flags: [cmdsyntax]
 
       # ---- +check -----------------------------------------------------------------
@@ -328,10 +616,11 @@ objects:
         value: |-
           @pemit %#=notice(SHEET,+check <stat>%[=<difficulty>%]%, such as +check iron or +check wits=hard. +<n> or -<n> after the stat adds or takes from the action die. /private rolls where only you see it.,warn)
         flags: [cmdsyntax]
-      # +check[/private] <stat>[+<n>|-<n>][=<difficulty>]: an action roll for the room.
+      # +check[/private] <stat>[+<n>|-<n>][=<difficulty>]: an action roll for the room. In an encounter the copy's
+      # stats roll.
       INC`CHECK`ROLL:
         value: |-
-          @assert strlen(%q<cmd_argument>)=@include %!/INC`CHECK`USAGE; think u(%!/FUN`CHECK`READ,%q<cmd_left_side>); @assert isint(%q<check_modifier>)=@pemit %#=notice(SHEET,'%q<cmd_left_side>' ends in something that is not a number to add.,warn); @include/args %!/INC`NEED`STAT=key,%q<check_typed>; think setq(check_adds,u(%!/API`TARGET,%q<cmd_right_side>)); @assert cor(not(%q<cmd_has_equals>),strlen(%q<check_adds>))=@pemit %#=notice(SHEET,'%q<cmd_right_side>' is not a difficulty. Give [itemize(v(DATA`DIFFICULTIES),,or)].,warn); think setq(check_result,uargs(%!/API`CHECK,roller,%q<viewer_objid>,trait,%q<trait_key>,modifier,%q<check_modifier>,target,%q<check_adds>)); @assert not(strmatch(%q<check_result>,#-*))=@pemit %#=notice(SHEET,%q<check_result>,error); think setq(check_line,u(%!/FUN`DISPLAY`CHECK,%q<check_result>)); @break member(%q<cmd_switch_list>,private)=@pemit %#=notice(SHEET,You privately roll %q<check_line>); @remit %l=notice(SHEET,tone(strong,name(%#)) rolls %q<check_line>)
+          @assert strlen(%q<cmd_argument>)=@include %!/INC`CHECK`USAGE; think u(%!/FUN`CHECK`READ,%q<cmd_left_side>); @assert isint(%q<check_modifier>)=@pemit %#=notice(SHEET,'%q<cmd_left_side>' ends in something that is not a number to add.,warn); @include/args %!/INC`NEED`STAT=key,%q<check_typed>; think setq(check_adds,u(%!/API`TARGET,%q<cmd_right_side>)); @assert cor(not(%q<cmd_has_equals>),strlen(%q<check_adds>))=@pemit %#=notice(SHEET,'%q<cmd_right_side>' is not a difficulty. Give [itemize(v(DATA`DIFFICULTIES),,or)].,warn); think setq(check_result,u(%!/FUN`CHECK`ROLLED,%q<trait_key>,u(%!/FUN`R,u(%!/FUN`STATS,%q<viewer_objid>),%q<trait_key>),add(%q<check_modifier>,firstof(%q<check_adds>,0)),%q<check_adds>)); think setq(check_line,u(%!/FUN`DISPLAY`CHECK,%q<check_result>)); @break member(%q<cmd_switch_list>,private)=@pemit %#=notice(SHEET,You privately roll %q<check_line>); @remit %l=notice(SHEET,tone(strong,name(%#)) rolls %q<check_line>)
         flags: [cmdsyntax]
       # %0 the stat as typed, with a number to add at its end: check_typed and check_modifier (0 when none).
       FUN`CHECK`READ:
@@ -343,43 +632,380 @@ objects:
         flags: [funsyntax]
 
       # ---- +vow -------------------------------------------------------------------
+      # Vows are on the sheet itself, whatever encounter the character is in.
       # +vow [<name>]: a character's vows.
       INC`VOW`LIST:
         value: |-
-          @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert strlen(%q<sheet_who>); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(VOW,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] vows.,error); @pemit %#=u(%!/FUN`SCREEN`VOWS,%q<sheet_who>)
+          @include/args %!/INC`NEED`TARGET=name,firstof(%q<cmd_argument>,%#); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(VOW,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] vows.,error); @pemit %#=u(%!/FUN`SCREEN`VOWS,%q<sheet_who>)
         flags: [cmdsyntax]
       # +vow/swear [<name>/]<vow>=<rank>.
       INC`VOW`SWEAR:
         value: |-
-          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>))=@pemit %#=notice(VOW,+vow/swear <vow>=<rank>%, the rank [itemize(v(DATA`RANKS),,or)].,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_left_side>; @assert cand(lte(strlen(%q<sheet_what>),60),not(strmatch(%q<sheet_what>,*`*)))=@pemit %#=notice(VOW,Name a vow in 60 characters or fewer.,warn); @assert member(v(DATA`RANKS),lcstr(%q<cmd_right_side>))=@pemit %#=notice(VOW,A vow is [itemize(v(DATA`RANKS),,or)].,warn); think setq(vow_key,u(%!/FUN`VOW`KEY,%q<sheet_what>)); @assert strlen(%q<vow_key>)=@pemit %#=notice(VOW,Give the vow a name with a letter or number in it.,warn); @assert not(hasattr(%q<sheet_who>,IRONSWORN`VOW`%q<vow_key>))=@pemit %#=notice(VOW,[name(%q<sheet_who>)] has sworn a vow called that already.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,VOW`%q<vow_key>,value,%q<sheet_what>; @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,VOW`%q<vow_key>`RANK,value,lcstr(%q<cmd_right_side>); @remit %l=notice(VOW,tone(strong,name(%q<sheet_who>)) swears an iron vow: %q<sheet_what> %([lcstr(%q<cmd_right_side>)]%).)
+          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>))=@pemit %#=notice(VOW,+vow/swear <vow>=<rank>%, the rank [itemize(v(DATA`RANKS),,or)].,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`OWNSHEET; @assert cand(strlen(%q<sheet_what>),lte(strlen(%q<sheet_what>),60),not(strmatch(%q<sheet_what>,*`*)))=@pemit %#=notice(VOW,Name a vow in 60 characters or fewer.,warn); @assert member(v(DATA`RANKS),lcstr(%q<cmd_right_side>))=@pemit %#=notice(VOW,A vow is [itemize(v(DATA`RANKS),,or)].,warn); think setq(vow_key,u(%!/FUN`VOW`KEY,%q<sheet_what>)); @assert strlen(%q<vow_key>)=@pemit %#=notice(VOW,Give the vow a name with a letter or number in it.,warn); @assert not(hasattr(%q<sheet_who>,IRONSWORN`VOW`%q<vow_key>))=@pemit %#=notice(VOW,[name(%q<sheet_who>)] has sworn a vow called that already.,warn); think [u(%!/FUN`API`ROOT,%q<sheet_who>)][attrib_set(%q<sheet_who>/IRONSWORN`VOW`%q<vow_key>,%q<sheet_what>)][attrib_set(%q<sheet_who>/IRONSWORN`VOW`%q<vow_key>`RANK,lcstr(%q<cmd_right_side>))]; @remit %l=notice(VOW,tone(strong,name(%q<sheet_who>)) swears an iron vow: %q<sheet_what> %([lcstr(%q<cmd_right_side>)]%).[u(%!/FUN`CHARGEN`AFTER,%q<sheet_who>)])
         flags: [cmdsyntax]
       # +vow/mark [<name>/]<vow>[=<n>]: marks progress n times (1 when none), by the vow's rank; below 0 takes it off.
       INC`VOW`MARK:
         value: |-
-          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(VOW,+vow/mark <vow> marks progress%, +vow/mark <vow>=<n> marks it n times.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_left_side>; @include/args %!/INC`NEED`VOW=name,%q<sheet_what>; think setq(mark_times,firstof(%q<cmd_right_side>,1)); @assert cand(isint(%q<mark_times>),neq(%q<mark_times>,0))=@pemit %#=notice(VOW,Mark a whole number of times%, not 0.,warn); think setq(mark_ticks,bound(add(u(%!/FUN`VOW`TICKS,%q<sheet_who>,%q<vow_key>),mul(%q<mark_times>,v(DATA`RANK`[ucstr(get(%q<sheet_who>/IRONSWORN`VOW`%q<vow_key>`RANK))]))),0,40)); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,VOW`%q<vow_key>`TICKS,value,if(%q<mark_ticks>,%q<mark_ticks>); @pemit %#=notice(VOW,u(%!/FUN`DISPLAY`VOW,%q<sheet_who>,%q<vow_key>),ok)
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(VOW,+vow/mark <vow> marks progress%, +vow/mark <vow>=<n> marks it n times.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`OWNSHEET; @include/args %!/INC`NEED`VOW=name,%q<sheet_what>; think setq(mark_times,firstof(%q<cmd_right_side>,1)); @assert cand(isint(%q<mark_times>),neq(%q<mark_times>,0))=@pemit %#=notice(VOW,Mark a whole number of times%, not 0.,warn); think setq(mark_ticks,bound(add(u(%!/FUN`VOW`TICKS,%q<sheet_who>,%q<vow_key>),mul(%q<mark_times>,v(DATA`RANK`[ucstr(get(%q<sheet_who>/IRONSWORN`VOW`%q<vow_key>`RANK))]))),0,40)); think u(%!/FUN`SETLEAF,%q<sheet_who>/IRONSWORN`VOW`%q<vow_key>`TICKS,if(%q<mark_ticks>,%q<mark_ticks>)); @pemit %#=notice(VOW,u(%!/FUN`DISPLAY`VOW,%q<sheet_who>,%q<vow_key>),ok)
         flags: [cmdsyntax]
       # +vow/fulfil [<name>/]<vow>: the progress roll. A hit fulfils it and marks experience by its rank (one less
-      # on a weak hit); a miss leaves it sworn.
+      # on a weak hit), which goes in the log; a miss leaves it sworn.
       INC`VOW`FULFIL:
         value: |-
-          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(VOW,+vow/fulfil <vow> makes the progress roll.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_argument>; @include/args %!/INC`NEED`VOW=name,%q<sheet_what>; think setqm(fulfil_label,get(%q<sheet_who>/IRONSWORN`VOW`%q<vow_key>),fulfil_rank,get(%q<sheet_who>/IRONSWORN`VOW`%q<vow_key>`RANK),fulfil_rolled,u(%!/FUN`ROLL`PROGRESS,floor(fdiv(u(%!/FUN`VOW`TICKS,%q<sheet_who>,%q<vow_key>),4)))); think setqm(fulfil_tier,json_query(%q<fulfil_rolled>,extract,$.tier),fulfil_xp,sub(member(v(DATA`RANKS),%q<fulfil_rank>),if(strmatch(json_query(%q<fulfil_rolled>,extract,$.tier),partial),1,0))); @remit %l=notice(VOW,tone(strong,name(%q<sheet_who>)) makes the progress roll for %q<fulfil_label>: [json_query(%q<fulfil_rolled>,extract,$.text)]: [tone(u(%!/FUN`DISPLAY`TIERTONE,%q<fulfil_tier>),u(%!/FUN`DISPLAY`TIER,%q<fulfil_tier>))] [tone(muted,%(roll [json_query(%q<fulfil_rolled>,extract,$.roll)]%))]); @break strmatch(%q<fulfil_tier>,*fail)=@pemit %#=notice(VOW,The vow stands. +vow/forsake takes it off.); @wipe %q<sheet_who>/IRONSWORN`VOW`%q<vow_key>; @pemit %#=notice(VOW,[name(%q<sheet_who>)] fulfils the vow[if(%q<fulfil_xp>,%band marks %q<fulfil_xp> experience: [u(%!/API`ADJUST,%q<sheet_who>,XP,%q<fulfil_xp>)] in all)].,ok)
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(VOW,+vow/fulfil <vow> makes the progress roll.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`OWNSHEET; @include/args %!/INC`NEED`VOW=name,%q<sheet_what>; think setqm(fulfil_label,get(%q<sheet_who>/IRONSWORN`VOW`%q<vow_key>),fulfil_rank,get(%q<sheet_who>/IRONSWORN`VOW`%q<vow_key>`RANK),fulfil_rolled,u(%!/FUN`ROLL`PROGRESS,floor(fdiv(u(%!/FUN`VOW`TICKS,%q<sheet_who>,%q<vow_key>),4)))); think setqm(fulfil_tier,json_query(%q<fulfil_rolled>,extract,$.tier),fulfil_xp,sub(member(v(DATA`RANKS),%q<fulfil_rank>),if(strmatch(json_query(%q<fulfil_rolled>,extract,$.tier),partial),1,0))); @remit %l=notice(VOW,tone(strong,name(%q<sheet_who>)) makes the progress roll for %q<fulfil_label>: [json_query(%q<fulfil_rolled>,extract,$.text)]: [tone(u(%!/FUN`DISPLAY`TIERTONE,%q<fulfil_tier>),u(%!/FUN`DISPLAY`TIER,%q<fulfil_tier>))] [tone(muted,%(roll [json_query(%q<fulfil_rolled>,extract,$.roll)]%))]); @break strmatch(%q<fulfil_tier>,*fail)=@pemit %#=notice(VOW,The vow stands. +vow/forsake takes it off.); think u(%!/FUN`WIPE,%q<sheet_who>,IRONSWORN`VOW`%q<vow_key>); @pemit %#=notice(VOW,[name(%q<sheet_who>)] fulfils the vow[if(%q<fulfil_xp>,%band marks %q<fulfil_xp> experience: [u(%!/FUN`XP`ADD,%q<sheet_who>,%q<fulfil_xp>,Fulfilled: %q<fulfil_label>)] to spend)].,ok)
         flags: [cmdsyntax]
       # +vow/forsake [<name>/]<vow>: takes a vow off.
       INC`VOW`FORSAKE:
         value: |-
-          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(VOW,+vow/forsake <vow> takes a vow off.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_argument>; @include/args %!/INC`NEED`VOW=name,%q<sheet_what>; think setq(forsake_label,get(%q<sheet_who>/IRONSWORN`VOW`%q<vow_key>)); @wipe %q<sheet_who>/IRONSWORN`VOW`%q<vow_key>; @pemit %#=notice(VOW,[name(%q<sheet_who>)] forsakes the vow %q<forsake_label>.,ok)
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(VOW,+vow/forsake <vow> takes a vow off.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`OWNSHEET; @include/args %!/INC`NEED`VOW=name,%q<sheet_what>; think setq(forsake_label,get(%q<sheet_who>/IRONSWORN`VOW`%q<vow_key>)); think u(%!/FUN`WIPE,%q<sheet_who>,IRONSWORN`VOW`%q<vow_key>); @pemit %#=notice(VOW,[name(%q<sheet_who>)] forsakes the vow %q<forsake_label>.,ok)
+        flags: [cmdsyntax]
+
+      # ---- +encounter -----------------------------------------------------------------
+      # An encounter is a scene played from copies of the sheets: a member's meters and companions' health change on
+      # their copy, and their rolls use the copy's stats, while they are in its room. Several may run in one room;
+      # the copy in use is that of a joined encounter in the room the character is in: the one /use picked, else the
+      # last joined. Anywhere else the sheet itself applies. /keep writes one character's meters and companions'
+      # health from their copy back to their sheet.
+      # +encounter [<n>]: one encounter, or the ones here and yours.
+      INC`ENCOUNTER`SHOW:
+        value: |-
+          think setqm(enc_here,u(%!/FUN`ENC`HERE,%#),enc_joined,u(%!/FUN`ENC`JOINED,%#)); @assert cor(strlen(%q<cmd_argument>),words(setunion(%q<enc_here>,%q<enc_joined>)))=@pemit %#=notice(ENCOUNTER,There is no encounter here%, and you are in none. +encounter/start begins one.,warn); @assert cor(strlen(%q<cmd_argument>),gt(words(setunion(%q<enc_here>,%q<enc_joined>)),1))=@pemit %#=u(%!/FUN`SCREEN`ENCOUNTER,setunion(%q<enc_here>,%q<enc_joined>),%#); @assert strlen(%q<cmd_argument>)=@pemit %#=u(%!/FUN`SCREEN`ENCOUNTERS,%q<enc_here>,%q<enc_joined>,%#); @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>,from,,verb,; @pemit %#=u(%!/FUN`SCREEN`ENCOUNTER,%q<enc_n>,%#)
+        flags: [cmdsyntax]
+      # +encounter/start [<title>]: a new encounter in the room you are in.
+      INC`ENCOUNTER`START:
+        value: |-
+          think setqm(enc_n,inc(lmax(0 [iter(lattr({{encounters}}/ENC`*),last(%i0,`))])),enc_title,firstof(left(%q<cmd_argument>,60),Encounter in [name(loc(%#))])); &ENC`%q<enc_n> {{encounters}}=%q<enc_title>; &ENC`%q<enc_n>`ROOM {{encounters}}=objid(loc(%#)); &ENC`%q<enc_n>`GM {{encounters}}=%q<viewer_objid>; &ENC`%q<enc_n>`STARTED {{encounters}}=secs(); @remit %l=notice(ENCOUNTER,tone(strong,name(%#)) starts encounter %q<enc_n>: %q<enc_title>. +encounter/join %q<enc_n> takes part with a copy of your sheet.)
+        flags: [cmdsyntax]
+      # +encounter/join [<n>]: takes part in an encounter here, with a copy of your sheet as it stands.
+      INC`ENCOUNTER`JOIN:
+        value: |-
+          @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>,from,u(%!/FUN`ENC`HERE,%#),verb,join; @assert member(u(%!/FUN`ENC`HERE,%#),%q<enc_n>)=@pemit %#=notice(ENCOUNTER,Encounter %q<enc_n> is not in this room.,warn); @assert not(u(%!/FUN`ENC`MEMBER,%q<viewer_objid>,%q<enc_n>))=@pemit %#=notice(ENCOUNTER,You are in [u(%!/FUN`ENC`NAME,%q<enc_n>)] already.,warn); @include/args %!/INC`DO`ENCJOIN=who,%q<viewer_objid>,n,%q<enc_n>; @remit %l=notice(ENCOUNTER,tone(strong,name(%#)) joins [u(%!/FUN`ENC`NAME,%q<enc_n>)].)
+        flags: [cmdsyntax]
+      # +encounter/use [<n>]: which of your encounters here your rolls use; nothing goes back to the last joined.
+      INC`ENCOUNTER`USE:
+        value: |-
+          @break not(strlen(%q<cmd_argument>))={@include/args %!/INC`DO`SET=who,%q<viewer_objid>,leaf,USING,value,; @pemit %#=notice(ENCOUNTER,Your rolls use [firstof(u(%!/FUN`ENC`NAME,u(%!/FUN`ENC`ACTIVE,%q<viewer_objid>)),your sheet)].,ok)}; @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>,from,,verb,; @assert u(%!/FUN`ENC`MEMBER,%q<viewer_objid>,%q<enc_n>)=@pemit %#=notice(ENCOUNTER,You are not in [u(%!/FUN`ENC`NAME,%q<enc_n>)]. +encounter/join %q<enc_n> takes part.,warn); @include/args %!/INC`DO`SET=who,%q<viewer_objid>,leaf,USING,value,%q<enc_n>; @pemit %#=notice(ENCOUNTER,Your rolls use your copy in [u(%!/FUN`ENC`NAME,%q<enc_n>)][if(member(u(%!/FUN`ENC`HERE,%#),%q<enc_n>),,%b when you are in its room)].,ok)
+        flags: [cmdsyntax]
+      # +encounter/add <name>[=<n>]: the GM brings someone in the encounter's room into it.
+      INC`ENCOUNTER`ADD:
+        value: |-
+          @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_right_side>,from,u(%!/FUN`ENC`HERE,%#),verb,add <name>=; @include %!/INC`NEED`GM; @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; @assert not(comp(objid(loc(%q<sheet_who>)),get({{encounters}}/ENC`%q<enc_n>`ROOM)))=@pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)] is not in the encounter's room.,warn); @assert not(u(%!/FUN`ENC`MEMBER,%q<sheet_who>,%q<enc_n>))=@pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)] is in [u(%!/FUN`ENC`NAME,%q<enc_n>)] already.,warn); @include/args %!/INC`DO`ENCJOIN=who,%q<sheet_who>,n,%q<enc_n>; @remit get({{encounters}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,tone(strong,name(%#)) brings [name(%q<sheet_who>)] into [u(%!/FUN`ENC`NAME,%q<enc_n>)].)
+        flags: [cmdsyntax]
+      # +encounter/remove <name>[=<n>]: the GM takes someone out; their copy goes.
+      INC`ENCOUNTER`REMOVE:
+        value: |-
+          @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_right_side>,from,u(%!/FUN`ENC`JOINED,%q<sheet_who>),verb,remove <name>=; @include %!/INC`NEED`GM; @include %!/INC`NEED`MEMBER; @include/args %!/INC`DO`ENCDROP=who,%q<sheet_who>,n,%q<enc_n>; @pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)] is out of [u(%!/FUN`ENC`NAME,%q<enc_n>)].,ok); @pemit %q<sheet_who>=notice(ENCOUNTER,[name(%#)] takes you out of [u(%!/FUN`ENC`NAME,%q<enc_n>)]. Its copy of your sheet is gone.)
+        flags: [cmdsyntax]
+      # +encounter/leave [<n>]: out of an encounter you are in; your copy goes.
+      INC`ENCOUNTER`LEAVE:
+        value: |-
+          @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>,from,firstof(u(%!/FUN`ENC`ACTIVE,%#),u(%!/FUN`ENC`JOINED,%#)),verb,leave; @assert u(%!/FUN`ENC`MEMBER,%q<viewer_objid>,%q<enc_n>)=@pemit %#=notice(ENCOUNTER,You are not in [u(%!/FUN`ENC`NAME,%q<enc_n>)].,warn); @include/args %!/INC`DO`ENCDROP=who,%q<viewer_objid>,n,%q<enc_n>; @pemit %#=notice(ENCOUNTER,You leave [u(%!/FUN`ENC`NAME,%q<enc_n>)]. Its copy of your sheet is gone.,ok)
+        flags: [cmdsyntax]
+      # +encounter/keep <name>[=<n>]: the GM writes a character's meters and companions' health from the copy to
+      # their sheet, with attrib_set, so nothing a player wrote is ever evaluated.
+      INC`ENCOUNTER`KEEP:
+        value: |-
+          @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_right_side>,from,u(%!/FUN`ENC`JOINED,%q<sheet_who>),verb,keep <name>=; @include %!/INC`NEED`GM; @include %!/INC`NEED`MEMBER; think setq(keep_path,u(%!/FUN`ENC`PATH,%q<enc_n>,%q<sheet_who>)); think [u(%!/FUN`API`ROOT,%q<sheet_who>)][iter(u(%!/FUN`PLAY`LEAVES,u(%!/FUN`NONE,get(%q<keep_path>ASSETS))),u(%!/FUN`SETLEAF,%q<sheet_who>/IRONSWORN`%i0,get(%q<keep_path>%i0)))]; @pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)]'s sheet keeps the meters and companions from [u(%!/FUN`ENC`NAME,%q<enc_n>)].,ok); @pemit %q<sheet_who>=notice(ENCOUNTER,[name(%#)] writes your meters and companions from [u(%!/FUN`ENC`NAME,%q<enc_n>)] to your sheet.)
+        flags: [cmdsyntax]
+      # +encounter/end [<n>]: the GM ends it; every copy goes.
+      INC`ENCOUNTER`END:
+        value: |-
+          @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>,from,u(%!/FUN`ENC`HERE,%#),verb,end; @include %!/INC`NEED`GM; think setqm(end_title,u(%!/FUN`ENC`NAME,%q<enc_n>),end_room,get({{encounters}}/ENC`%q<enc_n>`ROOM)); @dolist/inline u(%!/FUN`ENC`MEMBERS,%q<enc_n>)={@include/args %!/INC`DO`ENCDROP=who,##,n,%q<enc_n>}; think u(%!/FUN`WIPE,{{encounters}},ENC`%q<enc_n>); @remit %q<end_room>=notice(ENCOUNTER,tone(strong,name(%#)) ends %q<end_title>. Its copies are gone.); @if comp(objid(loc(%#)),%q<end_room>)={@pemit %#=notice(ENCOUNTER,%q<end_title> is ended.,ok)}
+        flags: [cmdsyntax]
+      # Which encounter a command means: enc_n. %<typed> a number, or nothing for the one in %<from>; several there,
+      # and the player is asked which, as +encounter/%<verb> <n>.
+      INC`NEED`ENCOUNTER:
+        value: |-
+          think setq(enc_n,if(strlen(%<typed>),%<typed>,if(eq(words(%<from>),1),%<from>))); @assert cor(strlen(%<typed>),words(%<from>))=@pemit %#=notice(ENCOUNTER,There is no encounter here[if(strlen(%<verb>),%b for that)]. +encounter lists them.,warn); @assert strlen(%q<enc_n>)=@pemit %#=notice(ENCOUNTER,Say which: [itemize(iter(%<from>,+encounter/[edit(%<verb> %i0,=%b,=)] for [get({{encounters}}/ENC`%i0)],%b,|),|,or)].,warn); @assert cand(isint(%q<enc_n>),hasattr({{encounters}},ENC`%q<enc_n>))=@pemit %#=notice(ENCOUNTER,There is no encounter %q<enc_n>.,warn)
+        flags: [cmdsyntax]
+      INC`NEED`GM:
+        value: |-
+          @assert u(%!/FUN`ENC`GM,%#,%q<enc_n>)=@pemit %#=notice(ENCOUNTER,Only [name(get({{encounters}}/ENC`%q<enc_n>`GM))]%, who runs [u(%!/FUN`ENC`NAME,%q<enc_n>)]%, and sheet keepers do that.,error)
+        flags: [cmdsyntax]
+      INC`NEED`MEMBER:
+        value: |-
+          @assert u(%!/FUN`ENC`MEMBER,%q<sheet_who>,%q<enc_n>)=@pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)] is not in [u(%!/FUN`ENC`NAME,%q<enc_n>)].,warn)
         flags: [cmdsyntax]
 
       # ---- writes -----------------------------------------------------------------
-      # %<who> an objid, %<leaf> what under IRONSWORN` to write, %<value> what to store; empty clears it. The
-      # root is wizard-flagged and no_command the first time, and its leaves take that from it.
+      # %<who> an objid. The IRONSWORN root is wizard-flagged and no_command, and its leaves take that from it.
+      INC`DO`ROOT:
+        value: |-
+          think u(%!/FUN`API`ROOT,%<who>)
+        flags: [cmdsyntax]
+      # %<who> an objid, %<leaf> what under IRONSWORN` to write on the sheet itself, %<value> what to store
+      # (numbers and encounter lists only); empty clears it.
       INC`DO`SET:
         value: |-
-          @if not(hasattr(%<who>,IRONSWORN))={&IRONSWORN %<who>=This character's Ironsworn sheet. +sheet shows it.; @set %<who>/IRONSWORN=wizard; @set %<who>/IRONSWORN=no_command}; @if strlen(%<value>)={&IRONSWORN`%<leaf> %<who>=%<value>},{&IRONSWORN`%<leaf> %<who>}
+          @include/args %!/INC`DO`ROOT=who,%<who>; @if strlen(%<value>)={&IRONSWORN`%<leaf> %<who>=%<value>},{&IRONSWORN`%<leaf> %<who>}
         flags: [cmdsyntax]
+      # A ledger entry: %<who>, %<kind>, %<key>, %<value>, %<phase> (chargen, play or staff). A chargen entry
+      # rewrites the chargen entry in force of the same kind and key; every other entry is numbered after the
+      # last. entry_n is its number. Each has the wizard attribute flag, and an entry without it is never read.
+      INC`DO`ENTRY:
+        value: |-
+          @include/args %!/INC`DO`ROOT=who,%<who>; think setq(entry_n,if(strmatch(%<phase>,chargen),u(%!/FUN`LEDGER`CHARGENOF,%<who>,%<kind>,%<key>))); think setq(entry_n,firstof(%q<entry_n>,inc(lmax(0 [iter(lattr(%<who>/IRONSWORN`LEDGER`*),last(%i0,`))])))); &IRONSWORN`LEDGER`%q<entry_n> %<who>=[json(object,n,%q<entry_n>,kind,json(string,%<kind>),key,json(string,%<key>),value,json(string,%<value>),phase,json(string,%<phase>),by,json(string,objid(%#)),at,secs())]; @set %<who>/IRONSWORN`LEDGER`%q<entry_n>=wizard
+        flags: [cmdsyntax]
+      # %<who> joins encounter %<n> with a copy of their sheet: the stats and assets in force as STATS and ASSETS,
+      # and their meters and companions' health. It goes last in their IRONSWORN`ENCOUNTERS.
+      INC`DO`ENCJOIN:
+        value: |-
+          think setqm(join_path,u(%!/FUN`ENC`PATH,%<n>,%<who>),join_assets,u(%!/FUN`ASSETS`LIVE,%<who>)); think [attrib_set(left(%q<join_path>,dec(strlen(%q<join_path>))),copy)][attrib_set(%q<join_path>STATS,firstof(u(%!/FUN`STATS`LIVE,%<who>),none))][attrib_set(%q<join_path>ASSETS,firstof(%q<join_assets>,none))][iter(u(%!/FUN`PLAY`LEAVES,%q<join_assets>),if(strlen(get(%<who>/IRONSWORN`%i0)),attrib_set(%q<join_path>%i0,get(%<who>/IRONSWORN`%i0))))]; @include/args %!/INC`DO`SET=who,%<who>,leaf,ENCOUNTERS,value,squish([setdiff(get(%<who>/IRONSWORN`ENCOUNTERS),%<n>)] %<n>)
+        flags: [cmdsyntax]
+      # %<who> leaves encounter %<n>; the copy goes.
+      INC`DO`ENCDROP:
+        value: |-
+          think u(%!/FUN`WIPE,{{encounters}},ENC`%<n>`COPY`[after(num(%<who>),#)]); @include/args %!/INC`DO`SET=who,%<who>,leaf,ENCOUNTERS,value,squish(iter(get(%<who>/IRONSWORN`ENCOUNTERS),if(comp(%i0,%<n>),%i0))); @if not(comp(get(%<who>/IRONSWORN`USING),%<n>))={&IRONSWORN`USING %<who>}
+        flags: [cmdsyntax]
+      # %0 an object, %1 an attribute: clears it and every attribute beneath it, deepest first.
+      FUN`WIPE:
+        value: |-
+          iter(revwords(lattr(%0/%1`**)) %1,attrib_set(%0/%i0))
+        flags: [funsyntax]
+      # %0 obj/attr, %1 a value: writes it, or clears it when empty. Nothing a player wrote is evaluated.
+      FUN`SETLEAF:
+        value: |-
+          if(strlen(%1),attrib_set(%0,%1),if(strlen(get(%0)),attrib_set(%0)))
+        flags: [funsyntax]
+      # %0 assets (KEY=n): the leaves an encounter's copy holds and /keep writes back, the meters and the health of
+      # each companion among them.
+      FUN`PLAY`LEAVES:
+        value: |-
+          squish([iter(v(DATA`METERS),METER`%i0)] [iter(%0,if(gt(default({{store}}/ASSET`[before(%i0,=)]`HEALTH,0),0),COMPANION`[before(%i0,=)]))])
+        flags: [funsyntax]
+      FUN`NONE:
+        value: |-
+          if(strmatch(%0,none),,%0)
+        flags: [funsyntax]
+
+      # ---- where play happens ---------------------------------------------------------
+      # %0 a character, %1 1 for their sheet whatever encounter they are in: where their meters and companions'
+      # health are now, as obj/prefix to put a leaf after: the copy in use, else the sheet.
+      FUN`PATH:
+        value: |-
+          if(cor(%1,not(strlen(setr(path_n,u(%!/FUN`ENC`ACTIVE,%0))))),%0/IRONSWORN`,u(%!/FUN`ENC`PATH,%q<path_n>,%0))
+        flags: [funsyntax]
+      # %0 a character, %1 a leaf (METER`<KEY>, COMPANION`<ASSET>), %2 1 for the sheet itself.
+      FUN`P:
+        value: |-
+          get([u(%!/FUN`PATH,%0,%2)]%1)
+        flags: [funsyntax]
+      # %0 a character, %1 a leaf, %2 its new value (empty clears it), %3 1 for the sheet itself.
+      FUN`PSET:
+        value: |-
+          setq(pset_path,u(%!/FUN`PATH,%0,%3))[if(strmatch(%q<pset_path>,*/IRONSWORN`),u(%!/FUN`API`ROOT,%0))][u(%!/FUN`SETLEAF,%q<pset_path>%1,%2)]
+        flags: [funsyntax]
+      # %0 a character, %1 a meter, %2 1 for the sheet itself: its value, the start when not set.
+      FUN`METER`NOW:
+        value: |-
+          setq(meter_got,u(%!/FUN`P,%0,METER`[ucstr(%1)],%2))[if(strlen(%q<meter_got>),%q<meter_got>,last(v(DATA`METER`[ucstr(%1)]`RANGE)))]
+        flags: [funsyntax]
+      # %0 a character, %1 a meter, %2 its new value, %3 1 for the sheet itself: writes it within the meter's range
+      # (cleared at its start) and returns it.
+      FUN`METER`SET:
+        value: |-
+          setqm(mset_range,v(DATA`METER`[ucstr(%1)]`RANGE),
+          mset_new,bound(%2,first(%q<mset_range>),extract(%q<mset_range>,2,1)))[u(%!/FUN`PSET,%0,METER`[ucstr(%1)],if(neq(%q<mset_new>,last(%q<mset_range>)),%q<mset_new>),%3)]%q<mset_new>
+        flags: [funsyntax]
+      # %0 a character, %1 a companion asset, %2 1 for the sheet itself: its health, its most when not set.
+      FUN`COMPANION`NOW:
+        value: |-
+          setq(comp_got,u(%!/FUN`P,%0,COMPANION`%1,%2))[if(strlen(%q<comp_got>),%q<comp_got>,default({{store}}/ASSET`%1`HEALTH,0))]
+        flags: [funsyntax]
+
+      # ---- the ledger -------------------------------------------------------------------
+      # A character's stats and assets are built from the entries under IRONSWORN`LEDGER`<n>, each a JSON object:
+      # n, kind, key, value, phase (chargen, play or staff), by (an objid) and at (secs). Kinds: stat {key a stat,
+      # value 1 to 5, or empty for unassigned}, asset {key an asset, value the abilities marked, 1 to 3, or 0 for
+      # none}, revoke {value: the entry it takes back}, clear (every entry before it). Rows are
+      # n~kind~key~value~phase~by.
+      FUN`LEDGER`NUMS:
+        value: |-
+          sort(iter(lattr(%0/IRONSWORN`LEDGER`*),if(hasflag(%0/%i0,wizard),last(%i0,`))),n)
+        flags: [funsyntax]
+      FUN`LEDGER`ROWS:
+        value: |-
+          iter(u(%!/FUN`LEDGER`NUMS,%0),u(%!/FUN`LEDGER`ROW,get(%0/IRONSWORN`LEDGER`%i0),%i0))
+        flags: [funsyntax]
+      FUN`LEDGER`ROW:
+        value: |-
+          %1~[json_query(%0,extract,$.kind)]~[json_query(%0,extract,$.key)]~[json_query(%0,extract,$.value)]~[json_query(%0,extract,$.phase)]~[json_query(%0,extract,$.by)]
+        flags: [funsyntax]
+      # %0 rows: the ones in force, after the last clear and not revoked; clears and revokes left out.
+      FUN`LEDGER`LIVE:
+        value: |-
+          setqm(live_clear,last(0 [iter(graball(%0,*~clear~*),first(%i0,~))]),live_revoked,iter(graball(%0,*~revoke~*),elements(%i0,4,~)))[squish(iter(%0,if(cor(lte(first(%i0,~),%q<live_clear>),member(%q<live_revoked>,first(%i0,~)),match(clear revoke,elements(%i0,2,~))),,%i0)))]
+        flags: [funsyntax]
+      # %0 a character, %1 a kind, %2 a key: the number of the chargen entry in force that matches.
+      FUN`LEDGER`CHARGENOF:
+        value: |-
+          first(iter(revwords(graball(u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%0)),*~%1~%2~*~chargen~*)),first(%i0,~)))
+        flags: [funsyntax]
+      # %0 rows in force, %1 a kind, %2 a key: the value of the last entry for it.
+      FUN`BUILD`VALUE:
+        value: |-
+          elements(last(graball(%0,*~%1~%2~*)),4,~)
+        flags: [funsyntax]
+
+      # ---- the build ----------------------------------------------------------------
+      # Stats are KEY=n for each stat assigned, built from the ledger; an unassigned stat counts as 1. Assets are
+      # KEY=n for each asset held, n the abilities marked. An encounter's copy keeps them as STATS and ASSETS (none
+      # when there are none).
+      FUN`STATS`ROWS:
+        value: |-
+          squish(iter(u(%!/FUN`LIST`ALL,STAT),if(strlen(setr(rows_stat,u(%!/FUN`BUILD`VALUE,%0,stat,%i0))),%i0=%q<rows_stat>)))
+        flags: [funsyntax]
+      FUN`STATS`LIVE:
+        value: |-
+          u(%!/FUN`STATS`ROWS,u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%0)))
+        flags: [funsyntax]
+      # %0 a character: the stats they roll now: their copy's in an encounter here, else their sheet's.
+      FUN`STATS:
+        value: |-
+          setq(stats_n,u(%!/FUN`ENC`ACTIVE,%0))[if(strlen(%q<stats_n>),u(%!/FUN`NONE,get([u(%!/FUN`ENC`PATH,%q<stats_n>,%0)]STATS)),u(%!/FUN`STATS`LIVE,%0))]
+        flags: [funsyntax]
+      # %0 rows in force: the assets held, by key.
+      FUN`ASSETS`ROWS:
+        value: |-
+          squish(iter(setunion(iter(graball(%0,*~asset~*),elements(%i0,3,~)),),if(gt(setr(rows_asset,u(%!/FUN`BUILD`VALUE,%0,asset,%i0)),0),%i0=%q<rows_asset>)))
+        flags: [funsyntax]
+      FUN`ASSETS`LIVE:
+        value: |-
+          u(%!/FUN`ASSETS`ROWS,u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%0)))
+        flags: [funsyntax]
+      # %0 a character: the assets they play with now: their copy's in an encounter here, else their sheet's.
+      FUN`ASSETS:
+        value: |-
+          setq(assets_n,u(%!/FUN`ENC`ACTIVE,%0))[if(strlen(%q<assets_n>),u(%!/FUN`NONE,get([u(%!/FUN`ENC`PATH,%q<assets_n>,%0)]ASSETS)),u(%!/FUN`ASSETS`LIVE,%0))]
+        flags: [funsyntax]
+      # %0 stats, %1 a stat: its value, 1 when unassigned.
+      FUN`R:
+        value: |-
+          firstof(after(grab(%0,%1=*),=),1)
+        flags: [funsyntax]
+      # %0 assets, %1 an asset: the abilities marked, 0 when not held.
+      FUN`R`ASSET:
+        value: |-
+          firstof(after(grab(%0,%1=*),=),0)
+        flags: [funsyntax]
+      # %0 values, %1 the starting values: 1 when each value in %0 is one %1 still has.
+      FUN`FITS:
+        value: |-
+          if(words(%0),land(iter(setunion(%0,%0),lte(words(graball(%0,%i0)),words(graball(%1,%i0))))),1)
+        flags: [funsyntax]
+
+      # ---- encounters ---------------------------------------------------------------
+      # On the encounter store: ENC`<n> the title, with ROOM, GM (objids), STARTED (secs) and COPY`<dbref number>
+      # one member's copy, its leaves beneath. A member's IRONSWORN`ENCOUNTERS lists theirs in the order they joined;
+      # IRONSWORN`USING is the one /use picked.
+      FUN`ENC`NAME:
+        value: |-
+          %0 %([get({{encounters}}/ENC`%0)]%)
+        flags: [funsyntax]
+      # %0 an encounter, %1 a member: obj/prefix of their copy, to put a leaf after.
+      FUN`ENC`PATH:
+        value: |-
+          {{encounters}}/ENC`%0`COPY`[after(num(%1),#)]`
+        flags: [funsyntax]
+      # %0 someone: the encounters in their room, oldest first.
+      FUN`ENC`HERE:
+        value: |-
+          setq(here_room,objid(loc(%0)))[squish(iter(sort(iter(lattr({{encounters}}/ENC`*),last(%i0,`)),n),if(not(comp(get({{encounters}}/ENC`%i0`ROOM),%q<here_room>)),%i0)))]
+        flags: [funsyntax]
+      FUN`ENC`MEMBER:
+        value: |-
+          hasattr({{encounters}},ENC`%1`COPY`[after(num(%0),#)])
+        flags: [funsyntax]
+      # %0 a character: the encounters they are in, in the order they joined.
+      FUN`ENC`JOINED:
+        value: |-
+          squish(iter(get(%0/IRONSWORN`ENCOUNTERS),if(u(%!/FUN`ENC`MEMBER,%0,%i0),%i0)))
+        flags: [funsyntax]
+      # %0 a character: the encounter whose copy they play from now: one they joined in the room they are in,
+      # the one /use picked when it is one of those, else the last joined. Nothing when none.
+      FUN`ENC`ACTIVE:
+        value: |-
+          setq(active_here,u(%!/FUN`ENC`HERE,%0))[setq(active_set,squish(iter(u(%!/FUN`ENC`JOINED,%0),if(member(%q<active_here>,%i0),%i0))))][if(member(%q<active_set>,get(%0/IRONSWORN`USING)),get(%0/IRONSWORN`USING),last(%q<active_set>))]
+        flags: [funsyntax]
+      # %0 an encounter: its members' objids.
+      FUN`ENC`MEMBERS:
+        value: |-
+          iter(lattr({{encounters}}/ENC`%0`COPY`*),objid(#[last(%i0,`)]))
+        flags: [funsyntax]
+      FUN`ENC`GM:
+        value: |-
+          cor(u(%!/FUN`PERM`KEEPER,%0),not(comp(objid(%0),get({{encounters}}/ENC`%1`GM))))
+        flags: [funsyntax]
+
+      # ---- character creation ---------------------------------------------------------
+      # %0 a character: the step they are on (stats, assets, vow), or nothing when done. chargen_rows,
+      # chargen_stats and chargen_assets are left set.
+      FUN`CHARGEN`STEP:
+        value: |-
+          setq(chargen_rows,u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%0)))[setq(chargen_stats,u(%!/FUN`STATS`ROWS,%q<chargen_rows>))][setq(chargen_assets,u(%!/FUN`ASSETS`ROWS,%q<chargen_rows>))][cond(lt(words(%q<chargen_stats>),words(u(%!/FUN`LIST`ALL,STAT))),stats,lt(words(%q<chargen_assets>),get(%!/DATA`CONFIG`STARTING)),assets,not(words(u(%!/FUN`VOW`ALL,%0))),vow)]
+        flags: [funsyntax]
+      # %0 a character: what to do next, after a step, for a player making their own character. Nothing otherwise.
+      FUN`CHARGEN`AFTER:
+        value: |-
+          if(cand(not(comp(%0,%q<viewer_objid>)),not(isapproved(%#))),%b[u(%!/FUN`CHARGEN`NEXT,%0)])
+        flags: [funsyntax]
+      FUN`CHARGEN`NEXT:
+        value: |-
+          switch(u(%!/FUN`CHARGEN`STEP,%0),stats,Next: +sheet/set <stat>=<value>. [u(%!/FUN`DISPLAY`ARRAYLEFT,iter(%q<chargen_stats>,after(%i0,=)))],assets,Next: +sheet/asset <asset>%, [sub(get(%!/DATA`CONFIG`STARTING),words(%q<chargen_assets>))] more. +sheet/assets lists them.,vow,Next: swear a background vow%, +vow/swear <vow>=epic.,Your sheet is complete.[u(%!/FUN`HINT,CHARGEN)])
+        flags: [funsyntax]
+
+      # ---- who may do what ----------------------------------------------------------
+      FUN`PERM`KEEPER:
+        value: |-
+          permission(%0,softcode.ironsworn.admin)
+        flags: [funsyntax]
+      # %0 who asks, %1 whose sheet: 1 when they may read it. ALLOW`VIEW`<name>, which a bridge adds, may let
+      # more people read it.
+      FUN`PERM`VIEW:
+        value: |-
+          cor(not(comp(objid(%0),%1)),u(%!/FUN`PERM`KEEPER,%0),get(%!/DATA`CONFIG`PUBLIC),words(filterbool(%!/FUN`PERM`ALLOWS,lattr(%!/ALLOW`VIEW`*),,,%0,%1)))
+        flags: [funsyntax]
+      FUN`PERM`ALLOWS:
+        value: |-
+          u(%!/%0,%1,%2)
+        flags: [funsyntax]
+      # %0 who asks, %1 a character: 1 when %0 runs the encounter whose copy %1 plays from, and is not %1.
+      FUN`PERM`RUNS:
+        value: |-
+          setq(runs_n,u(%!/FUN`ENC`ACTIVE,%1))[cand(comp(objid(%0),%1),strlen(%q<runs_n>),u(%!/FUN`ENC`GM,%0,%q<runs_n>))]
+        flags: [funsyntax]
+      FUN`GATE`EDIT:
+        value: |-
+          if(hasattr(%!,GATE`EDIT),u(%!/GATE`EDIT,%0))
+        flags: [funsyntax]
+      FUN`PLAYER`MATCH:
+        value: |-
+          if(isdbref(setr(found_player,pmatch(%0))),objid(%q<found_player>))
+        flags: [funsyntax]
+
+      # ---- experience and the log ------------------------------------------------------
+      # %0 a character, %1 experience to give (or take, below 0), %2 why: writes it, never below 0, logs it and
+      # returns what they have now.
+      FUN`XP`ADD:
+        value: |-
+          setqm(xpadd_old,default(%0/IRONSWORN`XP,0),
+          xpadd_new,max(0,add(%q<xpadd_old>,%1)))[u(%!/FUN`API`ROOT,%0)][u(%!/FUN`SETLEAF,%0/IRONSWORN`XP,if(%q<xpadd_new>,%q<xpadd_new>))][u(%!/FUN`LOG`ADD,%0,xp,sub(%q<xpadd_new>,%q<xpadd_old>),%q<xpadd_new>,%2,)]%q<xpadd_new>
+        flags: [funsyntax]
+      # Every change to experience is IRONSWORN`LOG`<n>: a JSON object with n, kind (xp), delta, total (after),
+      # item, reason, by (an objid) and at (secs). Each has the wizard attribute flag; past DATA`LOG`MAX the oldest
+      # goes.
+      # %0 a character, %1 the kind, %2 the change, %3 the total after, %4 why, %5 the item. Nothing when %2 is 0.
+      FUN`LOG`ADD:
+        value: |-
+          if(%2,[setq(log_n,inc(lmax(0 [iter(lattr(%0/IRONSWORN`LOG`*),last(%i0,`))])))][u(%!/FUN`API`ROOT,%0)][attrib_set(%0/IRONSWORN`LOG`%q<log_n>,json(object,n,%q<log_n>,kind,json(string,%1),delta,%2,total,firstof(%3,0),item,json(string,%5),reason,json(string,left(%4,200)),by,json(string,objid(%#)),at,secs()))][set(%0/IRONSWORN`LOG`%q<log_n>,wizard)][iter(lnum(max(0,sub(words(lattr(%0/IRONSWORN`LOG`*)),get(%!/DATA`LOG`MAX)))),attrib_set(%0/IRONSWORN`LOG`[first(sort(iter(lattr(%0/IRONSWORN`LOG`*),last(%i0,`)),n))]))])
+        flags: [funsyntax]
+      FUN`API`ROOT:
+        value: |-
+          if(hasattr(%0,IRONSWORN),,attrib_set(%0/IRONSWORN,This character's Ironsworn sheet. +sheet shows it.)[set(%0/IRONSWORN,wizard)][set(%0/IRONSWORN,no_command)])
+        flags: [funsyntax]
 
       # ---- lists ------------------------------------------------------------------
-      # %0 a list on the store (STAT): its keys, in order then by key.
+      # %0 a list on the store (STAT, ASSET): its keys, in order then by key.
       FUN`LIST`ALL:
         value: |-
           setq(list_path,%0)[sortkey(%!/FUN`LIST`SORTKEY,iter(lattr({{store}}/%0`*),after(%i0,`)))]
@@ -448,33 +1074,14 @@ objects:
         value: |-
           json(object,tier,json(string,u(%!/API`TIER,%0,%q<rolled_c1>,%q<rolled_c2>)),action,%0,challenge,json(array,%q<rolled_c1>,%q<rolled_c2>),match,eq(%q<rolled_c1>,%q<rolled_c2>),text,json(string,%1 vs %q<rolled_c1> and %q<rolled_c2>),roll,json_query(%q<rolled>,extract,$.id),formula,json(string,json_query(%q<rolled>,extract,$.formula)))
         flags: [funsyntax]
-
-      # ---- who may do what ----------------------------------------------------------
-      FUN`PERM`KEEPER:
+      # %0 the key, %1 the stat, %2 all the adds, %3 the target as given.
+      FUN`CHECK`ROLLED:
         value: |-
-          permission(%0,softcode.ironsworn.admin)
-        flags: [funsyntax]
-      # %0 who asks, %1 whose sheet: 1 when they may read it. ALLOW`VIEW`<name>, which a bridge adds, may let
-      # more people read it.
-      FUN`PERM`VIEW:
-        value: |-
-          cor(not(comp(objid(%0),%1)),u(%!/FUN`PERM`KEEPER,%0),get(%!/DATA`CONFIG`PUBLIC),words(filterbool(%!/FUN`PERM`ALLOWS,lattr(%!/ALLOW`VIEW`*),,,%0,%1)))
-        flags: [funsyntax]
-      FUN`PERM`ALLOWS:
-        value: |-
-          u(%!/%0,%1,%2)
-        flags: [funsyntax]
-      FUN`GATE`EDIT:
-        value: |-
-          if(hasattr(%!,GATE`EDIT),u(%!/GATE`EDIT,%0))
-        flags: [funsyntax]
-      FUN`PLAYER`MATCH:
-        value: |-
-          if(isdbref(setr(found_player,pmatch(%0))),objid(%q<found_player>))
+          setq(rolled_check,u(%!/FUN`ROLL`ACTION,add(%1,%2)))[json(object,tier,json(string,json_query(%q<rolled_check>,extract,$.tier)),action,json_query(%q<rolled_check>,extract,$.action),challenge,json_query(%q<rolled_check>,extract,$.challenge),match,json_query(%q<rolled_check>,extract,$.match),stat,%1,target,json(string,%3),label,json(string,u(%!/FUN`LIST`LABEL,STAT,%0)),text,json(string,json_query(%q<rolled_check>,extract,$.text)),roll,json_query(%q<rolled_check>,extract,$.roll),formula,json(string,json_query(%q<rolled_check>,extract,$.formula)))]
         flags: [funsyntax]
 
       # ---- screens ------------------------------------------------------------------
-      # %0 a check's JSON: "Iron +1: 1d6[4] + 3 = 7 vs 5 and 9: a weak hit (roll 42)".
+      # %0 a check's JSON: "Iron (+1): 1d6[4] + 3 = 7 vs 5 and 9: a weak hit (roll 42)".
       FUN`DISPLAY`CHECK:
         value: |-
           setqm(display_tier,json_query(%0,extract,$.tier),
@@ -488,10 +1095,30 @@ objects:
         value: |-
           switch(%0,crit-success,success,success,success,partial,warning,error)
         flags: [funsyntax]
-      # %0 a character, %1 a meter, %2 its value: "Alice's health is 3 of 5."
+      # %0 a character, %1 a meter, %2 its value: "Alice's health is 3 of 5".
       FUN`DISPLAY`METER:
         value: |-
           [name(%0)]'s [lcstr(v(DATA`METER`%1))] is [if(cand(strmatch(%1,MOMENTUM),gt(%2,0)),+)]%2[if(member(HEALTH SPIRIT SUPPLY,%1),%bof [extract(v(DATA`METER`%1`RANGE),2,1)])]
+        flags: [funsyntax]
+      # %0 a meter, %1 its value: "3/5" or "+2".
+      FUN`DISPLAY`METERVALUE:
+        value: |-
+          cond(strmatch(%0,MOMENTUM),[if(gt(%1,0),+)]%1,%1/[extract(v(DATA`METER`%0`RANGE),2,1)])
+        flags: [funsyntax]
+      # %0 a character: " in encounter <n> (<title>)" when a change went to an encounter's copy.
+      FUN`DISPLAY`WHERE:
+        value: |-
+          setq(where_n,u(%!/FUN`ENC`ACTIVE,%0))[if(strlen(%q<where_n>),%bin encounter [u(%!/FUN`ENC`NAME,%q<where_n>)])]
+        flags: [funsyntax]
+      # %0 the values given: "Left to give: 2 1 1." or that none are.
+      FUN`DISPLAY`ARRAYLEFT:
+        value: |-
+          setq(array_all,get(%!/DATA`CONFIG`ARRAY))[setq(array_left,squish(iter(setunion(%q<array_all>,%q<array_all>),repeat(%i0%b,max(0,sub(words(graball(%q<array_all>,%i0)),words(graball(%0,%i0))))))))][if(words(%q<array_left>),Left to give: [itemize(revwords(sort(%q<array_left>,n)))].,Every value is given.)]
+        flags: [funsyntax]
+      # %0 a number filled, %1 out of: [##.].
+      FUN`DISPLAY`TRACK:
+        value: |-
+          %[[repeat(#,%0)][repeat(.,sub(%1,%0))]%]
         flags: [funsyntax]
       # %0 ticks: ten boxes of four ticks, [#xx/......].
       FUN`DISPLAY`PROGRESS:
@@ -503,14 +1130,19 @@ objects:
         value: |-
           setq(vow_ticks,u(%!/FUN`VOW`TICKS,%0,%1))[get(%0/IRONSWORN`VOW`%1)] %([get(%0/IRONSWORN`VOW`%1`RANK)]%) [u(%!/FUN`DISPLAY`PROGRESS,%q<vow_ticks>)] [floor(fdiv(%q<vow_ticks>,4))]/10
         flags: [funsyntax]
-      # %0 the character, %1 who reads it.
+      # %0 the character, %1 who reads it. The sheet itself; +encounter shows the copies.
       FUN`SCREEN`SHEET:
         value: |-
-          setq(screen_stats,u(%!/FUN`LIST`ALL,STAT))[box(ldatatable(lit({"rule":""}),iter(%q<screen_stats>,u(%!/FUN`LIST`LABEL,STAT,%i0),%b,|),iter(%q<screen_stats>,u(%!/API`RATING,%0,%i0),%b,|),^)%r[rule(Meters)]%r[lfields(lit({"cols":3}),iter(v(DATA`METERS),v(DATA`METER`%i0),%b,%*<|>),iter(v(DATA`METERS),u(%!/FUN`DISPLAY`METERVALUE,%0,%i0),%b,%*<|>),%*<|>)]%r[rule(Vows)]%r[u(%!/FUN`SCREEN`VOWLIST,%0)]%r[rule()]%r[tone(muted,u(%!/FUN`DISPLAY`FOOTER,%0,%1))],name(%0))]
+          setqm(screen_stats,u(%!/FUN`STATS`LIVE,%0),screen_all,u(%!/FUN`LIST`ALL,STAT))[box(ldatatable(lit({"rule":""}),iter(%q<screen_all>,u(%!/FUN`LIST`LABEL,STAT,%i0),%b,|),iter(%q<screen_all>,u(%!/FUN`R,%q<screen_stats>,%i0),%b,|),^)%r[rule(Meters)]%r[lfields(lit({"cols":3}),[iter(v(DATA`METERS),v(DATA`METER`%i0),%b,%*<|>)]%*<|>Experience,[iter(v(DATA`METERS),u(%!/FUN`DISPLAY`METERVALUE,%i0,u(%!/FUN`METER`NOW,%0,%i0,1)),%b,%*<|>)]%*<|>[u(%!/API`XP,%0)],%*<|>)]%r[rule(Assets)]%r[u(%!/FUN`SCREEN`ASSETLIST,%0,u(%!/FUN`ASSETS`LIVE,%0))]%r[rule(Vows)]%r[u(%!/FUN`SCREEN`VOWLIST,%0)]%r[rule()]%r[tone(muted,u(%!/FUN`DISPLAY`FOOTER,%0,%1))],name(%0))]
         flags: [funsyntax]
-      FUN`DISPLAY`METERVALUE:
+      # %0 the character, %1 their assets: a table, or a line saying there are none.
+      FUN`SCREEN`ASSETLIST:
         value: |-
-          setq(meter_value,u(%!/API`METER,%0,%1))[cond(strmatch(%1,MOMENTUM),[if(gt(%q<meter_value>,0),+)]%q<meter_value>,member(HEALTH SPIRIT SUPPLY,%1),%q<meter_value>/[extract(v(DATA`METER`%1`RANGE),2,1)],%q<meter_value>)]
+          if(words(%1),ldatatable(lit({"nowrap":"2|3","rule":""}),Asset|Type|Abilities|Companion,iter(%1,u(%!/FUN`DISPLAY`ASSETROW,%0,before(%i0,=),after(%i0,=)),%b,%*<^>),%*<^>),tone(muted,No assets.))
+        flags: [funsyntax]
+      FUN`DISPLAY`ASSETROW:
+        value: |-
+          setq(assetrow_max,default({{store}}/ASSET`%1`HEALTH,0))[u(%!/FUN`LIST`LABEL,ASSET,%1)]|[lcstr(get({{store}}/ASSET`%1`TYPE))]|[u(%!/FUN`DISPLAY`TRACK,%2,3)]|[if(%q<assetrow_max>,[u(%!/FUN`COMPANION`NOW,%0,%1,1)]/%q<assetrow_max> health,-)]
         flags: [funsyntax]
       # %0 the character: their vows as a table, or a line saying there are none.
       FUN`SCREEN`VOWLIST:
@@ -521,18 +1153,83 @@ objects:
         value: |-
           box(u(%!/FUN`SCREEN`VOWLIST,%0)%r[rule()]%r[tone(muted,+vow/swear <vow>=<rank> swears one%, +vow/mark <vow> marks progress%, +vow/fulfil <vow> makes the progress roll.)],[name(%0)]'s vows)
         flags: [funsyntax]
+      # %0 the character, %1 who reads it: what they can do next.
       FUN`DISPLAY`FOOTER:
         value: |-
-          cond(cand(not(comp(objid(%1),%0)),not(isapproved(%1)),not(u(%!/FUN`PERM`KEEPER,%1))),+sheet/set <stat>=<value> sets a stat. +check <stat> rolls.[u(%!/FUN`HINT,FOOTER)],not(comp(objid(%1),%0)),+check <stat> rolls. +sheet/health -<n> takes harm%, +sheet/momentum +<n> gains momentum.,+check <stat> rolls a six-sided die plus the stat against two ten-sided dice.)
+          setq(footer_n,u(%!/FUN`ENC`JOINED,%0))[cond(cand(not(comp(objid(%1),%0)),not(isapproved(%1)),not(u(%!/FUN`PERM`KEEPER,%1))),u(%!/FUN`CHARGEN`NEXT,%0) +sheet/chargen shows the steps.[u(%!/FUN`HINT,FOOTER)],not(comp(objid(%1),%0)),+check <stat> rolls. +sheet/asset and +sheet/upgrade spend experience.,+check <stat> rolls a six-sided die plus the stat against two ten-sided dice.)][if(words(%q<footer_n>),%b[name(%0)] plays from a copy in encounter[if(gt(words(%q<footer_n>),1),s)] [itemize(%q<footer_n>)]: +encounter shows [if(gt(words(%q<footer_n>),1),them,it)].)]
+        flags: [funsyntax]
+      # %0 the character, %1 who reads it: the steps of making a character.
+      FUN`SCREEN`CHARGEN:
+        value: |-
+          setq(chargen_now,u(%!/FUN`CHARGEN`STEP,%0))[setq(chargen_vows,u(%!/FUN`VOW`ALL,%0))][box([u(%!/FUN`DISPLAY`STEP,1,Stats,not(match(stats,%q<chargen_now>)),[words(%q<chargen_stats>)] of [words(u(%!/FUN`LIST`ALL,STAT))] given[if(words(%q<chargen_stats>),: [itemize(iter(%q<chargen_stats>,[u(%!/FUN`LIST`LABEL,STAT,before(%i0,=))] [after(%i0,=)],%b,|),|)])]. [u(%!/FUN`DISPLAY`ARRAYLEFT,iter(%q<chargen_stats>,after(%i0,=)))])]%r[u(%!/FUN`DISPLAY`STEP,2,Assets,gte(words(%q<chargen_assets>),get(%!/DATA`CONFIG`STARTING)),[words(%q<chargen_assets>)] of [get(%!/DATA`CONFIG`STARTING)] taken[if(words(%q<chargen_assets>),: [itemize(iter(%q<chargen_assets>,u(%!/FUN`LIST`LABEL,ASSET,before(%i0,=)),%b,|),|)])].)]%r[u(%!/FUN`DISPLAY`STEP,3,Background vow,words(%q<chargen_vows>),if(words(%q<chargen_vows>),[words(%q<chargen_vows>)] sworn.,An extreme or epic vow that drives the character.))]%r[rule()]%r[tone(muted,if(strlen(%q<chargen_now>),u(%!/FUN`CHARGEN`NEXT,%0),Complete. New assets and abilities come after approval%, with experience.[if(not(isapproved(%0)),u(%!/FUN`HINT,CHARGEN))]))],Making [name(%0)])]
+        flags: [funsyntax]
+      # %0 the number, %1 the step, %2 1 when done, %3 what it says.
+      FUN`DISPLAY`STEP:
+        value: |-
+          %0. [tone(strong,%1)] [if(%2,tone(success,done),tone(warning,to do))]: %3
+        flags: [funsyntax]
+      # %0 the character: their ledger, oldest first. Entries no longer in force are muted.
+      FUN`SCREEN`LEDGER:
+        value: |-
+          setq(ledger_rows,u(%!/FUN`LEDGER`ROWS,%0))[setq(ledger_live,u(%!/FUN`LEDGER`LIVE,%q<ledger_rows>))][box(if(words(%q<ledger_rows>),ldatatable(lit({"nowrap":"1|3|4","grow":"|1"}),#|Entry|Phase|By,iter(%q<ledger_rows>,u(%!/FUN`DISPLAY`LEDGERROW,%i0),%b,%*<^>),%*<^>),There are no entries yet.)%r[rule()]%r[tone(muted,Muted entries are revoked or cleared. +sheet/chargen shows the steps.)],Ledger: [name(%0)])]
+        flags: [funsyntax]
+      FUN`DISPLAY`LEDGERROW:
+        value: |-
+          setq(ledgerrow_on,cor(member(%q<ledger_live>,%0),match(clear revoke,elements(%0,2,~))))[iter(first(%0,~)|[u(%!/FUN`DISPLAY`ENTRY,%0)]|[elements(%0,5,~)]|[name(elements(%0,6,~))],if(%q<ledgerrow_on>,%i0,tone(muted,%i0)),|,|)]
+        flags: [funsyntax]
+      # %0 a row: what the entry does.
+      FUN`DISPLAY`ENTRY:
+        value: |-
+          setqm(entry_kind,elements(%0,2,~),entry_key,elements(%0,3,~),entry_value,elements(%0,4,~))[switch(%q<entry_kind>,stat,[u(%!/FUN`LIST`LABEL,STAT,%q<entry_key>)] [firstof(%q<entry_value>,unassigned)],asset,[u(%!/FUN`LIST`LABEL,ASSET,%q<entry_key>)] [if(%q<entry_value>,%q<entry_value>/3,given back)],revoke,Revokes entry %q<entry_value>,clear,Clears everything before it,%q<entry_kind>)]
+        flags: [funsyntax]
+      # %0 the character: the latest 30 log entries, oldest first.
+      FUN`SCREEN`LOG:
+        value: |-
+          setq(log_nums,sort(iter(lattr(%0/IRONSWORN`LOG`*),if(hasflag(%0/%i0,wizard),last(%i0,`))),n))[setq(log_nums,extract(%q<log_nums>,max(1,sub(words(%q<log_nums>),29)),30))][box(if(words(%q<log_nums>),ldatatable(lit({"nowrap":"1|2|3|4|6","grow":"||||1"}),#|When|Change|>Now|Why|By,iter(%q<log_nums>,u(%!/FUN`DISPLAY`LOGROW,get(%0/IRONSWORN`LOG`%i0)),%b,%*<^>),%*<^>),Nothing is logged yet.)%r[rule()]%r[tone(muted,Every change to experience%, with who made it.)],Log: [name(%0)])]
+        flags: [funsyntax]
+      FUN`DISPLAY`LOGROW:
+        value: |-
+          [json_query(%0,extract,$.n)]|[timefmt($Y-$m-$d,json_query(%0,extract,$.at))]|[if(gte(json_query(%0,extract,$.delta),0),+)][json_query(%0,extract,$.delta)] XP|[json_query(%0,extract,$.total)]|[firstof(json_query(%0,extract,$.reason),-)]|[name(json_query(%0,extract,$.by))]
+        flags: [funsyntax]
+      # %0 an encounter, %1 who reads it.
+      FUN`SCREEN`ENCOUNTER:
+        value: |-
+          setq(enc_members,u(%!/FUN`ENC`MEMBERS,%0))[box(Run by [name(get({{encounters}}/ENC`%0`GM))] in [name(get({{encounters}}/ENC`%0`ROOM))].%r[rule()]%r[if(words(%q<enc_members>),ldatatable(lit({"nowrap":"1|2|3|4|5","grow":"|||||1"}),Name|>Health|>Spirit|>Supply|>Momentum|Companions,iter(%q<enc_members>,u(%!/FUN`DISPLAY`ENCROW,%i0,%0),%b,%*<^>),%*<^>),Nobody has joined yet.)]%r[rule()]%r[tone(muted,if(u(%!/FUN`ENC`GM,%1,%0),/add%, /remove and /keep <name>=%0%, and /end %0 run it. +sheet/health <name>=-<n> hurts a member here.,if(u(%!/FUN`ENC`MEMBER,%1,%0),You roll from your copy while you are in its room. /leave %0 comes out.,+encounter/join %0 takes part with a copy of your sheet.)))],Encounter [u(%!/FUN`ENC`NAME,%0)])]
+        flags: [funsyntax]
+      # %0 the encounters here, %1 the ones %2 is in.
+      FUN`SCREEN`ENCOUNTERS:
+        value: |-
+          setqm(encs_all,setunion(%0,%1,,n),encs_active,u(%!/FUN`ENC`ACTIVE,%2))[box(ldatatable(lit({"nowrap":"1|3|4|5","grow":"|1"}),#|Title|Where|Members|You,iter(%q<encs_all>,%i0|[get({{encounters}}/ENC`%i0)]|[if(member(%0,%i0),here,name(get({{encounters}}/ENC`%i0`ROOM)))]|[words(lattr({{encounters}}/ENC`%i0`COPY`*))]|[cond(member(%q<encs_active>,%i0),rolling here,member(%1,%i0),joined,-)],%b,%*<^>),%*<^>)%r[rule()]%r[tone(muted,+encounter <n> shows one. /join <n> takes part and /use <n> picks which copy you roll from here.)],Encounters)]
+        flags: [funsyntax]
+      # %0 a member, %1 the encounter: their copy in it, one table row.
+      FUN`DISPLAY`ENCROW:
+        value: |-
+          setqm(encrow_path,u(%!/FUN`ENC`PATH,%1,%0),encrow_assets,u(%!/FUN`NONE,get([u(%!/FUN`ENC`PATH,%1,%0)]ASSETS)))[name(%0)]|[iter(v(DATA`METERS),u(%!/FUN`DISPLAY`METERVALUE,%i0,u(%!/FUN`ENCROW`VALUE,%q<encrow_path>METER`%i0,last(v(DATA`METER`%i0`RANGE)))),%b,|)]|[firstof(itemize(squish(iter(%q<encrow_assets>,if(gt(setr(encrow_max,default({{store}}/ASSET`[before(%i0,=)]`HEALTH,0)),0),[u(%!/FUN`LIST`LABEL,ASSET,before(%i0,=))] [u(%!/FUN`ENCROW`VALUE,%q<encrow_path>COMPANION`[before(%i0,=)],%q<encrow_max>)]/%q<encrow_max>),%b,|),|),|),-)]
+        flags: [funsyntax]
+      # %0 obj/attr, %1 what an unset one counts as.
+      FUN`ENCROW`VALUE:
+        value: |-
+          setq(encrow_got,get(%0))[if(strlen(%q<encrow_got>),%q<encrow_got>,%1)]
         flags: [funsyntax]
       FUN`SCREEN`TRAITS:
         value: |-
-          box(ldatatable(lit({"nowrap":"1|2"}),Key|Stat,iter(u(%!/FUN`LIST`ALL,STAT),lcstr(%i0)|[u(%!/FUN`LIST`LABEL,STAT,%i0)],,%*<^>),%*<^>)%r[rule()]%r[tone(muted,Difficulties: [itemize(v(DATA`DIFFICULTIES))]. Vow ranks: [itemize(v(DATA`RANKS))].)],Ironsworn stats)
+          box(ldatatable(lit({"nowrap":"1|2"}),Key|Stat,iter(u(%!/FUN`LIST`ALL,STAT),lcstr(%i0)|[u(%!/FUN`LIST`LABEL,STAT,%i0)],,%*<^>),%*<^>)%r[rule()]%r[tone(muted,Difficulties: [itemize(v(DATA`DIFFICULTIES))]. Vow ranks: [itemize(v(DATA`RANKS))]. +sheet/assets lists the assets.)],Ironsworn stats)
+        flags: [funsyntax]
+      # The assets there are, by type.
+      FUN`SCREEN`ASSETS:
+        value: |-
+          setq(screen_assets,u(%!/FUN`LIST`ALL,ASSET))[box(if(words(%q<screen_assets>),ldatatable(lit({"nowrap":"1|2|3|4"}),Key|Asset|Type|>Health,iter(%q<screen_assets>,lcstr(%i0)|[u(%!/FUN`LIST`LABEL,ASSET,%i0)]|[lcstr(get({{store}}/ASSET`%i0`TYPE))]|[firstof(default({{store}}/ASSET`%i0`HEALTH,0),-)],%b,%*<^>),%*<^>),There are no assets.)%r[rule()]%r[tone(muted,+sheet/assets <asset> shows its abilities. A new asset costs [get(%!/DATA`CONFIG`NEWASSET)] experience and each ability after the first [get(%!/DATA`CONFIG`UPGRADE)].)],Ironsworn assets)]
+        flags: [funsyntax]
+      # %0 an asset, %1 who reads it: its three abilities, and which of them they have marked.
+      FUN`SCREEN`ASSET:
+        value: |-
+          setqm(asset_held,u(%!/FUN`R`ASSET,u(%!/FUN`ASSETS`LIVE,%1),%0),asset_max,default({{store}}/ASSET`%0`HEALTH,0))[box([capstr(lcstr(get({{store}}/ASSET`%0`TYPE)))][if(%q<asset_max>,%bwith %q<asset_max> health)].%r[rule()]%r[iter(v(DATA`ABILITIES),[inum(0)]. [if(gte(%q<asset_held>,inum(0)),tone(success,%[x%]),%[ %])] [firstof(get({{store}}/ASSET`%0`%i0),tone(muted,-))],%b,%r)]%r[rule()]%r[tone(muted,if(%q<asset_held>,You have it with [%q<asset_held>] of 3 marked. +sheet/upgrade [lcstr(%0)] marks the next.,+sheet/asset [lcstr(%0)] takes it.))],u(%!/FUN`LIST`LABEL,ASSET,%0))]
         flags: [funsyntax]
 
       # ---- the sheet API ------------------------------------------------------------
       # What other packages call: u({{sheet-ironsworn/sheet}}/API`<NAME>,...). Every sheet package has these
-      # names. They read and roll; API`ADJUST is the one that writes.
+      # names. They read the character's sheet itself, never an encounter's copy. They read and roll; API`ADJUST and
+      # API`AWARD are the ones that write, and API`AWARD's experience goes in the log.
       API:
         value: |-
           The Ironsworn sheet's functions for other packages. See the package README.
@@ -554,10 +1251,15 @@ objects:
         value: |-
           u(%!/FUN`LIST`LABEL,STAT,ucstr(%0))
         flags: [VISUAL]
-      # %0 a character, %1 a stat: its value, 1 when not set.
+      # %0 a character, %1 a stat: its value on the sheet, 1 when unassigned.
       API`RATING:
         value: |-
-          default(%0/IRONSWORN`STAT`[ucstr(%1)],1)
+          u(%!/FUN`R,u(%!/FUN`STATS`LIVE,%0),ucstr(%1))
+        flags: [VISUAL]
+      # %0 a character, %1 an asset: the abilities marked, 0 when they do not have it.
+      API`ASSET:
+        value: |-
+          u(%!/FUN`R`ASSET,u(%!/FUN`ASSETS`LIVE,%0),ucstr(%1))
         flags: [VISUAL]
       API`HAS:
         value: |-
@@ -575,18 +1277,27 @@ objects:
         value: |-
           setq(tier_hits,add(gt(%0,%1),gt(%0,%2)))[cond(not(cand(isint(%0),isint(%1),isint(%2))),,eq(%q<tier_hits>,2),if(eq(%1,%2),crit-success,success),eq(%q<tier_hits>,1),partial,if(eq(%1,%2),crit-fail,fail))]
         flags: [VISUAL]
-      # %0 a character, %1 a meter (HEALTH SPIRIT SUPPLY MOMENTUM XP): its value, the start when not set.
+      # %0 a character, %1 a meter (HEALTH SPIRIT SUPPLY MOMENTUM): its value on the sheet, the start when not set.
       API`METER:
         value: |-
-          default(%0/IRONSWORN`METER`[ucstr(%1)],last(v(DATA`METER`[ucstr(%1)]`RANGE)))
+          if(member(v(DATA`METERS),ucstr(%1)),u(%!/FUN`METER`NOW,%0,%1,1),#-1 NO SUCH METER)
         flags: [VISUAL]
-      # %0 a character, %1 a meter, %2 how much to add (or take, below 0): writes it within the meter's range and
-      # returns the new value.
+      # %0 a character, %1 a meter, %2 how much to add (or take, below 0): writes it to the sheet within the meter's
+      # range and returns the new value. XP as the meter gives experience, as API`AWARD does.
       API`ADJUST:
         value: |-
-          setqm(adjust_key,ucstr(%1),
-          adjust_range,v(DATA`METER`[ucstr(%1)]`RANGE),
-          adjust_new,bound(add(u(%!/API`METER,%0,%1),%2),first(%q<adjust_range>),extract(%q<adjust_range>,2,1)))[if(words(%q<adjust_range>),[if(hasattr(%0,IRONSWORN),,attrib_set(%0/IRONSWORN,This character's Ironsworn sheet. +sheet shows it.)[set(%0/IRONSWORN,wizard)][set(%0/IRONSWORN,no_command)])][if(neq(%q<adjust_new>,last(%q<adjust_range>)),attrib_set(%0/IRONSWORN`METER`%q<adjust_key>,%q<adjust_new>),attrib_set(%0/IRONSWORN`METER`%q<adjust_key>))]%q<adjust_new>,#-1 NO SUCH METER)]
+          cond(strmatch(%1,XP),u(%!/API`AWARD,%0,%2,),member(v(DATA`METERS),ucstr(%1)),u(%!/FUN`METER`SET,%0,%1,add(u(%!/FUN`METER`NOW,%0,%1,1),%2),1),#-1 NO SUCH METER)
+        flags: [VISUAL]
+      # %0 a character: the experience they have to spend.
+      API`XP:
+        value: |-
+          default(%0/IRONSWORN`XP,0)
+        flags: [VISUAL]
+      # %0 a character, %1 experience to give (or take, below 0), %2 why (Reward when empty): never below 0,
+      # logged, returns what they have now.
+      API`AWARD:
+        value: |-
+          u(%!/FUN`XP`ADD,%0,%1,firstof(%2,Reward))
         flags: [VISUAL]
       # Named: %<roller> an objid, %<trait> a stat key, %<modifier> adds, %<target> adds from the difficulty or
       # nothing. Makes the action roll and keeps it (roll() record), and returns {"tier","action","challenge",
@@ -595,17 +1306,12 @@ objects:
         value: |-
           setq(check_api_key,u(%!/FUN`LIST`FIND,STAT,%<trait>))[cond(not(hastype(%<roller>,player)),#-1 There is no character to roll for.,not(strlen(%q<check_api_key>)),#-1 There is no stat '%<trait>'.,u(%!/FUN`CHECK`ROLLED,%q<check_api_key>,u(%!/API`RATING,%<roller>,%q<check_api_key>),add(firstof(%<modifier>,0),firstof(%<target>,0)),%<target>))]
         flags: [VISUAL]
-      # %0 the key, %1 the stat, %2 all the adds, %3 the target as given.
-      FUN`CHECK`ROLLED:
-        value: |-
-          setq(rolled_check,u(%!/FUN`ROLL`ACTION,add(%1,%2)))[json(object,tier,json(string,json_query(%q<rolled_check>,extract,$.tier)),action,json_query(%q<rolled_check>,extract,$.action),challenge,json_query(%q<rolled_check>,extract,$.challenge),match,json_query(%q<rolled_check>,extract,$.match),stat,%1,target,json(string,%3),label,json(string,u(%!/FUN`LIST`LABEL,STAT,%0)),text,json(string,json_query(%q<rolled_check>,extract,$.text)),roll,json_query(%q<rolled_check>,extract,$.roll),formula,json(string,json_query(%q<rolled_check>,extract,$.formula)))]
-        flags: [funsyntax]
 
       # ---- lifecycle ----------------------------------------------------------------
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add/noparse/rsnoparse +sheet; @hook/override/inline +sheet=%!,CMD`SHEET; @command/add/noparse/rsnoparse +check; @hook/override/inline +check=%!,CMD`CHECK; @command/add/noparse/rsnoparse +vow; @hook/override/inline +vow=%!,CMD`VOW
+          @command/add/noparse/rsnoparse +sheet; @hook/override/inline +sheet=%!,CMD`SHEET; @command/add/noparse/rsnoparse +check; @hook/override/inline +check=%!,CMD`CHECK; @command/add/noparse/rsnoparse +vow; @hook/override/inline +vow=%!,CMD`VOW; @command/add/noparse/rsnoparse +encounter; @hook/override/inline +encounter=%!,CMD`ENCOUNTER
         flags: [cmdsyntax]
       AINSTALL:
         value: |-
@@ -616,9 +1322,10 @@ objects:
           @trigger %!/STARTUP
         flags: [cmdsyntax]
 
-  # The stat list. Inside the Ironsworn Sheet, so no player can reach it, and no_command, so nothing kept on it is
-  # ever matched as a command. STAT`<KEY> a stat's label, with ORDER beneath. Staff change it with
-  # +config ironsworn/stats.
+  # The lists. Inside the Ironsworn Sheet, so no player can reach it, and no_command, so nothing kept on it is ever
+  # matched as a command. STAT`<KEY> a stat's label, with ORDER beneath; ASSET`<KEY> an asset's label, with TYPE,
+  # HEALTH, FIRST, SECOND, THIRD and ORDER beneath. Staff change them with +config ironsworn/stats and /assets.
+  # The assets here are a starting set in this package's own words.
   - ref: store
     type: thing
     name: Ironsworn Sheet Store
@@ -647,6 +1354,170 @@ objects:
         Wits
       STAT`WITS`ORDER: |-
         5
+      ASSET: |-
+        The assets, one branch each, with their type, a companion's health and three abilities.
+      ASSET`HOUND: |-
+        Hound
+      ASSET`HOUND`TYPE: |-
+        companion
+      ASSET`HOUND`HEALTH: |-
+        4
+      ASSET`HOUND`FIRST: |-
+        Keen nose: when you follow a trail with your hound, add +1 and take +1 momentum on a hit.
+      ASSET`HOUND`SECOND: |-
+        Fierce: when you fight beside your hound and score a hit, inflict +1 harm.
+      ASSET`HOUND`THIRD: |-
+        Loyal: when you endure stress with your hound at your side, add +1.
+      ASSET`HOUND`ORDER: |-
+        10
+      ASSET`HAWK: |-
+        Hawk
+      ASSET`HAWK`TYPE: |-
+        companion
+      ASSET`HAWK`HEALTH: |-
+        3
+      ASSET`HAWK`FIRST: |-
+        Far sight: when your hawk scouts ahead on a journey, add +1.
+      ASSET`HAWK`SECOND: |-
+        Hunter: when you resupply by hunting with your hawk, add +1 and take +1 momentum on a hit.
+      ASSET`HAWK`THIRD: |-
+        Harrier: when you send your hawk at a foe to gain an advantage, add +1.
+      ASSET`HAWK`ORDER: |-
+        11
+      ASSET`HORSE: |-
+        Horse
+      ASSET`HORSE`TYPE: |-
+        companion
+      ASSET`HORSE`HEALTH: |-
+        5
+      ASSET`HORSE`FIRST: |-
+        Swift: when you travel on horseback, add +1.
+      ASSET`HORSE`SECOND: |-
+        Bold: when you ride hard to escape or face danger, add +1 and take +1 momentum on a hit.
+      ASSET`HORSE`THIRD: |-
+        Charger: when you strike from the saddle in a charge and score a hit, inflict +1 harm.
+      ASSET`HORSE`ORDER: |-
+        12
+      ASSET`HERBALIST: |-
+        Herbalist
+      ASSET`HERBALIST`TYPE: |-
+        path
+      ASSET`HERBALIST`FIRST: |-
+        When you heal someone with herbs and remedies, add +1; on a strong hit they take +1 health more.
+      ASSET`HERBALIST`SECOND: |-
+        When you resupply by gathering plants, add +1.
+      ASSET`HERBALIST`THIRD: |-
+        When you make camp and tend to your companions, each of them takes +1 health.
+      ASSET`HERBALIST`ORDER: |-
+        20
+      ASSET`WAYFINDER: |-
+        Wayfinder
+      ASSET`WAYFINDER`TYPE: |-
+        path
+      ASSET`WAYFINDER`FIRST: |-
+        When you set out on a journey through wild country, add +1.
+      ASSET`WAYFINDER`SECOND: |-
+        When you reach your destination on a strong hit, take +2 momentum.
+      ASSET`WAYFINDER`THIRD: |-
+        When you make camp in the wild, choose one more benefit.
+      ASSET`WAYFINDER`ORDER: |-
+        21
+      ASSET`VETERAN: |-
+        Veteran
+      ASSET`VETERAN`TYPE: |-
+        path
+      ASSET`VETERAN`FIRST: |-
+        When you endure harm in a fight, add +1.
+      ASSET`VETERAN`SECOND: |-
+        When you size up a foe before a fight, add +1 and take +1 momentum on a hit.
+      ASSET`VETERAN`THIRD: |-
+        When you rally others in battle, add +1; on a strong hit, each ally takes +1 momentum.
+      ASSET`VETERAN`ORDER: |-
+        22
+      ASSET`SWORDMASTER: |-
+        Swordmaster
+      ASSET`SWORDMASTER`TYPE: |-
+        talent
+      ASSET`SWORDMASTER`FIRST: |-
+        When you strike or clash with a sword and score a strong hit, inflict +1 harm.
+      ASSET`SWORDMASTER`SECOND: |-
+        When you parry an attack with your sword, add +1.
+      ASSET`SWORDMASTER`THIRD: |-
+        When you strike with a sword after a successful parry, add +1 and take +1 momentum on a hit.
+      ASSET`SWORDMASTER`ORDER: |-
+        30
+      ASSET`ARCHER: |-
+        Archer
+      ASSET`ARCHER`TYPE: |-
+        talent
+      ASSET`ARCHER`FIRST: |-
+        When you shoot at a foe from range, add +1.
+      ASSET`ARCHER`SECOND: |-
+        When you take careful aim before shooting, take +1 momentum; on a strong hit, inflict +1 harm.
+      ASSET`ARCHER`THIRD: |-
+        When you hunt with your bow, add +1 to resupply.
+      ASSET`ARCHER`ORDER: |-
+        31
+      ASSET`SHIELD-BEARER: |-
+        Shield-Bearer
+      ASSET`SHIELD-BEARER`TYPE: |-
+        talent
+      ASSET`SHIELD-BEARER`FIRST: |-
+        When you endure harm with your shield raised, add +1.
+      ASSET`SHIELD-BEARER`SECOND: |-
+        When you shield an ally from an attack, add +1 and take +1 momentum on a hit.
+      ASSET`SHIELD-BEARER`THIRD: |-
+        When you sacrifice your shield to turn a blow, take no harm from it, and the shield is gone.
+      ASSET`SHIELD-BEARER`ORDER: |-
+        32
+      ASSET`BRAWLER: |-
+        Brawler
+      ASSET`BRAWLER`TYPE: |-
+        talent
+      ASSET`BRAWLER`FIRST: |-
+        When you fight unarmed or with a makeshift weapon, add +1.
+      ASSET`BRAWLER`SECOND: |-
+        When you grapple a foe, add +1 and take +1 momentum on a hit.
+      ASSET`BRAWLER`THIRD: |-
+        When you endure harm in a brawl, add +1.
+      ASSET`BRAWLER`ORDER: |-
+        33
+      ASSET`WARD: |-
+        Ward
+      ASSET`WARD`TYPE: |-
+        ritual
+      ASSET`WARD`FIRST: |-
+        Mark a place with signs of warding and roll +wits. On a hit, you sense anything hostile that crosses it.
+      ASSET`WARD`SECOND: |-
+        When you perform the ward at your camp, add +1.
+      ASSET`WARD`THIRD: |-
+        On a strong hit, the first foe to cross the ward is held back for a moment, and you take +1 momentum.
+      ASSET`WARD`ORDER: |-
+        40
+      ASSET`COMMUNION: |-
+        Communion
+      ASSET`COMMUNION`TYPE: |-
+        ritual
+      ASSET`COMMUNION`FIRST: |-
+        Speak with the spirit of the dead at its resting place and roll +heart. On a hit, it answers a question.
+      ASSET`COMMUNION`SECOND: |-
+        When you offer something the dead one valued, add +1.
+      ASSET`COMMUNION`THIRD: |-
+        On a strong hit, the spirit also answers a second question, or guides you toward what it knew.
+      ASSET`COMMUNION`ORDER: |-
+        41
+
+  # The encounters running now. Inside the Ironsworn Sheet and no_command, like the store. ENC`<n> is one
+  # encounter, with ROOM, GM, STARTED and COPY`<dbref number> (one member's copy: STATS, ASSETS, METER`<KEY> and
+  # COMPANION`<ASSET> beneath) under it.
+  - ref: encounters
+    type: thing
+    name: Ironsworn Encounters
+    location: "{{sheet}}"
+    flags: [no_command]
+    attributes:
+      ENC: |-
+        The encounters running now, one branch each.
 
   # The +help topics, on an object of their own. sheet-ironsworn-help registers it with +help; without that
   # bridge nothing reads it. HELP`<TOPIC> is a topic, its subtopics the leaves beneath, LOCK`<TOPIC> who may read it.
@@ -656,39 +1527,77 @@ objects:
     location: "{{sheet}}"
     attributes:
       HELP: |-
-        Your character's Ironsworn sheet, action rolls and iron vows: +sheet, +check and +vow.
+        Your character's Ironsworn sheet, action rolls, iron vows and encounters: +sheet, +check, +vow and +encounter.
       SEE: |-
         Cross-references. One leaf per topic; subtopics come from the tree, not from here.
       SEE`SHEET: |-
-        check vow
+        check vow encounter
       SEE`CHECK: |-
-        sheet vow
+        sheet vow encounter
       SEE`VOW: |-
         sheet check
+      SEE`ENCOUNTER: |-
+        sheet check
       HELP`SHEET: |-
-        `+sheet` shows your character's sheet: five stats, Edge, Heart, Iron, Shadow and Wits, the meters, and your vows.
+        `+sheet` shows your character's sheet: five stats, Edge, Heart, Iron, Shadow and Wits, the meters, experience, assets and vows.
 
         - `+sheet` shows your own; `+sheet <name>` another character's, when the game lets you read it.
-        - `+sheet/set <stat>=<value>` sets a stat from 1 to 3: `+sheet/set iron=3`. Leave the value out to put it back to 1.
-        - `+sheet/traits` lists the stats.
+        - `+sheet/chargen` shows the steps of making your character and what to do next.
+        - `+sheet/traits` lists the stats; `+sheet/assets` lists the assets.
+        - `+sheet/ledger` lists every entry your stats and assets are built from, oldest first.
+        - `+sheet/log` lists every change to your experience, who made it and why.
 
-        A new character usually gives their stats 3, 2, 2, 1 and 1. You set stats until your character is approved; then staff change them.
+        Your stats and assets are built from the ledger: each value you give and each asset you take is an entry. Once you are approved, `+sheet/asset` and `+sheet/upgrade` spend experience and staff make other changes.
+
+        For example:
+
+        `+sheet/chargen`
+
+        Output: `1. Stats to do: 2 of 5 given: Iron 3 and Heart 2. Left to give: 2, 1 and 1.`
+
+        See `+help sheet chargen` for making a character, `+help sheet assets` for assets and experience, `+help sheet play` for the meters and `+help check` for rolling.
+      HELP`SHEET`CHARGEN: |-
+        Making a character takes three steps. `+sheet/chargen` shows how far you are.
+
+        1. Stats: give your stats 3, 2, 2, 1 and 1, one value each, unless your game changed that. `+sheet/set <stat>=<value>`: `+sheet/set iron=3`. `+sheet/set <stat>=` frees the value.
+        2. Assets: take three, unless your game changed that, each with its first ability marked. `+sheet/asset <asset>`: `+sheet/asset hound`. `+sheet/asset <asset>=remove` gives one back.
+        3. A background vow: an extreme or epic vow that drives your character. `+vow/swear <vow>=epic`.
+
+        `+sheet/assets` lists the assets and `+sheet/assets <asset>` shows one's abilities.
 
         For example:
 
         `+sheet/set heart=2`
 
-        Output: `\[SHEET\] Done: Heart is 2 on Alice's sheet.`
+        Output: `\[SHEET\] Done: Heart is 2 on Alice's sheet. Next: +sheet/set <stat>=<value>. Left to give: 2, 1 and 1.`
 
-        See `+help sheet play` for the meters, `+help check` for rolling and `+help vow` for vows.
+        When every step is done, your sheet is complete. Once you are approved, staff change your stats.
+      HELP`SHEET`ASSETS: |-
+        An asset is a companion, a path, a combat talent or a ritual, with three abilities. Taking it marks the first; upgrades mark the second and third.
+
+        - `+sheet/assets` lists them; `+sheet/assets <asset>` shows one's abilities and which you have marked.
+        - `+sheet/asset <asset>` takes a new asset. Once you are approved it costs 3 experience, unless your game changed that.
+        - `+sheet/upgrade <asset>` marks its next ability for 2 experience.
+        - `+sheet/log` lists every change to your experience.
+
+        You mark experience when you fulfil a vow, and staff give it. A companion has health of its own: see `+help sheet play`.
+
+        For example:
+
+        `+sheet/upgrade hound`
+
+        Output: `\[SHEET\] Done: Alice marks the second ability of Hound (2 experience spent): Fierce: when you fight beside your hound and score a hit, inflict +1 harm.`
       HELP`SHEET`PLAY: |-
         In play you keep your own meters:
 
         - `+sheet/health`, `/spirit` and `/supply` run from 0 to 5 and start at 5.
         - `+sheet/momentum` runs from -6 to +10 and starts at +2.
-        - `+sheet/xp` is the experience you have marked.
 
         Each takes `+<n>`, `-<n>`, `<n>`, or `reset` to go back to where it starts: `+sheet/health -2`, `+sheet/momentum reset`.
+
+        A companion asset has health of its own, up to the most its asset gives: `+sheet/companion <asset>=-1` hurts it, `+<n>` heals it, `reset` puts it back to its most. At 0 it is out of action.
+
+        In an encounter, the meters and companions change your copy there. See `+help encounter`.
 
         For example:
 
@@ -698,19 +1607,19 @@ objects:
       HELP`CHECK: |-
         `+check <stat>` makes an action roll where the room sees it: a six-sided die plus the stat is the action score, no more than 10, against two ten-sided challenge dice.
 
-        - `+check <stat>+<n>` or `-<n>` adds or takes from the action score: `+check iron+1`.
+        - `+check <stat>+<n>` or `-<n>` adds or takes from the action score, such as +1 from an asset: `+check iron+1`.
         - `+check <stat>=<difficulty>`: trivial adds 2, easy 1, standard nothing, hard takes 1 and extreme 2.
         - `/private` rolls where only you see it.
 
-        Beating both challenge dice is a strong hit, one a weak hit, neither a miss; a tie goes to the die. Both challenge dice the same is a match. Every check is kept under a number that `rollinfo()` reads back.
+        Beating both challenge dice is a strong hit, one a weak hit, neither a miss; a tie goes to the die. Both challenge dice the same is a match. In an encounter, your copy's stats roll. Every check is kept under a number that `rollinfo()` reads back.
 
         For example:
 
         `+check iron+1`
 
-        Output: `\[SHEET\] Alice rolls Iron: 1d6\[4\] + 3 = 7 vs 5 and 9: a weak hit (roll 42)`
+        Output: `\[SHEET\] Alice rolls Iron: 1d6\[4\] + 4 = 8 vs 5 and 9: a weak hit (roll 42)`
       HELP`VOW: |-
-        An iron vow is a promise your character swears, with a progress track of ten boxes.
+        An iron vow is a promise your character swears, with a progress track of ten boxes. Vows stay on your sheet, whatever encounter you are in.
 
         - `+vow` lists your vows; `+vow <name>` another character's, when the game lets you read it.
         - `+vow/swear <vow>=<rank>` swears one: troublesome, dangerous, formidable, extreme or epic.
@@ -723,17 +1632,55 @@ objects:
         `+vow/swear Find my brother=dangerous`
 
         Output: `\[VOW\] Alice swears an iron vow: Find my brother (dangerous).`
+      HELP`ENCOUNTER: |-
+        An encounter is a scene played from copies of the sheets, so health, spirit, supply, momentum and companions' health in it stay there. It lasts until its GM ends it, over as many days as it takes.
+
+        - `+encounter` lists the encounters here and yours; `+encounter <n>` shows one.
+        - `+encounter/start [<title>]` starts one in your room. You run it.
+        - `+encounter/join [<n>]` takes part with a copy of your sheet as it is now.
+        - `+encounter/leave [<n>]` comes out; your copy there is gone.
+        - `+encounter/use <n>` picks which copy you roll from, when you are in more than one here.
+
+        While you are in an encounter's room, `+check`, the meters and `+sheet/companion` use your copy in it. Anywhere else, your sheet.
+
+        For example:
+
+        `+encounter/join 1`
+
+        Output: `\[ENCOUNTER\] Alice joins 1 (Ambush at the ford).`
+
+        See `+help encounter gm` for running one.
+      HELP`ENCOUNTER`GM: |-
+        Whoever starts an encounter runs it; sheet keepers run any. Give the number after `=` when the room has more than one.
+
+        - `+encounter/add <name>[=<n>]` brings someone in the room into it, with a copy of their sheet.
+        - `+encounter/remove <name>[=<n>]` takes them out; their copy goes.
+        - `+encounter/keep <name>[=<n>]` writes their meters and companions' health from the copy to their sheet.
+        - `+encounter/end [<n>]` ends it. Every copy goes, and nothing is written back unless you kept it first.
+
+        While a member plays from your encounter's copy, you change it: `+sheet/health <name>=-<n>`, the other meters the same way, and `+sheet/companion <name>/<asset>=-<n>`.
+
+        For example:
+
+        `+encounter/keep Alice=1`
+
+        Output: `\[ENCOUNTER\] Done: Alice's sheet keeps the meters and companions from 1 (Ambush at the ford).`
       HELP`SHEET`CREDITS: |-
         This sheet is based on Ironsworn, created by Shawn Tomkin, and licensed for our use under the Creative Commons Attribution 4.0 International License \(https://creativecommons.org/licenses/by/4.0/\). It is not an official Ironsworn product.
+
+        The starting assets are written in this package's own words.
       LOCK`SHEET`STAFF: |-
         perm^softcode.ironsworn.admin
       HELP`SHEET`STAFF: |-
         Sheet keepers \(`softcode.ironsworn.admin`, or the Ironsworn Sheet Keeper role\) read every sheet and change any character's at any time:
 
-        - `+sheet <name>` and `+vow <name>` show a character's sheet and vows.
-        - `/set` takes `<name>/` first: `+sheet/set Alice/iron=4`. A keeper may set a stat up to 5.
-        - `+sheet/health <name>=<n>`, and the other meters the same way, change theirs.
+        - `/set`, `/asset`, `/upgrade` and `/companion` take `<name>/` first: `+sheet/set Alice/iron=4`. A keeper sets a stat from 1 to 5, and gives assets and abilities without experience. `+sheet/asset <name>/<asset>=remove` takes one away.
+        - The meters take `<name>=` first: `+sheet/health Alice=-2`.
+        - `+sheet/xp <name>=+<n> [<reason>]` gives experience, `-<n>` takes, `<n>` sets: `+sheet/xp Alice=+2 Saved the village`.
+        - `+sheet/log <name>` lists every change to their experience, with who made it and why.
         - The `+vow` switches take `<name>/` first: `+vow/mark Alice/Find my brother`.
+        - `+sheet/revoke <name>/<n>` takes back one ledger entry; `+sheet/clear <name>` revokes them all, and character creation starts again.
+        - Keepers run any encounter.
 
         `@role/assign <player>=ironsworn-sheet-keeper` makes someone a keeper.
       LOCK`SHEET`SETTINGS: |-
@@ -741,9 +1688,12 @@ objects:
       HELP`SHEET`SETTINGS: |-
         `+config ironsworn` lists the settings and `+config ironsworn/<setting>=<value>` changes one \(`config.admin`\):
 
-        - `cap`: the highest a player sets a stat \(3\).
+        - `array`: the values a new character gives their stats \(`3 2 2 1 1`\).
+        - `starting`: how many assets a new character takes \(3\).
+        - `newasset`: the experience a new asset costs \(3\). `upgrade`: the experience each ability after the first costs \(2\).
         - `adds`: what trivial, easy, standard, hard and extreme add to the action score \(`2 1 0 -1 -2`\).
         - `public`: whether anyone may read anyone's sheet and vows \(no\).
         - `stats`: the stat list. `+config/add ironsworn/stats/luck=Luck` adds one.
+        - `assets`: the asset list, each with `type` \(companion, path, talent or ritual\), `health` for a companion, and `first`, `second` and `third` abilities. `+config/add ironsworn/assets/raven=Raven` adds one.
 
-        Removing a stat leaves what characters had stored, but the sheet stops showing it.
+        Removing a stat or an asset leaves what characters had stored, but the sheet stops showing it.
