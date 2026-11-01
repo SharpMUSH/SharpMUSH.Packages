@@ -57,8 +57,8 @@ packages:
   - path: sheet-fate/
     name: Fate Sheet
     package: sheet-fate
-    version: 1.0.1
-    description: Fate character sheet (skills or approaches, aspects, stress, consequences, fate points) with +check on four Fate dice; Fate SRD text under CC BY 3.0
+    version: 1.1.0
+    description: Fate character sheet (skills or approaches, aspects, stunts, stress, consequences, fate points) with +check on four Fate dice; Fate SRD text under CC BY 3.0
   - path: sheet-fate-help/
     package: sheet-fate-help
     version: 1.0.0
@@ -71,6 +71,19 @@ packages:
     package: sheet-fate-chargen
     version: 1.0.0
     description: Joins the Fate sheet to +app character applications
+  - path: fate-action-science/
+    name: Fate Action Science
+    package: fate-action-science
+    version: 1.0.0
+    description: Pulp action science and giant robots on the Fate sheet (modes, mega-stunts, invention, brainstorms, machines at scale); Atomic Robo RPG SRD and Fate System Toolkit text under CC BY 3.0
+  - path: fate-action-science-help/
+    package: fate-action-science-help
+    version: 1.0.0
+    description: Puts the action science topics into +help
+  - path: fate-action-science-config/
+    package: fate-action-science-config
+    version: 1.0.0
+    description: Puts the action science settings and its modes and scales tables into +config
   - path: duties-d20/
     package: duties-d20
     version: 1.0.1

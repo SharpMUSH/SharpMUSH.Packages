@@ -1,0 +1,1281 @@
+format: "1.16"
+package: fate-action-science
+title: "Fate: action science and giant robots"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Pulp action science and super robots on the Fate sheet: characters pick three modes (Action, Banter, Intrigue, Science, or weird ones such as Robot and Pilot) that rate their skills, take mega-stunts, invent gadgets with catches and flaws, brainstorm a hypothesis together, and pilot giant machines whose scale counts in a fight. Based on the Atomic Robo RPG SRD and the Fate System Toolkit, both under CC BY 3.0."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [sheet, fate, invention, robots, mecha]
+category: Characters
+requires_server: ">=0.1"
+
+# It works the Fate sheet's skill ratings out from modes, so it needs the sheet's stunts, per-character stress
+# boxes and its GATE`SET and SECTION` hooks (sheet-fate 1.1). Sheet keepers (softcode.fate.admin) keep this
+# too; there is no permission of its own.
+depends:
+  - package: sheet-fate
+    version: ">=1.1 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH.Packages
+      path: sheet-fate/
+      branch: main
+
+objects:
+  # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook), writes
+  # under each character's FATE` tree (wizard-flagged), and calls the Fate sheet's API.
+  #
+  # What it keeps on a character, beside the sheet's own leaves: FATE`MODE`<KEY> a mode's rating,
+  # FATE`FOCUS`<SKILL> the steps bought for a skill, FATE`SKILLPOINTS a keeper's skill point total,
+  # FATE`MODESTRESS`<KEY> which track a mode's extra boxes go on, FATE`MEGA`<n> a mega-stunt's benefits (WEAK
+  # beneath: voluntary weaknesses and costs), FATE`MACHINE the machine's name (SCALE, CONCEPT, FLAW, WEAPON,
+  # ARMOR, STRESS beneath) and FATE`INVENTION`<n> an invention's function (BENEFITS, SKILL, OUTCOME, ROLL, FLAW,
+  # CATCH`<n> beneath). It writes FATE`RATING`<SKILL> and FATE`BOXES`<TRACK> from the modes, so the sheet,
+  # +check and Duties read the right numbers.
+  #
+  # +mode, +machine, +invent and +brainstorm are added with /noparse/rsnoparse and hooked to CMD`<word>, so
+  # what a player types reaches the code exactly as typed and nothing a player wrote is ever evaluated.
+  #
+  # Trees: CMD` the hooked commands, INC`COMMAND` the parse and dispatch, INC`MODE`, INC`MACHINE`, INC`INVENT`
+  # and INC`BRAINSTORM` one routine per switch, INC`NEED` the guards, INC`DO` the writes. FUN`MODE`, FUN`SKILL`,
+  # FUN`STRESS` and FUN`POINTS` work the ratings out, FUN`SECTION` the parts of +sheet, FUN`SCREEN` the screens.
+  - ref: science
+    type: thing
+    name: Fate Action Science
+    location: "{{$master_room}}"
+    flags: [WIZARD]
+    attributes:
+      # ---- settings ---------------------------------------------------------------
+      # +config fate-science shows and changes them (fate-action-science-config).
+      DATA`CONFIG: |-
+        Settings for modes, mega-stunts, machines and brainstorms on the Fate sheet. One leaf per setting.
+      DATA`CONFIG`LABEL: |-
+        Fate action science
+      DATA`CONFIG`RATINGS: |-
+        3 2 1
+      DATA`CONFIG`RATINGS`TYPE: |-
+        list
+      DATA`CONFIG`RATINGS`DEFAULT: |-
+        3 2 1
+      DATA`CONFIG`RATINGS`MIN: |-
+        1
+      DATA`CONFIG`RATINGS`MAX: |-
+        6
+      DATA`CONFIG`RATINGS`CHECK: |-
+        CHECK`RATINGS
+      DATA`CONFIG`RATINGS`LABEL: |-
+        Mode ratings
+      DATA`CONFIG`RATINGS`DESCRIPTION: |-
+        The ratings a character's modes take, one each: as many modes as ratings.
+      DATA`CONFIG`RATINGS`EXAMPLE: |-
+        3 2 2 1
+      DATA`CONFIG`POINTS: |-
+        3
+      DATA`CONFIG`POINTS`TYPE: |-
+        integer
+      DATA`CONFIG`POINTS`DEFAULT: |-
+        3
+      DATA`CONFIG`POINTS`MIN: |-
+        0
+      DATA`CONFIG`POINTS`MAX: |-
+        30
+      DATA`CONFIG`POINTS`LABEL: |-
+        Skill points
+      DATA`CONFIG`POINTS`DESCRIPTION: |-
+        Points each character has to improve skills within their modes: 1 to focus a trained skill, 2 to specialize a focused one.
+      DATA`CONFIG`POINTS`EXAMPLE: |-
+        5
+      DATA`CONFIG`STRESS: |-
+        2
+      DATA`CONFIG`STRESS`TYPE: |-
+        integer
+      DATA`CONFIG`STRESS`DEFAULT: |-
+        2
+      DATA`CONFIG`STRESS`MIN: |-
+        1
+      DATA`CONFIG`STRESS`MAX: |-
+        10
+      DATA`CONFIG`STRESS`LABEL: |-
+        Starting stress boxes
+      DATA`CONFIG`STRESS`DESCRIPTION: |-
+        The physical and mental boxes a character with modes starts with, before their Fair and Good modes add more.
+      DATA`CONFIG`STRESS`EXAMPLE: |-
+        3
+      DATA`CONFIG`PHYSICAL: |-
+        athletics physique
+      DATA`CONFIG`PHYSICAL`TYPE: |-
+        list
+      DATA`CONFIG`PHYSICAL`DEFAULT: |-
+        athletics physique
+      DATA`CONFIG`PHYSICAL`LABEL: |-
+        Physical stress skills
+      DATA`CONFIG`PHYSICAL`DESCRIPTION: |-
+        A Fair or Good mode with one of these skills adds physical stress boxes.
+      DATA`CONFIG`PHYSICAL`EXAMPLE: |-
+        athletics physique combat
+      DATA`CONFIG`MENTAL: |-
+        provoke will
+      DATA`CONFIG`MENTAL`TYPE: |-
+        list
+      DATA`CONFIG`MENTAL`DEFAULT: |-
+        provoke will
+      DATA`CONFIG`MENTAL`LABEL: |-
+        Mental stress skills
+      DATA`CONFIG`MENTAL`DESCRIPTION: |-
+        A Fair or Good mode with one of these skills adds mental stress boxes.
+      DATA`CONFIG`MENTAL`EXAMPLE: |-
+        provoke will empathy
+      DATA`CONFIG`SCALE_EFFECT: |-
+        roll
+      DATA`CONFIG`SCALE_EFFECT`TYPE: |-
+        choice
+      DATA`CONFIG`SCALE_EFFECT`DEFAULT: |-
+        roll
+      DATA`CONFIG`SCALE_EFFECT`CHOICES: |-
+        roll harm both
+      DATA`CONFIG`SCALE_EFFECT`LABEL: |-
+        What scale does
+      DATA`CONFIG`SCALE_EFFECT`DESCRIPTION: |-
+        For each step of scale between a machine and its foe: roll gives the larger +1 on the roll, harm 2 shifts more harm (or 2 less taken), both does both.
+      DATA`CONFIG`SCALE_EFFECT`EXAMPLE: |-
+        both
+      DATA`CONFIG`MACHINE_SCALE: |-
+        giant
+      DATA`CONFIG`MACHINE_SCALE`TYPE: |-
+        text
+      DATA`CONFIG`MACHINE_SCALE`DEFAULT: |-
+        giant
+      DATA`CONFIG`MACHINE_SCALE`CHECK: |-
+        CHECK`SCALE
+      DATA`CONFIG`MACHINE_SCALE`LABEL: |-
+        A new machine's scale
+      DATA`CONFIG`MACHINE_SCALE`DESCRIPTION: |-
+        The scale a machine starts at, one of the scales table.
+      DATA`CONFIG`MACHINE_SCALE`EXAMPLE: |-
+        vehicle
+      DATA`CONFIG`MACHINE_BOXES: |-
+        3
+      DATA`CONFIG`MACHINE_BOXES`TYPE: |-
+        integer
+      DATA`CONFIG`MACHINE_BOXES`DEFAULT: |-
+        3
+      DATA`CONFIG`MACHINE_BOXES`MIN: |-
+        1
+      DATA`CONFIG`MACHINE_BOXES`MAX: |-
+        10
+      DATA`CONFIG`MACHINE_BOXES`LABEL: |-
+        Machine stress boxes
+      DATA`CONFIG`MACHINE_BOXES`DESCRIPTION: |-
+        How many stress boxes every machine has.
+      DATA`CONFIG`MACHINE_BOXES`EXAMPLE: |-
+        4
+      DATA`CONFIG`BRAINSTORM_DIFFICULTY: |-
+        3
+      DATA`CONFIG`BRAINSTORM_DIFFICULTY`TYPE: |-
+        integer
+      DATA`CONFIG`BRAINSTORM_DIFFICULTY`DEFAULT: |-
+        3
+      DATA`CONFIG`BRAINSTORM_DIFFICULTY`MIN: |-
+        0
+      DATA`CONFIG`BRAINSTORM_DIFFICULTY`MAX: |-
+        8
+      DATA`CONFIG`BRAINSTORM_DIFFICULTY`LABEL: |-
+        Brainstorm difficulty
+      DATA`CONFIG`BRAINSTORM_DIFFICULTY`DESCRIPTION: |-
+        The difficulty of a brainstorm's first fact, and of the next one after a round nobody wins.
+      DATA`CONFIG`BRAINSTORM_DIFFICULTY`EXAMPLE: |-
+        2
+      DATA`CONFIG`BRAINSTORM_POINT: |-
+        1
+      DATA`CONFIG`BRAINSTORM_POINT`TYPE: |-
+        boolean
+      DATA`CONFIG`BRAINSTORM_POINT`DEFAULT: |-
+        1
+      DATA`CONFIG`BRAINSTORM_POINT`LABEL: |-
+        A fate point for joining a brainstorm
+      DATA`CONFIG`BRAINSTORM_POINT`DESCRIPTION: |-
+        Whether a character who joins a brainstorm, compelling one of their aspects, gains a fate point.
+      DATA`CONFIG`BRAINSTORM_POINT`EXAMPLE: |-
+        no
+      DATA`CONFIG`MODES`TYPE: |-
+        table
+      DATA`CONFIG`MODES`LABEL: |-
+        Modes
+      DATA`CONFIG`MODES`DESCRIPTION: |-
+        The modes characters choose from, each with its skills. A weird mode lets a character take mega-stunts.
+      DATA`CONFIG`MODES`STORE: |-
+        {{store}}
+      DATA`CONFIG`MODES`PATH: |-
+        MODE
+      DATA`CONFIG`MODES`ENTRY: |-
+        label
+      DATA`CONFIG`MODES`FIELDS: |-
+        label skills weird order
+      DATA`CONFIG`MODES`KEYPATTERN: |-
+        ^[A-Za-z0-9-]{1,20}$
+      DATA`CONFIG`MODES`FIELD`LABEL`TYPE: |-
+        text
+      DATA`CONFIG`MODES`FIELD`LABEL`MIN: |-
+        1
+      DATA`CONFIG`MODES`FIELD`LABEL`MAX: |-
+        30
+      DATA`CONFIG`MODES`FIELD`LABEL`LABEL: |-
+        Label
+      DATA`CONFIG`MODES`FIELD`LABEL`DESCRIPTION: |-
+        The name the sheet shows.
+      DATA`CONFIG`MODES`FIELD`SKILLS`TYPE: |-
+        list
+      DATA`CONFIG`MODES`FIELD`SKILLS`MIN: |-
+        1
+      DATA`CONFIG`MODES`FIELD`SKILLS`MAX: |-
+        30
+      DATA`CONFIG`MODES`FIELD`SKILLS`LABEL: |-
+        Skills
+      DATA`CONFIG`MODES`FIELD`SKILLS`DESCRIPTION: |-
+        The keys of the Fate sheet's skills this mode rates, as +sheet/traits lists them.
+      DATA`CONFIG`MODES`FIELD`WEIRD`TYPE: |-
+        boolean
+      DATA`CONFIG`MODES`FIELD`WEIRD`DEFAULT: |-
+        0
+      DATA`CONFIG`MODES`FIELD`WEIRD`LABEL: |-
+        Weird
+      DATA`CONFIG`MODES`FIELD`WEIRD`DESCRIPTION: |-
+        Whether this is a weird mode, which lets a character take mega-stunts.
+      DATA`CONFIG`MODES`FIELD`ORDER`TYPE: |-
+        integer
+      DATA`CONFIG`MODES`FIELD`ORDER`DEFAULT: |-
+        50
+      DATA`CONFIG`MODES`FIELD`ORDER`MIN: |-
+        0
+      DATA`CONFIG`MODES`FIELD`ORDER`MAX: |-
+        999
+      DATA`CONFIG`MODES`FIELD`ORDER`LABEL: |-
+        Order
+      DATA`CONFIG`MODES`FIELD`ORDER`DESCRIPTION: |-
+        Where it comes in the list: lower first, then by name.
+      DATA`CONFIG`SCALES`TYPE: |-
+        table
+      DATA`CONFIG`SCALES`LABEL: |-
+        Scales
+      DATA`CONFIG`SCALES`DESCRIPTION: |-
+        The steps of size and might, smallest first by step. People are on the first.
+      DATA`CONFIG`SCALES`STORE: |-
+        {{store}}
+      DATA`CONFIG`SCALES`PATH: |-
+        SCALE
+      DATA`CONFIG`SCALES`ENTRY: |-
+        label
+      DATA`CONFIG`SCALES`FIELDS: |-
+        label step
+      DATA`CONFIG`SCALES`KEYPATTERN: |-
+        ^[A-Za-z0-9-]{1,20}$
+      DATA`CONFIG`SCALES`FIELD`LABEL`TYPE: |-
+        text
+      DATA`CONFIG`SCALES`FIELD`LABEL`MIN: |-
+        1
+      DATA`CONFIG`SCALES`FIELD`LABEL`MAX: |-
+        30
+      DATA`CONFIG`SCALES`FIELD`LABEL`LABEL: |-
+        Label
+      DATA`CONFIG`SCALES`FIELD`LABEL`DESCRIPTION: |-
+        The name the sheet shows.
+      DATA`CONFIG`SCALES`FIELD`STEP`TYPE: |-
+        integer
+      DATA`CONFIG`SCALES`FIELD`STEP`DEFAULT: |-
+        1
+      DATA`CONFIG`SCALES`FIELD`STEP`MIN: |-
+        1
+      DATA`CONFIG`SCALES`FIELD`STEP`MAX: |-
+        10
+      DATA`CONFIG`SCALES`FIELD`STEP`LABEL: |-
+        Step
+      DATA`CONFIG`SCALES`FIELD`STEP`DESCRIPTION: |-
+        How big it is: each step between two scales is +1 or 2 shifts to the larger.
+      CHECK`RATINGS: |-
+        if(every(%!/FUN`IS`RATING,%0),,Give each rating as a number from 1 to 5.)
+      CHECK`SCALE: |-
+        if(strlen(u(%!/FUN`SCALE`FIND,%0)),,There is no scale '%0'. +config fate-science/scales lists them.)
+      FUN`IS`RATING: |-
+        cand(isint(%0),gte(%0,1),lte(%0,5))
+
+      # Which INC` routine each switch runs: DATA`ROUTE`<table>`<switch>. BARE is the command alone, ARG the
+      # command with something after it and no switch.
+      DATA`ROUTE: |-
+        Which routine each switch runs. One leaf per switch.
+      DATA`ROUTE`MODE`BARE: |-
+        MODE`SHOW
+      DATA`ROUTE`MODE`ARG: |-
+        MODE`SHOW
+      DATA`ROUTE`MODE`LIST: |-
+        MODE`LIST
+      DATA`ROUTE`MODE`SET: |-
+        MODE`SET
+      DATA`ROUTE`MODE`FOCUS: |-
+        MODE`FOCUS
+      DATA`ROUTE`MODE`UNFOCUS: |-
+        MODE`UNFOCUS
+      DATA`ROUTE`MODE`STRESS: |-
+        MODE`STRESS
+      DATA`ROUTE`MODE`POINTS: |-
+        MODE`POINTS
+      DATA`ROUTE`MODE`MEGA: |-
+        MODE`MEGA
+      DATA`ROUTE`MODE`WEAKNESS: |-
+        MODE`WEAKNESS
+      DATA`ROUTE`MODE`RESERVE: |-
+        MODE`RESERVE
+      DATA`ROUTE`MACHINE`BARE: |-
+        MACHINE`SHOW
+      DATA`ROUTE`MACHINE`ARG: |-
+        MACHINE`SHOW
+      DATA`ROUTE`MACHINE`SET: |-
+        MACHINE`SET
+      DATA`ROUTE`MACHINE`STRESS: |-
+        MACHINE`STRESS
+      DATA`ROUTE`MACHINE`CHECK: |-
+        MACHINE`CHECK
+      DATA`ROUTE`MACHINE`SCRAP: |-
+        MACHINE`SCRAP
+      DATA`ROUTE`INVENT`BARE: |-
+        INVENT`LIST
+      DATA`ROUTE`INVENT`ARG: |-
+        INVENT`ROLL
+      DATA`ROUTE`INVENT`LIST: |-
+        INVENT`LIST
+      DATA`ROUTE`INVENT`CATCH: |-
+        INVENT`CATCH
+      DATA`ROUTE`INVENT`FLAW: |-
+        INVENT`FLAW
+      DATA`ROUTE`INVENT`DROP: |-
+        INVENT`DROP
+      DATA`ROUTE`BRAINSTORM`BARE: |-
+        BRAINSTORM`SHOW
+      DATA`ROUTE`BRAINSTORM`ARG: |-
+        BRAINSTORM`ROLL
+      DATA`ROUTE`BRAINSTORM`START: |-
+        BRAINSTORM`START
+      DATA`ROUTE`BRAINSTORM`JOIN: |-
+        BRAINSTORM`JOIN
+      DATA`ROUTE`BRAINSTORM`NEXT: |-
+        BRAINSTORM`NEXT
+      DATA`ROUTE`BRAINSTORM`FACT: |-
+        BRAINSTORM`FACT
+      DATA`ROUTE`BRAINSTORM`HYPOTHESIS: |-
+        BRAINSTORM`HYPOTHESIS
+      DATA`ROUTE`BRAINSTORM`STOP: |-
+        BRAINSTORM`STOP
+
+      # ---- commands ---------------------------------------------------------------
+      # %1 the switches and %2 what follows, exactly as typed.
+      CMD`MODE:
+        value: |-
+          $(?is)^\+mode(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,mode,table,MODE,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`MACHINE:
+        value: |-
+          $(?is)^\+machine(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,machine,table,MACHINE,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`INVENT:
+        value: |-
+          $(?is)^\+invent(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,invent,table,INVENT,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`BRAINSTORM:
+        value: |-
+          $(?is)^\+brainstorm(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,brainstorm,table,BRAINSTORM,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      # A line a bridge adds to one of this object's messages: HINT`<message>. Nothing when no bridge set one.
+      FUN`HINT:
+        value: |-
+          if(hasattr(%!,HINT`%0),%b[u(%!/HINT`%0,%1,%2)])
+        flags: [funsyntax]
+      INC`COMMAND`RUN:
+        value: |-
+          @assert hastype(%#,player)=@pemit %#=notice(SCIENCE,Only players have a sheet.,warn); think u(%!/FUN`COMMAND`PARSE,%<word>,%<table>,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(SCIENCE,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(SCIENCE,+%q<cmd_word> has no /%q<cmd_switch> switch.[u(%!/FUN`HINT,SWITCHES,%q<cmd_word>)],warn); @include %!/INC`%q<cmd_route>
+        flags: [cmdsyntax]
+      # %0 the word, %1 its route table, %2 the switches and %3 the argument, as typed. Sets cmd_word,
+      # cmd_switch_list, cmd_switch, cmd_argument, cmd_has_equals, cmd_left_side and cmd_right_side around the
+      # first =, cmd_route (the INC` routine to run), viewer_objid and viewer_keeper.
+      FUN`COMMAND`PARSE:
+        value: |-
+          setqm(cmd_word,lcstr(%0),
+          cmd_switch_list,lcstr(trim(edit(%2,/,%b))),
+          cmd_switch,first(%q<cmd_switch_list>),
+          cmd_argument,trim(%3),
+          cmd_has_equals,strmatch(%3,*=*),
+          cmd_left_side,trim(before(%3,=)),
+          cmd_right_side,trim(after(%3,=)),
+          cmd_route,get(%!/DATA`ROUTE`%1`[if(strlen(%q<cmd_switch>),ucstr(%q<cmd_switch>),if(strlen(%q<cmd_argument>),ARG,BARE))]),
+          viewer_objid,objid(%#),
+          viewer_keeper,permission(%#,softcode.fate.admin))
+        flags: [funsyntax]
+
+      # ---- guards -----------------------------------------------------------------
+      # The left of =: <name>/<what> for a sheet keeper, else <what> on your own sheet. sheet_who and sheet_what.
+      INC`NEED`WHO:
+        value: |-
+          think if(strmatch(%q<cmd_left_side>,*/*),setqm(sheet_who,u(%!/FUN`PLAYER`MATCH,setr(sheet_name,trim(before(%q<cmd_left_side>,/)))),sheet_what,trim(after(%q<cmd_left_side>,/))),setqm(sheet_name,,sheet_who,%q<viewer_objid>,sheet_what,%q<cmd_left_side>)); @assert strlen(%q<sheet_who>)=@pemit %#=notice(SCIENCE,There is no player called '%q<sheet_name>'.,warn); @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SCIENCE,Only sheet keepers change another character's sheet.,error)
+        flags: [cmdsyntax]
+      # The whole argument as a player's name, or yourself when there is none: sheet_who.
+      INC`NEED`TARGET:
+        value: |-
+          think setq(sheet_who,if(strlen(%q<cmd_argument>),u(%!/FUN`PLAYER`MATCH,%q<cmd_argument>),%q<viewer_objid>)); @assert strlen(%q<sheet_who>)=@pemit %#=notice(SCIENCE,There is no player called '%q<cmd_argument>'.,warn)
+        flags: [cmdsyntax]
+      # Choices a player makes before approval, as the Fate sheet's own ratings and aspects are.
+      INC`NEED`EDITABLE:
+        value: |-
+          @assert cor(%q<viewer_keeper>,not(isapproved(%#)))=@pemit %#=notice(SCIENCE,Your character is approved%, so staff change your sheet now.,error); @assert cor(%q<viewer_keeper>,not(strlen(setr(edit_gate,u({{sheet-fate/sheet}}/FUN`GATE`EDIT,%#)))))=@pemit %#=notice(SCIENCE,%q<edit_gate>,warn)
+        flags: [cmdsyntax]
+      INC`NEED`KEEPER:
+        value: |-
+          @assert %q<viewer_keeper>=@pemit %#=notice(SCIENCE,Only sheet keepers do that.,error)
+        flags: [cmdsyntax]
+      INC`NEED`VIEW:
+        value: |-
+          @assert u({{sheet-fate/sheet}}/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SCIENCE,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error)
+        flags: [cmdsyntax]
+
+      # ---- +mode --------------------------------------------------------------------
+      INC`MODE`SHOW:
+        value: |-
+          @include %!/INC`NEED`TARGET; @include %!/INC`NEED`VIEW; @pemit %#=u(%!/FUN`SCREEN`MODES,%q<sheet_who>,%#)
+        flags: [cmdsyntax]
+      INC`MODE`LIST:
+        value: |-
+          @pemit %#=u(%!/FUN`SCREEN`LIST)
+        flags: [cmdsyntax]
+      # +mode/set [<name>/]<mode>=<rating>: a rating the game's modes take and no other mode has. Empty drops it.
+      INC`MODE`SET:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SCIENCE,+mode/set <mode>=<rating>%, such as +mode/set action=good. +mode/list shows the modes.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @assert strlen(setr(mode_key,u(%!/FUN`LIST`FIND,MODE,%q<sheet_what>)))=@pemit %#=notice(SCIENCE,There is no mode '%q<sheet_what>'. +mode/list shows them.,warn); @break not(strlen(%q<cmd_right_side>))={@assert hasattr(%q<sheet_who>,FATE`MODE`%q<mode_key>)=@pemit %#=notice(SCIENCE,[name(%q<sheet_who>)] has no [u(%!/FUN`MODE`LABEL,%q<mode_key>)] mode.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,MODE`%q<mode_key>,value,; @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,MODESTRESS`%q<mode_key>,value,; @include/args %!/INC`DO`RATE=who,%q<sheet_who>; @pemit %#=notice(SCIENCE,[name(%q<sheet_who>)] drops the [u(%!/FUN`MODE`LABEL,%q<mode_key>)] mode.,ok)}; think setqm(mode_value,u({{sheet-fate/sheet}}/FUN`LADDER`READ,%q<cmd_right_side>),mode_ratings,get(%!/DATA`CONFIG`RATINGS),mode_others,setdiff(u(%!/FUN`MODE`HELD,%q<sheet_who>),%q<mode_key>),mode_taken,iter(%q<mode_others>,get(%q<sheet_who>/FATE`MODE`%i0))); @assert member(%q<mode_ratings>,%q<mode_value>)=@pemit %#=notice(SCIENCE,A mode is rated [u(%!/FUN`DISPLAY`RATINGS)].,warn); @assert lt(words(%q<mode_others>),words(%q<mode_ratings>))=@pemit %#=notice(SCIENCE,[name(%q<sheet_who>)] has [words(%q<mode_ratings>)] modes already: [u(%!/FUN`DISPLAY`MODES,%q<sheet_who>,%q<mode_others>)]. Drop one first with +mode/set <mode>=.,warn); @assert gt(words(matchall(%q<mode_ratings>,%q<mode_value>)),words(matchall(%q<mode_taken>,%q<mode_value>)))=@pemit %#=notice(SCIENCE,The modes are rated [u(%!/FUN`DISPLAY`RATINGS)]%, one each%, and [u(%!/FUN`DISPLAY`MODES,%q<sheet_who>,setr(mode_clash,filterbool(%!/FUN`MODE`RATEDAT,%q<mode_others>,,,%q<sheet_who>,%q<mode_value>)))] [if(gt(words(%q<mode_clash>),1),have,has)] [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,%q<mode_value>)] already.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,MODE`%q<mode_key>,value,%q<mode_value>; @include/args %!/INC`DO`RATE=who,%q<sheet_who>; @pemit %#=notice(SCIENCE,[name(%q<sheet_who>)]'s [u(%!/FUN`MODE`LABEL,%q<mode_key>)] mode is [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,%q<mode_value>)]: [u(%!/FUN`DISPLAY`HOMESKILLS,%q<sheet_who>,%q<mode_key>)].,ok)
+        flags: [cmdsyntax]
+      # +mode/focus [<name>/]<skill>: one step up within its mode, for skill points.
+      INC`MODE`FOCUS:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SCIENCE,+mode/focus <skill> improves a skill in one of your modes.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @include %!/INC`NEED`SKILL; think setqm(focus_steps,u(%!/FUN`SKILL`STEPS,%q<sheet_who>,%q<skill_key>,words(%q<skill_holders>)),focus_cost,if(%q<focus_steps>,2,1),focus_left,u(%!/FUN`POINTS`LEFT,%q<sheet_who>)); @assert lt(%q<focus_steps>,2)=@pemit %#=notice(SCIENCE,[u({{sheet-fate/sheet}}/API`LABEL,%q<skill_key>)] is specialized already: two steps over its mode is the most.,warn); @assert gte(%q<focus_left>,%q<focus_cost>)=@pemit %#=notice(SCIENCE,[if(%q<focus_steps>,Specializing,Focusing)] [u({{sheet-fate/sheet}}/API`LABEL,%q<skill_key>)] costs %q<focus_cost> skill point[if(gt(%q<focus_cost>,1),s)]%, and [name(%q<sheet_who>)] has %q<focus_left> left.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,FOCUS`%q<skill_key>,value,inc(default(%q<sheet_who>/FATE`FOCUS`%q<skill_key>,0)); @include/args %!/INC`DO`RATE=who,%q<sheet_who>; @pemit %#=notice(SCIENCE,[name(%q<sheet_who>)]'s [u({{sheet-fate/sheet}}/API`LABEL,%q<skill_key>)] is [u(%!/FUN`SKILL`WORD,inc(%q<focus_steps>))]: [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,u({{sheet-fate/sheet}}/API`RATING,%q<sheet_who>,%q<skill_key>))]. [u(%!/FUN`DISPLAY`POINTSLEFT,%q<sheet_who>)],ok)
+        flags: [cmdsyntax]
+      # +mode/unfocus [<name>/]<skill>: one bought step back down, and its points back.
+      INC`MODE`UNFOCUS:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SCIENCE,+mode/unfocus <skill> takes back a step you bought.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @assert strlen(setr(skill_key,ucstr(u({{sheet-fate/sheet}}/API`FIND,%q<sheet_what>))))=@pemit %#=notice(SCIENCE,There is no skill '%q<sheet_what>'. +sheet/traits lists them.,warn); @assert gt(setr(unfocus_bought,default(%q<sheet_who>/FATE`FOCUS`%q<skill_key>,0)),0)=@pemit %#=notice(SCIENCE,[name(%q<sheet_who>)] bought no steps of [u({{sheet-fate/sheet}}/API`LABEL,%q<skill_key>)].,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,FOCUS`%q<skill_key>,value,if(gt(%q<unfocus_bought>,1),dec(%q<unfocus_bought>)); @include/args %!/INC`DO`RATE=who,%q<sheet_who>; @pemit %#=notice(SCIENCE,[name(%q<sheet_who>)]'s [u({{sheet-fate/sheet}}/API`LABEL,%q<skill_key>)] is [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,u({{sheet-fate/sheet}}/API`RATING,%q<sheet_who>,%q<skill_key>))] again. [u(%!/FUN`DISPLAY`POINTSLEFT,%q<sheet_who>)],ok)
+        flags: [cmdsyntax]
+      # sheet_what a skill in one of sheet_who's modes: skill_key (upper case) and skill_holders, its modes.
+      INC`NEED`SKILL:
+        value: |-
+          @assert strlen(setr(skill_key,ucstr(u({{sheet-fate/sheet}}/API`FIND,%q<sheet_what>))))=@pemit %#=notice(SCIENCE,There is no skill '%q<sheet_what>'. +sheet/traits lists them.,warn); @assert words(setr(skill_holders,u(%!/FUN`MODE`HOLDERS,%q<sheet_who>,%q<skill_key>)))=@pemit %#=notice(SCIENCE,[u({{sheet-fate/sheet}}/API`LABEL,%q<skill_key>)] is in none of [name(%q<sheet_who>)]'s modes%, so it stays Mediocre (+0).,warn)
+        flags: [cmdsyntax]
+      # +mode/stress [<name>/]<mode>=physical|mental|split: where a mode's extra boxes go when its skills fit both.
+      INC`MODE`STRESS:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SCIENCE,+mode/stress <mode>=physical%, mental or split.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @assert strlen(setr(mode_key,u(%!/FUN`LIST`FIND,MODE,%q<sheet_what>)))=@pemit %#=notice(SCIENCE,There is no mode '%q<sheet_what>'. +mode/list shows them.,warn); @assert hasattr(%q<sheet_who>,FATE`MODE`%q<mode_key>)=@pemit %#=notice(SCIENCE,[name(%q<sheet_who>)] has no [u(%!/FUN`MODE`LABEL,%q<mode_key>)] mode.,warn); @assert eq(words(u(%!/FUN`MODE`SCOPES,%q<mode_key>)),2)=@pemit %#=notice(SCIENCE,[u(%!/FUN`MODE`LABEL,%q<mode_key>)]'s skills add [firstof(u(%!/FUN`MODE`SCOPES,%q<mode_key>),no)] stress only%, so there is nothing to choose.,warn); @assert member(physical mental split,setr(stress_choice,lcstr(%q<cmd_right_side>)))=@pemit %#=notice(SCIENCE,Choose physical%, mental or split.,warn); @assert cor(comp(%q<stress_choice>,split),gte(get(%q<sheet_who>/FATE`MODE`%q<mode_key>),3))=@pemit %#=notice(SCIENCE,Only a mode that adds two boxes or more splits them: Good (+3) or better.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,MODESTRESS`%q<mode_key>,value,%q<stress_choice>; @include/args %!/INC`DO`RATE=who,%q<sheet_who>; @pemit %#=notice(SCIENCE,[name(%q<sheet_who>)]'s [u(%!/FUN`MODE`LABEL,%q<mode_key>)] boxes go [if(strmatch(%q<stress_choice>,split),on both tracks,on the %q<stress_choice> track)]. [u(%!/FUN`DISPLAY`BOXES,%q<sheet_who>)],ok)
+        flags: [cmdsyntax]
+      # +mode/points <name>=<n>|default: a keeper's skill point total for one character, such as at a milestone.
+      INC`MODE`POINTS:
+        value: |-
+          @include %!/INC`NEED`KEEPER; @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>))=@pemit %#=notice(SCIENCE,+mode/points <name>=<points>%, or =default for the game's.,warn); think setq(sheet_who,u(%!/FUN`PLAYER`MATCH,%q<cmd_left_side>)); @assert strlen(%q<sheet_who>)=@pemit %#=notice(SCIENCE,There is no player called '%q<cmd_left_side>'.,warn); @break strmatch(%q<cmd_right_side>,default)={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,SKILLPOINTS,value,; @pemit %#=notice(SCIENCE,[name(%q<sheet_who>)] has the game's [get(%!/DATA`CONFIG`POINTS)] skill points again. [u(%!/FUN`DISPLAY`POINTSLEFT,%q<sheet_who>)],ok)}; @assert cand(isint(%q<cmd_right_side>),gte(%q<cmd_right_side>,0),lte(%q<cmd_right_side>,60))=@pemit %#=notice(SCIENCE,Skill points are a whole number from 0 to 60%, or default.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,SKILLPOINTS,value,%q<cmd_right_side>; @pemit %#=notice(SCIENCE,[name(%q<sheet_who>)] has %q<cmd_right_side> skill points in all. [u(%!/FUN`DISPLAY`POINTSLEFT,%q<sheet_who>)],ok); @pemit %q<sheet_who>=notice(SCIENCE,[name(%#)] gives you %q<cmd_right_side> skill points in all. +mode/focus <skill> spends them.)
+        flags: [cmdsyntax]
+      # +mode/mega [<name>/]<slot>=<benefits>: makes a written stunt a mega-stunt. Empty makes it a stunt again.
+      INC`MODE`MEGA:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SCIENCE,+mode/mega <stunt slot>=<benefits>%, such as +mode/mega 2=3.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @assert cand(isint(%q<sheet_what>),gte(%q<sheet_what>,1),lte(%q<sheet_what>,get({{sheet-fate/sheet}}/DATA`CONFIG`STUNTS)))=@pemit %#=notice(SCIENCE,There is no stunt slot '%q<sheet_what>'. Use 1 to [get({{sheet-fate/sheet}}/DATA`CONFIG`STUNTS)].,warn); @break not(strlen(%q<cmd_right_side>))={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,MEGA`%q<sheet_what>`WEAK,value,; @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,MEGA`%q<sheet_what>,value,; @pemit %#=notice(SCIENCE,Stunt %q<sheet_what> on [name(%q<sheet_who>)]'s sheet is a plain stunt.,ok)}; @assert hasattr(%q<sheet_who>,FATE`STUNT`%q<sheet_what>)=@pemit %#=notice(SCIENCE,Write the stunt first: +sheet/stunt %q<sheet_what>=<name>: <what it does>.,warn); @assert u(%!/FUN`MODE`WEIRD,%q<sheet_who>)=@pemit %#=notice(SCIENCE,A mega-stunt needs a weird mode%, such as [u(%!/FUN`DISPLAY`WEIRDMODES)]%, and a high concept that fits it.,warn); @assert cand(isint(%q<cmd_right_side>),gte(%q<cmd_right_side>,1),lte(%q<cmd_right_side>,10))=@pemit %#=notice(SCIENCE,A mega-stunt has 1 to 10 benefits.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,MEGA`%q<sheet_what>,value,%q<cmd_right_side>; @pemit %#=notice(SCIENCE,Stunt %q<sheet_what> on [name(%q<sheet_who>)]'s sheet is a mega-stunt with %q<cmd_right_side> benefit[if(gt(%q<cmd_right_side>,1),s)]. [u(%!/FUN`DISPLAY`RESERVE,%q<sheet_who>)],ok)
+        flags: [cmdsyntax]
+      # +mode/weakness [<name>/]<slot>=<n>: weaknesses and costs a mega-stunt takes on that its benefits don't need.
+      INC`MODE`WEAKNESS:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SCIENCE,+mode/weakness <stunt slot>=<number> counts the weaknesses and costs you chose to take.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @assert gt(setr(weak_benefits,get(%q<sheet_who>/FATE`MEGA`%q<sheet_what>)),0)=@pemit %#=notice(SCIENCE,Stunt '%q<sheet_what>' is not a mega-stunt. +mode/mega %q<sheet_what>=<benefits> makes it one.,warn); @assert cand(isint(%q<cmd_right_side>),gte(%q<cmd_right_side>,0),lte(%q<cmd_right_side>,%q<weak_benefits>))=@pemit %#=notice(SCIENCE,One weakness or cost at most for each benefit: 0 to %q<weak_benefits>.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,MEGA`%q<sheet_what>`WEAK,value,if(%q<cmd_right_side>,%q<cmd_right_side>); @pemit %#=notice(SCIENCE,Stunt %q<sheet_what> on [name(%q<sheet_who>)]'s sheet takes %q<cmd_right_side> voluntary weakness[if(neq(%q<cmd_right_side>,1),es)] or cost[if(neq(%q<cmd_right_side>,1),s)]. [u(%!/FUN`DISPLAY`RESERVE,%q<sheet_who>)],ok)
+        flags: [cmdsyntax]
+      # +mode/reserve: what the characters in the room add to the GM's fate point reserve.
+      INC`MODE`RESERVE:
+        value: |-
+          think setqm(reserve_people,filterbool(%!/FUN`RESERVE`ANY,lcon(%l)),reserve_total,ladd(iter(%q<reserve_people>,u(%!/FUN`RESERVE,%i0)))); @pemit %#=notice(SCIENCE,if(words(%q<reserve_people>),The people here add %q<reserve_total> to the GM's fate point reserve: [itemize(iter(%q<reserve_people>,name(%i0) [u(%!/FUN`RESERVE,%i0)],%b,|),|)].,Nobody here adds to the GM's fate point reserve.))
+        flags: [cmdsyntax]
+
+      # ---- +machine -----------------------------------------------------------------
+      INC`MACHINE`SHOW:
+        value: |-
+          @include %!/INC`NEED`TARGET; @include %!/INC`NEED`VIEW; @assert hasattr(%q<sheet_who>,FATE`MACHINE)=@pemit %#=notice(SCIENCE,if(comp(%q<sheet_who>,%q<viewer_objid>),[name(%q<sheet_who>)] has no machine.,You have no machine. +machine/set name=<name> builds one.),warn); @pemit %#=box(u(%!/FUN`SECTION`MACHINE,%q<sheet_who>,%#)%r[rule()]%r[tone(muted,+machine/check <skill>=<opposition> vs <scale> pilots it. +machine/stress <box> marks its stress.)],get(%q<sheet_who>/FATE`MACHINE))
+        flags: [cmdsyntax]
+      # +machine/set [<name>/]<field>=<value>: name, scale, concept, flaw, weapon or armor.
+      INC`MACHINE`SET:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SCIENCE,+machine/set <field>=<value>: name%, scale%, concept%, flaw%, weapon or armor.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`EDITABLE; @assert member(name scale concept flaw weapon armor,setr(machine_field,lcstr(%q<sheet_what>)))=@pemit %#=notice(SCIENCE,A machine has a name%, scale%, concept%, flaw%, weapon and armor.,warn); @assert cor(hasattr(%q<sheet_who>,FATE`MACHINE),strmatch(%q<machine_field>,name))=@pemit %#=notice(SCIENCE,Name the machine first: +machine/set name=<name>.,warn); @include %!/INC`MACHINE`SET`[ucstr(%q<machine_field>)]
+        flags: [cmdsyntax]
+      INC`MACHINE`SET`NAME:
+        value: |-
+          @assert cand(strlen(%q<cmd_right_side>),lte(strlen(%q<cmd_right_side>),40))=@pemit %#=notice(SCIENCE,A machine's name is 1 to 40 characters.,warn); @if not(hasattr(%q<sheet_who>,FATE`MACHINE))={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,MACHINE`SCALE,value,u(%!/FUN`SCALE`FIND,get(%!/DATA`CONFIG`MACHINE_SCALE))}; @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,MACHINE,value,%q<cmd_right_side>; @pemit %#=notice(SCIENCE,[name(%q<sheet_who>)]'s machine is %q<cmd_right_side>%, [lcstr(u(%!/FUN`SCALE`LABEL,get(%q<sheet_who>/FATE`MACHINE`SCALE)))] scale.,ok)
+        flags: [cmdsyntax]
+      INC`MACHINE`SET`SCALE:
+        value: |-
+          @assert strlen(setr(machine_scale,u(%!/FUN`SCALE`FIND,%q<cmd_right_side>)))=@pemit %#=notice(SCIENCE,There is no scale '%q<cmd_right_side>'. The scales are [u(%!/FUN`DISPLAY`SCALES)].,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,MACHINE`SCALE,value,%q<machine_scale>; @pemit %#=notice(SCIENCE,[get(%q<sheet_who>/FATE`MACHINE)] is [lcstr(u(%!/FUN`SCALE`LABEL,%q<machine_scale>))] scale.,ok)
+        flags: [cmdsyntax]
+      INC`MACHINE`SET`CONCEPT:
+        value: |-
+          @include/args %!/INC`MACHINE`SET`ASPECT=leaf,CONCEPT,label,concept
+        flags: [cmdsyntax]
+      INC`MACHINE`SET`FLAW:
+        value: |-
+          @include/args %!/INC`MACHINE`SET`ASPECT=leaf,FLAW,label,flaw
+        flags: [cmdsyntax]
+      INC`MACHINE`SET`ASPECT:
+        value: |-
+          @assert lte(strlen(%q<cmd_right_side>),200)=@pemit %#=notice(SCIENCE,Keep an aspect to 200 characters.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,MACHINE`%<leaf>,value,%q<cmd_right_side>; @pemit %#=notice(SCIENCE,if(strlen(%q<cmd_right_side>),[get(%q<sheet_who>/FATE`MACHINE)]'s %<label>: %q<cmd_right_side>,[get(%q<sheet_who>/FATE`MACHINE)]'s %<label> is cleared.),ok)
+        flags: [cmdsyntax]
+      INC`MACHINE`SET`WEAPON:
+        value: |-
+          @include/args %!/INC`MACHINE`SET`RATING=leaf,WEAPON,label,Weapon
+        flags: [cmdsyntax]
+      INC`MACHINE`SET`ARMOR:
+        value: |-
+          @include/args %!/INC`MACHINE`SET`RATING=leaf,ARMOR,label,Armor
+        flags: [cmdsyntax]
+      INC`MACHINE`SET`RATING:
+        value: |-
+          @assert cand(isint(%q<cmd_right_side>),gte(%q<cmd_right_side>,0),lte(%q<cmd_right_side>,4))=@pemit %#=notice(SCIENCE,%<label> is a whole number from 0 to 4.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,MACHINE`%<leaf>,value,if(%q<cmd_right_side>,%q<cmd_right_side>); @pemit %#=notice(SCIENCE,[get(%q<sheet_who>/FATE`MACHINE)] has %<label>:%q<cmd_right_side>.,ok)
+        flags: [cmdsyntax]
+      # +machine/stress [<name>/]<box> marks a box; clear empties the track.
+      INC`MACHINE`STRESS:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SCIENCE,+machine/stress <box> marks a box%, +machine/stress clear empties them.,warn); @include %!/INC`NEED`WHO; @assert hasattr(%q<sheet_who>,FATE`MACHINE)=@pemit %#=notice(SCIENCE,[name(%q<sheet_who>)] has no machine.,warn); @break strmatch(%q<sheet_what>,clear)={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,MACHINE`STRESS,value,; @pemit %#=notice(SCIENCE,[get(%q<sheet_who>/FATE`MACHINE)]'s stress is clear.,ok)}; @assert cand(isint(%q<sheet_what>),gte(%q<sheet_what>,1),lte(%q<sheet_what>,get(%!/DATA`CONFIG`MACHINE_BOXES)))=@pemit %#=notice(SCIENCE,A machine has stress boxes 1 to [get(%!/DATA`CONFIG`MACHINE_BOXES)].,warn); @assert not(member(setr(machine_marked,get(%q<sheet_who>/FATE`MACHINE`STRESS)),%q<sheet_what>))=@pemit %#=notice(SCIENCE,Box %q<sheet_what> is marked already.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,MACHINE`STRESS,value,sort(%q<machine_marked> %q<sheet_what>,n); @remit %l=notice(SCIENCE,[get(%q<sheet_who>/FATE`MACHINE)] takes stress: box %q<sheet_what> is marked.)
+        flags: [cmdsyntax]
+      # +machine/check <skill>[+<n>|-<n>][=<opposition>][ vs <scale>]: the pilot's skill, with the scale between them.
+      INC`MACHINE`CHECK:
+        value: |-
+          @assert hasattr(%:,FATE`MACHINE)=@pemit %#=notice(SCIENCE,You have no machine. +machine/set name=<name> builds one.,warn); @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SCIENCE,+machine/check <skill>%[=<opposition>%] %[vs <scale>%]%, such as +machine/check combat=good vs titan.,warn); think setqm(pilot_line,lcstr(%q<cmd_argument>),pilot_versus,if(strmatch(%q<pilot_line>,* vs *),trim(last(%q<pilot_line>,%bvs%b))),pilot_rest,trim(if(strlen(%q<pilot_versus>),before(%q<pilot_line>,%bvs%b%q<pilot_versus>),%q<pilot_line>)),pilot_typed,trim(before(%q<pilot_rest>,=)),pilot_opposition,trim(after(%q<pilot_rest>,=)),pilot_own,get(%:/FATE`MACHINE`SCALE),pilot_foe,if(strlen(%q<pilot_versus>),u(%!/FUN`SCALE`FIND,%q<pilot_versus>),%q<pilot_own>)); @assert strlen(%q<pilot_foe>)=@pemit %#=notice(SCIENCE,There is no scale '%q<pilot_versus>'. The scales are [u(%!/FUN`DISPLAY`SCALES)].,warn); think u({{sheet-fate/sheet}}/FUN`CHECK`READ,%q<pilot_typed>); @assert isint(%q<check_modifier>)=@pemit %#=notice(SCIENCE,'%q<pilot_typed>' ends in something that is not a number to add.,warn); @assert strlen(setr(trait_key,u({{sheet-fate/sheet}}/API`FIND,%q<check_typed>)))=@pemit %#=notice(SCIENCE,There is no skill '%q<check_typed>'. +sheet/traits lists them.,warn); think setq(pilot_target,u({{sheet-fate/sheet}}/API`TARGET,%q<pilot_opposition>)); @assert cor(not(strlen(%q<pilot_opposition>)),isint(%q<pilot_target>))=@pemit %#=notice(SCIENCE,'%q<pilot_opposition>' is not an opposition. Give a number%, a ladder word such as Fair%, or a difficulty such as hard.,warn); think setqm(pilot_steps,sub(u(%!/FUN`SCALE`STEP,%q<pilot_own>),u(%!/FUN`SCALE`STEP,%q<pilot_foe>)),pilot_effect,get(%!/DATA`CONFIG`SCALE_EFFECT),pilot_on_roll,if(member(roll both,%q<pilot_effect>),%q<pilot_steps>,0),pilot_on_harm,if(member(harm both,%q<pilot_effect>),mul(2,%q<pilot_steps>),0),pilot_result,uargs({{sheet-fate/sheet}}/API`CHECK,roller,%:,trait,%q<trait_key>,modifier,add(%q<check_modifier>,%q<pilot_on_roll>),target,%q<pilot_target>)); @assert not(strmatch(%q<pilot_result>,#-*))=@pemit %#=notice(SCIENCE,%q<pilot_result>,error); @remit %l=notice(SCIENCE,tone(strong,name(%#)) pilots [get(%:/FATE`MACHINE)]: [u({{sheet-fate/sheet}}/FUN`DISPLAY`CHECK,%q<pilot_result>)][u(%!/FUN`DISPLAY`SCALE,%q<pilot_own>,%q<pilot_foe>,%q<pilot_on_roll>)][u(%!/FUN`DISPLAY`HIT,%q<pilot_result>,default(%:/FATE`MACHINE`WEAPON,0),%q<pilot_on_harm>)])
+        flags: [cmdsyntax]
+      # +machine/scrap [<name>]: the machine goes from the sheet.
+      INC`MACHINE`SCRAP:
+        value: |-
+          @include %!/INC`NEED`TARGET; @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SCIENCE,Only sheet keepers change another character's sheet.,error); @include %!/INC`NEED`EDITABLE; @assert hasattr(%q<sheet_who>,FATE`MACHINE)=@pemit %#=notice(SCIENCE,[name(%q<sheet_who>)] has no machine.,warn); think setq(scrap_name,get(%q<sheet_who>/FATE`MACHINE)); @include/args %!/INC`DO`WIPE=who,%q<sheet_who>,leaf,MACHINE; @pemit %#=notice(SCIENCE,%q<scrap_name> is gone from [name(%q<sheet_who>)]'s sheet.,ok)
+        flags: [cmdsyntax]
+
+      # ---- +invent ------------------------------------------------------------------
+      INC`INVENT`LIST:
+        value: |-
+          @include %!/INC`NEED`TARGET; @include %!/INC`NEED`VIEW; @pemit %#=box(firstof(u(%!/FUN`SECTION`INVENTIONS,%q<sheet_who>,%#),tone(muted,No inventions yet.))%r[rule()]%r[tone(muted,+invent <skill>=<benefits> <what it does> builds one.)],Inventions: [name(%q<sheet_who>)])
+        flags: [cmdsyntax]
+      # +invent <skill>[+<n>]=<benefits> <function>: rolls against twice the benefits; the outcome says who picks
+      # the catches.
+      INC`INVENT`ROLL:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SCIENCE,+invent <skill>=<benefits> <what it does>%, such as +invent robotics=2 Rocket Boots. +invent/list <name> shows someone's inventions.,warn); think u({{sheet-fate/sheet}}/FUN`CHECK`READ,%q<cmd_left_side>); @assert isint(%q<check_modifier>)=@pemit %#=notice(SCIENCE,'%q<cmd_left_side>' ends in something that is not a number to add.,warn); @assert strlen(setr(trait_key,u({{sheet-fate/sheet}}/API`FIND,%q<check_typed>)))=@pemit %#=notice(SCIENCE,There is no skill '%q<check_typed>'. +sheet/traits lists them.,warn); think setqm(invent_benefits,first(%q<cmd_right_side>),invent_function,trim(rest(%q<cmd_right_side>))); @assert cand(isint(%q<invent_benefits>),gte(%q<invent_benefits>,1),lte(%q<invent_benefits>,10))=@pemit %#=notice(SCIENCE,Start with its stunt benefits%, 1 to 10%, then what it does: +invent %q<cmd_left_side>=2 Rocket Boots.,warn); @assert cand(strlen(%q<invent_function>),lte(strlen(%q<invent_function>),100))=@pemit %#=notice(SCIENCE,Say what it does after the benefits%, in 100 characters or fewer: its function aspect.,warn); @assert lt(words(lattr(%:/FATE`INVENTION`*)),20)=@pemit %#=notice(SCIENCE,You have 20 inventions. +invent/drop <number> lets one go.,warn); think setqm(invent_slot,inc(lmath(max,0 [iter(lattr(%:/FATE`INVENTION`*),after(%i0,FATE`INVENTION`))])),invent_result,uargs({{sheet-fate/sheet}}/API`CHECK,roller,%:,trait,%q<trait_key>,modifier,%q<check_modifier>,target,mul(2,%q<invent_benefits>)),invent_tier,json_query(%q<invent_result>,extract,$.tier)); @assert not(strmatch(%q<invent_result>,#-*))=@pemit %#=notice(SCIENCE,%q<invent_result>,error); @include/args %!/INC`DO`SET=who,%:,leaf,INVENTION`%q<invent_slot>,value,%q<invent_function>; @include/args %!/INC`DO`SET=who,%:,leaf,INVENTION`%q<invent_slot>`BENEFITS,value,%q<invent_benefits>; @include/args %!/INC`DO`SET=who,%:,leaf,INVENTION`%q<invent_slot>`SKILL,value,ucstr(%q<trait_key>); @include/args %!/INC`DO`SET=who,%:,leaf,INVENTION`%q<invent_slot>`OUTCOME,value,%q<invent_tier>; @include/args %!/INC`DO`SET=who,%:,leaf,INVENTION`%q<invent_slot>`ROLL,value,json_query(%q<invent_result>,extract,$.roll); @remit %l=notice(SCIENCE,tone(strong,name(%#)) invents %q<invent_function>: [u({{sheet-fate/sheet}}/FUN`DISPLAY`CHECK,%q<invent_result>)]. [u(%!/FUN`INVENT`CATCHES,%q<invent_tier>,%q<invent_benefits>,name(%#))] It adds %q<invent_benefits> to the GM's fate point reserve%, and the GM names its flaw.); @pemit %#=notice(SCIENCE,It is invention %q<invent_slot>. +invent/catch %q<invent_slot>=<catch> writes each catch down.,ok)
+        flags: [cmdsyntax]
+      # +invent/catch [<name>/]<n>=<catch>: one catch for each benefit.
+      INC`INVENT`CATCH:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SCIENCE,+invent/catch <invention>=<catch>.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`INVENTION; @assert lt(setr(catch_count,words(lattr(%q<sheet_who>/FATE`INVENTION`%q<sheet_what>`CATCH`*))),setr(catch_max,get(%q<sheet_who>/FATE`INVENTION`%q<sheet_what>`BENEFITS)))=@pemit %#=notice(SCIENCE,[get(%q<sheet_who>/FATE`INVENTION`%q<sheet_what>)] has its %q<catch_max> catch[if(neq(%q<catch_max>,1),es)]: one for each benefit.,warn); @assert cand(strlen(%q<cmd_right_side>),lte(strlen(%q<cmd_right_side>),200))=@pemit %#=notice(SCIENCE,A catch is 1 to 200 characters.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,INVENTION`%q<sheet_what>`CATCH`[inc(%q<catch_count>)],value,%q<cmd_right_side>; @pemit %#=notice(SCIENCE,[get(%q<sheet_who>/FATE`INVENTION`%q<sheet_what>)]%, catch [inc(%q<catch_count>)] of %q<catch_max>: %q<cmd_right_side>,ok)
+        flags: [cmdsyntax]
+      # +invent/flaw [<name>/]<n>=<flaw>: the flaw aspect the GM names. Empty clears it.
+      INC`INVENT`FLAW:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SCIENCE,+invent/flaw <invention>=<flaw>.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`INVENTION; @assert lte(strlen(%q<cmd_right_side>),200)=@pemit %#=notice(SCIENCE,Keep a flaw to 200 characters.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,INVENTION`%q<sheet_what>`FLAW,value,%q<cmd_right_side>; @pemit %#=notice(SCIENCE,if(strlen(%q<cmd_right_side>),[get(%q<sheet_who>/FATE`INVENTION`%q<sheet_what>)]%, flaw: %q<cmd_right_side>,[get(%q<sheet_who>/FATE`INVENTION`%q<sheet_what>)] has no flaw named now.),ok)
+        flags: [cmdsyntax]
+      # +invent/drop [<name>/]<n>: the invention goes from the sheet.
+      INC`INVENT`DROP:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SCIENCE,+invent/drop <invention>.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`INVENTION; think setq(drop_name,get(%q<sheet_who>/FATE`INVENTION`%q<sheet_what>)); @include/args %!/INC`DO`WIPE=who,%q<sheet_who>,leaf,INVENTION`%q<sheet_what>; @pemit %#=notice(SCIENCE,%q<drop_name> is gone from [name(%q<sheet_who>)]'s sheet.,ok)
+        flags: [cmdsyntax]
+      INC`NEED`INVENTION:
+        value: |-
+          @assert cand(isint(%q<sheet_what>),hasattr(%q<sheet_who>,FATE`INVENTION`%q<sheet_what>))=@pemit %#=notice(SCIENCE,[name(%q<sheet_who>)] has no invention '%q<sheet_what>'. +invent lists them by number.,warn)
+        flags: [cmdsyntax]
+
+      # ---- +brainstorm ----------------------------------------------------------------
+      # One brainstorm per room, kept on Fate Brainstorms under BS`<room>: the question, LEAD, ROUND (1 to 3 the
+      # facts, 4 the hypothesis roll, 5 waiting for the hypothesis), DIFFICULTY, VICTORIES, PEOPLE, ROLL`<person>
+      # this round's totals, WINNERS who may state the last round's fact, FACT`<round>`<person> the facts.
+      INC`NEED`BRAINSTORM:
+        value: |-
+          think setq(bs_key,u(%!/FUN`BS`KEY,%l)); @assert hasattr({{brainstorms}},BS`%q<bs_key>)=@pemit %#=notice(SCIENCE,There is no brainstorm here. +brainstorm/start <question> begins one.,warn); think setqm(bs_round,get({{brainstorms}}/BS`%q<bs_key>`ROUND),bs_me,u(%!/FUN`BS`KEY,%:))
+        flags: [cmdsyntax]
+      INC`NEED`LEAD:
+        value: |-
+          @assert cor(%q<viewer_keeper>,not(comp(get({{brainstorms}}/BS`%q<bs_key>`LEAD),%:)))=@pemit %#=notice(SCIENCE,Only [name(get({{brainstorms}}/BS`%q<bs_key>`LEAD))]%, who started it%, and sheet keepers do that.,error)
+        flags: [cmdsyntax]
+      INC`BRAINSTORM`SHOW:
+        value: |-
+          @include %!/INC`NEED`BRAINSTORM; @pemit %#=u(%!/FUN`SCREEN`BRAINSTORM,%q<bs_key>)
+        flags: [cmdsyntax]
+      # +brainstorm/start <question>: one per room.
+      INC`BRAINSTORM`START:
+        value: |-
+          think setq(bs_key,u(%!/FUN`BS`KEY,%l)); @assert not(hasattr({{brainstorms}},BS`%q<bs_key>))=@pemit %#=notice(SCIENCE,There is a brainstorm here already. +brainstorm shows it.,warn); @assert cand(strlen(%q<cmd_argument>),lte(strlen(%q<cmd_argument>),200))=@pemit %#=notice(SCIENCE,+brainstorm/start <question>%, such as +brainstorm/start Why are the ants giant?,warn); &BS`%q<bs_key> {{brainstorms}}=%q<cmd_argument>; &BS`%q<bs_key>`LEAD {{brainstorms}}=%:; &BS`%q<bs_key>`ROUND {{brainstorms}}=1; &BS`%q<bs_key>`DIFFICULTY {{brainstorms}}=get(%!/DATA`CONFIG`BRAINSTORM_DIFFICULTY); &BS`%q<bs_key>`VICTORIES {{brainstorms}}=0; @remit %l=notice(SCIENCE,tone(strong,name(%#)) starts a brainstorm: [u(%!/FUN`DISPLAY`SENTENCE,%q<cmd_argument>)] Everyone taking part compels one of their aspects to join: +brainstorm/join <aspect>.)
+        flags: [cmdsyntax]
+      # +brainstorm/join <aspect>: the aspect that drags you in, and a fate point for it.
+      INC`BRAINSTORM`JOIN:
+        value: |-
+          @include %!/INC`NEED`BRAINSTORM; @assert lt(%q<bs_round>,5)=@pemit %#=notice(SCIENCE,u(%!/FUN`BS`WAITING,%q<bs_key>,%q<bs_round>),warn); @assert not(member(get({{brainstorms}}/BS`%q<bs_key>`PEOPLE),%:))=@pemit %#=notice(SCIENCE,You are in this brainstorm already.,warn); @assert cand(strlen(%q<cmd_argument>),lte(strlen(%q<cmd_argument>),200))=@pemit %#=notice(SCIENCE,+brainstorm/join <the aspect that brings you in>.,warn); &BS`%q<bs_key>`PEOPLE {{brainstorms}}=trim(get({{brainstorms}}/BS`%q<bs_key>`PEOPLE) %:); @remit %l=notice(SCIENCE,tone(strong,name(%#)) joins the brainstorm%, compelled by %q<cmd_argument>[if(get(%!/DATA`CONFIG`BRAINSTORM_POINT),%, and gains a fate point: [u({{sheet-fate/sheet}}/API`AWARD,%:,1)])].)
+        flags: [cmdsyntax]
+      # +brainstorm <skill>[+<n>]: this round's roll, once each.
+      INC`BRAINSTORM`ROLL:
+        value: |-
+          @include %!/INC`NEED`BRAINSTORM; @assert member(get({{brainstorms}}/BS`%q<bs_key>`PEOPLE),%:)=@pemit %#=notice(SCIENCE,Join first: +brainstorm/join <aspect>.,warn); @assert lt(%q<bs_round>,5)=@pemit %#=notice(SCIENCE,The rolls are done. [u(%!/FUN`BS`WAITING,%q<bs_key>,%q<bs_round>)],warn); @assert not(hasattr({{brainstorms}},BS`%q<bs_key>`ROLL`%q<bs_me>))=@pemit %#=notice(SCIENCE,You have rolled this round.,warn); think u({{sheet-fate/sheet}}/FUN`CHECK`READ,%q<cmd_argument>); @assert isint(%q<check_modifier>)=@pemit %#=notice(SCIENCE,'%q<cmd_argument>' ends in something that is not a number to add.,warn); @assert strlen(setr(trait_key,u({{sheet-fate/sheet}}/API`FIND,%q<check_typed>)))=@pemit %#=notice(SCIENCE,There is no skill '%q<check_typed>'. +sheet/traits lists them.,warn); think setq(bs_result,uargs({{sheet-fate/sheet}}/API`CHECK,roller,%:,trait,%q<trait_key>,modifier,%q<check_modifier>,target,if(lt(%q<bs_round>,4),get({{brainstorms}}/BS`%q<bs_key>`DIFFICULTY)))); @assert not(strmatch(%q<bs_result>,#-*))=@pemit %#=notice(SCIENCE,%q<bs_result>,error); &BS`%q<bs_key>`ROLL`%q<bs_me> {{brainstorms}}=json_query(%q<bs_result>,extract,$.total); @remit %l=notice(SCIENCE,tone(strong,name(%#)) [if(lt(%q<bs_round>,4),brainstorms,rolls for the hypothesis)]: [u({{sheet-fate/sheet}}/FUN`DISPLAY`CHECK,%q<bs_result>)])
+        flags: [cmdsyntax]
+      # +brainstorm/next: the lead closes the round.
+      INC`BRAINSTORM`NEXT:
+        value: |-
+          @include %!/INC`NEED`BRAINSTORM; @include %!/INC`NEED`LEAD; @assert lt(%q<bs_round>,5)=@pemit %#=notice(SCIENCE,u(%!/FUN`BS`WAITING,%q<bs_key>,%q<bs_round>),warn); think setqm(bs_rollers,iter(lattr({{brainstorms}}/BS`%q<bs_key>`ROLL`*),after(%i0,`ROLL`)),bs_difficulty,get({{brainstorms}}/BS`%q<bs_key>`DIFFICULTY)); @break eq(%q<bs_round>,4)={@include %!/INC`BRAINSTORM`NEXT`FINAL}; @include %!/INC`BRAINSTORM`NEXT`FACT
+        flags: [cmdsyntax]
+      # Rounds 1 to 3: the highest who reached the difficulty win; victories by their margin.
+      INC`BRAINSTORM`NEXT`FACT:
+        value: |-
+          think setqm(bs_reached,filterbool(%!/FUN`BS`REACHED,%q<bs_rollers>,,,%q<bs_key>,%q<bs_difficulty>),bs_best,if(words(%q<bs_reached>),lmath(max,iter(%q<bs_reached>,get({{brainstorms}}/BS`%q<bs_key>`ROLL`%i0)))),bs_won,if(words(%q<bs_reached>),filterbool(%!/FUN`BS`TOTALIS,%q<bs_reached>,,,%q<bs_key>,%q<bs_best>)),bs_gained,cond(not(words(%q<bs_won>)),0,gt(words(%q<bs_won>),1),1,gte(sub(%q<bs_best>,%q<bs_difficulty>),3),2,1),bs_victories,add(get({{brainstorms}}/BS`%q<bs_key>`VICTORIES),%q<bs_gained>),bs_next_difficulty,if(words(%q<bs_won>),%q<bs_best>,get(%!/DATA`CONFIG`BRAINSTORM_DIFFICULTY))); @include/args %!/INC`BS`CLEARROLLS=key,%q<bs_key>; &BS`%q<bs_key>`WINNERS {{brainstorms}}=iter(%q<bs_won>,u(%!/FUN`BS`OBJID,%i0)); &BS`%q<bs_key>`VICTORIES {{brainstorms}}=%q<bs_victories>; &BS`%q<bs_key>`DIFFICULTY {{brainstorms}}=%q<bs_next_difficulty>; &BS`%q<bs_key>`ROUND {{brainstorms}}=inc(%q<bs_round>); @remit %l=notice(SCIENCE,Fact [%q<bs_round>] of the brainstorm: [u(%!/FUN`BS`ROUNDTEXT,%q<bs_won>,%q<bs_best>,%q<bs_difficulty>,%q<bs_gained>)] Victories: %q<bs_victories>.[if(lt(%q<bs_round>,3),%bThe next fact's difficulty is [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,%q<bs_next_difficulty>)].)]); @break lt(%q<bs_round>,3); @break gte(%q<bs_victories>,3)=@remit %l=notice(SCIENCE,With %q<bs_victories> victories there is a hypothesis to find. Everyone in the brainstorm rolls once more%, any skill: +brainstorm <skill>. The highest names it.); @break words(%q<bs_won>)={&BS`%q<bs_key>`ROUND {{brainstorms}}=6}; @remit %l=notice(SCIENCE,u(%!/FUN`BS`MYSTERY,%q<bs_key>,%q<bs_victories>)); @include/args %!/INC`BS`WIPE=key,%q<bs_key>
+        flags: [cmdsyntax]
+      # Round 4: the highest total names the hypothesis.
+      INC`BRAINSTORM`NEXT`FINAL:
+        value: |-
+          @assert words(%q<bs_rollers>)=@pemit %#=notice(SCIENCE,Nobody has rolled for the hypothesis yet.,warn); think setqm(bs_best,lmath(max,iter(%q<bs_rollers>,get({{brainstorms}}/BS`%q<bs_key>`ROLL`%i0))),bs_won,filterbool(%!/FUN`BS`TOTALIS,%q<bs_rollers>,,,%q<bs_key>,%q<bs_best>),bs_names,itemize(iter(%q<bs_won>,name(u(%!/FUN`BS`OBJID,%i0)),%b,|),|,or)); @include/args %!/INC`BS`CLEARROLLS=key,%q<bs_key>; &BS`%q<bs_key>`WINNERS {{brainstorms}}=iter(%q<bs_won>,u(%!/FUN`BS`OBJID,%i0)); &BS`%q<bs_key>`ROUND {{brainstorms}}=5; @remit %l=notice(SCIENCE,%q<bs_names> [if(gt(words(%q<bs_won>),1),tie,wins)] the hypothesis roll at [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,%q<bs_best>)]. +brainstorm/hypothesis <aspect> names what is going on%, building on the facts: it is true%, [u(%!/FUN`BS`INVOKES,get({{brainstorms}}/BS`%q<bs_key>`VICTORIES))].)
+        flags: [cmdsyntax]
+      # +brainstorm/fact <fact>: a winner of the last round states theirs.
+      INC`BRAINSTORM`FACT:
+        value: |-
+          @include %!/INC`NEED`BRAINSTORM; @assert member(get({{brainstorms}}/BS`%q<bs_key>`WINNERS),%:)=@pemit %#=notice(SCIENCE,Only a winner of the last round states a fact.,warn); @assert not(eq(%q<bs_round>,5))=@pemit %#=notice(SCIENCE,The facts are in: +brainstorm/hypothesis <aspect> names what is going on.,warn); @assert cand(strlen(%q<cmd_argument>),lte(strlen(%q<cmd_argument>),200))=@pemit %#=notice(SCIENCE,+brainstorm/fact <what you found>: something true about it%, not a guess.,warn); think setq(bs_fact_round,if(eq(%q<bs_round>,6),3,dec(%q<bs_round>))); &BS`%q<bs_key>`FACT`%q<bs_fact_round>`%q<bs_me> {{brainstorms}}=%q<cmd_argument>; &BS`%q<bs_key>`WINNERS {{brainstorms}}=setdiff(get({{brainstorms}}/BS`%q<bs_key>`WINNERS),%:); @remit %l=notice(SCIENCE,Fact %q<bs_fact_round>%, from [name(%#)]: [u(%!/FUN`DISPLAY`SENTENCE,%q<cmd_argument>)]); @break cor(not(eq(%q<bs_round>,6)),words(get({{brainstorms}}/BS`%q<bs_key>`WINNERS))); @remit %l=notice(SCIENCE,u(%!/FUN`BS`MYSTERY,%q<bs_key>,get({{brainstorms}}/BS`%q<bs_key>`VICTORIES))); @include/args %!/INC`BS`WIPE=key,%q<bs_key>
+        flags: [cmdsyntax]
+      # +brainstorm/hypothesis <aspect>: the winner of the last roll says what is going on, and the brainstorm ends.
+      INC`BRAINSTORM`HYPOTHESIS:
+        value: |-
+          @include %!/INC`NEED`BRAINSTORM; @assert eq(%q<bs_round>,5)=@pemit %#=notice(SCIENCE,The hypothesis comes after three facts and a last roll. +brainstorm shows where it is.,warn); @assert member(get({{brainstorms}}/BS`%q<bs_key>`WINNERS),%:)=@pemit %#=notice(SCIENCE,Only [itemize(iter(get({{brainstorms}}/BS`%q<bs_key>`WINNERS),name(%i0),%b,|),|,or)] names the hypothesis.,warn); @assert cand(strlen(%q<cmd_argument>),lte(strlen(%q<cmd_argument>),200))=@pemit %#=notice(SCIENCE,+brainstorm/hypothesis <what is going on>%, such as Radiation Has Made the Ants Giant!,warn); @remit %l=notice(SCIENCE,tone(strong,name(%#))'s hypothesis: [u(%!/FUN`DISPLAY`SENTENCE,%q<cmd_argument>)] It is true%, and an aspect on the scene now [u(%!/FUN`BS`INVOKES,get({{brainstorms}}/BS`%q<bs_key>`VICTORIES))]. The brainstorm's facts fold into it.); @include/args %!/INC`BS`WIPE=key,%q<bs_key>
+        flags: [cmdsyntax]
+      # +brainstorm/stop: the lead or a keeper ends it.
+      INC`BRAINSTORM`STOP:
+        value: |-
+          @include %!/INC`NEED`BRAINSTORM; @include %!/INC`NEED`LEAD; @include/args %!/INC`BS`WIPE=key,%q<bs_key>; @remit %l=notice(SCIENCE,tone(strong,name(%#)) ends the brainstorm here.)
+        flags: [cmdsyntax]
+      INC`BS`CLEARROLLS:
+        value: |-
+          @dolist/inline lattr({{brainstorms}}/BS`%<key>`ROLL`*)={&## {{brainstorms}}}
+        flags: [cmdsyntax]
+      INC`BS`WIPE:
+        value: |-
+          @dolist/inline revwords(lattr({{brainstorms}}/BS`%<key>`**))={&## {{brainstorms}}}; &BS`%<key> {{brainstorms}}
+        flags: [cmdsyntax]
+      # %0 an object: its key, the objid without # and with _ for :.
+      FUN`BS`KEY:
+        value: |-
+          edit(after(objid(%0),#),:,_)
+        flags: [funsyntax]
+      FUN`BS`OBJID:
+        value: |-
+          #[edit(%0,_,:)]
+        flags: [funsyntax]
+      # %0 a person's key, %1 the brainstorm, %2 the difficulty: 1 when their roll reached it.
+      FUN`BS`REACHED:
+        value: |-
+          gte(get({{brainstorms}}/BS`%1`ROLL`%0),%2)
+        flags: [funsyntax]
+      FUN`BS`TOTALIS:
+        value: |-
+          eq(get({{brainstorms}}/BS`%1`ROLL`%0),%2)
+        flags: [funsyntax]
+      # %0 the winners' keys, %1 the best total, %2 the difficulty, %3 the victories gained.
+      FUN`BS`ROUNDTEXT:
+        value: |-
+          if(words(%0),[itemize(iter(%0,name(u(%!/FUN`BS`OBJID,%i0)),%b,|),|)] [if(gt(words(%0),1),tie at,wins with)] [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,%1)] against [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,%2)]: %3 victor[if(eq(%3,1),y,ies)][if(cand(eq(%1,%2),eq(words(%0),1)),%, at a cost the GM names)]. [if(gt(words(%0),1),Each,[name(u(%!/FUN`BS`OBJID,first(%0)))])] states a fact with +brainstorm/fact <fact>.,Nobody reaches [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,%2)]%, so no fact comes of it.)
+        flags: [funsyntax]
+      # %0 the brainstorm, %1 its round, 5 or 6: what it waits for.
+      FUN`BS`WAITING:
+        value: |-
+          The brainstorm is waiting for [if(eq(%1,6),the last fact,its hypothesis)] from [itemize(iter(get({{brainstorms}}/BS`%0`WINNERS),name(%i0),%b,|),|,or)]: +brainstorm/[if(eq(%1,6),fact <fact>,hypothesis <aspect>)].
+        flags: [funsyntax]
+      # %0 the victories: the hypothesis's free invocations.
+      FUN`BS`INVOKES:
+        value: |-
+          cond(gte(%0,6),with two free invocations,gte(%0,4),with one free invocation,with no free invocation)
+        flags: [funsyntax]
+      FUN`BS`MYSTERY:
+        value: |-
+          [if(%1,With only %1 victor[if(eq(%1,1),y,ies)],With no victories)]%, it stays a mystery for now. The GM puts an aspect on the scene to say so%, such as Science Can't Explain It!, and keeps the facts: [u(%!/FUN`DISPLAY`SENTENCE,firstof(u(%!/FUN`BS`FACTS,%0,;%b),none))]
+        flags: [funsyntax]
+      # %0 the brainstorm, %1 the separator: its facts, in order.
+      FUN`BS`FACTS:
+        value: |-
+          iter(filterbool(%!/FUN`BS`ISFACT,lattr({{brainstorms}}/BS`%0`FACT`**)),get({{brainstorms}}/%i0),%b,%1)
+        flags: [funsyntax]
+      # %0 an attribute under BS`<room>`FACT`: 1 when it is a fact, BS`<room>`FACT`<round>`<person>, not a branch.
+      FUN`BS`ISFACT:
+        value: |-
+          eq(words(%0,`),5)
+        flags: [funsyntax]
+      FUN`SCREEN`BRAINSTORM:
+        value: |-
+          setqm(sb_round,get({{brainstorms}}/BS`%0`ROUND),sb_people,get({{brainstorms}}/BS`%0`PEOPLE),sb_facts,u(%!/FUN`BS`FACTS,%0,%*<|>))[box(lfields(,Question|Started by|Stage|Victories|Taking part|Rolled this round,get({{brainstorms}}/BS`%0)|[name(get({{brainstorms}}/BS`%0`LEAD))]|[switch(%q<sb_round>,4,The hypothesis roll,5,Waiting for the hypothesis,6,Waiting for the last fact,Fact %q<sb_round> of 3%, against [u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,get({{brainstorms}}/BS`%0`DIFFICULTY))])]|[get({{brainstorms}}/BS`%0`VICTORIES)]|[firstof(itemize(iter(%q<sb_people>,name(%i0),%b,%,),%,),nobody yet)]|[firstof(itemize(iter(lattr({{brainstorms}}/BS`%0`ROLL`*),name(u(%!/FUN`BS`OBJID,after(%i0,`ROLL`))),%b,%,),%,),nobody yet)],|)%r[rule(Facts)]%r[if(strlen(%q<sb_facts>),bullets(%q<sb_facts>,%*<|>),tone(muted,None yet.))]%r[rule()]%r[tone(muted,+brainstorm/join <aspect> takes part. +brainstorm <skill> rolls once a round. The one who started it closes each round with +brainstorm/next.)],Brainstorm)]
+        flags: [funsyntax]
+
+      # ---- writes -------------------------------------------------------------------
+      # %<who> an objid, %<leaf> what under FATE` to write, %<value> what to store; empty clears it. The FATE root is
+      # made wizard and no_command the first time, as the Fate sheet makes it.
+      INC`DO`SET:
+        value: |-
+          @if not(hasattr(%<who>,FATE))={&FATE %<who>=This character's Fate sheet. +sheet shows it.; @set %<who>/FATE=wizard; @set %<who>/FATE=no_command}; @if strlen(%<value>)={&FATE`%<leaf> %<who>=%<value>},{&FATE`%<leaf> %<who>}
+        flags: [cmdsyntax]
+      # %<who>, %<leaf>: clears FATE`<leaf> and everything beneath it.
+      INC`DO`WIPE:
+        value: |-
+          @dolist/inline revwords(lattr(%<who>/FATE`%<leaf>`**))={&## %<who>}; &FATE`%<leaf> %<who>
+        flags: [cmdsyntax]
+      # %<who>: writes every skill's rating and the stress tracks' lengths from their modes.
+      INC`DO`RATE:
+        value: |-
+          @dolist/inline ucstr(u({{sheet-fate/sheet}}/API`ALWAYS))={@include/args %!/INC`DO`SET=who,%<who>,leaf,RATING`##,value,if(setr(rate_value,u(%!/FUN`SKILL`RATING,%<who>,##)),%q<rate_value>)}; @include/args %!/INC`DO`SET=who,%<who>,leaf,BOXES`PHYSICAL,value,u(%!/FUN`STRESS`BOXES,%<who>,PHYSICAL); @include/args %!/INC`DO`SET=who,%<who>,leaf,BOXES`MENTAL,value,u(%!/FUN`STRESS`BOXES,%<who>,MENTAL)
+        flags: [cmdsyntax]
+
+      # ---- modes and skills ---------------------------------------------------------
+      FUN`MODE`LABEL:
+        value: |-
+          firstof(get({{store}}/MODE`%0),lcstr(%0))
+        flags: [funsyntax]
+      # %0 a character: the modes they hold, highest rated first, then in the list's order.
+      FUN`MODE`HELD:
+        value: |-
+          setq(held_who,%0)[sortkey(%!/FUN`MODE`RANKKEY,squish(iter(u(%!/FUN`LIST`ALL,MODE),if(hasattr(%0,FATE`MODE`%i0),%i0))))]
+        flags: [funsyntax]
+      FUN`MODE`RANKKEY:
+        value: |-
+          sub(9,get(%q<held_who>/FATE`MODE`%0))[rjust(default({{store}}/MODE`%0`ORDER,50),3,0)]%0
+        flags: [funsyntax]
+      # %0 a character, %1 a skill key in upper case: the modes they hold that rate it, highest first.
+      FUN`MODE`HOLDERS:
+        value: |-
+          squish(iter(u(%!/FUN`MODE`HELD,%0),if(member(ucstr(get({{store}}/MODE`%i0`SKILLS)),%1),%i0)))
+        flags: [funsyntax]
+      # %0 a mode: physical and mental, the tracks its skills add boxes to.
+      FUN`MODE`SCOPES:
+        value: |-
+          setq(scopes_skills,lcstr(get({{store}}/MODE`%0`SKILLS)))[squish(if(words(setinter(%q<scopes_skills>,lcstr(get(%!/DATA`CONFIG`PHYSICAL)))),physical) [if(words(setinter(%q<scopes_skills>,lcstr(get(%!/DATA`CONFIG`MENTAL)))),mental)])]
+        flags: [funsyntax]
+      # %0 a character: 1 when they hold a weird mode.
+      FUN`MODE`WEIRD:
+        value: |-
+          words(filterbool(%!/FUN`MODE`ISWEIRD,u(%!/FUN`MODE`HELD,%0)))
+        flags: [funsyntax]
+      # %0 a mode, %1 a character, %2 a rating: 1 when their mode has that rating.
+      FUN`MODE`RATEDAT:
+        value: |-
+          eq(get(%1/FATE`MODE`%0),%2)
+        flags: [funsyntax]
+      FUN`MODE`ISWEIRD:
+        value: |-
+          get({{store}}/MODE`%0`WEIRD)
+        flags: [funsyntax]
+      # %0 a character, %1 a skill: the rating their modes give it. Its highest mode's rating, one step more for
+      # each other mode that has it and each step bought, two steps at most. Mediocre (0) in none.
+      FUN`SKILL`RATING:
+        value: |-
+          setq(rating_holders,u(%!/FUN`MODE`HOLDERS,%0,%1))[if(words(%q<rating_holders>),add(get(%0/FATE`MODE`[first(%q<rating_holders>)]),u(%!/FUN`SKILL`STEPS,%0,%1,words(%q<rating_holders>))),0)]
+        flags: [funsyntax]
+      # %0 a character, %1 a skill, %2 how many of their modes have it: 0 trained, 1 focused, 2 specialized.
+      FUN`SKILL`STEPS:
+        value: |-
+          min(2,add(dec(%2),default(%0/FATE`FOCUS`%1,0)))
+        flags: [funsyntax]
+      FUN`SKILL`WORD:
+        value: |-
+          switch(%0,0,trained,1,focused,specialized)
+        flags: [funsyntax]
+      # %0 a character, %1 a skill: what its bought steps cost. 1 for trained to focused, 2 for focused to
+      # specialized; a step a second mode gives is free.
+      FUN`FOCUS`COST:
+        value: |-
+          setqm(cost_count,words(u(%!/FUN`MODE`HOLDERS,%0,%1)),cost_from,dec(%q<cost_count>),cost_to,min(2,add(%q<cost_from>,default(%0/FATE`FOCUS`%1,0))))[if(%q<cost_count>,sub(mul(2,max(0,sub(%q<cost_to>,%q<cost_from>))),if(cand(eq(%q<cost_from>,0),gt(%q<cost_to>,0)),1,0)),0)]
+        flags: [funsyntax]
+      FUN`POINTS`TOTAL:
+        value: |-
+          default(%0/FATE`SKILLPOINTS,get(%!/DATA`CONFIG`POINTS))
+        flags: [funsyntax]
+      FUN`POINTS`LEFT:
+        value: |-
+          sub(u(%!/FUN`POINTS`TOTAL,%0),ladd(iter(lattr(%0/FATE`FOCUS`*),u(%!/FUN`FOCUS`COST,%0,after(%i0,FATE`FOCUS`)))))
+        flags: [funsyntax]
+      # %0 a character, %1 PHYSICAL or MENTAL: the track's length from their modes, or nothing without modes (the
+      # sheet's own length).
+      FUN`STRESS`BOXES:
+        value: |-
+          if(words(setr(boxes_held,u(%!/FUN`MODE`HELD,%0))),add(get(%!/DATA`CONFIG`STRESS),ladd(iter(%q<boxes_held>,u(%!/FUN`STRESS`FROM,%0,%i0,%1)))))
+        flags: [funsyntax]
+      # %0 a character, %1 a mode, %2 PHYSICAL or MENTAL: the boxes it adds there. Fair adds one, Good two, on the
+      # track its skills fit, or the one the character chose when they fit both.
+      FUN`STRESS`FROM:
+        value: |-
+          setqm(from_bonus,max(0,dec(get(%0/FATE`MODE`%1))),from_choice,u(%!/FUN`STRESS`CHOICE,%0,%1))[switch(%q<from_choice>,split,if(strmatch(%2,PHYSICAL),ceil(fdiv(%q<from_bonus>,2)),floor(fdiv(%q<from_bonus>,2))),lcstr(%2),%q<from_bonus>,0)]
+        flags: [funsyntax]
+      FUN`STRESS`CHOICE:
+        value: |-
+          setq(choice_scopes,u(%!/FUN`MODE`SCOPES,%1))[cond(eq(words(%q<choice_scopes>),2),firstof(get(%0/FATE`MODESTRESS`%1),physical),words(%q<choice_scopes>),%q<choice_scopes>,none)]
+        flags: [funsyntax]
+
+      # ---- mega-stunts and the GM's reserve ------------------------------------------
+      # %0 a character: what they add to the GM's fate point reserve. Each benefit past the stunt slots adds one,
+      # each voluntary weakness or cost takes one off.
+      FUN`RESERVE:
+        value: |-
+          setq(reserve_slots,get({{sheet-fate/sheet}}/DATA`CONFIG`STUNTS))[if(%q<reserve_slots>,max(0,sub(max(0,sub(ladd(iter(lnum(1,%q<reserve_slots>),if(hasattr(%0,FATE`STUNT`%i0),default(%0/FATE`MEGA`%i0,1),0))),%q<reserve_slots>)),ladd(iter(lnum(1,%q<reserve_slots>),default(%0/FATE`MEGA`%i0`WEAK,0))))),0)]
+        flags: [funsyntax]
+      FUN`RESERVE`ANY:
+        value: |-
+          cand(hastype(%0,player),gt(u(%!/FUN`RESERVE,%0),0))
+        flags: [funsyntax]
+
+      # ---- scale --------------------------------------------------------------------
+      FUN`SCALE`FIND:
+        value: |-
+          u(%!/FUN`LIST`FIND,SCALE,%0)
+        flags: [funsyntax]
+      FUN`SCALE`STEP:
+        value: |-
+          default({{store}}/SCALE`%0`STEP,1)
+        flags: [funsyntax]
+      FUN`SCALE`LABEL:
+        value: |-
+          firstof(get({{store}}/SCALE`%0),lcstr(%0))
+        flags: [funsyntax]
+      FUN`SCALE`ALL:
+        value: |-
+          sortkey(%!/FUN`SCALE`STEPKEY,u(%!/FUN`LIST`ALL,SCALE))
+        flags: [funsyntax]
+      FUN`SCALE`STEPKEY:
+        value: |-
+          rjust(u(%!/FUN`SCALE`STEP,%0),2,0)%0
+        flags: [funsyntax]
+
+      # ---- lists on the store -------------------------------------------------------
+      # %0 a list on the store (MODE, SCALE): its keys, in order then by key. FUN`LIST`SORTKEY reads list_path.
+      FUN`LIST`ALL:
+        value: |-
+          setq(list_path,%0)[sortkey(%!/FUN`LIST`SORTKEY,iter(lattr({{store}}/%0`*),after(%i0,`)))]
+        flags: [funsyntax]
+      FUN`LIST`SORTKEY:
+        value: |-
+          rjust(default({{store}}/%q<list_path>`%0`ORDER,50),3,0)%0
+        flags: [funsyntax]
+      # %0 a list, %1 typed text: the key it names, by key, by label, or by the start of one, or nothing.
+      FUN`LIST`FIND:
+        value: |-
+          setqm(find_typed,trim(%1),
+          find_all,u(%!/FUN`LIST`ALL,%0),
+          find_exact,iter(%q<find_all>,if(cor(not(comp(%i0,ucstr(edit(%q<find_typed>,%b,-)))),not(comp(lcstr(get({{store}}/%0`%i0)),lcstr(%q<find_typed>)))),%i0)),
+          find_start,iter(%q<find_all>,if(cor(not(comp(left(%i0,strlen(%q<find_typed>)),ucstr(%q<find_typed>))),not(comp(lcstr(left(get({{store}}/%0`%i0),strlen(%q<find_typed>))),lcstr(%q<find_typed>)))),%i0)))[if(strlen(%q<find_typed>),first(firstof(%q<find_exact>,if(eq(words(%q<find_start>),1),%q<find_start>))))]
+        flags: [funsyntax]
+      FUN`PLAYER`MATCH:
+        value: |-
+          if(isdbref(setr(found_player,pmatch(%0))),objid(%q<found_player>))
+        flags: [funsyntax]
+
+      # ---- display ------------------------------------------------------------------
+      # %0 typed text: itself, with a full stop when it ends in none.
+      FUN`DISPLAY`SENTENCE:
+        value: |-
+          %0[if(member(. ! ?,right(%0,1)),,.)]
+        flags: [funsyntax]
+      FUN`DISPLAY`RATINGS:
+        value: |-
+          itemize(iter(get(%!/DATA`CONFIG`RATINGS),u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,%i0),%b,|),|)
+        flags: [funsyntax]
+      # %0 a character, %1 modes: Action (Good) and Banter (Fair).
+      FUN`DISPLAY`MODES:
+        value: |-
+          itemize(iter(%1,[u(%!/FUN`MODE`LABEL,%i0)] %([u({{sheet-fate/sheet}}/API`LADDER,get(%0/FATE`MODE`%i0))]%),%b,|),|)
+        flags: [funsyntax]
+      # %0 a character, %1 a mode: the skills written under it (each under its highest mode only), with the
+      # focused and specialized ones marked.
+      FUN`DISPLAY`HOMESKILLS:
+        value: |-
+          firstof(itemize(iter(filterbool(%!/FUN`SKILL`ISHOME,ucstr(get({{store}}/MODE`%1`SKILLS)),,,%0,%1),[u({{sheet-fate/sheet}}/API`LABEL,%i0)][setq(home_steps,u(%!/FUN`SKILL`STEPS,%0,%i0,words(u(%!/FUN`MODE`HOLDERS,%0,%i0))))][if(%q<home_steps>,%b%([u(%!/FUN`SKILL`WORD,%q<home_steps>)]%, [u({{sheet-fate/sheet}}/API`LADDER,u(%!/FUN`SKILL`RATING,%0,%i0))]%))],%b,|),|),each of its skills is written under a higher mode)
+        flags: [funsyntax]
+      # %0 a skill, %1 a character, %2 a mode: 1 when the skill is written under that mode, its highest.
+      FUN`SKILL`ISHOME:
+        value: |-
+          cand(strlen(u({{sheet-fate/sheet}}/API`FIND,%0)),not(comp(first(u(%!/FUN`MODE`HOLDERS,%1,%0)),%2)))
+        flags: [funsyntax]
+      FUN`DISPLAY`POINTSLEFT:
+        value: |-
+          setr(points_left,u(%!/FUN`POINTS`LEFT,%0)) of [u(%!/FUN`POINTS`TOTAL,%0)] skill point[if(neq(u(%!/FUN`POINTS`TOTAL,%0),1),s)] left.
+        flags: [funsyntax]
+      FUN`DISPLAY`BOXES:
+        value: |-
+          Stress boxes: [firstof(u(%!/FUN`STRESS`BOXES,%0,PHYSICAL),u({{sheet-fate/sheet}}/FUN`TRACK`BOXES,%0,PHYSICAL))] physical%, [firstof(u(%!/FUN`STRESS`BOXES,%0,MENTAL),u({{sheet-fate/sheet}}/FUN`TRACK`BOXES,%0,MENTAL))] mental.
+        flags: [funsyntax]
+      FUN`DISPLAY`RESERVE:
+        value: |-
+          if(setr(reserve_adds,u(%!/FUN`RESERVE,%0)),Together [poss(%0)] stunts add %q<reserve_adds> to the GM's fate point reserve.,[capstr(poss(%0))] stunts add nothing to the GM's fate point reserve.)
+        flags: [funsyntax]
+      FUN`DISPLAY`WEIRDMODES:
+        value: |-
+          itemize(iter(filterbool(%!/FUN`MODE`ISWEIRD,u(%!/FUN`LIST`ALL,MODE)),u(%!/FUN`MODE`LABEL,%i0),%b,|),|,or)
+        flags: [funsyntax]
+      FUN`DISPLAY`SCALES:
+        value: |-
+          itemize(iter(u(%!/FUN`SCALE`ALL),lcstr(u(%!/FUN`SCALE`LABEL,%i0)),%b,|),|)
+        flags: [funsyntax]
+      # %0 the machine's scale, %1 the foe's, %2 what it added to the roll: " Giant against Titan: -1 to the roll."
+      FUN`DISPLAY`SCALE:
+        value: |-
+          if(comp(%0,%1),%b[u(%!/FUN`SCALE`LABEL,%0)] against [lcstr(u(%!/FUN`SCALE`LABEL,%1))][if(%2,: [if(gt(%2,0),+%2,%2)] to the roll)].)
+        flags: [funsyntax]
+      # %0 the check, %1 the Weapon rating, %2 the shifts scale adds to harm: " A hit for 4 shifts."
+      FUN`DISPLAY`HIT:
+        value: |-
+          setq(hit_shifts,json_query(%0,extract,$.shifts))[if(cand(isint(%q<hit_shifts>),gt(%q<hit_shifts>,0)),%bAs an attack it hits for [setr(hit_harm,max(0,add(%q<hit_shifts>,%1,%2)))] shift[if(neq(%q<hit_harm>,1),s)][if(cor(%1,%2),%b%([trim(%q<hit_shifts> [if(%1,+ Weapon:%1)] [if(%2,[if(gt(%2,0),+,-)] [abs(%2)] for scale)])]%))].)]
+        flags: [funsyntax]
+      # %0 the outcome, %1 the benefits, %2 the inventor's name: who chooses the catches.
+      FUN`INVENT`CATCHES:
+        value: |-
+          switch(%0,fail,The GM chooses [if(eq(%1,1),its catch,all %1 catches)].,partial,if(eq(%1,1),The GM chooses its catch.,The GM and %2 take turns choosing the %1 catches%, the GM first.),success,if(eq(%1,1),The GM chooses its catch.,The GM chooses one catch and %2 the other [dec(%1)].),%2 chooses [if(eq(%1,1),its catch,every catch)].)
+        flags: [funsyntax]
+
+      # ---- the parts of +sheet --------------------------------------------------------
+      # %0 the character, %1 the reader. Each mode with its rating and the skills written under it; then the
+      # skill points and stress boxes. Nothing for a character without modes, but a hint for one still choosing.
+      FUN`SECTION`MODES:
+        value: |-
+          if(words(setr(section_held,u(%!/FUN`MODE`HELD,%0))),[lfields(,iter(%q<section_held>,u(%!/FUN`MODE`LABEL,%i0),%b,%*<|>),iter(%q<section_held>,[u({{sheet-fate/sheet}}/FUN`LADDER`SHOW,get(%0/FATE`MODE`%i0))]: [u(%!/FUN`DISPLAY`HOMESKILLS,%0,%i0)],%b,%*<|>),%*<|>)]%r[tone(muted,[u(%!/FUN`DISPLAY`POINTSLEFT,%0)] [u(%!/FUN`DISPLAY`BOXES,%0)])],if(cand(not(comp(objid(%1),%0)),not(isapproved(%1))),tone(muted,No modes yet. +mode/list shows them%, and +mode/set <mode>=good chooses one.)))
+        flags: [funsyntax]
+      # %0 the character: each mega-stunt with its benefits, and what they add to the GM's reserve.
+      FUN`SECTION`MEGA:
+        value: |-
+          if(words(setr(section_megas,iter(lattr(%0/FATE`MEGA`*),after(%i0,FATE`MEGA`)))),[lfields(,iter(%q<section_megas>,Stunt %i0,%b,%*<|>),iter(%q<section_megas>,[get(%0/FATE`MEGA`%i0)] benefit[if(neq(get(%0/FATE`MEGA`%i0),1),s)][if(get(%0/FATE`MEGA`%i0`WEAK),%, [get(%0/FATE`MEGA`%i0`WEAK)] chosen weakness[if(neq(get(%0/FATE`MEGA`%i0`WEAK),1),es)] or cost[if(neq(get(%0/FATE`MEGA`%i0`WEAK),1),s)])],%b,%*<|>),%*<|>)]%r[tone(muted,u(%!/FUN`DISPLAY`RESERVE,%0))])
+        flags: [funsyntax]
+      FUN`SECTION`MACHINE:
+        value: |-
+          if(hasattr(%0,FATE`MACHINE),lfields(lit({"cols":2}),Machine|Scale|Concept|Flaw|Weapon|Armor|Stress,[get(%0/FATE`MACHINE)]|[u(%!/FUN`SCALE`LABEL,get(%0/FATE`MACHINE`SCALE))]|[firstof(get(%0/FATE`MACHINE`CONCEPT),tone(muted,-))]|[firstof(get(%0/FATE`MACHINE`FLAW),tone(muted,-))]|[default(%0/FATE`MACHINE`WEAPON,0)]|[default(%0/FATE`MACHINE`ARMOR,0)]|[setq(machine_marked,get(%0/FATE`MACHINE`STRESS))][iter(lnum(1,get(%!/DATA`CONFIG`MACHINE_BOXES)),if(member(%q<machine_marked>,%i0),%[X%],%[%b%]))],|))
+        flags: [funsyntax]
+      FUN`SECTION`INVENTIONS:
+        value: |-
+          if(words(setr(section_inventions,sort(iter(lattr(%0/FATE`INVENTION`*),after(%i0,FATE`INVENTION`)),n))),lfields(,iter(%q<section_inventions>,Invention %i0,%b,%*<|>),iter(%q<section_inventions>,u(%!/FUN`DISPLAY`INVENTION,%0,%i0),%b,%*<|>),%*<|>))
+        flags: [funsyntax]
+      # %0 a character, %1 an invention: "Rocket Boots: 2 benefits, success. Flaw: Weighs a Ton. Catches: Time."
+      FUN`DISPLAY`INVENTION:
+        value: |-
+          get(%0/FATE`INVENTION`%1): [get(%0/FATE`INVENTION`%1`BENEFITS)] benefit[if(neq(get(%0/FATE`INVENTION`%1`BENEFITS),1),s)]%, built with [u({{sheet-fate/sheet}}/API`LABEL,get(%0/FATE`INVENTION`%1`SKILL))]: [u({{sheet-fate/sheet}}/FUN`DISPLAY`TIER,get(%0/FATE`INVENTION`%1`OUTCOME))]. Flaw: [firstof(get(%0/FATE`INVENTION`%1`FLAW),not named yet)]. Catches: [firstof(itemize(iter(sort(iter(lattr(%0/FATE`INVENTION`%1`CATCH`*),last(%i0,`)),n),get(%0/FATE`INVENTION`%1`CATCH`%i0),%b,|),|),none yet)].
+        flags: [funsyntax]
+
+      # ---- screens ------------------------------------------------------------------
+      FUN`SCREEN`MODES:
+        value: |-
+          box(firstof(u(%!/FUN`SECTION`MODES,%0,%1),tone(muted,[name(%0)] has no modes.))[if(strlen(setr(screen_mega,u(%!/FUN`SECTION`MEGA,%0,%1))),%r[rule(Mega-stunts)]%r%q<screen_mega>)]%r[rule()]%r[tone(muted,+mode/set <mode>=<rating> chooses a mode. +mode/focus <skill> improves a skill. +mode/list shows the modes.)],Modes: [name(%0)])
+        flags: [funsyntax]
+      FUN`SCREEN`LIST:
+        value: |-
+          setq(screen_all,u(%!/FUN`LIST`ALL,MODE))[box(ldatatable(lit({"nowrap":"1|2","grow":"||1"}),Mode|Kind|Skills,iter(%q<screen_all>,[u(%!/FUN`MODE`LABEL,%i0)]|[if(get({{store}}/MODE`%i0`WEIRD),weird,standard)]|[itemize(iter(get({{store}}/MODE`%i0`SKILLS),u({{sheet-fate/sheet}}/API`LABEL,%i0),%b,%,),%,)],,%*<^>),%*<^>)%r[rule()]%r[tone(muted,Rate [words(get(%!/DATA`CONFIG`RATINGS))] of them [u(%!/FUN`DISPLAY`RATINGS)]: +mode/set <mode>=<rating>. A weird mode allows mega-stunts.)],Modes)]
+        flags: [funsyntax]
+
+      # ---- lifecycle ----------------------------------------------------------------
+      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
+      STARTUP:
+        value: |-
+          @command/add/noparse/rsnoparse +mode; @hook/override/inline +mode=%!,CMD`MODE; @command/add/noparse/rsnoparse +machine; @hook/override/inline +machine=%!,CMD`MACHINE; @command/add/noparse/rsnoparse +invent; @hook/override/inline +invent=%!,CMD`INVENT; @command/add/noparse/rsnoparse +brainstorm; @hook/override/inline +brainstorm=%!,CMD`BRAINSTORM
+        flags: [cmdsyntax]
+      AINSTALL:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+      AUPDATE:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+
+  # The lists staff curate: MODE`<KEY> a mode (SKILLS, WEIRD, ORDER beneath) and SCALE`<KEY> a scale (STEP
+  # beneath). Inside the command object, so no player can reach it; no_command, so nothing on it is a command.
+  - ref: store
+    type: thing
+    name: Fate Action Science Store
+    location: "{{science}}"
+    flags: [no_command]
+    attributes:
+      MODE: |-
+        The modes characters choose from, one branch each, with SKILLS, WEIRD and ORDER beneath.
+      MODE`ACTION: |-
+        Action
+      MODE`ACTION`SKILLS: |-
+        athletics combat notice physique provoke vehicles
+      MODE`ACTION`ORDER: |-
+        1
+      MODE`BANTER: |-
+        Banter
+      MODE`BANTER`SKILLS: |-
+        contacts deceive empathy provoke rapport will
+      MODE`BANTER`ORDER: |-
+        2
+      MODE`INTRIGUE: |-
+        Intrigue
+      MODE`INTRIGUE`SKILLS: |-
+        athletics burglary contacts deceive notice stealth
+      MODE`INTRIGUE`ORDER: |-
+        3
+      MODE`SCIENCE: |-
+        Science
+      MODE`SCIENCE`SKILLS: |-
+        notice will chemistry engineering exobiology mechanics physics robotics science
+      MODE`SCIENCE`ORDER: |-
+        4
+      MODE`MARTIAL-ARTIST: |-
+        Martial Artist
+      MODE`MARTIAL-ARTIST`SKILLS: |-
+        athletics combat notice physique stealth will
+      MODE`MARTIAL-ARTIST`WEIRD: |-
+        1
+      MODE`PILOT: |-
+        Pilot
+      MODE`PILOT`SKILLS: |-
+        contacts notice vehicles
+      MODE`PILOT`WEIRD: |-
+        1
+      MODE`REPORTER: |-
+        Reporter
+      MODE`REPORTER`SKILLS: |-
+        contacts empathy notice rapport stealth will
+      MODE`REPORTER`WEIRD: |-
+        1
+      MODE`ROBOT: |-
+        Robot
+      MODE`ROBOT`SKILLS: |-
+        athletics notice physique
+      MODE`ROBOT`WEIRD: |-
+        1
+      MODE`SECRET-AGENT: |-
+        Secret Agent
+      MODE`SECRET-AGENT`SKILLS: |-
+        burglary contacts deceive notice stealth vehicles
+      MODE`SECRET-AGENT`WEIRD: |-
+        1
+      MODE`SOLDIER: |-
+        Soldier
+      MODE`SOLDIER`SKILLS: |-
+        athletics combat contacts notice physique vehicles will
+      MODE`SOLDIER`WEIRD: |-
+        1
+      SCALE: |-
+        The scales, one branch each, with STEP beneath: people on step 1.
+      SCALE`PERSON: |-
+        Person
+      SCALE`PERSON`STEP: |-
+        1
+      SCALE`VEHICLE: |-
+        Vehicle
+      SCALE`VEHICLE`STEP: |-
+        2
+      SCALE`GIANT: |-
+        Giant
+      SCALE`GIANT`STEP: |-
+        3
+      SCALE`TITAN: |-
+        Titan
+      SCALE`TITAN`STEP: |-
+        4
+
+  # Live brainstorms, one per room: BS`<room key>. Inside the command object; no_command.
+  - ref: brainstorms
+    type: thing
+    name: Fate Brainstorms
+    location: "{{science}}"
+    flags: [no_command]
+    attributes:
+      BS: |-
+        The brainstorms going on now, one branch per room. +brainstorm/stop ends one.
+
+  # The +help topics, on an object of their own. fate-action-science-help registers it with +help; without that
+  # bridge nothing reads it. HELP`<TOPIC> is a topic, its subtopics the leaves beneath, LOCK`<TOPIC> who may read it.
+  - ref: science_help
+    type: thing
+    name: Fate Action Science Help
+    location: "{{science}}"
+    attributes:
+      HELP: |-
+        Modes, mega-stunts, machines, inventions and brainstorms on the Fate sheet: +mode, +machine, +invent and +brainstorm.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`MODE: |-
+        sheet machine invent brainstorm
+      SEE`MACHINE: |-
+        mode check
+      SEE`INVENT: |-
+        mode brainstorm
+      SEE`BRAINSTORM: |-
+        invent
+      HELP`MODE: |-
+        On this game your skills come from three modes, rated Good \(+3\), Fair \(+2\) and Average \(+1\). Each mode holds a set of skills; a skill takes the rating of your best mode that holds it.
+
+        - `+mode` shows your modes, skill points and stress boxes; `+mode <name>` someone else's, when you may read their sheet.
+        - `+mode/list` lists the modes and their skills. Weird modes, such as Robot or Pilot, allow mega-stunts.
+        - `+mode/set <mode>=<rating>` chooses a mode: `+mode/set science=good`. Leave the rating out to drop it.
+        - `+mode/focus <skill>` spends skill points on a skill in one of your modes: 1 point focuses it \(+1\), 2 more specialize it \(+2\). `+mode/unfocus <skill>` takes a step back.
+        - `+mode/stress <mode>=physical`, `mental` or `split` says where a mode's extra stress boxes go, when its skills give both kinds.
+
+        A skill in two of your modes is focused for free, and in all three specialized. Fair and Good modes with Athletics or Physique add physical stress boxes, with Provoke or Will mental ones.
+
+        You choose modes until your character is approved; then staff change them. `+sheet/set` does not rate skills here.
+
+        For example:
+
+        `+mode/set science=fair`
+
+        Output: `\[SCIENCE\] Done: Bob's Science mode is Fair (+2): Will, Chemistry, Engineering, Exobiology, Mechanics, Physics, Robotics, and Other sciences.`
+
+        See `+help mode mega` for mega-stunts.
+      HELP`MODE`MEGA: |-
+        A character with a weird mode may make any stunt a mega-stunt, with more than one benefit.
+
+        - `+sheet/stunt <slot>=<text>` writes the stunt first.
+        - `+mode/mega <slot>=<benefits>` gives it that many benefits, 1 to 10: `+mode/mega 2=3`. Leave the number out to make it a plain stunt again.
+        - `+mode/weakness <slot>=<number>` counts the weaknesses and costs you chose for it; each takes one benefit off the bill.
+        - `+mode/reserve` adds up what everyone in the room puts into the GM's fate point reserve.
+
+        Your stunt slots cover one benefit each. Every benefit beyond them, less your chosen weaknesses, adds a fate point to the GM's reserve while you are in the scene.
+
+        For example:
+
+        `+mode/mega 1=2`
+
+        Output: `\[SCIENCE\] Done: Stunt 1 on Bob's sheet is a mega-stunt with 2 benefits. Their stunts add nothing to the GM's fate point reserve.`
+      LOCK`MODE`STAFF: |-
+        perm^softcode.fate.admin
+      HELP`MODE`STAFF: |-
+        Sheet keepers \(`softcode.fate.admin`, or the Fate Sheet Keeper role\) change anyone's modes at any time:
+
+        - `/set`, `/focus`, `/unfocus`, `/stress`, `/mega` and `/weakness` take `<name>/` first: `+mode/set Alice/robot=good`.
+        - `+mode/points <name>=<points>` gives one character a skill point total of their own, `=default` the game's again.
+        - `+machine/set <name>/<field>=<value>`, `+machine/scrap <name>` and the `/catch`, `/flaw` and `/drop` switches of `+invent` work on anyone's.
+        - `+brainstorm/next` and `+brainstorm/stop` work on anyone's brainstorm.
+
+        The modes write each skill's rating and the stress boxes onto the Fate sheet, so `+check`, `+sheet` and Duties read the same numbers.
+      LOCK`MODE`SETTINGS: |-
+        perm^config.admin
+      HELP`MODE`SETTINGS: |-
+        `+config fate-science` lists the settings and `+config fate-science/<setting>=<value>` changes one \(`config.admin`\):
+
+        - `ratings`: the modes' ratings, one per mode \(`3 2 1`\). `points`: skill points each \(3\).
+        - `stress`: physical and mental boxes before the modes add theirs \(2\). `physical`, `mental`: the skills that add them.
+        - `scale_effect`: what each step of scale does: `roll` \(+1 to the larger\), `harm` \(2 shifts\) or `both`.
+        - `machine_scale`: the scale a new machine starts at \(giant\). `machine_boxes`: a machine's stress boxes \(3\).
+        - `brainstorm_difficulty`: the first fact's difficulty \(3\). `brainstorm_point`: whether joining a brainstorm pays a fate point \(yes\).
+        - `modes`: the modes, each with its skills and whether it is weird. `+config/add fate-science/modes/spy=Spy` adds one.
+        - `scales`: the scales and their steps.
+
+        A new science is a skill: `+config/add fate/skills/<key>=<label>`, then add its key to the Science mode's skills.
+      HELP`MODE`CREDITS: |-
+        Modes, mega-stunts, invention and brainstorms are based on the Atomic Robo RPG SRD. This work is based on the Atomic Robo RPG SRD \(found at http://www.faterpg.com/\), a product of Evil Hat Productions, LLC, developed, authored, and edited by Mike Olson, Jeremy Keller, Adam Jury, Brian Clevinger, Brian Engard, Morgan Ellis, and Fred Hicks, and licensed for our use under the Creative Commons Attribution 3.0 Unported license \(http://creativecommons.org/licenses/by/3.0/\).
+
+        Scale is based on the Fate System Toolkit. This work is based on the Fate System Toolkit \(found at http://www.faterpg.com/\), a product of Evil Hat Productions, LLC, developed, authored, and edited by Robert Donoghue, Brian Engard, Brennan Taylor, Mike Olson, Mark Diaz Truman, Fred Hicks, and Matthew Gandy, and licensed for our use under the Creative Commons Attribution 3.0 Unported license \(http://creativecommons.org/licenses/by/3.0/\).
+
+        Fate is a trademark of Evil Hat Productions, LLC. This game is not affiliated with or endorsed by Evil Hat Productions.
+      HELP`MACHINE: |-
+        `+machine` shows your machine: a giant robot, a tank, a starship. Machines are built at a scale, and scale counts when they meet something bigger or smaller.
+
+        - `+machine/set name=<name>` builds one; `/set scale=`, `concept=`, `flaw=`, `weapon=` and `armor=` fill it in: `+machine/set scale=titan`.
+        - `+machine/check <skill>=<opposition> vs <scale>` pilots it against something of that scale: `+machine/check combat=good vs person`. Leave out `vs` for a foe of its own size.
+        - `+machine/stress <box>` marks one of its stress boxes; `+machine/stress clear` empties them.
+        - `+machine/scrap` takes it off your sheet.
+
+        Each step of scale between the machine and its foe gives the larger one +1 on the roll, or 2 shifts of harm, or both, as the game sets. A hit adds the machine's Weapon rating; its Armor takes shifts off a hit it takes.
+
+        For example:
+
+        `+machine/check vehicles=fair vs person`
+
+        Output: `\[SCIENCE\] Bob pilots Little Tin: Vehicles: 4dF\[-1, 1, 1, 1\] + 5 = 7 (Epic) against Fair (+2): success with style, 5 shifts (roll 25) Giant against person: +2 to the roll. As an attack it hits for 5 shifts.`
+      HELP`INVENT: |-
+        `+invent <skill>=<benefits> <what it does>` builds a gadget: a science roll against twice its benefits, where the room sees it. What it does becomes its function aspect.
+
+        - `+invent` lists your inventions; `+invent/list <name>` someone else's.
+        - `+invent/catch <invention>=<catch>` writes a catch down: an invention has one per benefit.
+        - `+invent/flaw <invention>=<flaw>` names its flaw, an aspect the GM may compel.
+        - `+invent/drop <invention>` lets one go.
+
+        The roll decides who chooses the catches: the GM on a fail; the GM first and then you in turn on a tie; one by the GM and the rest by you on a success; all of them by you with style. Every invention adds its benefits to the GM's fate point reserve, one fewer for each Bug among its catches, and the GM names its flaw.
+
+        For example:
+
+        `+invent mechanics=1 Spring Heels`
+
+        Output: `\[SCIENCE\] Bob invents Spring Heels: Mechanics: 4dF\[0, -1, 0, 1\] + 2 = 2 (Fair) against Fair (+2): a tie, no shifts (roll 26). The GM chooses its catch. It adds 1 to the GM's fate point reserve, and the GM names its flaw.`
+      HELP`BRAINSTORM: |-
+        A brainstorm is the group working out what is going on, three facts and then a hypothesis.
+
+        - `+brainstorm/start <question>` begins one in the room: `+brainstorm/start Why are the ants giant?`
+        - `+brainstorm/join <aspect>` takes part, compelling one of your aspects for a fate point.
+        - `+brainstorm <skill>` rolls once a round. The first fact is against Good \(+3\), each after it against the last winning total.
+        - `+brainstorm/next` closes the round \(whoever started it\). `+brainstorm/fact <fact>` is how the winner states what they found.
+        - `+brainstorm` shows where it stands; `+brainstorm/stop` ends it.
+
+        A win is 1 victory, 2 with three shifts or more; a tie between winners is 1 between them, and a lone tie 1 at a cost. With 3 victories or more after the third fact, everyone rolls once more and the highest names the hypothesis with `+brainstorm/hypothesis <aspect>`: it is true, with a free invocation at 4 victories and two at 6. Fewer than 3 and it stays a mystery.
+
+        For example:
+
+        `+brainstorm/start Why are the ants giant?`
+
+        Output: `\[SCIENCE\] Alice starts a brainstorm: Why are the ants giant? Everyone taking part compels one of their aspects to join: +brainstorm/join <aspect>.`
+
+  # The skills the modes rate that the Fate sheet's list lacks: Combat and Vehicles, and the sciences. Staff add a
+  # science with +config/add fate/skills/<key>=<label> and add its key to the Science mode's skills.
+  - ref: skills
+    target: "{{sheet-fate/store}}"
+    attributes:
+      SKILL`COMBAT: |-
+        Combat
+      SKILL`VEHICLES: |-
+        Vehicles
+      SKILL`CHEMISTRY: |-
+        Chemistry
+      SKILL`CHEMISTRY`ORDER: |-
+        60
+      SKILL`ENGINEERING: |-
+        Engineering
+      SKILL`ENGINEERING`ORDER: |-
+        60
+      SKILL`EXOBIOLOGY: |-
+        Exobiology
+      SKILL`EXOBIOLOGY`ORDER: |-
+        60
+      SKILL`MECHANICS: |-
+        Mechanics
+      SKILL`MECHANICS`ORDER: |-
+        60
+      SKILL`PHYSICS: |-
+        Physics
+      SKILL`PHYSICS`ORDER: |-
+        60
+      SKILL`ROBOTICS: |-
+        Robotics
+      SKILL`ROBOTICS`ORDER: |-
+        60
+      SKILL`SCIENCE: |-
+        Other sciences
+      SKILL`SCIENCE`ORDER: |-
+        61
+
+  # The Fate sheet's hooks: ratings come from the modes, and +sheet shows the modes, mega-stunts, machine and
+  # inventions. Each runs as the Fate Sheet, which is WIZARD and so may call this object.
+  - ref: sheet_hooks
+    target: "{{sheet-fate/sheet}}"
+    attributes:
+      GATE`SET: |-
+        Your skills come from your modes on this game: +mode/set and +mode/focus change them.
+      SECTION`MODES:
+        value: |-
+          u({{science}}/FUN`SECTION`MODES,%0,%1)
+        flags: [funsyntax]
+      SECTION`MODES`TITLE: |-
+        Modes
+      SECTION`MODES`ORDER: |-
+        10
+      SECTION`MEGA:
+        value: |-
+          u({{science}}/FUN`SECTION`MEGA,%0,%1)
+        flags: [funsyntax]
+      SECTION`MEGA`TITLE: |-
+        Mega-stunts
+      SECTION`MEGA`ORDER: |-
+        20
+      SECTION`MACHINE:
+        value: |-
+          u({{science}}/FUN`SECTION`MACHINE,%0,%1)
+        flags: [funsyntax]
+      SECTION`MACHINE`TITLE: |-
+        Machine
+      SECTION`MACHINE`ORDER: |-
+        30
+      SECTION`INVENTIONS:
+        value: |-
+          u({{science}}/FUN`SECTION`INVENTIONS,%0,%1)
+        flags: [funsyntax]
+      SECTION`INVENTIONS`TITLE: |-
+        Inventions
+      SECTION`INVENTIONS`ORDER: |-
+        40
