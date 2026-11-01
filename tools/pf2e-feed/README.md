@@ -38,8 +38,8 @@ Review the book's items the way the first four were reviewed, add rewordings and
 
 | File | Holds |
 | --- | --- |
-| `index.json` | Format number, Foundry commit, and per book its item files with item counts, sizes and hashes |
-| `items/<book>/<pack>-<n>.txt` | One item a line: `<_id> <hash> <json>`; files stay under 256 KiB |
+| `index.json` | Format number, Foundry commit, and per book its item files with line and item counts, sizes and hashes |
+| `items/<book>/<pack>-<n>.txt` | One stored attribute a line: `<_id> <hash> <leaf> <value>`, where `<leaf>` is `ITEM` (the item less its description and embedded items), `TEXT` (the description as a JSON string), ``EMBED`<ID>`` (an embedded item) or `HASH` (last, the item's hash). An item's lines may run on into the next file. Files stay under 60 KiB, so one fits in an attribute |
 | `lang.json` | Language key to English text |
 | `reports/reserved.md` | Every Reserved Material change |
 | `reports/rules.md` | Rule element kinds by count, and what the licence filter left out |

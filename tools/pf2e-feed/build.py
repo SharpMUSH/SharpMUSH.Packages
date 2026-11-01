@@ -8,7 +8,8 @@ and sort order, with Reserved Material reworded, cut or dropped (reserved.py). E
 
 Feed layout:
 	index.json                     Foundry commit, books, the files of each book with item counts and hashes
-	items/<book>/<pack>-<n>.txt    one item per line: <_id> <hash> <json>, at most MAX_FILE bytes a file
+	items/<book>/<pack>-<n>.txt    one stored attribute a line: <_id> <hash> <leaf> <value> (see item_lines),
+	                               at most MAX_FILE bytes a file
 	reports/reserved.md            what the Reserved Material screening did, item by item
 	reports/rules.md               rule element kinds and the items carrying them; what the licence filter left out
 	corpus/predicates.txt          every distinct rule element predicate, one JSON value a line
@@ -28,7 +29,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)  # python3 -I leaves the script's own folder off the path
 
 import reserved  # noqa: E402
-MAX_FILE = 256 * 1024
+MAX_FILE = 60 * 1024  # a file fits in one attribute (64 KiB)
 STRIP = {"img", "sort", "folder", "ownership", "_stats"}
 PROSE = {"publicNotes", "privateNotes", "blurb", "description", "disable", "reset", "routine"}
 LANG_KEY = re.compile(r"^PF2E\.[A-Za-z0-9_.-]+$")
@@ -233,14 +234,38 @@ def build(foundry, books_file):
 	return config, kept, excluded, rule_kinds, rule_items, predicates, formula_set, screen.rows, left, lang, missing
 
 
-def item_line(item):
+def item_lines(item):
+	"""The item as the attributes a game stores it in, one a line: <_id> <hash> <leaf> <value>.
+
+	ITEM is the item less its description and embedded items, TEXT the description as a JSON string,
+	EMBED`<ID> each embedded item, and HASH, last, the hash of the whole item, so a game that stores
+	HASH has stored everything before it. <hash> is on every line, so a game can skip an unchanged item
+	line by line. Every value is JSON and has no line break."""
 	body = canonical(item)
 	digest = hashlib.sha256(body.encode("utf-8")).hexdigest()[:16]
-	return f"{item['_id']} {digest} {body}\n"
+	head = f"{item['_id']} {digest}"
+	system = dict(item.get("system") or {})
+	description = system.pop("description", None)
+	text = description.get("value", "") if isinstance(description, dict) else ""
+	main = {k: v for k, v in item.items() if k != "items"}
+	main["system"] = system
+	lines = [f"{head} ITEM {canonical(main)}\n", f"{head} TEXT {canonical(text)}\n"]
+	seen = set()
+	for embedded in item.get("items") or []:
+		key = embedded["_id"].upper()
+		if key in seen:
+			raise SystemExit(f"{item['name']}: two embedded items share the id {key} in upper case")
+		seen.add(key)
+		lines.append(f"{head} EMBED`{key} {canonical(embedded)}\n")
+	lines.append(f"{head} HASH {digest}\n")
+	for line in lines:
+		if len(line.encode("utf-8")) > MAX_FILE:
+			raise SystemExit(f"{item['name']}: a line of {len(line.encode('utf-8'))} bytes is longer than a file may be")
+	return lines
 
 
 def chunks(lines):
-	"""Lines grouped into files of at most MAX_FILE bytes (a longer line gets a file of its own)."""
+	"""Lines grouped into files of at most MAX_FILE bytes."""
 	group, size = [], 0
 	for line in lines:
 		n = len(line.encode("utf-8"))
@@ -270,14 +295,19 @@ def write(out, foundry, result):
 		files = []
 		for pack in config["packs"]:
 			items = sorted(kept.get((book["slug"], pack), []), key=lambda i: i["_id"])
-			for n, group in enumerate(chunks(item_line(i) for i in items), start=1):
+			upper = collections.Counter(i["_id"].upper() for i in items)
+			if any(n > 1 for n in upper.values()):
+				raise SystemExit(f"{pack}: two items share an id in upper case")
+			lines = [line for i in items for line in item_lines(i)]
+			for n, group in enumerate(chunks(lines), start=1):
 				rel = f"items/{book['slug']}/{pack}-{n}.txt"
 				path = os.path.join(out, rel)
 				os.makedirs(os.path.dirname(path), exist_ok=True)
 				data = "".join(group)
 				with open(path, "w", encoding="utf-8", newline="\n") as f:
 					f.write(data)
-				files.append({"path": rel, "pack": pack, "items": len(group),
+				files.append({"path": rel, "pack": pack, "lines": len(group),
+					"items": sum(1 for line in group if line.split(" ", 3)[2] == "HASH"),
 					"bytes": len(data.encode("utf-8")), "hash": hashlib.sha256(data.encode("utf-8")).hexdigest()[:16]})
 		index_books.append({"slug": book["slug"], "name": book["name"], "title": book["title"], "default": book["default"],
 			"items": sum(f["items"] for f in files), "files": files})
