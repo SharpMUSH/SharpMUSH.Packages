@@ -1,0 +1,43 @@
+format: "1.16"
+package: sheet-salvage-union-help
+title: "Salvage Union sheet: +help topics"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Puts the Salvage Union sheet topics into +help: registers the sheet-salvage-union package's help with the +help librarian, and points its messages at +help."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [sheet, salvage-union, help, bridge]
+category: Characters
+requires_server: ">=0.1"
+
+# A bridge: it joins two packages that do not know about each other. sheet-salvage-union keeps its topics on its own
+# help object, and plus-help reads any object registered with its librarian. This package is that
+# registration, and the lines that point its messages at +help; uninstalling it takes the topics out of
+# +help, and neither package changes.
+depends:
+  - package: sheet-salvage-union
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH.Packages
+      path: sheet-salvage-union/
+      branch: main
+  - package: plus-help
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+
+objects:
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`SHEET-SALVAGE-UNION: |-
+        {{sheet-salvage-union/sheet_help}}
+
+  # Lines the sheet's messages end with when +help is here, through its FUN`HINT: HINT`<message>.
+  - ref: message_hints
+    target: "{{sheet-salvage-union/sheet}}"
+    attributes:
+      HINT`SWITCHES: |-
+        +help %0 lists them.
