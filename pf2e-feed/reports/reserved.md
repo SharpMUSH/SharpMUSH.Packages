@@ -1,0 +1,344 @@
+# Reserved Material report
+
+Foundry pf2e commit `41aecb4e337e18c1ba32604ba292613ff2ba2086`.
+
+The ORC License does not license Paizo's proper nouns: deities, places, organizations, planes, named characters.
+Terms matched: every deity in the Foundry deities pack (less a few ordinary words) and the setting list in
+`tools/pf2e-feed/reserved.py`. Items under "Cut by the general rule" had every sentence naming a term removed;
+a rewording in `reserved.py` replaces the cut for an item that reads badly without them.
+
+## Dropped (26)
+
+- **Bronze brazier with Asmodean artwork**: art object named for a deity
+- **Divine art piece created by Shelyn**: art object named for a deity
+- **Eternal Eruption of Barrowsiege**: named for a volcano of the setting
+- **Eternal Eruption of Blackpeak**: named for a volcano of the setting
+- **Eternal Eruption of Droskar's Crag**: named for a volcano of the setting
+- **Eternal Eruption of Ka**: named for a volcano of the setting
+- **Eternal Eruption of Mhar Massif**: named for a volcano of the setting
+- **Eternal Eruption of Pale Mountain**: named for a volcano of the setting
+- **Eternal Eruption of Sakalayo**: named for a volcano of the setting
+- **Forgefather's Seal**: a rune made by and invoking a named deity
+- **Frozen Lava of Barrowsiege**: named for a volcano of the setting
+- **Frozen Lava of Blackpeak**: named for a volcano of the setting
+- **Frozen Lava of Droskar's Crag**: named for a volcano of the setting
+- **Frozen Lava of Ka**: named for a volcano of the setting
+- **Frozen Lava of Mhar Massif**: named for a volcano of the setting
+- **Frozen Lava of Pale Mountain**: named for a volcano of the setting
+- **Frozen Lava of Sakalayo**: named for a volcano of the setting
+- **Serithtial**: a named intelligent artifact bound to named deities and a named dragon
+- **Shot of the First Vault**: an artifact tied to a named deity and a named plane
+- **Tankard owned by Cayden Cailean**: art object named for a deity
+- **First World Magic**: feat named for a named plane
+- **First World Adept**: feat named for a named plane
+- **Boneyard's Call**: feat named for, and travelling to, a named plane
+- **Armageddon Orb**: a hazard forged from a named deity's blood and disabled through two named deities
+- **Avatar**: the spell's battle forms are each a named deity's
+- **Treerazer**: named for Treerazer
+
+## Embedded items dropped (0)
+
+
+## Reworded (137)
+
+- **Pursue a Lead** `system/description`: reworded
+- **Gnome** `system/description`: reworded
+- **Human** `system/description`: reworded
+- **Blessed** `system/description`: reworded
+- **Feybound** `system/description`: reworded
+- **Raised by Belief** `system/description`: reworded
+- **Returned** `system/description`: plane names replaced with plain descriptions
+- **Street Urchin** `system/description`: reworded
+- **Anathema (Cleric)** `system/description`: reworded
+- **Ancestors** `system/description`: reworded; sentences naming it cut
+- **Arcane School** `system/description`: sentences naming it cut
+- **Battle** `system/description`: sentences naming it cut
+- **Bloodline: Fey** `system/description`: plane names replaced with plain descriptions
+- **Bones** `system/description`: sentences naming it cut
+- **Cosmos** `system/description`: sentences naming it cut
+- **Deity (Champion)** `system/description`: reworded
+- **Deity (Cleric)** `system/description`: reworded
+- **Enigma** `system/description`: sentences naming it cut
+- **Flames** `system/description`: sentences naming it cut
+- **Life** `system/description`: sentences naming it cut
+- **Lore** `system/description`: sentences naming it cut
+- **Maestro** `system/description`: sentences naming it cut
+- **Mystery** `system/description`: sentences naming it cut
+- **Polymath** `system/description`: sentences naming it cut
+- **Spinner of Threads** `system/description`: sentences naming it cut
+- **Starless Shadow** `system/description`: plane names replaced with plain descriptions
+- **Tempest** `system/description`: sentences naming it cut
+- **Warrior** `system/description`: sentences naming it cut
+- **Wizard Spellcasting** `system/description`: reworded
+- **School of Ars Grammatica** `system/description`: sentences naming it cut
+- **School of Battle Magic** `system/description`: sentences naming it cut
+- **School of Civic Wizardry** `system/description`: sentences naming it cut
+- **School of Mentalism** `system/description`: sentences naming it cut
+- **School of Protean Form** `system/description`: sentences naming it cut
+- **School of the Boundary** `system/description`: sentences naming it cut
+- **Basic Crafter's Book** `system/description`: plane names replaced with plain descriptions
+- **Composite Longbow** `system/description`: reworded
+- **Duskwood Branch** `system/description`: reworded
+- **Duskwood Lumber** `system/description`: reworded
+- **Eye of Fortune** `system/description`: reworded
+- **Forge Warden** `system/description`: reworded
+- **Formula Book (Blank)** `system/description`: plane names replaced with plain descriptions
+- **Frozen Lava** `system/description`: reworded
+- **Martyr's Shield** `system/description`: reworded
+- **Nethershade** `system/description`: plane names replaced with plain descriptions
+- **Sash of Prowess (Greater)** `system/description`: reworded
+- **Sash of Prowess** `system/description`: reworded
+- **Sawtooth Saber** `system/description`: reworded
+- **Shadow Signet** `system/description`: plane names replaced with plain descriptions
+- **Trident of Lightning** `system/description`: reworded
+- **Wayfinder** `system/description`: reworded
+- **Fey Fellowship** `system/description`: plane names replaced with plain descriptions
+- **Homeward Bound** `system/description`: plane names replaced with plain descriptions
+- **Vivacious Conduit** `system/description`: plane names replaced with plain descriptions
+- **Duskwalker Lore** `system/description`: plane names replaced with plain descriptions
+- **Ghost Hunter** `system/description`: plane names replaced with plain descriptions
+- **Quietus Strikes** `system/description`: plane names replaced with plain descriptions
+- **Angelkin** `system/description`: plane names replaced with plain descriptions
+- **Musetouched** `system/description`: plane names replaced with plain descriptions
+- **Pitborn** `system/description`: plane names replaced with plain descriptions
+- **Cavalier's Banner** `system/description`: reworded
+- **Pirate Dedication** `system/description`: reworded
+- **Deadly Simplicity** `system/description`: reworded
+- **Chameleon Gnome** `system/description`: plane names replaced with plain descriptions
+- **Fey-Touched Gnome** `system/description`: plane names replaced with plain descriptions
+- **Mountainkeeper Tengu** `system/description`: plane names replaced with plain descriptions
+- **Stormtossed Tengu** `system/description`: reworded
+- **Duskwalker** `system/description`: plane names replaced with plain descriptions
+- **Chthonian Wrath** `system/description`: plane names replaced with plain descriptions
+- **Pulse of Civilization** `system/description`: reworded
+- **Clone** `system/description`: reworded
+- **Consecrate** `system/description`: reworded
+- **Reincarnate** `system/description`: reworded
+- **Resurrect** `system/description`: plane names replaced with plain descriptions; reworded
+- **Shadow Double** `system/description`: plane names replaced with plain descriptions
+- **Vitality Lash** `system/description`: plane names replaced with plain descriptions
+- **Summon Lesser Servitor** `system/description`: sentences naming it cut
+- **Shadow Blast** `system/description`: plane names replaced with plain descriptions
+- **Summon Celestial** `system/description`: sentences naming it cut
+- **Summon Monitor** `system/description`: sentences naming it cut
+- **Umbral Journey** `system/description`: plane names replaced with plain descriptions
+- **Raise Dead** `system/description`: plane names replaced with plain descriptions; reworded
+- **Interplanar Teleport** `system/description`: reworded
+- **Lifewood Cage** `system/description`: reworded
+- **Akhana** `items/5/system/description`: plane names replaced with plain descriptions
+- **Astradaemon** `items/3/system/description`: plane names replaced with plain descriptions
+- **Bandersnatch** `system/details/publicNotes`: plane names replaced with plain descriptions
+- **Brimorak** `system/details/publicNotes`: plane names replaced with plain descriptions
+- **Cloud Giant** `system/details/publicNotes`: plane names replaced with plain descriptions
+- **Diabolic Dragon (Adult, Spellcaster)** `items/2/system/description`: plane names replaced with plain descriptions
+- **Diabolic Dragon (Adult)** `items/1/system/description`: plane names replaced with plain descriptions
+- **Diabolic Dragon (Ancient, Spellcaster)** `items/9/system/description`: plane names replaced with plain descriptions
+- **Diabolic Dragon (Ancient)** `items/2/system/description`: plane names replaced with plain descriptions
+- **Duskwalker Ghost Hunter** `system/details/publicNotes`: plane names replaced with plain descriptions
+- **Elananx** `system/details/publicNotes`: plane names replaced with plain descriptions
+- **Empyreal Dragon (Adult, Spellcaster)** `items/2/system/description`: plane names replaced with plain descriptions
+- **Empyreal Dragon (Adult)** `items/1/system/description`: plane names replaced with plain descriptions
+- **Empyreal Dragon (Ancient, Spellcaster)** `items/7/system/description`: plane names replaced with plain descriptions
+- **Empyreal Dragon (Ancient)** `items/1/system/description`: plane names replaced with plain descriptions
+- **Faydhaan** `items/1/system/description`: plane names replaced with plain descriptions
+- **Fey Dragonet** `system/details/publicNotes`: plane names replaced with plain descriptions
+- **Fire Giant** `system/details/publicNotes`: plane names replaced with plain descriptions
+- **Frost Giant** `system/details/publicNotes`: plane names replaced with plain descriptions
+- **Greater Nightmare** `items/1/system/description`: plane names replaced with plain descriptions
+- **Greater Shadow** `system/details/publicNotes`: plane names replaced with plain descriptions
+- **Grim Reaper** `items/2/system/description`: plane names replaced with plain descriptions
+- **Grim Reaper** `system/details/publicNotes`: plane names replaced with plain descriptions
+- **Ifrit** `items/1/system/description`: plane names replaced with plain descriptions
+- **Jaathoom** `items/1/system/description`: plane names replaced with plain descriptions
+- **Jabali** `items/1/system/description`: plane names replaced with plain descriptions
+- **Jann** `items/1/system/description`: plane names replaced with plain descriptions
+- **Lawbringer Warpriest** `system/details/publicNotes`: plane names replaced with plain descriptions
+- **Lesser Death** `system/details/publicNotes`: plane names replaced with plain descriptions
+- **Marsh Giant** `system/details/publicNotes`: plane names replaced with plain descriptions
+- **Morrigna** `items/27/system/description`: plane names replaced with plain descriptions
+- **Nightmare** `items/1/system/description`: plane names replaced with plain descriptions
+- **Nuckelavee** `system/details/publicNotes`: plane names replaced with plain descriptions
+- **Omox** `system/details/publicNotes`: plane names replaced with plain descriptions
+- **Phistophilus** `items/1/system/description`: plane names replaced with plain descriptions
+- **Pitborn Adept** `system/details/publicNotes`: plane names replaced with plain descriptions
+- **Pleroma** `items/5/system/description`: plane names replaced with plain descriptions
+- **Pleroma** `items/18/system/description`: plane names replaced with plain descriptions
+- **Pukwudgie** `system/details/publicNotes`: plane names replaced with plain descriptions
+- **Quetz Coatl** `items/1/system/description`: plane names replaced with plain descriptions
+- **Quetz Coatl** `items/10/system/description`: plane names replaced with plain descriptions
+- **Rune Giant** `system/details/publicNotes`: plane names replaced with plain descriptions
+- **Seraptis** `system/details/publicNotes`: plane names replaced with plain descriptions
+- **Shadow Giant** `system/details/publicNotes`: plane names replaced with plain descriptions
+- **Shemhazian** `system/details/publicNotes`: plane names replaced with plain descriptions
+- **Stone Giant** `system/details/publicNotes`: plane names replaced with plain descriptions
+- **Succubus** `system/details/publicNotes`: plane names replaced with plain descriptions
+- **Thulgant** `items/4/system/description`: plane names replaced with plain descriptions
+- **Vescavor Queen** `system/details/publicNotes`: plane names replaced with plain descriptions
+- **Vescavor Swarm** `items/2/system/description`: plane names replaced with plain descriptions
+- **Vescavor Swarm** `system/details/publicNotes`: plane names replaced with plain descriptions
+- **Vrolikai** `system/details/publicNotes`: plane names replaced with plain descriptions
+- **Yamaraj** `items/27/system/description`: plane names replaced with plain descriptions
+
+## Cut by the general rule (157)
+
+- **Blackaxe** `system/description`: sentences naming it cut (general rule)
+- **Darkening Poison** `system/description`: sentences naming it cut (general rule)
+- **Aapoph Granitescale** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Aapoph Serpentfolk** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Aeolaeka** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Aesra** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Akhana** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Alce** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Ankylosaurus** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Arbiter** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Astradaemon** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Augnagar** `system/details/publicNotes`: plane names replaced with plain descriptions; sentences naming it cut (general rule)
+- **Axiomite** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Azarketi Crab Catcher** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Azarketi Tide Tamer** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Azuretzi** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Balisse** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Banshee** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Benthic Worm** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Boggard Swampseer** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Bone Prophet** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Brontosaurus** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Caldera Oni** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Caligni Hunter** `items/6/system/description`: sentences naming it cut (general rule)
+- **Caligni Hunter** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Caligni Skulker** `items/1/system/description`: sentences naming it cut (general rule)
+- **Cassisian** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Catfolk Pouncer** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Cave Worm** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Choral** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Coarti** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Coil Spy** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Compsognathus** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Cythnigot** `system/details/publicNotes`: plane names replaced with plain descriptions; sentences naming it cut (general rule)
+- **Deinonychus** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Dero Magister** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Dero Stalker** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Dero Strangler** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Dhampir Wizard** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Duskwalker Ghost Hunter** `items/0/system/description`: sentences naming it cut (general rule)
+- **Empyreal Dragon (Adult, Spellcaster)** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Empyreal Dragon (Adult)** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Empyreal Dragon (Ancient, Spellcaster)** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Empyreal Dragon (Ancient)** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Empyreal Dragon (Young, Spellcaster)** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Empyreal Dragon (Young)** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Faydhaan** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Flash Beetle** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Gancanagh** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Gargoyle** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Giant Wasp** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Gimmerling** `system/details/publicNotes`: plane names replaced with plain descriptions; sentences naming it cut (general rule)
+- **Gnome Bard** `system/details/publicNotes`: plane names replaced with plain descriptions; sentences naming it cut (general rule)
+- **Gogiteth** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Gongorinan** `system/details/publicNotes`: plane names replaced with plain descriptions; sentences naming it cut (general rule)
+- **Gosreg** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Graveknight** `items/0/system/description`: sentences naming it cut (general rule)
+- **Graveknight** `items/8/system/description`: sentences naming it cut (general rule)
+- **Griffon** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Grothlut** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Gylou** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Hadrosaurid** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Harpy** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Hippogriff** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Hryngar Bombardier** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Hryngar Sharpshooter** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Hryngar Taskmaster** `items/17/system/description`: sentences naming it cut (general rule)
+- **Hryngar Taskmaster** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Ifrit** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Irnakurse** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Iron Warden** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Island Oni** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Jaathoom** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Jabali** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Jah-Tohl** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Jann** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Kanya** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Keketar** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Kholo Bonekeeper** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Lamia** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Leukodaemon** `items/4/system/description`: sentences naming it cut (general rule)
+- **Leukodaemon** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Lyrakien** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Magma Worm** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Merfolk Warrior** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Merfolk Wavecaller** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Morrigna** `system/details/publicNotes`: plane names replaced with plain descriptions; sentences naming it cut (general rule)
+- **Mountain Oni** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Mukradi** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Nessari** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Norn** `items/43/system/description`: sentences naming it cut (general rule)
+- **Norn** `system/details/publicNotes`: plane names replaced with plain descriptions; sentences naming it cut (general rule)
+- **Nosoi** `system/details/publicNotes`: plane names replaced with plain descriptions; sentences naming it cut (general rule)
+- **Omen Dragon (Adult, Spellcaster)** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Omen Dragon (Adult)** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Omen Dragon (Ancient, Spellcaster)** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Omen Dragon (Ancient)** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Omen Dragon (Young, Spellcaster)** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Omen Dragon (Young)** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Ort** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Pachycephalosaurus** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Paleohemoth** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Phantom Beast** `items/10/system/description`: sentences naming it cut (general rule)
+- **Phantom Beast** `system/details/publicNotes`: plane names replaced with plain descriptions; sentences naming it cut (general rule)
+- **Phantom Knight** `items/4/system/description`: sentences naming it cut (general rule)
+- **Phantom Knight** `system/details/publicNotes`: plane names replaced with plain descriptions; sentences naming it cut (general rule)
+- **Phistophilus** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Pleroma** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Poracha** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Pukwudgie** `items/10/system/description`: sentences naming it cut (general rule)
+- **Pusk** `system/details/publicNotes`: plane names replaced with plain descriptions; sentences naming it cut (general rule)
+- **Qarna** `items/7/system/description`: sentences naming it cut (general rule)
+- **Qarna** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Rhu-Chalik** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Sarglagon** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Sedacthy Marauder** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Sedacthy Scout** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Sedacthy Speaker** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Shuln** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Smaranava** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Snow Oni** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Soulbound Doll (Brave)** `system/details/publicNotes`: plane names replaced with plain descriptions; sentences naming it cut (general rule)
+- **Soulbound Doll (Calm)** `system/details/publicNotes`: plane names replaced with plain descriptions; sentences naming it cut (general rule)
+- **Soulbound Doll (Careful)** `system/details/publicNotes`: plane names replaced with plain descriptions; sentences naming it cut (general rule)
+- **Soulbound Doll (Cruel)** `system/details/publicNotes`: plane names replaced with plain descriptions; sentences naming it cut (general rule)
+- **Soulbound Doll (Gentle)** `system/details/publicNotes`: plane names replaced with plain descriptions; sentences naming it cut (general rule)
+- **Soulbound Doll (Impish)** `system/details/publicNotes`: plane names replaced with plain descriptions; sentences naming it cut (general rule)
+- **Soulbound Doll (Jolly)** `system/details/publicNotes`: plane names replaced with plain descriptions; sentences naming it cut (general rule)
+- **Soulbound Doll (Kind)** `system/details/publicNotes`: plane names replaced with plain descriptions; sentences naming it cut (general rule)
+- **Soulbound Doll (Rash)** `system/details/publicNotes`: plane names replaced with plain descriptions; sentences naming it cut (general rule)
+- **Soulbound Doll (Sassy)** `system/details/publicNotes`: plane names replaced with plain descriptions; sentences naming it cut (general rule)
+- **Soulbound Doll (Timid)** `system/details/publicNotes`: plane names replaced with plain descriptions; sentences naming it cut (general rule)
+- **Sprigjack** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Stegosaurus** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Tabellia** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Tengu Sneak** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Terotricus** `system/details/publicNotes`: plane names replaced with plain descriptions; sentences naming it cut (general rule)
+- **Thulgant** `system/details/publicNotes`: plane names replaced with plain descriptions; sentences naming it cut (general rule)
+- **Triceratops** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Twigjack** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Tyrannosaurus** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Umbral Gnome Rockwarden** `system/details/publicNotes`: plane names replaced with plain descriptions; sentences naming it cut (general rule)
+- **Umbral Gnome Scout** `system/details/publicNotes`: plane names replaced with plain descriptions; sentences naming it cut (general rule)
+- **Umbral Gnome Warrior** `system/details/publicNotes`: plane names replaced with plain descriptions; sentences naming it cut (general rule)
+- **Vanth** `system/details/publicNotes`: plane names replaced with plain descriptions; sentences naming it cut (general rule)
+- **Velociraptor** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Voidworm** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Vordine** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Wasp Swarm** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Witchwarg** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Xoarian** `system/details/publicNotes`: sentences naming it cut (general rule)
+- **Xulgath Leader** `system/details/publicNotes`: plane names replaced with plain descriptions; sentences naming it cut (general rule)
+- **Xulgath Skulker** `system/details/publicNotes`: plane names replaced with plain descriptions; sentences naming it cut (general rule)
+- **Xulgath Warrior** `system/details/publicNotes`: plane names replaced with plain descriptions; sentences naming it cut (general rule)
+- **Yamaraj** `items/11/system/description`: plane names replaced with plain descriptions; sentences naming it cut (general rule)
+- **Yamaraj** `system/details/publicNotes`: plane names replaced with plain descriptions; sentences naming it cut (general rule)
+- **Zyss Serpentfolk** `system/details/publicNotes`: sentences naming it cut (general rule)
+
+## Left in the feed
+
+None.

@@ -1,0 +1,46 @@
+name: Refresh PF2e feed
+
+# Rebuilds pf2e-feed/ from the Foundry VTT pf2e system each week and opens a pull request when it
+# changed. The pull request carries the Reserved Material and rule element reports for review.
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout packages
+        uses: actions/checkout@v4
+        with:
+          path: packages
+
+      - name: Checkout Foundry pf2e (data only)
+        run: |
+          set -e
+          git clone --depth 1 --filter=blob:none --sparse https://github.com/foundryvtt/pf2e.git foundry
+          packs=$(python3 -I -c "import json; c = json.load(open('packages/tools/pf2e-feed/books.json')); print(' '.join('packs/pf2e/' + p for p in c['packs'] + ['deities']))")
+          git -C foundry sparse-checkout set $packs static/lang
+
+      - name: Build the feed
+        run: python3 -I packages/tools/pf2e-feed/build.py foundry packages/pf2e-feed --write
+
+      - name: Open a pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          path: packages
+          branch: pf2e-feed/refresh
+          delete-branch: true
+          commit-message: Refresh the PF2e feed from Foundry pf2e
+          title: Refresh the PF2e feed from Foundry pf2e
+          body: |
+            The weekly rebuild of `pf2e-feed/` from the Foundry VTT pf2e system changed the feed.
+
+            Before merging, check that "Left in the feed" in `pf2e-feed/reports/reserved.md` says "None." and
+            read `pf2e-feed/reports/rules.md`. Games pick the change up from the
+            PF2e app's Overview page.

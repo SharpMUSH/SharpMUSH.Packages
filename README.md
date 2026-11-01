@@ -82,6 +82,13 @@ each README explains which manifest features it demonstrates. The curated
 default softcode experience (scene-system, bboard, chargen, events, finger,
 http-hooks) will land here as those systems mature.
 
+## PF2e feed
+
+[`pf2e-feed/`](pf2e-feed/) is game data, not a package: every ORC item of Player Core, Player Core 2, GM Core
+and Monster Core from the Foundry VTT pf2e system, one item a line, with an index the PF2e app reads to fill
+and update a game. [`tools/pf2e-feed/`](tools/pf2e-feed/) builds it, and a weekly workflow opens a pull request
+when Foundry's data changes.
+
 ## Community repos
 
 [`community/`](community/) is the curated directory of accepted
@@ -177,6 +184,7 @@ and released versions are never rewritten — bump the version instead.
 
 Same license as SharpMUSH unless a package declares otherwise in its
 manifest. `pf2e-remaster/` is one that does: its rules text is under the ORC
-License, with the notice in [`pf2e-remaster/NOTICE.md`](pf2e-remaster/NOTICE.md).
+License, with the notice in [`pf2e-remaster/NOTICE.md`](pf2e-remaster/NOTICE.md). So is the data in
+`pf2e-feed/`, with its notice in [`pf2e-feed/NOTICE.md`](pf2e-feed/NOTICE.md).
 Package manifests are softcode — inspect anything you install; the admin panel's review screen flags dangerous patterns (`@force`, `@toad`, …)
 to help.
