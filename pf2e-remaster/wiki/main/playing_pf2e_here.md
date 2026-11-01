@@ -62,6 +62,8 @@ Your sheet is a ledger. Every choice is an entry, and nothing is overwritten, so
 
 The GM starts a fight with `+enc/start`; you take part with `+enc/join`. `+enc/init` rolls initiative and `+enc/next` moves through the turns, handling persistent damage, frightened, timed conditions and recovery checks. On your turn, `+enc/strike <target>` attacks with the multiple attack penalty counted, and `+enc/use <item>` uses a consumable.
 
+The GM builds the fight from the books: `+enc/bestiary <name, trait or hazard>=<levels>` lists creatures and hazards with the XP each is worth against the characters, and `+enc/add Goblin Warrior=2 elite` adds them, elite or weak as GM Core adjusts them. Hazards join the same way; a complex hazard takes turns. Strikes, basic saves (`+enc/save foes=reflex vs 21 6d6 fire`) and damage apply a creature's weaknesses, resistances and immunities, and a troll's regeneration stops for a turn after fire hits it. `+enc/award` writes the encounter's XP into each character's XP ledger. `+help pf2e enc build` and `+help pf2e enc gm` list the GM's commands.
+
 An encounter keeps its own copy of everyone in it. Hit points, conditions, dying and the potions you drink stay in the encounter and never change your sheet, so an encounter can last several sessions and two encounters never affect each other. When it ends, the GM decides what carries on.
 
 See [[Encounter Mode|main:encounter_mode]] and [[Dying and Recovery|main:dying_and_recovery]] for the rules these follow.
