@@ -1,0 +1,141 @@
+format: "1.16"
+package: duties-fabula
+title: "Duties: JRPG rolls"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Lets Duties roll on the JRPG sheet: a roll provider called fabula, so a duty's checks roll two attribute dice against a Difficulty Level, with help and bonds adding to the total, Fabula Points paying for rerolls, and experience, zenit or Fabula Points as rewards. Pick it with +config duties/system=fabula."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [duties, fabula, sheet, dice, bridge]
+category: Characters
+requires_server: ">=0.1"
+
+# A bridge: it joins two packages that do not know about each other. Duties asks the game's one active roll
+# provider for every check, and sheet-fabula holds the sheet and rolls against it. This package is a provider that
+# answers Duties' questions with the sheet's API, and the one leaf that registers it.
+depends:
+  - package: duties
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/duties/
+      branch: main
+  - package: sheet-fabula
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH.Packages
+      path: sheet-fabula/
+      branch: main
+
+objects:
+  # The provider. Duties calls each FN`DUTIES` attribute with u() and named arguments, so it runs as this object;
+  # WIZARD because the sheet's API is on a WIZARD object, which a lesser one may not call. Its only writes are
+  # Fabula Points and experience, through the sheet's API`ADJUST: spent on rerolls, gained on a fumble, given as
+  # rewards.
+  - ref: provider
+    type: thing
+    name: Duties JRPG Provider
+    location: "{{sheet-fabula/sheet}}"
+    flags: [WIZARD, no_command]
+    attributes:
+      # The ten pairs of attributes; every character has each, so each can be rolled.
+      FN`DUTIES`TRAITS:
+        value: |-
+          u({{sheet-fabula/sheet}}/API`TRAITS)
+        flags: [funsyntax]
+      # Both dice the same and 6 or more is crit-success, both 1 crit-fail. There is no partial success.
+      FN`DUTIES`TIERS:
+        value: |-
+          crit-fail fail success crit-success
+        flags: [funsyntax]
+      # %<difficulty>: its Difficulty Level, "Hard (13)".
+      FN`DUTIES`DC:
+        value: |-
+          setq(provider_dl,u({{sheet-fabula/sheet}}/API`TARGET,%<difficulty>))[if(strlen(%q<provider_dl>),[capstr(lcstr(%<difficulty>))] %(%q<provider_dl>%),#-1 NO SUCH DIFFICULTY)]
+        flags: [funsyntax]
+      # %<roller>: the pair this character improvises with, their two largest dice now (the first of equals); nothing
+      # when %<roller> is not a character.
+      FN`DUTIES`FALLBACK:
+        value: |-
+          setq(provider_roller,%<roller>)[if(hastype(%<roller>,player),u({{sheet-fabula/sheet}}/API`FIND,extract(revwords(sortkey(%!/FUN`ATTR`SORTKEY,revwords(DEX INS MIG WLP),n)),1,2)))]
+        flags: [funsyntax]
+      # %<roller>, %<trait>, %<difficulty>, %<mods>, %<context>. Each helper in %<mods> adds 1, and the strongest bond
+      # a helper has with the roller adds its strength, as a group check does. {"invokes":<n>} spends up to that
+      # many Fabula Points, as many as the roller has and at most 3 in one check, so one duty roll cannot empty a
+      # character's points; it rerolls both dice after each failure that is not a fumble.
+      # A fumble gives the roller a Fabula Point. Returns {"tier","text","roll","margin","system"}: margin is the
+      # total less the Difficulty Level; system holds total, hr, dice, sizes, dl, helpers, bond and invokes.
+      FN`DUTIES`CHECK:
+        value: |-
+          setqm(provider_dl,u({{sheet-fabula/sheet}}/API`TARGET,%<difficulty>),
+          provider_helpers,u(%!/FUN`MODS`HELPERS,%<mods>),
+          provider_bond,u(%!/FUN`MODS`BOND,%q<provider_helpers>,%<roller>),
+          provider_bonus,add(words(%q<provider_helpers>),%q<provider_bond>),
+          provider_invokes,min(u(%!/FUN`MODS`INVOKES,%<mods>),u({{sheet-fabula/sheet}}/API`METER,%<roller>,FP),3),
+          provider_used,0)[cond(not(strlen(%q<provider_dl>)),#-1 NO SUCH DIFFICULTY,not(strlen(u({{sheet-fabula/sheet}}/API`FIND,%<trait>))),#-1 There is no check '%<trait>'.,u(%!/FUN`CHECK`TRY,%<roller>,%<trait>,%q<provider_invokes>))]
+        flags: [funsyntax]
+      # %0 the roller, %1 the pair, %2 invokes left: rolls, and after a failure rolls again for a Fabula Point while
+      # any are left; then builds the result.
+      FUN`CHECK`TRY:
+        value: |-
+          setq(provider_rolled,uargs({{sheet-fabula/sheet}}/API`CHECK,roller,%0,trait,%1,modifier,%q<provider_bonus>,target,%q<provider_dl>))[cond(strmatch(%q<provider_rolled>,#-*),%q<provider_rolled>,cand(%2,strmatch(json_query(%q<provider_rolled>,extract,$.tier),fail)),[setq(provider_used,inc(%q<provider_used>))][null(u({{sheet-fabula/sheet}}/API`ADJUST,%0,FP,-1))][u(%!/FUN`CHECK`TRY,%0,%1,dec(%2))],u(%!/FUN`CHECK`RESULT,%0,%q<provider_rolled>))]
+        flags: [funsyntax]
+      # %0 the roller, %1 the sheet's check JSON.
+      FUN`CHECK`RESULT:
+        value: |-
+          setqm(result_tier,json_query(%1,extract,$.tier),
+          result_total,json_query(%1,extract,$.total),
+          result_fp,if(strmatch(%q<result_tier>,crit-fail),u({{sheet-fabula/sheet}}/API`ADJUST,%0,FP,1)))[json(object,tier,json(string,%q<result_tier>),text,json(string,[json_query(%1,extract,$.label)]: [json_query(%1,extract,$.text)] vs %q<provider_dl>: [u(%!/FUN`TIER`WORDS,%q<result_tier>)][u(%!/FUN`CHECK`EXTRAS)]),roll,json(string,json_query(%1,extract,$.roll)),margin,sub(%q<result_total>,%q<provider_dl>),system,json(object,total,%q<result_total>,hr,json_query(%1,extract,$.hr),dice,json_query(%1,extract,$.dice),sizes,json_query(%1,extract,$.sizes),dl,%q<provider_dl>,helpers,words(%q<provider_helpers>),bond,%q<provider_bond>,invokes,%q<provider_used>))]
+        flags: [funsyntax]
+      FUN`CHECK`EXTRAS:
+        value: |-
+          setq(extras,trim([if(words(%q<provider_helpers>),+[words(%q<provider_helpers>)] from help)]|[if(%q<provider_bond>,+%q<provider_bond> from a bond)]|[if(%q<provider_used>,%q<provider_used> reroll[if(neq(%q<provider_used>,1),s)] for Fabula Points)]|[if(strlen(%q<result_fp>),a Fabula Point for the fumble)],|))[if(strlen(squish(%q<extras>,|)),%b%([itemize(trim(squish(%q<extras>,|),|),|)]%))]
+        flags: [funsyntax]
+      FUN`TIER`WORDS:
+        value: |-
+          switch(%0,crit-success,a critical success,success,a success,crit-fail,a fumble,a failure)
+        flags: [funsyntax]
+      # The rewards a duty may give on this sheet, for Duties' editor.
+      FN`DUTIES`REWARDS:
+        value: |-
+          lit([{"kind":"experience","label":"Experience","fields":[{"key":"amount","type":"integer"}]},{"kind":"zenit","label":"Zenit","fields":[{"key":"amount","type":"integer"}]},{"kind":"fabula-point","label":"Fabula Points","fields":[{"key":"amount","type":"integer"}]}])
+        flags: [funsyntax]
+      # Queued once for each reward and member: %<roller>, %<reward> {"kind","amount"}, %<context>. Gives the
+      # experience, zenit or Fabula Points (1 when no amount), and tells the player. Experience and zenit go on
+      # the sheet's ledger with "Duty <id>" as their source.
+      ON`DUTIES`GRANT:
+        value: |-
+          @assert hastype(%<roller>,player); think setqm(grant_kind,json_query(%<reward>,extract,$.kind),grant_amount,firstof(json_query(%<reward>,extract,$.amount),1)); @assert cand(isint(%q<grant_amount>),gt(%q<grant_amount>,0)); think setq(grant_source,Duty [json_query(%<context>,extract,$.duty)]); @break strmatch(%q<grant_kind>,experience)={@include/args %!/INC`GRANT`WALLET=roller,%<roller>,key,XP,label,experience}; @break strmatch(%q<grant_kind>,zenit)={@include/args %!/INC`GRANT`WALLET=roller,%<roller>,key,ZENIT,label,zenit}; @break not(strmatch(%q<grant_kind>,fabula-point)); think setqm(grant_was,u({{sheet-fabula/sheet}}/API`METER,%<roller>,FP),grant_now,u({{sheet-fabula/sheet}}/API`ADJUST,%<roller>,FP,%q<grant_amount>),grant_got,sub(%q<grant_now>,%q<grant_was>)); @pemit %<roller>=notice(DUTIES,You gain %q<grant_got> Fabula Point[if(neq(%q<grant_got>,1),s)]. You have %q<grant_now>.,ok)
+        flags: [cmdsyntax]
+      # %<roller>, %<key> XP or ZENIT, %<label> its name: gives grant_amount of it, from grant_source, and tells the player.
+      INC`GRANT`WALLET:
+        value: |-
+          think setqm(grant_was,u({{sheet-fabula/sheet}}/API`METER,%<roller>,%<key>),grant_now,u({{sheet-fabula/sheet}}/API`ADJUST,%<roller>,%<key>,%q<grant_amount>,%q<grant_source>)); @assert not(strmatch(%q<grant_now>,#-*))=@pemit %<roller>=notice(DUTIES,Your sheet's ledger is full%, so the %q<grant_amount> %<label> from this duty is not on it. Ask staff.,warn); @pemit %<roller>=notice(DUTIES,You gain [sub(%q<grant_now>,%q<grant_was>)] %<label>. You have %q<grant_now>.,ok)
+        flags: [cmdsyntax]
+
+      # %0 %<mods>: the helpers' objids, a space list.
+      FUN`MODS`HELPERS:
+        value: |-
+          if(cand(strlen(%0),strmatch(json_query(json_query(%0,get,helpers)),array)),iter(lnum(0,dec(json_query(json_query(%0,get,helpers),size))),json_query(%0,extract,$.helpers%[%i0%])))
+        flags: [funsyntax]
+      # %0 the helpers, %1 the roller: the strongest bond any helper has with the roller, 0 when none.
+      FUN`MODS`BOND:
+        value: |-
+          setq(bond_roller,%1)[lmax(0 [iter(%0,u({{sheet-fabula/sheet}}/API`BOND,%i0,%q<bond_roller>))])]
+        flags: [funsyntax]
+      # %0 %<mods>: how many invokes the player asked for.
+      FUN`MODS`INVOKES:
+        value: |-
+          setq(invokes_asked,if(strlen(%0),json_query(%0,extract,$.invokes)))[if(cand(isint(%q<invokes_asked>),gt(%q<invokes_asked>,0)),%q<invokes_asked>,0)]
+        flags: [funsyntax]
+      # %0 an attribute: its die now for provider_roller, for sorting.
+      FUN`ATTR`SORTKEY:
+        value: |-
+          after(u({{sheet-fabula/sheet}}/API`RATING,%q<provider_roller>,%0),d)
+        flags: [funsyntax]
+
+  - ref: provider_registration
+    target: "{{duties/duties}}"
+    attributes:
+      PROVIDER`FABULA: |-
+        {{provider}}
