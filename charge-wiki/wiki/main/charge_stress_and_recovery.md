@@ -4,7 +4,7 @@ When a PC **gets hurt** as a result of a consequence, **they take stress**. Each
 
 As the stress clock gets filled, you also need to **update the PC's condition** by writing a small descriptive text below the clock. The character's condition imposes narrative restrictions as to what the character can or cannot do.
 
-When the 4 segments of the stress clock are filled, the PC is **taken out for the scene**, and their stress clock is cleared. Because they were taken out, the next scenes should handle how the character's recovery is going to happen in the fiction.
+When the stress clock is filled (4 segments by default; staff set the number with `+config charge`), the PC is **taken out for the scene**, and their stress clock is cleared. Because they were taken out, the next scenes should handle how the character's recovery is going to happen in the fiction.
 
 ## Recovery
 

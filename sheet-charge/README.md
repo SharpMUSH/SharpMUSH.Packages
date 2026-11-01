@@ -7,7 +7,8 @@ condition in play. `+check` rolls one six-sided die per dot and reads the highes
 which the whole room sees and the game keeps as a recorded roll, and the roll gains momentum.
 
 The build is a ledger: every change to dots, milestones and talents is an entry, and the sheet adds
-them up, so staff can see how a character was built and undo one step. Encounters keep their own
+them up, so staff can see how a character was built and undo one step. During chargen, changing an action's dots
+rewrites that action's entry instead of adding one, so the ledger keeps one entry per action from chargen. Encounters keep their own
 copy of each member's sheet, so a fight that runs for days changes nothing outside it until the GM
 keeps its stress and condition.
 
