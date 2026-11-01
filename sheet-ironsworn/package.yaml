@@ -1,9 +1,9 @@
 format: "1.16"
 package: sheet-ironsworn
 title: "Ironsworn sheet"
-version: 2.0.0
+version: 2.1.0
 authors: [SharpMUSH]
-description: "An Ironsworn character sheet: five stats and assets built from a ledger, health, spirit, supply and momentum, experience spent on new assets and their abilities with an audited log, companion health, iron vows with progress tracks, and encounters that play from copies of the sheets. +check makes an action roll, a six-sided die plus a stat against two ten-sided challenge dice, for the room; +vow swears, marks and fulfils vows. Based on the Ironsworn SRD under CC BY 4.0."
+description: "An Ironsworn character sheet: five stats and assets built from a ledger, health, spirit, supply and momentum, experience spent on new assets and their abilities, with its own audited ledger, companion health, iron vows with progress tracks, and encounters that play from copies of the sheets. +check makes an action roll, a six-sided die plus a stat against two ten-sided challenge dice, for the room; +vow swears, marks and fulfils vows. Based on the Ironsworn SRD under CC BY 4.0."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, ironsworn, vows, assets, dice]
@@ -44,9 +44,10 @@ objects:
   # writes the sheet attributes on characters, and reads them for other packages.
   #
   # A character's sheet is their own attributes under IRONSWORN`: IRONSWORN`LEDGER`<n> the entries their stats and
-  # assets are built from, IRONSWORN`METER`<KEY> a meter (unset is its start), IRONSWORN`COMPANION`<ASSET> a
-  # companion's health (unset is its most), IRONSWORN`XP the experience not yet spent, IRONSWORN`LOG`<n> the log of
-  # experience, IRONSWORN`VOW`<KEY> a vow's name with RANK and TICKS beneath, and IRONSWORN`ENCOUNTERS and
+  # assets are built from and IRONSWORN`MERGED a cache of the ones in force, IRONSWORN`METER`<KEY> a meter (unset
+  # is its start), IRONSWORN`COMPANION`<ASSET> a companion's health (unset is its most), IRONSWORN`XPLEDGER`<n>
+  # the experience ledger and IRONSWORN`XP a cache of its running total, the experience not yet spent,
+  # IRONSWORN`VOW`<KEY> a vow's name with RANK and TICKS beneath, and IRONSWORN`ENCOUNTERS and
   # IRONSWORN`USING the encounters they are in. The IRONSWORN root is wizard-flagged, so only this object writes
   # them.
   #
@@ -56,7 +57,7 @@ objects:
   # Trees: CMD` the hooked commands, INC`COMMAND` the parse and dispatch, INC`SHEET`, INC`CHECK`, INC`VOW` and
   # INC`ENCOUNTER` one routine per switch, INC`NEED` the guards they share, INC`DO` the writes. FUN`LEDGER` and
   # FUN`BUILD` the ledger, FUN`STATS`, FUN`ASSETS` and FUN`R the build, FUN`P and FUN`PSET where play happens,
-  # FUN`METER` and FUN`COMPANION` the meters, FUN`XP` and FUN`LOG` experience, FUN`ENC` the encounters, FUN`LIST`
+  # FUN`METER` and FUN`COMPANION` the meters, FUN`XP` and FUN`BOOK` experience, FUN`ENC` the encounters, FUN`LIST`
   # the stats and assets, FUN`VOW` the vows, FUN`ROLL` the dice, FUN`PERM` who may do what, FUN`SCREEN` and
   # FUN`DISPLAY` the screens. API` the functions other packages call (VISUAL), the same names in every sheet
   # package. Bridges add HINT`<message> lines, GATE`EDIT (a reason a player may not change their own sheet now)
@@ -327,6 +328,8 @@ objects:
         SHEET`LEDGER
       DATA`ROUTE`SHEET`LOG: |-
         SHEET`LOG
+      DATA`ROUTE`SHEET`REBUILD: |-
+        SHEET`REBUILD
       DATA`ROUTE`SHEET`REVOKE: |-
         SHEET`REVOKE
       DATA`ROUTE`SHEET`CLEAR: |-
@@ -419,7 +422,7 @@ objects:
       # The most entries a character's ledger holds; a sheet keeper's +sheet/clear starts it again.
       DATA`LEDGER`MAX: |-
         200
-      # The most entries a character's log keeps; past it the oldest goes.
+      # The most entries a character's experience ledger keeps; past it the oldest goes.
       DATA`LOG`MAX: |-
         500
 
@@ -505,7 +508,7 @@ objects:
       # (phase chargen). sheet_phase, and sheet_rows, the ledger's entries in force.
       INC`NEED`BUILD:
         value: |-
-          @include %!/INC`NEED`OWNSHEET; @assert cor(%q<viewer_keeper>,not(isapproved(%#)))=@pemit %#=notice(SHEET,Your character is approved%, so staff change your stats now. +sheet/asset and +sheet/upgrade spend experience.,error); @include %!/INC`NEED`GATE; @include %!/INC`NEED`ROOM; think setqm(sheet_phase,if(%q<viewer_keeper>,staff,chargen),sheet_rows,u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%q<sheet_who>)))
+          @include %!/INC`NEED`OWNSHEET; @assert cor(%q<viewer_keeper>,not(isapproved(%#)))=@pemit %#=notice(SHEET,Your character is approved%, so staff change your stats now. +sheet/asset and +sheet/upgrade spend experience.,error); @include %!/INC`NEED`GATE; @include %!/INC`NEED`ROOM; think setqm(sheet_phase,if(%q<viewer_keeper>,staff,chargen),sheet_rows,u(%!/FUN`LEDGER`MERGED,%q<sheet_who>))
         flags: [cmdsyntax]
       INC`NEED`ROOM:
         value: |-
@@ -565,7 +568,7 @@ objects:
         value: |-
           @assert strlen(%q<cmd_argument>)=@pemit %#=u(%!/FUN`SCREEN`ASSETS); @include/args %!/INC`NEED`ASSET=key,%q<cmd_argument>; @pemit %#=u(%!/FUN`SCREEN`ASSET,%q<asset_key>,%q<viewer_objid>)
         flags: [cmdsyntax]
-      # +sheet/xp <name>=<n> [<reason>] sets their experience; +<n> or -<n> gives or takes. Logged.
+      # +sheet/xp <name>=<n> [<reason>] sets their experience; +<n> or -<n> gives or takes. Each change is an experience ledger entry.
       INC`SHEET`XP:
         value: |-
           @include %!/INC`NEED`KEEPER; @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/xp <name>=+<n> %[<reason>%] gives experience%, -<n> takes and <n> sets: +sheet/xp Alice=+2 Fulfilled a sworn oath.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; think setqm(xp_typed,first(%q<cmd_right_side>),xp_reason,rest(%q<cmd_right_side>),xp_old,u(%!/API`XP,%q<sheet_who>)); think setq(set_value,if(member(+ -,left(%q<xp_typed>,1)),add(%q<xp_old>,edit(%q<xp_typed>,+,)),%q<xp_typed>)); @assert cand(isint(%q<set_value>),gte(%q<set_value>,0),lte(%q<set_value>,999))=@pemit %#=notice(SHEET,Experience is a whole number from 0 to 999.,warn); think u(%!/FUN`XP`ADD,%q<sheet_who>,sub(%q<set_value>,%q<xp_old>),%q<xp_reason>); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<set_value> experience.,ok); @pemit %q<sheet_who>=notice(SHEET,[name(%#)] [if(lt(%q<set_value>,%q<xp_old>),takes [sub(%q<xp_old>,%q<set_value>)] experience from you,gives you [sub(%q<set_value>,%q<xp_old>)] experience)][if(strlen(%q<xp_reason>),: %q<xp_reason>)]. You have %q<set_value>.)
@@ -575,21 +578,26 @@ objects:
         value: |-
           @include/args %!/INC`NEED`TARGET=name,firstof(%q<cmd_argument>,%#); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`LEDGER,%q<sheet_who>)
         flags: [cmdsyntax]
-      # +sheet/log [<name>]: the latest changes to experience, who made them and why.
+      # +sheet/log [<name>]: the latest experience ledger entries, who made them and why.
       INC`SHEET`LOG:
         value: |-
           @include/args %!/INC`NEED`TARGET=name,firstof(%q<cmd_argument>,%#); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`LOG,%q<sheet_who>)
         flags: [cmdsyntax]
+      # +sheet/rebuild <name>: works their experience out again from their ledger, and drops the cached sheet.
+      INC`SHEET`REBUILD:
+        value: |-
+          @include %!/INC`NEED`KEEPER; @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/rebuild <name> works out their experience again from their ledger.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>; @include/args %!/INC`DO`ROOT=who,%q<sheet_who>; think u(%!/FUN`BOOK`REBUILD,%q<sheet_who>); @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s experience is worked out again from the ledger: [default(%q<sheet_who>/IRONSWORN`XP,0)].,ok)
+        flags: [cmdsyntax]
       # +sheet/revoke <name>/<n>: takes back one entry.
       INC`SHEET`REVOKE:
         value: |-
-          @include %!/INC`NEED`KEEPER; @include %!/INC`NEED`WHO; @include %!/INC`NEED`ROOM; think setq(revoke_row,grab(u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%q<sheet_who>)),%q<sheet_what>~*)); @assert cand(isint(%q<sheet_what>),strlen(%q<revoke_row>))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has no entry '%q<sheet_what>' in force. +sheet/ledger [name(%q<sheet_who>)] lists them.,warn); @include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,revoke,key,,value,%q<sheet_what>,phase,staff; @pemit %#=notice(SHEET,Revoked [name(%q<sheet_who>)]'s entry %q<sheet_what>: [u(%!/FUN`DISPLAY`ENTRY,%q<revoke_row>)].,ok)
+          @include %!/INC`NEED`KEEPER; @include %!/INC`NEED`WHO; @include %!/INC`NEED`ROOM; think setq(revoke_row,grab(u(%!/FUN`LEDGER`MERGED,%q<sheet_who>),%q<sheet_what>~*)); @assert cand(isint(%q<sheet_what>),strlen(%q<revoke_row>))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has no entry '%q<sheet_what>' in force. +sheet/ledger [name(%q<sheet_who>)] lists them.,warn); @include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,revoke,key,,value,%q<sheet_what>,phase,staff; @pemit %#=notice(SHEET,Revoked [name(%q<sheet_who>)]'s entry %q<sheet_what>: [u(%!/FUN`DISPLAY`ENTRY,%q<revoke_row>)].,ok)
         flags: [cmdsyntax]
       # +sheet/clear <name>: revokes the whole build; character creation starts again. Experience, meters and vows
       # stay.
       INC`SHEET`CLEAR:
         value: |-
-          @include %!/INC`NEED`KEEPER; @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/clear <name> revokes everything on their sheet's ledger.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>; @assert words(u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%q<sheet_who>)))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s sheet has nothing to clear.,warn); @include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,clear,key,,value,,phase,staff; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s build is cleared %(entry %q<entry_n>%). +sheet/chargen [name(%q<sheet_who>)] shows the steps.,ok)
+          @include %!/INC`NEED`KEEPER; @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/clear <name> revokes everything on their sheet's ledger.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>; @assert words(u(%!/FUN`LEDGER`MERGED,%q<sheet_who>))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s sheet has nothing to clear.,warn); @include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,clear,key,,value,,phase,staff; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s build is cleared %(entry %q<entry_n>%). +sheet/chargen [name(%q<sheet_who>)] shows the steps.,ok)
         flags: [cmdsyntax]
       INC`SHEET`TRAITS:
         value: |-
@@ -649,7 +657,7 @@ objects:
           @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(VOW,+vow/mark <vow> marks progress%, +vow/mark <vow>=<n> marks it n times.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`OWNSHEET; @include/args %!/INC`NEED`VOW=name,%q<sheet_what>; think setq(mark_times,firstof(%q<cmd_right_side>,1)); @assert cand(isint(%q<mark_times>),neq(%q<mark_times>,0))=@pemit %#=notice(VOW,Mark a whole number of times%, not 0.,warn); think setq(mark_ticks,bound(add(u(%!/FUN`VOW`TICKS,%q<sheet_who>,%q<vow_key>),mul(%q<mark_times>,v(DATA`RANK`[ucstr(get(%q<sheet_who>/IRONSWORN`VOW`%q<vow_key>`RANK))]))),0,40)); think u(%!/FUN`SETLEAF,%q<sheet_who>/IRONSWORN`VOW`%q<vow_key>`TICKS,if(%q<mark_ticks>,%q<mark_ticks>)); @pemit %#=notice(VOW,u(%!/FUN`DISPLAY`VOW,%q<sheet_who>,%q<vow_key>),ok)
         flags: [cmdsyntax]
       # +vow/fulfil [<name>/]<vow>: the progress roll. A hit fulfils it and marks experience by its rank (one less
-      # on a weak hit), which goes in the log; a miss leaves it sworn.
+      # on a weak hit), an experience ledger entry; a miss leaves it sworn.
       INC`VOW`FULFIL:
         value: |-
           @assert strlen(%q<cmd_argument>)=@pemit %#=notice(VOW,+vow/fulfil <vow> makes the progress roll.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`OWNSHEET; @include/args %!/INC`NEED`VOW=name,%q<sheet_what>; think setqm(fulfil_label,get(%q<sheet_who>/IRONSWORN`VOW`%q<vow_key>),fulfil_rank,get(%q<sheet_who>/IRONSWORN`VOW`%q<vow_key>`RANK),fulfil_rolled,u(%!/FUN`ROLL`PROGRESS,floor(fdiv(u(%!/FUN`VOW`TICKS,%q<sheet_who>,%q<vow_key>),4)))); think setqm(fulfil_tier,json_query(%q<fulfil_rolled>,extract,$.tier),fulfil_xp,sub(member(v(DATA`RANKS),%q<fulfil_rank>),if(strmatch(json_query(%q<fulfil_rolled>,extract,$.tier),partial),1,0))); @remit %l=notice(VOW,tone(strong,name(%q<sheet_who>)) makes the progress roll for %q<fulfil_label>: [json_query(%q<fulfil_rolled>,extract,$.text)]: [tone(u(%!/FUN`DISPLAY`TIERTONE,%q<fulfil_tier>),u(%!/FUN`DISPLAY`TIER,%q<fulfil_tier>))] [tone(muted,%(roll [json_query(%q<fulfil_rolled>,extract,$.roll)]%))]); @break strmatch(%q<fulfil_tier>,*fail)=@pemit %#=notice(VOW,The vow stands. +vow/forsake takes it off.); think u(%!/FUN`WIPE,%q<sheet_who>,IRONSWORN`VOW`%q<vow_key>); @pemit %#=notice(VOW,[name(%q<sheet_who>)] fulfils the vow[if(%q<fulfil_xp>,%band marks %q<fulfil_xp> experience: [u(%!/FUN`XP`ADD,%q<sheet_who>,%q<fulfil_xp>,Fulfilled: %q<fulfil_label>)] to spend)].,ok)
@@ -744,7 +752,7 @@ objects:
       # last. entry_n is its number. Each has the wizard attribute flag, and an entry without it is never read.
       INC`DO`ENTRY:
         value: |-
-          @include/args %!/INC`DO`ROOT=who,%<who>; think setq(entry_n,if(strmatch(%<phase>,chargen),u(%!/FUN`LEDGER`CHARGENOF,%<who>,%<kind>,%<key>))); think setq(entry_n,firstof(%q<entry_n>,inc(lmax(0 [iter(lattr(%<who>/IRONSWORN`LEDGER`*),last(%i0,`))])))); &IRONSWORN`LEDGER`%q<entry_n> %<who>=[json(object,n,%q<entry_n>,kind,json(string,%<kind>),key,json(string,%<key>),value,json(string,%<value>),phase,json(string,%<phase>),by,json(string,objid(%#)),at,secs())]; @set %<who>/IRONSWORN`LEDGER`%q<entry_n>=wizard
+          @include/args %!/INC`DO`ROOT=who,%<who>; think setq(entry_n,if(strmatch(%<phase>,chargen),u(%!/FUN`LEDGER`CHARGENOF,%<who>,%<kind>,%<key>))); think setq(entry_n,firstof(%q<entry_n>,inc(lmax(0 [iter(lattr(%<who>/IRONSWORN`LEDGER`*),last(%i0,`))])))); &IRONSWORN`LEDGER`%q<entry_n> %<who>=[json(object,n,%q<entry_n>,kind,json(string,%<kind>),key,json(string,%<key>),value,json(string,%<value>),phase,json(string,%<phase>),by,json(string,objid(%#)),at,secs())]; @set %<who>/IRONSWORN`LEDGER`%q<entry_n>=wizard; &IRONSWORN`MERGED %<who>
         flags: [cmdsyntax]
       # %<who> joins encounter %<n> with a copy of their sheet: the stats and assets in force as STATS and ASSETS,
       # and their meters and companions' health. It goes last in their IRONSWORN`ENCOUNTERS.
@@ -839,7 +847,7 @@ objects:
       # %0 a character, %1 a kind, %2 a key: the number of the chargen entry in force that matches.
       FUN`LEDGER`CHARGENOF:
         value: |-
-          first(iter(revwords(graball(u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%0)),*~%1~%2~*~chargen~*)),first(%i0,~)))
+          first(iter(revwords(graball(u(%!/FUN`LEDGER`MERGED,%0),*~%1~%2~*~chargen~*)),first(%i0,~)))
         flags: [funsyntax]
       # %0 rows in force, %1 a kind, %2 a key: the value of the last entry for it.
       FUN`BUILD`VALUE:
@@ -857,7 +865,7 @@ objects:
         flags: [funsyntax]
       FUN`STATS`LIVE:
         value: |-
-          u(%!/FUN`STATS`ROWS,u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%0)))
+          u(%!/FUN`STATS`ROWS,u(%!/FUN`LEDGER`MERGED,%0))
         flags: [funsyntax]
       # %0 a character: the stats they roll now: their copy's in an encounter here, else their sheet's.
       FUN`STATS:
@@ -871,7 +879,7 @@ objects:
         flags: [funsyntax]
       FUN`ASSETS`LIVE:
         value: |-
-          u(%!/FUN`ASSETS`ROWS,u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%0)))
+          u(%!/FUN`ASSETS`ROWS,u(%!/FUN`LEDGER`MERGED,%0))
         flags: [funsyntax]
       # %0 a character: the assets they play with now: their copy's in an encounter here, else their sheet's.
       FUN`ASSETS:
@@ -942,7 +950,7 @@ objects:
       # chargen_stats and chargen_assets are left set.
       FUN`CHARGEN`STEP:
         value: |-
-          setq(chargen_rows,u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%0)))[setq(chargen_stats,u(%!/FUN`STATS`ROWS,%q<chargen_rows>))][setq(chargen_assets,u(%!/FUN`ASSETS`ROWS,%q<chargen_rows>))][cond(lt(words(%q<chargen_stats>),words(u(%!/FUN`LIST`ALL,STAT))),stats,lt(words(%q<chargen_assets>),get(%!/DATA`CONFIG`STARTING)),assets,not(words(u(%!/FUN`VOW`ALL,%0))),vow)]
+          setq(chargen_rows,u(%!/FUN`LEDGER`MERGED,%0))[setq(chargen_stats,u(%!/FUN`STATS`ROWS,%q<chargen_rows>))][setq(chargen_assets,u(%!/FUN`ASSETS`ROWS,%q<chargen_rows>))][cond(lt(words(%q<chargen_stats>),words(u(%!/FUN`LIST`ALL,STAT))),stats,lt(words(%q<chargen_assets>),get(%!/DATA`CONFIG`STARTING)),assets,not(words(u(%!/FUN`VOW`ALL,%0))),vow)]
         flags: [funsyntax]
       # %0 a character: what to do next, after a step, for a player making their own character. Nothing otherwise.
       FUN`CHARGEN`AFTER:
@@ -983,21 +991,92 @@ objects:
           if(isdbref(setr(found_player,pmatch(%0))),objid(%q<found_player>))
         flags: [funsyntax]
 
-      # ---- experience and the log ------------------------------------------------------
-      # %0 a character, %1 experience to give (or take, below 0), %2 why: writes it, never below 0, logs it and
-      # returns what they have now.
+      # ---- experience ----------------------------------------------------------------
+      # %0 a character, %1 experience to give (or take, below 0), %2 why: an experience ledger entry, never below
+      # 0; returns what they have now.
       FUN`XP`ADD:
         value: |-
           setqm(xpadd_old,default(%0/IRONSWORN`XP,0),
-          xpadd_new,max(0,add(%q<xpadd_old>,%1)))[u(%!/FUN`API`ROOT,%0)][u(%!/FUN`SETLEAF,%0/IRONSWORN`XP,if(%q<xpadd_new>,%q<xpadd_new>))][u(%!/FUN`LOG`ADD,%0,xp,sub(%q<xpadd_new>,%q<xpadd_old>),%q<xpadd_new>,%2,)]%q<xpadd_new>
+          xpadd_new,max(0,add(%q<xpadd_old>,%1)))[u(%!/FUN`BOOK`ADD,%0,XP,sub(%q<xpadd_new>,%q<xpadd_old>),%2)]%q<xpadd_new>
         flags: [funsyntax]
-      # Every change to experience is IRONSWORN`LOG`<n>: a JSON object with n, kind (xp), delta, total (after),
-      # item, reason, by (an objid) and at (secs). Each has the wizard attribute flag; past DATA`LOG`MAX the oldest
-      # goes.
-      # %0 a character, %1 the kind, %2 the change, %3 the total after, %4 why, %5 the item. Nothing when %2 is 0.
-      FUN`LOG`ADD:
+      # ---- the XP and money ledgers --------------------------------------------------------
+      # Each book is its own ledger, apart from the sheet's: IRONSWORN`<BOOK>LEDGER`<n>, a JSON object with n, delta,
+      # total (the running total after it), item and label (what it counts, when the book counts more than one
+      # thing), reason, by (an objid) and at (secs), with the wizard attribute flag. The totals on the sheet are a
+      # cache of the latest entry's total: FUN`BOOK`ADD is the only thing that writes either, and +sheet/rebuild
+      # works every cache out again from the ledgers.
+      # %0 a book, %1 an item: the attribute holding its cached total.
+      FUN`BOOK`CACHE:
         value: |-
-          if(%2,[setq(log_n,inc(lmax(0 [iter(lattr(%0/IRONSWORN`LOG`*),last(%i0,`))])))][u(%!/FUN`API`ROOT,%0)][attrib_set(%0/IRONSWORN`LOG`%q<log_n>,json(object,n,%q<log_n>,kind,json(string,%1),delta,%2,total,firstof(%3,0),item,json(string,%5),reason,json(string,left(%4,200)),by,json(string,objid(%#)),at,secs()))][set(%0/IRONSWORN`LOG`%q<log_n>,wizard)][iter(lnum(max(0,sub(words(lattr(%0/IRONSWORN`LOG`*)),get(%!/DATA`LOG`MAX)))),attrib_set(%0/IRONSWORN`LOG`[first(sort(iter(lattr(%0/IRONSWORN`LOG`*),last(%i0,`)),n))]))])
+          IRONSWORN`XP
+        flags: [funsyntax]
+      # %0 a book: 1 when its cache keeps the item's label with the total, as <total>|<label>.
+      FUN`BOOK`LABELLED:
+        value: |-
+          0
+        flags: [funsyntax]
+      # %0 a character, %1 a book: the numbers of its entries, oldest first.
+      FUN`BOOK`NUMS:
+        value: |-
+          sort(iter(lattr(%0/IRONSWORN`%1LEDGER`*),if(hasflag(%0/%i0,wizard),last(%i0,`))),n)
+        flags: [funsyntax]
+      # %0 a character, %1 a book, %2 the change, %3 why, %4 the item, %5 its label: a new entry, then the cached
+      # total. Nothing for no change.
+      FUN`BOOK`ADD:
+        value: |-
+          if(%2,[setqm(book_cache,u(%!/FUN`BOOK`CACHE,%1,%4),book_n,inc(lmax(0 [iter(lattr(%0/IRONSWORN`%1LEDGER`*),last(%i0,`))])))][setq(book_had,get(%0/%q<book_cache>))][setqm(book_total,add(firstof(before(%q<book_had>,|),0),%2),book_label,firstof(%5,after(%q<book_had>,|)))][u(%!/FUN`API`ROOT,%0)][attrib_set(%0/IRONSWORN`%1LEDGER`%q<book_n>,json(object,n,%q<book_n>,delta,%2,total,%q<book_total>,item,json(string,%4),label,json(string,%q<book_label>),reason,json(string,left(%3,200)),by,json(string,objid(%#)),at,secs()))][set(%0/IRONSWORN`%1LEDGER`%q<book_n>,wizard)][u(%!/FUN`BOOK`SET,%0,%q<book_cache>,%q<book_total>,if(u(%!/FUN`BOOK`LABELLED,%1),%q<book_label>))][u(%!/FUN`BOOK`TRIM,%0,%1)])
+        flags: [funsyntax]
+      # %0 a character, %1 a cache attribute, %2 the total, %3 a label: writes the cache; 0 removes it.
+      FUN`BOOK`SET:
+        value: |-
+          if(%2,[attrib_set(%0/%1,if(strlen(%3),%2|%3,%2))][set(%0/%1,wizard)],if(hasattr(%0/%1),attrib_set(%0/%1)))
+        flags: [funsyntax]
+      # %0 a character, %1 a book: past DATA`LOG`MAX entries, the oldest one a later entry for the same item
+      # replaces goes, so the latest entry for each item, and with it every total, always stays.
+      FUN`BOOK`TRIM:
+        value: |-
+          setqm(bt_drop,,bt_nums,sort(iter(lattr(%0/IRONSWORN`%1LEDGER`*),last(%i0,`)),n))[if(gt(words(%q<bt_nums>),get(%!/DATA`LOG`MAX)),setq(bt_drop,first(iter(extract(%q<bt_nums>,1,50),if(gt(words(grep(%0,IRONSWORN`%1LEDGER`*,"item":"[json_query(get(%0/IRONSWORN`%1LEDGER`%i0),extract,$.item)]")),1),%i0)))))][if(strlen(%q<bt_drop>),attrib_set(%0/IRONSWORN`%1LEDGER`%q<bt_drop>))]
+        flags: [funsyntax]
+      # %0 a character, %1 a book, %2 an item: its latest entry.
+      FUN`BOOK`LAST:
+        value: |-
+          setq(bl_n,last(iter(u(%!/FUN`BOOK`NUMS,%0,%1),if(not(comp(json_query(get(%0/IRONSWORN`%1LEDGER`%i0),extract,$.item),%2)),%i0))))[if(strlen(%q<bl_n>),get(%0/IRONSWORN`%1LEDGER`%q<bl_n>))]
+        flags: [funsyntax]
+      # %0 a character, %1 a book, %2 an item: writes its cache from its latest entry.
+      FUN`BOOK`REBUILDITEM:
+        value: |-
+          setq(br_last,u(%!/FUN`BOOK`LAST,%0,%1,%2))[u(%!/FUN`BOOK`SET,%0,u(%!/FUN`BOOK`CACHE,%1,%2),if(strlen(%q<br_last>),json_query(%q<br_last>,extract,$.total),0),if(cand(strlen(%q<br_last>),u(%!/FUN`BOOK`LABELLED,%1)),json_query(%q<br_last>,extract,$.label)))]
+        flags: [funsyntax]
+      # %0 a character, %1 a book: the items it has entries for.
+      FUN`BOOK`ITEMS:
+        value: |-
+          setunion(iter(u(%!/FUN`BOOK`NUMS,%0,%1),json_query(get(%0/IRONSWORN`%1LEDGER`%i0),extract,$.item)),)
+        flags: [funsyntax]
+      # %0 a character, %1 a book, %2 its title, %3 its unit (after the item's label), %4 how many: the
+      # latest entries, oldest first.
+      FUN`SCREEN`BOOK:
+        value: |-
+          setq(sb_nums,u(%!/FUN`BOOK`NUMS,%0,%1))[setq(sb_nums,extract(%q<sb_nums>,max(1,sub(words(%q<sb_nums>),dec(%4))),%4))][tone(strong,%2)]%r[if(words(%q<sb_nums>),ldatatable(lit({"nowrap":"1|2|3|4|6","grow":"||||1"}),#|When|Change|>Total|Why|By,iter(%q<sb_nums>,u(%!/FUN`DISPLAY`BOOKROW,get(%0/IRONSWORN`%1LEDGER`%i0),%3),%b,%*<^>),%*<^>),tone(muted,Nothing yet.))]
+        flags: [funsyntax]
+      FUN`DISPLAY`BOOKROW:
+        value: |-
+          [json_query(%0,extract,$.n)]|[timefmt($Y-$m-$d,json_query(%0,extract,$.at))]|[u(%!/FUN`DISPLAY`SIGNED,json_query(%0,extract,$.delta))] [trim([json_query(%0,extract,$.label)] %1)]|[json_query(%0,extract,$.total)]|[firstof(json_query(%0,extract,$.reason),-)]|[name(json_query(%0,extract,$.by))]
+        flags: [funsyntax]
+      # %0 a character: the sheet's ledger merged, the rows in force. Kept as a cache in IRONSWORN`MERGED once worked
+      # out; every ledger write drops it.
+      FUN`LEDGER`MERGED:
+        value: |-
+          if(cand(hasattr(%0/IRONSWORN`MERGED),hasflag(%0/IRONSWORN`MERGED,wizard)),get(%0/IRONSWORN`MERGED),[setq(lm_rows,u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%0)))][if(cand(words(%q<lm_rows>),hasattr(%0,IRONSWORN)),null([attrib_set(%0/IRONSWORN`MERGED,%q<lm_rows>)][set(%0/IRONSWORN`MERGED,wizard)]))]%q<lm_rows>)
+        flags: [funsyntax]
+      # %0 a character: every cache worked out again from the ledgers.
+      FUN`BOOK`REBUILD:
+        value: |-
+          [if(hasattr(%0/IRONSWORN`MERGED),attrib_set(%0/IRONSWORN`MERGED))][u(%!/FUN`BOOK`REBUILDITEM,%0,XP,)]
+        flags: [funsyntax]
+      # %0 the character: the latest 30 XP ledger entries, oldest first.
+      FUN`SCREEN`LOG:
+        value: |-
+          box([u(%!/FUN`SCREEN`BOOK,%0,XP,Experience,XP,30)]%r[rule()]%r[tone(muted,Every change to experience%, with who made it.)],Ledger: [name(%0)])
         flags: [funsyntax]
       FUN`API`ROOT:
         value: |-
@@ -1182,14 +1261,9 @@ objects:
         value: |-
           setqm(entry_kind,elements(%0,2,~),entry_key,elements(%0,3,~),entry_value,elements(%0,4,~))[switch(%q<entry_kind>,stat,[u(%!/FUN`LIST`LABEL,STAT,%q<entry_key>)] [firstof(%q<entry_value>,unassigned)],asset,[u(%!/FUN`LIST`LABEL,ASSET,%q<entry_key>)] [if(%q<entry_value>,%q<entry_value>/3,given back)],revoke,Revokes entry %q<entry_value>,clear,Clears everything before it,%q<entry_kind>)]
         flags: [funsyntax]
-      # %0 the character: the latest 30 log entries, oldest first.
-      FUN`SCREEN`LOG:
+      FUN`DISPLAY`SIGNED:
         value: |-
-          setq(log_nums,sort(iter(lattr(%0/IRONSWORN`LOG`*),if(hasflag(%0/%i0,wizard),last(%i0,`))),n))[setq(log_nums,extract(%q<log_nums>,max(1,sub(words(%q<log_nums>),29)),30))][box(if(words(%q<log_nums>),ldatatable(lit({"nowrap":"1|2|3|4|6","grow":"||||1"}),#|When|Change|>Now|Why|By,iter(%q<log_nums>,u(%!/FUN`DISPLAY`LOGROW,get(%0/IRONSWORN`LOG`%i0)),%b,%*<^>),%*<^>),Nothing is logged yet.)%r[rule()]%r[tone(muted,Every change to experience%, with who made it.)],Log: [name(%0)])]
-        flags: [funsyntax]
-      FUN`DISPLAY`LOGROW:
-        value: |-
-          [json_query(%0,extract,$.n)]|[timefmt($Y-$m-$d,json_query(%0,extract,$.at))]|[if(gte(json_query(%0,extract,$.delta),0),+)][json_query(%0,extract,$.delta)] XP|[json_query(%0,extract,$.total)]|[firstof(json_query(%0,extract,$.reason),-)]|[name(json_query(%0,extract,$.by))]
+          if(gte(%0,0),+%0,%0)
         flags: [funsyntax]
       # %0 an encounter, %1 who reads it.
       FUN`SCREEN`ENCOUNTER:
@@ -1229,7 +1303,7 @@ objects:
       # ---- the sheet API ------------------------------------------------------------
       # What other packages call: u({{sheet-ironsworn/sheet}}/API`<NAME>,...). Every sheet package has these
       # names. They read the character's sheet itself, never an encounter's copy. They read and roll; API`ADJUST and
-      # API`AWARD are the ones that write, and API`AWARD's experience goes in the log.
+      # API`AWARD are the ones that write, and API`AWARD's experience is an experience ledger entry.
       API:
         value: |-
           The Ironsworn sheet's functions for other packages. See the package README.
@@ -1294,7 +1368,7 @@ objects:
           default(%0/IRONSWORN`XP,0)
         flags: [VISUAL]
       # %0 a character, %1 experience to give (or take, below 0), %2 why (Reward when empty): never below 0,
-      # logged, returns what they have now.
+      # an experience ledger entry; returns what they have now.
       API`AWARD:
         value: |-
           u(%!/FUN`XP`ADD,%0,%1,firstof(%2,Reward))
@@ -1545,7 +1619,7 @@ objects:
         - `+sheet/chargen` shows the steps of making your character and what to do next.
         - `+sheet/traits` lists the stats; `+sheet/assets` lists the assets.
         - `+sheet/ledger` lists every entry your stats and assets are built from, oldest first.
-        - `+sheet/log` lists every change to your experience, who made it and why.
+        - `+sheet/log` shows your experience ledger, every change with who made it and why.
 
         Your stats and assets are built from the ledger: each value you give and each asset you take is an entry. Once you are approved, `+sheet/asset` and `+sheet/upgrade` spend experience and staff make other changes.
 
@@ -1578,7 +1652,7 @@ objects:
         - `+sheet/assets` lists them; `+sheet/assets <asset>` shows one's abilities and which you have marked.
         - `+sheet/asset <asset>` takes a new asset. Once you are approved it costs 3 experience, unless your game changed that.
         - `+sheet/upgrade <asset>` marks its next ability for 2 experience.
-        - `+sheet/log` lists every change to your experience.
+        - `+sheet/log` shows your experience ledger.
 
         You mark experience when you fulfil a vow, and staff give it. A companion has health of its own: see `+help sheet play`.
 
@@ -1677,7 +1751,7 @@ objects:
         - `/set`, `/asset`, `/upgrade` and `/companion` take `<name>/` first: `+sheet/set Alice/iron=4`. A keeper sets a stat from 1 to 5, and gives assets and abilities without experience. `+sheet/asset <name>/<asset>=remove` takes one away.
         - The meters take `<name>=` first: `+sheet/health Alice=-2`.
         - `+sheet/xp <name>=+<n> [<reason>]` gives experience, `-<n>` takes, `<n>` sets: `+sheet/xp Alice=+2 Saved the village`.
-        - `+sheet/log <name>` lists every change to their experience, with who made it and why.
+        - `+sheet/log <name>` shows their experience ledger; `+sheet/rebuild <name>` works their experience out again from it.
         - The `+vow` switches take `<name>/` first: `+vow/mark Alice/Find my brother`.
         - `+sheet/revoke <name>/<n>` takes back one ledger entry; `+sheet/clear <name>` revokes them all, and character creation starts again.
         - Keepers run any encounter.

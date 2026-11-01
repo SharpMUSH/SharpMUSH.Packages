@@ -18,8 +18,9 @@ You mark experience when you fulfil a vow, and staff give it. Once you are appro
 - `+sheet/asset <asset>` takes a new asset, with its first ability marked, for 3 experience.
 - `+sheet/upgrade <asset>` marks its next ability for 2 experience.
 
-Unless your game changed those costs. `+sheet/log` lists every change to your experience: how much, what you had
-after, why, and who made it.
+Unless your game changed those costs. Experience has a ledger of its own, apart from the ledger your stats
+and assets are built from: `+sheet/log` lists every change to your experience, how much, what you had after,
+why, and who made it.
 
 ## The ledger
 

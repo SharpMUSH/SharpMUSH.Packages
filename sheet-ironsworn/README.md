@@ -2,7 +2,7 @@
 
 An Ironsworn character sheet: five stats (Edge, Heart, Iron, Shadow, Wits) and assets built from a
 ledger, health, spirit, supply and momentum, experience spent on new assets and their abilities with
-an audited log, companion health, iron vows with progress tracks, and encounters that play from
+its own audited ledger, companion health, iron vows with progress tracks, and encounters that play from
 copies of the sheets. Players give out their starting stats and take their starting assets until they
 are approved, then spend experience, and keep their own meters and vows in play. `+check` makes an
 action roll, a six-sided die plus a stat against two ten-sided challenge dice, which the whole room
@@ -35,7 +35,7 @@ Every sheet package answers `+sheet` and `+check`. Install one sheet package per
 | `+sheet/upgrade <asset>` | approved player | Marks the asset's next ability for `upgrade` (2) experience |
 | `+sheet/assets [<asset>]` | all | The assets, or one asset's three abilities |
 | `+sheet/ledger [<name>]` | all | Every entry the stats and assets are built from |
-| `+sheet/log [<name>]` | all | Every change to experience, who made it and why |
+| `+sheet/log [<name>]` | all | The latest 30 experience ledger entries, who made them and why |
 | `+sheet/health`, `/spirit`, `/supply` | player | 0 to 5, starting at 5 |
 | `+sheet/momentum` | player | -6 to +10, starting at +2 |
 | `+sheet/companion <asset>=<n>` | player | A companion's health, 0 up to its most |
@@ -60,6 +60,7 @@ three more switches:
 |---|---|
 | `+sheet/xp <name>=+<n> [<reason>]` | Gives experience; `-<n>` takes, `<n>` sets |
 | `+sheet/revoke <name>/<n>` | Takes back one ledger entry |
+| `+sheet/rebuild <name>` | Works their experience out again from their ledger |
 | `+sheet/clear <name>` | Revokes every entry; character creation starts again. Experience, meters and vows stay |
 
 The GM of an encounter changes the meters and companions of anyone playing from its copies.
@@ -97,12 +98,20 @@ Every entry also has `n`, `phase` (`chargen`, `play` or `staff`), `by` (an objid
 Before approval a player's change rewrites their own `chargen` entry for that stat or asset; every
 other change is a new entry. A ledger holds at most 200 entries.
 
-## The log
+## The experience ledger
 
-Every change to experience is an entry in the character's log, `IRONSWORN`LOG`<n>`, with the `wizard`
-attribute flag: `kind` (`xp`), `delta`, `total` after, `reason`, `by` and `at`. A keeper's `/xp` takes a
-reason after the number; spending logs the asset or ability bought, fulfilling a vow logs the vow,
-and `API`AWARD` (Duties rewards) logs its reason. A log keeps the latest 500 entries.
+Experience has a ledger of its own, apart from the sheet's: `IRONSWORN`XPLEDGER`<n>`, each entry with the
+`wizard` attribute flag: `n`, `delta`, `total` (the running total after it), `item` and `label` (both
+empty), `reason`, `by` and `at`. A keeper's `/xp` takes a reason after the number; spending records the
+asset or ability bought, fulfilling a vow records the vow, and `API`AWARD` (Duties rewards) records its
+reason. The ledger keeps 500 entries; past that, the oldest goes, and the latest total always stays.
+
+## Caches
+
+`IRONSWORN`XP` holds the latest entry's total, and `IRONSWORN`MERGED` the sheet ledger's entries in force,
+once something has worked them out. Only ledger writes touch a cache: a new entry rewrites its total, and a
+sheet ledger entry drops `IRONSWORN`MERGED` until the next read. `+sheet/rebuild <name>` (keepers) works
+every cache out again from the ledgers.
 
 ## Encounters
 
@@ -123,8 +132,9 @@ IRONSWORN                       the root: wizard, no_command
 IRONSWORN`LEDGER`<n>            a ledger entry
 IRONSWORN`METER`<KEY>           HEALTH, SPIRIT, SUPPLY or MOMENTUM; unset is its start
 IRONSWORN`COMPANION`<ASSET>     a companion's health; unset is its most
-IRONSWORN`XP                    experience to spend; unset is 0
-IRONSWORN`LOG`<n>               a log entry
+IRONSWORN`MERGED                cache: the ledger entries in force
+IRONSWORN`XPLEDGER`<n>          an experience ledger entry
+IRONSWORN`XP                    cache: experience to spend; unset is 0
 IRONSWORN`VOW`<KEY>             a vow's name, with RANK and TICKS beneath
 IRONSWORN`ENCOUNTERS            the encounters they are in, in the order they joined
 IRONSWORN`USING                 the encounter /use picked
@@ -148,7 +158,7 @@ The same `API` tree as every sheet package (see [sheet-d20](../sheet-d20/README.
 adds `ASSET` (the abilities a character has marked on an asset), `METER` (a character's meter),
 `ADJUST` (adds to a meter within its range and returns the new value; `XP` gives experience as
 `AWARD` does), `XP` (experience to spend) and `AWARD` (`%0` a character, `%1` experience to give or
-take, `%2` why, `Reward` when empty: never below 0, logged, returns the new count). `ADJUST` and
+take, `%2` why, `Reward` when empty: never below 0, an experience ledger entry, returns the new count). `ADJUST` and
 `AWARD` are the ones that write.
 
 Bridges may set `` HINT`<message> ``, `` GATE`EDIT `` and `` ALLOW`VIEW`<name> `` on the

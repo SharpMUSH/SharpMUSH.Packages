@@ -16,10 +16,11 @@ two harms each, level 3 one. Harm at a full level moves up a level. `+sheet/harm
 
 `+sheet/coin -2 Bribe` spends 2 coin and notes why. Staff, or the GM of an encounter you are in, give coin.
 
-## The log
+## The ledgers
 
-`+sheet/log` lists every change to your XP, and to the coin on your sheet: how much, what you had after, why,
-and who made it. Changes in an encounter appear when its GM keeps them.
+XP and coin each have a ledger of their own, apart from the ledger your action ratings are built from. Every
+change is an entry: how much, the total after it, why, and who made it. `+sheet/log` shows the latest entries
+of both, and `+sheet/log xp` or `coin` more of one. Changes in an encounter appear when its GM keeps them.
 
 ## Advances
 

@@ -1,9 +1,9 @@
 format: "1.16"
 package: sheet-brp
 title: "Percentile sheet (BRP)"
-version: 2.0.0
+version: 2.1.0
 authors: [SharpMUSH]
-description: "A percentile character sheet on the Basic Roleplaying rules: seven characteristics and a skill list with base chances the game edits, built from a ledger, with point-buy character creation, experience checks that raise skills, hit points, power points and coin, an audited log of coin and skill gains, and encounters that play from copies of the sheets. +check rolls 1d100 under a skill or a characteristic roll, doubled or halved for difficulty, and reads critical, special, success, failure or fumble. The skill list is ORC Licensed Material from Basic Roleplaying: Universal Game Engine."
+description: "A percentile character sheet on the Basic Roleplaying rules: seven characteristics and a skill list with base chances the game edits, built from a ledger, with point-buy character creation, experience checks that raise skills, hit points, power points and coin, an audited coin ledger, and encounters that play from copies of the sheets. +check rolls 1d100 under a skill or a characteristic roll, doubled or halved for difficulty, and reads critical, special, success, failure or fumble. The skill list is ORC Licensed Material from Basic Roleplaying: Universal Game Engine."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, brp, percentile, d100, skills]
@@ -44,17 +44,17 @@ objects:
   # writes the sheet attributes on characters, and reads them for other packages.
   #
   # A character's sheet is their own attributes under BRP`: BRP`LEDGER`<n> the entries their characteristics
-  # and skills are built from, BRP`HP and BRP`PP the hit points and power points left (unset is the most),
-  # BRP`COIN the coin, BRP`MARKS the skills marked for an experience check, BRP`LOG`<n> the log of coin and skill
-  # gains, and BRP`ENCOUNTERS and BRP`USING the encounters they are in. The BRP root is wizard-flagged, so only
-  # this object writes them.
+  # and skills are built from (skill gains too) and BRP`MERGED a cache of the ones in force, BRP`HP and BRP`PP
+  # the hit points and power points left (unset is the most), BRP`MONEYLEDGER`<n> the coin ledger and BRP`COIN a
+  # cache of its running total, BRP`MARKS the skills marked for an experience check, and BRP`ENCOUNTERS and
+  # BRP`USING the encounters they are in. The BRP root is wizard-flagged, so only this object writes them.
   #
   # +sheet, +check and +encounter are added with /noparse/rsnoparse and hooked to CMD`<word>, so what a player
   # types reaches the code exactly as typed and nothing a player wrote is ever evaluated.
   #
   # Trees: CMD` the hooked commands, INC`COMMAND` the parse and dispatch, INC`SHEET`, INC`CHECK` and INC`ENCOUNTER`
   # one routine per switch, INC`NEED` the guards they share, INC`DO` the writes. FUN`LEDGER` and FUN`BUILD` the
-  # ledger, FUN`P and FUN`PSET where play happens, FUN`ENC` the encounters, FUN`LOG` the log, FUN`TRAIT` characteristics and skills together,
+  # ledger, FUN`P and FUN`PSET where play happens, FUN`ENC` the encounters, FUN`BOOK` the coin ledger, FUN`TRAIT` characteristics and skills together,
   # FUN`LIST` the store's lists, FUN`BASE` base chances, FUN`CHANCE` the numbers, FUN`PERM` who may do what,
   # FUN`SCREEN` and FUN`DISPLAY` the screens. API` the functions other packages call (VISUAL), the same names in
   # every sheet package. Bridges add HINT`<message> lines, GATE`EDIT (a reason a player may not change their own
@@ -268,6 +268,8 @@ objects:
         SHEET`LEDGER
       DATA`ROUTE`SHEET`LOG: |-
         SHEET`LOG
+      DATA`ROUTE`SHEET`REBUILD: |-
+        SHEET`REBUILD
       DATA`ROUTE`SHEET`REVOKE: |-
         SHEET`REVOKE
       DATA`ROUTE`SHEET`CLEAR: |-
@@ -324,7 +326,7 @@ objects:
       # The most entries a character's ledger holds; a sheet keeper's +sheet/clear starts it again.
       DATA`LEDGER`MAX: |-
         200
-      # The most entries a character's log keeps; past it the oldest goes.
+      # The most entries a character's coin ledger keeps; past it the oldest goes.
       DATA`LOG`MAX: |-
         500
 
@@ -401,7 +403,7 @@ objects:
       # approved (phase chargen). sheet_phase, and sheet_rows, the ledger's entries in force.
       INC`NEED`BUILD:
         value: |-
-          @include %!/INC`NEED`OWNSHEET; @assert cor(%q<viewer_keeper>,not(isapproved(%#)))=@pemit %#=notice(SHEET,Your character is approved%, so staff change your sheet now. +sheet/improve rolls your experience checks.,error); @assert cor(%q<viewer_keeper>,not(strlen(setr(set_gate,u(%!/FUN`GATE`EDIT,%#)))))=@pemit %#=notice(SHEET,%q<set_gate>,warn); @include %!/INC`NEED`ROOM; think setqm(sheet_phase,if(%q<viewer_keeper>,staff,chargen),sheet_rows,u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%q<sheet_who>)))
+          @include %!/INC`NEED`OWNSHEET; @assert cor(%q<viewer_keeper>,not(isapproved(%#)))=@pemit %#=notice(SHEET,Your character is approved%, so staff change your sheet now. +sheet/improve rolls your experience checks.,error); @assert cor(%q<viewer_keeper>,not(strlen(setr(set_gate,u(%!/FUN`GATE`EDIT,%#)))))=@pemit %#=notice(SHEET,%q<set_gate>,warn); @include %!/INC`NEED`ROOM; think setqm(sheet_phase,if(%q<viewer_keeper>,staff,chargen),sheet_rows,u(%!/FUN`LEDGER`MERGED,%q<sheet_who>))
         flags: [cmdsyntax]
       INC`NEED`ROOM:
         value: |-
@@ -444,10 +446,10 @@ objects:
           @include/args %!/INC`NEED`TARGET=name,firstof(%q<cmd_argument>,%#); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`CHARGEN,%q<sheet_who>,%#)
         flags: [cmdsyntax]
       # +sheet/improve [<name>]: rolls every experience check marked on the sheet. Over the skill's percentage
-      # raises it by a die of IMPROVE sides. Each gain is a ledger entry and goes in the log; the marks clear.
+      # raises it by a die of IMPROVE sides. Each gain is a ledger entry; the marks clear.
       INC`SHEET`IMPROVE:
         value: |-
-          @include/args %!/INC`NEED`TARGET=name,firstof(%q<cmd_argument>,%#); @include %!/INC`NEED`OWNSHEET; @assert cor(%q<viewer_keeper>,isapproved(%#))=@pemit %#=notice(SHEET,Experience checks are rolled after approval.,warn); @include %!/INC`NEED`ROOM; think setq(improve_marks,get(%q<sheet_who>/BRP`MARKS)); @assert words(%q<improve_marks>)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has no experience checks marked. A successful roll on a skill marks one.,warn); think u(%!/FUN`BUILD`OF,%q<sheet_who>); think setq(improve_res,iter(%q<improve_marks>,u(%!/FUN`IMPROVE`ROLL,%i0))); @dolist/inline %q<improve_res>={@if last(##,:)={@include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,improve,key,first(##,:),value,last(##,:),phase,play; think u(%!/FUN`LOG`ADD,%q<sheet_who>,improve,last(##,:),add(elements(##,3,:),last(##,:)),Experience check: rolled [elements(##,2,:)],u(%!/FUN`TRAIT`LABEL,first(##,:)))}}; &BRP`MARKS %q<sheet_who>; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s experience checks: [itemize(iter(%q<improve_res>,u(%!/FUN`DISPLAY`IMPROVED,%i0),%b,|),|)].,ok); @if comp(%q<sheet_who>,%q<viewer_objid>)={@pemit %q<sheet_who>=notice(SHEET,[name(%#)] rolls your experience checks: [itemize(iter(%q<improve_res>,u(%!/FUN`DISPLAY`IMPROVED,%i0),%b,|),|)].)}
+          @include/args %!/INC`NEED`TARGET=name,firstof(%q<cmd_argument>,%#); @include %!/INC`NEED`OWNSHEET; @assert cor(%q<viewer_keeper>,isapproved(%#))=@pemit %#=notice(SHEET,Experience checks are rolled after approval.,warn); @include %!/INC`NEED`ROOM; think setq(improve_marks,get(%q<sheet_who>/BRP`MARKS)); @assert words(%q<improve_marks>)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has no experience checks marked. A successful roll on a skill marks one.,warn); think u(%!/FUN`BUILD`OF,%q<sheet_who>); think setq(improve_res,iter(%q<improve_marks>,u(%!/FUN`IMPROVE`ROLL,%i0))); @dolist/inline %q<improve_res>={@if last(##,:)={@include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,improve,key,first(##,:),value,last(##,:),phase,play}}; &BRP`MARKS %q<sheet_who>; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s experience checks: [itemize(iter(%q<improve_res>,u(%!/FUN`DISPLAY`IMPROVED,%i0),%b,|),|)].,ok); @if comp(%q<sheet_who>,%q<viewer_objid>)={@pemit %q<sheet_who>=notice(SHEET,[name(%#)] rolls your experience checks: [itemize(iter(%q<improve_res>,u(%!/FUN`DISPLAY`IMPROVED,%i0),%b,|),|)].)}
         flags: [cmdsyntax]
       # %0 a skill: KEY:roll:percentage:gain, from build_rows and build_chars.
       FUN`IMPROVE`ROLL:
@@ -459,21 +461,26 @@ objects:
         value: |-
           @include/args %!/INC`NEED`TARGET=name,firstof(%q<cmd_argument>,%#); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`LEDGER,%q<sheet_who>)
         flags: [cmdsyntax]
-      # +sheet/log [<name>]: the latest changes to coin and skills, who made them and why.
+      # +sheet/log [<name>]: the latest coin ledger entries, who made them and why.
       INC`SHEET`LOG:
         value: |-
           @include/args %!/INC`NEED`TARGET=name,firstof(%q<cmd_argument>,%#); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`LOG,%q<sheet_who>)
         flags: [cmdsyntax]
+      # +sheet/rebuild <name>: works their coin out again from their ledger, and drops the cached sheet.
+      INC`SHEET`REBUILD:
+        value: |-
+          @include %!/INC`NEED`KEEPER; @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/rebuild <name> works out their coin again from their ledger.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>; @include/args %!/INC`DO`ROOT=who,%q<sheet_who>; think u(%!/FUN`BOOK`REBUILD,%q<sheet_who>); @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s coin is worked out again from the ledger: [default(%q<sheet_who>/BRP`COIN,0)].,ok)
+        flags: [cmdsyntax]
       # +sheet/revoke <name>/<n>: takes back one entry.
       INC`SHEET`REVOKE:
         value: |-
-          @include %!/INC`NEED`KEEPER; @include %!/INC`NEED`WHO; @include %!/INC`NEED`ROOM; think setq(revoke_row,grab(u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%q<sheet_who>)),%q<sheet_what>~*)); @assert cand(isint(%q<sheet_what>),strlen(%q<revoke_row>))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has no entry '%q<sheet_what>' in force. +sheet/ledger [name(%q<sheet_who>)] lists them.,warn); @include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,revoke,key,,value,%q<sheet_what>,phase,staff; @pemit %#=notice(SHEET,Revoked [name(%q<sheet_who>)]'s entry %q<sheet_what>: [u(%!/FUN`DISPLAY`ENTRY,%q<revoke_row>)].,ok)
+          @include %!/INC`NEED`KEEPER; @include %!/INC`NEED`WHO; @include %!/INC`NEED`ROOM; think setq(revoke_row,grab(u(%!/FUN`LEDGER`MERGED,%q<sheet_who>),%q<sheet_what>~*)); @assert cand(isint(%q<sheet_what>),strlen(%q<revoke_row>))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has no entry '%q<sheet_what>' in force. +sheet/ledger [name(%q<sheet_who>)] lists them.,warn); @include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,revoke,key,,value,%q<sheet_what>,phase,staff; @pemit %#=notice(SHEET,Revoked [name(%q<sheet_who>)]'s entry %q<sheet_what>: [u(%!/FUN`DISPLAY`ENTRY,%q<revoke_row>)].,ok)
         flags: [cmdsyntax]
       # +sheet/clear <name>: revokes the whole build; character creation starts again. Hit points, power points,
       # coin and experience checks stay.
       INC`SHEET`CLEAR:
         value: |-
-          @include %!/INC`NEED`KEEPER; @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/clear <name> revokes everything on their sheet's ledger.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>; @assert words(u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%q<sheet_who>)))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s sheet has nothing to clear.,warn); @include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,clear,key,,value,,phase,staff; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s build is cleared %(entry %q<entry_n>%). +sheet/chargen [name(%q<sheet_who>)] shows the steps.,ok)
+          @include %!/INC`NEED`KEEPER; @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/clear <name> revokes everything on their sheet's ledger.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>; @assert words(u(%!/FUN`LEDGER`MERGED,%q<sheet_who>))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s sheet has nothing to clear.,warn); @include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,clear,key,,value,,phase,staff; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s build is cleared %(entry %q<entry_n>%). +sheet/chargen [name(%q<sheet_who>)] shows the steps.,ok)
         flags: [cmdsyntax]
       INC`SHEET`TRAITS:
         value: |-
@@ -577,10 +584,10 @@ objects:
           @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>,from,firstof(u(%!/FUN`ENC`ACTIVE,%#),u(%!/FUN`ENC`JOINED,%#)),verb,leave; @assert u(%!/FUN`ENC`MEMBER,%q<viewer_objid>,%q<enc_n>)=@pemit %#=notice(ENCOUNTER,You are not in [u(%!/FUN`ENC`NAME,%q<enc_n>)].,warn); @include/args %!/INC`DO`ENCDROP=who,%q<viewer_objid>,n,%q<enc_n>; @pemit %#=notice(ENCOUNTER,You leave [u(%!/FUN`ENC`NAME,%q<enc_n>)]. Its copy of your sheet is gone.,ok)
         flags: [cmdsyntax]
       # +encounter/keep <name>[=<n>]: the GM writes a character's hit points, power points and coin from the copy
-      # to their sheet, and adds the copy's experience checks to the sheet's. The coin's change is logged.
+      # to their sheet, and adds the copy's experience checks to the sheet's. The coin goes through its ledger.
       INC`ENCOUNTER`KEEP:
         value: |-
-          @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_right_side>,from,u(%!/FUN`ENC`JOINED,%q<sheet_who>),verb,keep <name>=; @include %!/INC`NEED`GM; @include %!/INC`NEED`MEMBER; think setq(keep_path,u(%!/FUN`ENC`PATH,%q<enc_n>,%q<sheet_who>)); think u(%!/FUN`LOG`ADD,%q<sheet_who>,coin,sub(default(%q<keep_path>COIN,0),default(%q<sheet_who>/BRP`COIN,0)),default(%q<keep_path>COIN,0),Kept from encounter [u(%!/FUN`ENC`NAME,%q<enc_n>)],); think [u(%!/FUN`API`ROOT,%q<sheet_who>)][iter(u(%!/FUN`PLAY`LEAVES),u(%!/FUN`SETLEAF,%q<sheet_who>/BRP`%i0,get(%q<keep_path>%i0)))][u(%!/FUN`SETLEAF,%q<sheet_who>/BRP`MARKS,setunion(get(%q<sheet_who>/BRP`MARKS),get(%q<keep_path>MARKS)))]; @pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)]'s sheet keeps the hit points%, power points%, coin and experience checks from [u(%!/FUN`ENC`NAME,%q<enc_n>)].,ok); @pemit %q<sheet_who>=notice(ENCOUNTER,[name(%#)] writes your hit points%, power points%, coin and experience checks from [u(%!/FUN`ENC`NAME,%q<enc_n>)] to your sheet.)
+          @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_right_side>,from,u(%!/FUN`ENC`JOINED,%q<sheet_who>),verb,keep <name>=; @include %!/INC`NEED`GM; @include %!/INC`NEED`MEMBER; think setq(keep_path,u(%!/FUN`ENC`PATH,%q<enc_n>,%q<sheet_who>)); think u(%!/FUN`BOOK`ADD,%q<sheet_who>,MONEY,sub(default(%q<keep_path>COIN,0),default(%q<sheet_who>/BRP`COIN,0)),Kept from encounter [u(%!/FUN`ENC`NAME,%q<enc_n>)]); think [u(%!/FUN`API`ROOT,%q<sheet_who>)][iter(setdiff(u(%!/FUN`PLAY`LEAVES),COIN),u(%!/FUN`SETLEAF,%q<sheet_who>/BRP`%i0,get(%q<keep_path>%i0)))][u(%!/FUN`SETLEAF,%q<sheet_who>/BRP`MARKS,setunion(get(%q<sheet_who>/BRP`MARKS),get(%q<keep_path>MARKS)))]; @pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)]'s sheet keeps the hit points%, power points%, coin and experience checks from [u(%!/FUN`ENC`NAME,%q<enc_n>)].,ok); @pemit %q<sheet_who>=notice(ENCOUNTER,[name(%#)] writes your hit points%, power points%, coin and experience checks from [u(%!/FUN`ENC`NAME,%q<enc_n>)] to your sheet.)
         flags: [cmdsyntax]
       # +encounter/end [<n>]: the GM ends it; every copy goes.
       INC`ENCOUNTER`END:
@@ -623,7 +630,7 @@ objects:
       # A chargen entry rewrites the chargen entry in force of the same kind and key.
       FUN`ENTRY`ADD:
         value: |-
-          setq(ea_n,if(strmatch(%4,chargen),u(%!/FUN`LEDGER`CHARGENOF,%0,%1,%2)))[setq(ea_n,firstof(%q<ea_n>,inc(lmax(0 [iter(lattr(%0/BRP`LEDGER`*),last(%i0,`))]))))][u(%!/FUN`API`ROOT,%0)][attrib_set(%0/BRP`LEDGER`%q<ea_n>,json(object,n,%q<ea_n>,kind,json(string,%1),key,json(string,%2),value,json(string,%3),phase,json(string,%4),by,json(string,objid(%#)),at,secs()))][set(%0/BRP`LEDGER`%q<ea_n>,wizard)]%q<ea_n>
+          setq(ea_n,if(strmatch(%4,chargen),u(%!/FUN`LEDGER`CHARGENOF,%0,%1,%2)))[setq(ea_n,firstof(%q<ea_n>,inc(lmax(0 [iter(lattr(%0/BRP`LEDGER`*),last(%i0,`))]))))][u(%!/FUN`API`ROOT,%0)][attrib_set(%0/BRP`LEDGER`%q<ea_n>,json(object,n,%q<ea_n>,kind,json(string,%1),key,json(string,%2),value,json(string,%3),phase,json(string,%4),by,json(string,objid(%#)),at,secs()))][set(%0/BRP`LEDGER`%q<ea_n>,wizard)][if(hasattr(%0/BRP`MERGED),attrib_set(%0/BRP`MERGED))]%q<ea_n>
         flags: [funsyntax]
       # %<who> joins encounter %<n> with a copy of their sheet: hit points, power points and coin. Its experience
       # checks start empty. It goes last in their BRP`ENCOUNTERS.
@@ -670,11 +677,11 @@ objects:
           setq(pset_path,u(%!/FUN`PATH,%0,%3))[if(strmatch(%q<pset_path>,*/BRP`),u(%!/FUN`API`ROOT,%0))][u(%!/FUN`SETLEAF,%q<pset_path>%1,%2)]
         flags: [funsyntax]
       # %0 a character, %1 coin to give (or take, below 0), %2 1 for the sheet itself, %3 why. Never below 0. A
-      # change to the sheet itself goes in the log; a copy's waits for /keep. Returns the new count.
+      # change to the sheet itself is a coin ledger entry; a copy's waits for /keep. Returns the new count.
       FUN`COIN`ADD:
         value: |-
           setqm(coinadd_old,firstof(u(%!/FUN`P,%0,COIN,%2),0),
-          coinadd_live,cor(%2,not(strlen(u(%!/FUN`ENC`ACTIVE,%0)))))[setq(coinadd_new,max(0,add(%q<coinadd_old>,%1)))][u(%!/FUN`PSET,%0,COIN,if(%q<coinadd_new>,%q<coinadd_new>),%2)][if(%q<coinadd_live>,u(%!/FUN`LOG`ADD,%0,coin,sub(%q<coinadd_new>,%q<coinadd_old>),%q<coinadd_new>,%3,))]%q<coinadd_new>
+          coinadd_live,cor(%2,not(strlen(u(%!/FUN`ENC`ACTIVE,%0)))))[setq(coinadd_new,max(0,add(%q<coinadd_old>,%1)))][if(%q<coinadd_live>,u(%!/FUN`BOOK`ADD,%0,MONEY,sub(%q<coinadd_new>,%q<coinadd_old>),%3),u(%!/FUN`PSET,%0,COIN,if(%q<coinadd_new>,%q<coinadd_new>),%2))]%q<coinadd_new>
         flags: [funsyntax]
       # %0 a character, %1 HP or PP, %2 1 for the sheet itself: what they have left where they play now. Unset is
       # the most.
@@ -709,7 +716,7 @@ objects:
       # %0 a character, %1 a kind, %2 a key: the number of the chargen entry in force that matches.
       FUN`LEDGER`CHARGENOF:
         value: |-
-          first(iter(revwords(graball(u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%0)),*~%1~%2~*~chargen~*)),first(%i0,~)))
+          first(iter(revwords(graball(u(%!/FUN`LEDGER`MERGED,%0),*~%1~%2~*~chargen~*)),first(%i0,~)))
         flags: [funsyntax]
 
       # ---- the build --------------------------------------------------------------
@@ -718,7 +725,7 @@ objects:
       # %0 a character: build_rows and build_chars.
       FUN`BUILD`OF:
         value: |-
-          u(%!/FUN`BUILD`ROWS,u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%0)))
+          u(%!/FUN`BUILD`ROWS,u(%!/FUN`LEDGER`MERGED,%0))
         flags: [funsyntax]
       # %0 rows in force: build_rows and build_chars.
       FUN`BUILD`ROWS:
@@ -949,14 +956,79 @@ objects:
           if(isdbref(setr(found_player,pmatch(%0))),objid(%q<found_player>))
         flags: [funsyntax]
 
-      # ---- the log ----------------------------------------------------------------
-      # Every change to coin on the sheet itself, and every skill gain from an experience check or a reward, is
-      # BRP`LOG`<n>: a JSON object with n, kind (coin or improve), delta, total (after), item (the skill), reason,
-      # by (an objid) and at (secs). Each has the wizard attribute flag; past DATA`LOG`MAX the oldest goes.
-      # %0 a character, %1 the kind, %2 the change, %3 the total after, %4 why, %5 the item. Nothing when %2 is 0.
-      FUN`LOG`ADD:
+      # ---- the XP and money ledgers --------------------------------------------------------
+      # Each book is its own ledger, apart from the sheet's: BRP`<BOOK>LEDGER`<n>, a JSON object with n, delta,
+      # total (the running total after it), item and label (what it counts, when the book counts more than one
+      # thing), reason, by (an objid) and at (secs), with the wizard attribute flag. The totals on the sheet are a
+      # cache of the latest entry's total: FUN`BOOK`ADD is the only thing that writes either, and +sheet/rebuild
+      # works every cache out again from the ledgers.
+      # %0 a book, %1 an item: the attribute holding its cached total.
+      FUN`BOOK`CACHE:
         value: |-
-          if(%2,[setq(log_n,inc(lmax(0 [iter(lattr(%0/BRP`LOG`*),last(%i0,`))])))][u(%!/FUN`API`ROOT,%0)][attrib_set(%0/BRP`LOG`%q<log_n>,json(object,n,%q<log_n>,kind,json(string,%1),delta,%2,total,firstof(%3,0),item,json(string,%5),reason,json(string,left(%4,200)),by,json(string,objid(%#)),at,secs()))][set(%0/BRP`LOG`%q<log_n>,wizard)][iter(lnum(max(0,sub(words(lattr(%0/BRP`LOG`*)),get(%!/DATA`LOG`MAX)))),attrib_set(%0/BRP`LOG`[first(sort(iter(lattr(%0/BRP`LOG`*),last(%i0,`)),n))]))])
+          BRP`COIN
+        flags: [funsyntax]
+      # %0 a book: 1 when its cache keeps the item's label with the total, as <total>|<label>.
+      FUN`BOOK`LABELLED:
+        value: |-
+          0
+        flags: [funsyntax]
+      # %0 a character, %1 a book: the numbers of its entries, oldest first.
+      FUN`BOOK`NUMS:
+        value: |-
+          sort(iter(lattr(%0/BRP`%1LEDGER`*),if(hasflag(%0/%i0,wizard),last(%i0,`))),n)
+        flags: [funsyntax]
+      # %0 a character, %1 a book, %2 the change, %3 why, %4 the item, %5 its label: a new entry, then the cached
+      # total. Nothing for no change.
+      FUN`BOOK`ADD:
+        value: |-
+          if(%2,[setqm(book_cache,u(%!/FUN`BOOK`CACHE,%1,%4),book_n,inc(lmax(0 [iter(lattr(%0/BRP`%1LEDGER`*),last(%i0,`))])))][setq(book_had,get(%0/%q<book_cache>))][setqm(book_total,add(firstof(before(%q<book_had>,|),0),%2),book_label,firstof(%5,after(%q<book_had>,|)))][u(%!/FUN`API`ROOT,%0)][attrib_set(%0/BRP`%1LEDGER`%q<book_n>,json(object,n,%q<book_n>,delta,%2,total,%q<book_total>,item,json(string,%4),label,json(string,%q<book_label>),reason,json(string,left(%3,200)),by,json(string,objid(%#)),at,secs()))][set(%0/BRP`%1LEDGER`%q<book_n>,wizard)][u(%!/FUN`BOOK`SET,%0,%q<book_cache>,%q<book_total>,if(u(%!/FUN`BOOK`LABELLED,%1),%q<book_label>))][u(%!/FUN`BOOK`TRIM,%0,%1)])
+        flags: [funsyntax]
+      # %0 a character, %1 a cache attribute, %2 the total, %3 a label: writes the cache; 0 removes it.
+      FUN`BOOK`SET:
+        value: |-
+          if(%2,[attrib_set(%0/%1,if(strlen(%3),%2|%3,%2))][set(%0/%1,wizard)],if(hasattr(%0/%1),attrib_set(%0/%1)))
+        flags: [funsyntax]
+      # %0 a character, %1 a book: past DATA`LOG`MAX entries, the oldest one a later entry for the same item
+      # replaces goes, so the latest entry for each item, and with it every total, always stays.
+      FUN`BOOK`TRIM:
+        value: |-
+          setqm(bt_drop,,bt_nums,sort(iter(lattr(%0/BRP`%1LEDGER`*),last(%i0,`)),n))[if(gt(words(%q<bt_nums>),get(%!/DATA`LOG`MAX)),setq(bt_drop,first(iter(extract(%q<bt_nums>,1,50),if(gt(words(grep(%0,BRP`%1LEDGER`*,"item":"[json_query(get(%0/BRP`%1LEDGER`%i0),extract,$.item)]")),1),%i0)))))][if(strlen(%q<bt_drop>),attrib_set(%0/BRP`%1LEDGER`%q<bt_drop>))]
+        flags: [funsyntax]
+      # %0 a character, %1 a book, %2 an item: its latest entry.
+      FUN`BOOK`LAST:
+        value: |-
+          setq(bl_n,last(iter(u(%!/FUN`BOOK`NUMS,%0,%1),if(not(comp(json_query(get(%0/BRP`%1LEDGER`%i0),extract,$.item),%2)),%i0))))[if(strlen(%q<bl_n>),get(%0/BRP`%1LEDGER`%q<bl_n>))]
+        flags: [funsyntax]
+      # %0 a character, %1 a book, %2 an item: writes its cache from its latest entry.
+      FUN`BOOK`REBUILDITEM:
+        value: |-
+          setq(br_last,u(%!/FUN`BOOK`LAST,%0,%1,%2))[u(%!/FUN`BOOK`SET,%0,u(%!/FUN`BOOK`CACHE,%1,%2),if(strlen(%q<br_last>),json_query(%q<br_last>,extract,$.total),0),if(cand(strlen(%q<br_last>),u(%!/FUN`BOOK`LABELLED,%1)),json_query(%q<br_last>,extract,$.label)))]
+        flags: [funsyntax]
+      # %0 a character, %1 a book: the items it has entries for.
+      FUN`BOOK`ITEMS:
+        value: |-
+          setunion(iter(u(%!/FUN`BOOK`NUMS,%0,%1),json_query(get(%0/BRP`%1LEDGER`%i0),extract,$.item)),)
+        flags: [funsyntax]
+      # %0 a character, %1 a book, %2 its title, %3 its unit (after the item's label), %4 how many: the
+      # latest entries, oldest first.
+      FUN`SCREEN`BOOK:
+        value: |-
+          setq(sb_nums,u(%!/FUN`BOOK`NUMS,%0,%1))[setq(sb_nums,extract(%q<sb_nums>,max(1,sub(words(%q<sb_nums>),dec(%4))),%4))][tone(strong,%2)]%r[if(words(%q<sb_nums>),ldatatable(lit({"nowrap":"1|2|3|4|6","grow":"||||1"}),#|When|Change|>Total|Why|By,iter(%q<sb_nums>,u(%!/FUN`DISPLAY`BOOKROW,get(%0/BRP`%1LEDGER`%i0),%3),%b,%*<^>),%*<^>),tone(muted,Nothing yet.))]
+        flags: [funsyntax]
+      FUN`DISPLAY`BOOKROW:
+        value: |-
+          [json_query(%0,extract,$.n)]|[timefmt($Y-$m-$d,json_query(%0,extract,$.at))]|[u(%!/FUN`DISPLAY`SIGNED,json_query(%0,extract,$.delta))] [trim([json_query(%0,extract,$.label)] %1)]|[json_query(%0,extract,$.total)]|[firstof(json_query(%0,extract,$.reason),-)]|[name(json_query(%0,extract,$.by))]
+        flags: [funsyntax]
+      # %0 a character: the sheet's ledger merged, the rows in force. Kept as a cache in BRP`MERGED once worked
+      # out; every ledger write drops it.
+      FUN`LEDGER`MERGED:
+        value: |-
+          if(cand(hasattr(%0/BRP`MERGED),hasflag(%0/BRP`MERGED,wizard)),get(%0/BRP`MERGED),[setq(lm_rows,u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%0)))][if(cand(words(%q<lm_rows>),hasattr(%0,BRP)),null([attrib_set(%0/BRP`MERGED,%q<lm_rows>)][set(%0/BRP`MERGED,wizard)]))]%q<lm_rows>)
+        flags: [funsyntax]
+      # %0 a character: every cache worked out again from the ledgers.
+      FUN`BOOK`REBUILD:
+        value: |-
+          [if(hasattr(%0/BRP`MERGED),attrib_set(%0/BRP`MERGED))][u(%!/FUN`BOOK`REBUILDITEM,%0,MONEY,)]
         flags: [funsyntax]
       FUN`API`ROOT:
         value: |-
@@ -1027,10 +1099,10 @@ objects:
         value: |-
           setq(ledgerrow_on,cor(member(%q<ledger_live>,%0),match(clear revoke,elements(%0,2,~))))[iter(first(%0,~)|[u(%!/FUN`DISPLAY`ENTRY,%0)]|[elements(%0,5,~)]|[name(elements(%0,6,~))],if(%q<ledgerrow_on>,%i0,tone(muted,%i0)),|,|)]
         flags: [funsyntax]
-      # %0 the character: the latest 30 log entries, oldest first.
+      # %0 the character: the latest 30 coin ledger entries, oldest first.
       FUN`SCREEN`LOG:
         value: |-
-          setq(log_nums,sort(iter(lattr(%0/BRP`LOG`*),if(hasflag(%0/%i0,wizard),last(%i0,`))),n))[setq(log_nums,extract(%q<log_nums>,max(1,sub(words(%q<log_nums>),29)),30))][box(if(words(%q<log_nums>),ldatatable(lit({"nowrap":"1|2|3|4|6","grow":"||||1"}),#|When|Change|>Now|Why|By,iter(%q<log_nums>,u(%!/FUN`DISPLAY`LOGROW,get(%0/BRP`LOG`%i0)),%b,%*<^>),%*<^>),Nothing is logged yet.)%r[rule()]%r[tone(muted,Every change to coin on the sheet itself%, and every skill gain%, with who made it.)],Log: [name(%0)])]
+          box([u(%!/FUN`SCREEN`BOOK,%0,MONEY,Coin,coin,30)]%r[rule()]%r[tone(muted,Every change to coin on the sheet itself%, with who made it. Skill gains are on +sheet/ledger.)],Ledger: [name(%0)])
         flags: [funsyntax]
       # %0 the encounters here, %1 the ones %2 is in.
       FUN`SCREEN`ENCOUNTERS:
@@ -1046,10 +1118,6 @@ objects:
       FUN`DISPLAY`ENTRY:
         value: |-
           setqm(entry_kind,elements(%0,2,~),entry_key,elements(%0,3,~),entry_value,elements(%0,4,~))[switch(%q<entry_kind>,char,[u(%!/FUN`TRAIT`NAME,%q<entry_key>)] [firstof(%q<entry_value>,unassigned)],skill,[u(%!/FUN`TRAIT`NAME,%q<entry_key>)]: %q<entry_value> points,improve,[u(%!/FUN`TRAIT`NAME,%q<entry_key>)] +%q<entry_value>%% %(experience%),revoke,Revokes entry %q<entry_value>,clear,Clears everything before it,%q<entry_kind>)]
-        flags: [funsyntax]
-      FUN`DISPLAY`LOGROW:
-        value: |-
-          setqm(lr_kind,json_query(%0,extract,$.kind),lr_delta,json_query(%0,extract,$.delta))[json_query(%0,extract,$.n)]|[timefmt($Y-$m-$d,json_query(%0,extract,$.at))]|[u(%!/FUN`DISPLAY`SIGNED,%q<lr_delta>)][switch(%q<lr_kind>,coin,%bcoin,improve,%% [json_query(%0,extract,$.item)],%b[json_query(%0,extract,$.item)])]|[json_query(%0,extract,$.total)][if(strmatch(%q<lr_kind>,improve),%%)]|[firstof(json_query(%0,extract,$.reason),-)]|[name(json_query(%0,extract,$.by))]
         flags: [funsyntax]
       # %0 an encounter, %1 who reads it.
       FUN`SCREEN`ENCOUNTER:
@@ -1069,7 +1137,7 @@ objects:
       # ---- the sheet API ----------------------------------------------------------
       # What other packages call: u({{sheet-brp/sheet}}/API`<NAME>,...). Every sheet package has these names.
       # They read the character's sheet itself, never an encounter's copy. They read and roll; API`RAISE,
-      # API`HEAL and API`AWARD are the ones that write, and API`RAISE and API`AWARD go in the log.
+      # API`HEAL and API`AWARD are the ones that write, API`RAISE is a sheet ledger entry and API`AWARD a coin ledger entry.
       API:
         value: |-
           The percentile sheet's functions for other packages. See the package README.
@@ -1123,10 +1191,10 @@ objects:
           switch(%0,fumble,crit-fail,critical,crit-success,special,success,success,success,automatic,success,failure,fail)
         flags: [VISUAL]
       # %0 a character, %1 a skill, %2 percent to add, %3 why (Reward when empty): a ledger entry that raises it,
-      # never past 999, logged. Returns the new percentage.
+      # never past 999. Returns the new percentage.
       API`RAISE:
         value: |-
-          setqm(raise_key,ucstr(u(%!/FUN`TRAIT`FIND,%1)),raise_old,u(%!/API`RATING,%0,%1))[setq(raise_new,min(999,max(0,add(%q<raise_old>,%2))))][if(cand(strmatch(u(%!/FUN`TRAIT`KIND,%q<raise_key>),SKILL),hasattr({{store}},SKILL`%q<raise_key>),neq(%q<raise_new>,%q<raise_old>)),null(u(%!/FUN`ENTRY`ADD,%0,improve,%q<raise_key>,sub(%q<raise_new>,%q<raise_old>),play))[u(%!/FUN`LOG`ADD,%0,improve,sub(%q<raise_new>,%q<raise_old>),%q<raise_new>,firstof(%3,Reward),u(%!/FUN`TRAIT`LABEL,%q<raise_key>))])]%q<raise_new>
+          setqm(raise_key,ucstr(u(%!/FUN`TRAIT`FIND,%1)),raise_old,u(%!/API`RATING,%0,%1))[setq(raise_new,min(999,max(0,add(%q<raise_old>,%2))))][if(cand(strmatch(u(%!/FUN`TRAIT`KIND,%q<raise_key>),SKILL),hasattr({{store}},SKILL`%q<raise_key>),neq(%q<raise_new>,%q<raise_old>)),null(u(%!/FUN`ENTRY`ADD,%0,improve,%q<raise_key>,sub(%q<raise_new>,%q<raise_old>),play)))]%q<raise_new>
         flags: [VISUAL]
       # %0 a character, %1 HP or PP: the most they hold.
       API`MOST:
@@ -1149,8 +1217,8 @@ objects:
         value: |-
           default(%0/BRP`COIN,0)
         flags: [VISUAL]
-      # %0 a character, %1 coin to give (or take, below 0), %2 why (Reward when empty): writes it to their sheet,
-      # never below 0, logs it, and returns the new count.
+      # %0 a character, %1 coin to give (or take, below 0), %2 why (Reward when empty): a coin ledger entry on
+      # their sheet, never below 0; returns the new count.
       API`AWARD:
         value: |-
           u(%!/FUN`COIN`ADD,%0,%1,1,firstof(%2,Reward))
@@ -1593,7 +1661,7 @@ objects:
         - `+sheet/hp -<n>` loses hit points, `+<n>` gets some back, `<n>` sets them, `full` fills them. `+sheet/pp` does the same for power points.
         - `+sheet/coin -<n> [<reason>]` spends coin: `+sheet/coin -20 Train ticket`. Staff give it.
 
-        A successful `+check` on a skill marks it for an experience check. Once you are approved, `+sheet/improve` rolls 1d100 for each marked skill: over its percentage, it rises by 1d6, unless your game changed the die. The marks clear. `+sheet/log` lists every change to your coin and every skill gain, who made it and why.
+        A successful `+check` on a skill marks it for an experience check. Once you are approved, `+sheet/improve` rolls 1d100 for each marked skill: over its percentage, it rises by 1d6, unless your game changed the die. The marks clear. Each gain is an entry on `+sheet/ledger`. `+sheet/log` shows your coin ledger, every change with who made it and why.
 
         In an encounter, hit points, power points, coin and marks change your copy there. See `+help encounter`.
 
@@ -1662,7 +1730,7 @@ objects:
         - `/set` takes `<name>/` first: `+sheet/set Alice/dodge=80`. A keeper sets a characteristic up to 99 and a skill up to 999%, without points.
         - `/hp`, `/pp` and `/coin` take `<name>=` first: `+sheet/coin Alice=+50 Inheritance`.
         - `+sheet/mark <name>/<skill>` marks an experience check; `=remove` takes it off. `+sheet/improve <name>` rolls their checks.
-        - `+sheet/log <name>` lists every change to their coin and every skill gain, with who made it and why.
+        - `+sheet/log <name>` shows their coin ledger; `+sheet/rebuild <name>` works their coin out again from it.
         - `+sheet/revoke <name>/<n>` takes back one ledger entry; `+sheet/clear <name>` revokes them all, and character creation starts again.
         - Keepers run any encounter.
 

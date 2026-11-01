@@ -38,7 +38,8 @@ one sheet package per game.
 | `+sheet/ledger [<name>]` | all | Every entry the sheet is built from |
 | `+sheet/revoke <name>/<n>`, `+sheet/clear <name>` | keeper | Take back one entry, or the whole build so character creation starts again |
 | `+sheet/xp <name>=<n> [<reason>]` | keeper | Set XP, or `=+<n>`/`=-<n>` to add or take |
-| `+sheet/log [<name>]` | all | The latest 30 changes to XP, coin and gear: how much, the total after, why, and who |
+| `+sheet/log [<name>]` | all | The latest 10 entries of the XP, coin and gear ledgers: how much, the total after, why, and who. `[<name>=]xp`, `coin` or `gear` shows 30 of one |
+| `+sheet/rebuild <name>` | keeper | Works their XP, coin and gear out again from their ledgers |
 | `+sheet/traits` | all | Every trait, its key, and what it adds |
 | `+check[/private][/advantage\|/disadvantage] <trait>[+<n>\|-<n>][=<DC or difficulty>]` | all | Roll 1d20 plus the trait for the room: `Alice checks Athletics: 1d20[13] + 6 = 19 vs DC 15: success (roll 13)` |
 | `+encounter [<n>]` | all | The encounters here and yours, or one |
@@ -85,14 +86,23 @@ Every entry also has `n`, `phase` (`chargen`, `play` or `staff`), `by` (an objid
 approval a player's change rewrites their own `chargen` entry of the same kind and key; every other change
 is a new entry. A ledger holds at most 200 entries.
 
-## The log
+## The XP and money ledgers
 
-Every change to XP, and to the coin and gear on the sheet itself, is an entry in the character's log,
-`D20`LOG`<n>`, with the `wizard` attribute flag: `kind` (`xp`, `coin` or `gear`), `delta`, `total` after,
-`item` (gear's name), `reason`, `by` and `at`. A keeper's `/xp`, `/coin` and `/gear` take a reason after the
-number; an advance logs the XP it spends, `API`COIN` and `API`GEAR` (Duties rewards) log `Reward`, and
-`/keep` logs how the encounter's copy differs from the sheet. Changes to an encounter's copy are not logged
-until they are kept. A log keeps the latest 500 entries.
+XP, coin and gear each have a ledger of their own, apart from the sheet's: `D20`XPLEDGER`<n>`,
+`D20`MONEYLEDGER`<n>` and `D20`GEARLEDGER`<n>`, each entry with the `wizard` attribute flag: `n`, `delta`,
+`total` (the running total after it), `item` and `label` (gear's key and name), `reason`, `by` and `at`. A
+keeper's `/xp`, `/coin` and `/gear` take a reason after the number; an advance records the XP it spends,
+`API`COIN` and `API`GEAR` (Duties rewards) record `Reward`, and `/keep` records how the encounter's copy
+differs from the sheet. Changes to an encounter's copy are entered only when they are kept. Each ledger
+keeps 500 entries; past that, the oldest entry that a later one for the same item replaces goes, so every
+latest total stays.
+
+## Caches
+
+`D20`XP`, `D20`COIN` and `D20`GEAR`<KEY>` hold the latest entry's total, and `D20`MERGED` the sheet ledger's
+entries in force, once something has worked them out. Only ledger writes touch a cache: a new entry rewrites
+its total, and a sheet ledger entry drops `D20`MERGED` until the next read. `+sheet/rebuild <name>`
+(keepers) works every cache out again from the ledgers.
 
 ## Encounters
 
@@ -110,11 +120,14 @@ The Duties provider and every `API`` function always use the sheet itself.
 ```
 D20                 the root: wizard, no_command
 D20`LEDGER`<n>      a ledger entry
+D20`MERGED          cache: the ledger entries in force
 D20`DAMAGE          hit points lost
-D20`COIN            the coin
-D20`GEAR`<KEY>      an item: <count>|<name>, the key its name in upper case
-D20`XP              experience
-D20`LOG`<n>         a log entry
+D20`XPLEDGER`<n>    an XP ledger entry
+D20`MONEYLEDGER`<n> a coin ledger entry
+D20`GEARLEDGER`<n>  a gear ledger entry
+D20`XP              cache: experience
+D20`COIN            cache: the coin
+D20`GEAR`<KEY>      cache: an item, <count>|<name>, the key its name in upper case
 D20`ENCOUNTERS      the encounters they are in, in the order they joined
 D20`USING           the encounter /use picked
 ```

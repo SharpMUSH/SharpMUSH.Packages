@@ -38,7 +38,8 @@ one sheet package per game.
 | `+sheet/ledger [<name>]` | all | Every entry the sheet is built from |
 | `+sheet/revoke <name>/<n>`, `+sheet/clear <name>` | keeper | Take back one entry, or the whole build so character creation starts again |
 | `+sheet/xp <name>=<n> [<reason>]` | keeper | Set XP, or `=+<n>`/`=-<n>` to add or take |
-| `+sheet/log [<name>]` | all | The latest 30 changes to XP: how much, the total after, why, and who |
+| `+sheet/log [<name>]` | all | The latest 30 XP ledger entries: how much, the total after, why, and who |
+| `+sheet/rebuild <name>` | keeper | Works their XP out again from their ledger |
 | `+sheet/traits` | all | Every move, what it rolls with, and the stats |
 | `+sheet/move <move>` | all | One move's whole text |
 | `+check[/private] <move>[/<stat>][+<n>\|-<n>][=<difficulty>]` | all | Make a move: `Alice rolls Defy Danger (+Dex): 2d6[3, 5] + 1 = 9: a partial hit (roll 7)`, then what the move says for a partial hit |
@@ -83,12 +84,20 @@ move removes its entry; every other change is a new entry. A ledger holds at mos
 The sheet is the playbook's starting moves, every basic move (no `PLAYBOOK`), and the moves taken, with each
 stat's base plus its boosts.
 
-## The log
+## The XP ledger
 
-Every change to XP is an entry in the character's log, `PBTA`LOG`<n>`, with the `wizard` attribute flag:
-`kind` (`xp`), `delta`, `total` after, `reason`, `by` and `at`. A keeper's `/xp` takes a reason after the
-number; an advance logs the XP it spends, and `API`AWARD` (a Duties reward) logs `Reward`. A log keeps the
-latest 500 entries.
+XP has a ledger of its own, apart from the sheet's: `PBTA`XPLEDGER`<n>`, each entry with the `wizard`
+attribute flag: `n`, `delta`, `total` (the running total after it), `item` and `label` (both empty),
+`reason`, `by` and `at`. A keeper's `/xp` takes a reason after the number; an advance records the XP it
+spends, and `API`AWARD` (a Duties reward) records `Reward`. The ledger keeps 500 entries; past that, the
+oldest goes, and the latest total always stays.
+
+## Caches
+
+`PBTA`XP` holds the latest entry's total, and `PBTA`MERGED` the sheet ledger's entries in force, once
+something has worked them out. Only ledger writes touch a cache: a new entry rewrites its total, and a sheet
+ledger entry drops `PBTA`MERGED` until the next read. `+sheet/rebuild <name>` (keepers) works every cache
+out again from the ledgers.
 
 ## Encounters
 
@@ -109,8 +118,9 @@ PBTA`LEDGER`<n>     a ledger entry
 PBTA`FORWARD        forward, spent by the next roll
 PBTA`ONGOING        ongoing
 PBTA`HOLD           hold, MOVE=n pairs
-PBTA`XP             experience
-PBTA`LOG`<n>        a log entry
+PBTA`MERGED         cache: the ledger entries in force
+PBTA`XPLEDGER`<n>   an XP ledger entry
+PBTA`XP             cache: experience
 PBTA`ENCOUNTERS     the encounters they are in, in the order they joined
 PBTA`USING          the encounter /use picked
 ```

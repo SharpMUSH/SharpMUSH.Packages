@@ -20,10 +20,11 @@ unless your game changed the die. The marks then clear, whatever the rolls.
 
 Staff can mark a skill by hand, or take a mark off.
 
-## The log
+## The coin ledger
 
-`+sheet/log` lists every change to your coin and every skill gain: how much, what you had after, why, and who
-made it. Changes in an encounter appear when its GM keeps them.
+Coin has a ledger of its own, apart from the ledger your sheet is built from. `+sheet/log` lists every change
+to your coin: how much, what you had after, why, and who made it. Changes in an encounter appear when its GM
+keeps them. Skill gains are entries on the sheet's ledger.
 
 ## The ledger
 
