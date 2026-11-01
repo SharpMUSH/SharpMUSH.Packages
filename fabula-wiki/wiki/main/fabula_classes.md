@@ -1,4 +1,6 @@
-The fifteen classes of the Core Rulebook, and what each class's first level gives. A game can add the classes of other books.
+The classes of the Core Rulebook, the three Atlases and the two bonus classes, and what each class's first level gives. A game can add more.
+
+## Core Rulebook
 
 | Class | First level gives |
 |---|---|
@@ -18,7 +20,40 @@ The fifteen classes of the Core Rulebook, and what each class's first level give
 | Wayfarer | +2 IP |
 | Weaponmaster | +5 HP, martial melee weapons and martial shields |
 
-Each class's skills are in the Core Rulebook. `+sheet/traits` lists the classes this game knows.
+## High Fantasy Atlas
+
+| Class | First level gives |
+|---|---|
+| Chanter | +5 MP |
+| Commander | +5 HP, martial melee weapons and martial ranged weapons |
+| Dancer | +5 HP or MP |
+| Symbolist | +2 IP |
+
+## Techno Fantasy Atlas
+
+| Class | First level gives |
+|---|---|
+| Esper | +5 MP |
+| Mutant | +5 HP |
+| Pilot | +5 HP, martial melee weapons and martial ranged weapons |
+
+## Natural Fantasy Atlas
+
+| Class | First level gives |
+|---|---|
+| Floralist | +5 HP or MP |
+| Gourmet | +2 IP |
+| Invoker | +5 HP or MP |
+| Merchant | +2 IP |
+
+## Bonus classes
+
+| Class | First level gives |
+|---|---|
+| Ace of Cards | +5 HP or MP |
+| Necromancer | +5 HP or MP |
+
+For a class that gives +5 HP or MP, the player picks one with `+sheet/benefit <class>=hp` or `=mp`. Each class's skills are in the book it comes from. `+sheet/traits` lists the classes this game knows.
 
 ---
 

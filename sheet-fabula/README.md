@@ -6,7 +6,10 @@ origin; HP, MP, IP, Fabula Points, experience and zenit; status effects; and bon
 and zenit are a ledger of entries, each with where it came from. `+check` rolls the dice of two attributes against a Difficulty
 Level for the room, keeps the roll, and lets the roller spend Fabula Points to reroll or to add a bond.
 `+encounter` keeps an encounter's own copy of each member's HP, MP, IP and status effects, and runs a
-conflict in turns against foes from a bestiary of the package's own creatures.
+conflict in turns against foes from a bestiary of the package's own creatures, drawn as a battle screen:
+a battlefield of pictures, with text for clients that cannot show them, the foes' and the party's windows
+with HP and MP bars, and the commands of whoever can act. The class list holds the classes of the Core
+Rulebook, the High, Techno and Natural Fantasy Atlases and the two bonus classes.
 
 Requires the Fabula Ultima Core Rulebook. See [NOTICE.md](NOTICE.md) for the licence notice; the
 in-game `+help sheet credits` topic carries it too. The help and messages are this package's own
@@ -32,6 +35,7 @@ Every sheet package answers `+sheet` and `+check`. Install one sheet package per
 | `+sheet [<name>]` | all | Your sheet, or another character's when you may read it |
 | `+sheet/set <attribute>=<die>` | unapproved player | `d6`, `d8`, `d10` or `d12`; unset is d8 |
 | `+sheet/class <class>=<levels>` | unapproved player | 0 to 10; the classes share `start` (5) levels, at most 3 below level 10 |
+| `+sheet/benefit <class>=<hp\|mp>` | player, keeper after approval | For a class whose first level gives +5 HP or MP, which one. A player picks once |
 | `+sheet/skill <class>:<skill>=<level>` | player | One skill level per class level; `heroic:<skill>=1` for each class at 10. Approved players only raise |
 | `+sheet/levelup <class>` | approved player | 10 experience for one more class level, as a ledger entry |
 | `+sheet/raise <attribute>` | player | One die size larger, at level 20 and at 40 |
@@ -54,7 +58,7 @@ Every sheet package answers `+sheet` and `+check`. Install one sheet package per
 | `+check init` | all | Dexterity + Insight with the Initiative bonus |
 | `+check/support <leader>=<attr>+<attr>` | all | A check against 10 that helps the leader's next group check |
 | `+check/group <attr>+<attr>[=<difficulty>]` | all | The leader's check: +1 for each supporter who succeeded, and the strongest of their bonds with the leader |
-| `+encounter [<n>]` | all | The encounter you are in, or the one here, with each member's copy |
+| `+encounter [<n>]` | all | The battle screen of the encounter you are in, or the one here, with each member's copy |
 | `+encounter/start [<title>]` | all | A new encounter in this room, with you as its GM |
 | `+encounter/join [<n>]`, `/leave [<n>]` | all | Take part with a copy of your HP, MP, IP and status effects, or drop it |
 | `+encounter/use [<n>]` | all | Which of your encounters in this room your commands use; nothing for the last joined |
@@ -76,10 +80,11 @@ Every sheet package answers `+sheet` and `+check`. Install one sheet package per
 | `+foe/attack <foe>=<target>[/<attack>]` | GM | One of the foe's attacks, rolled, with its damage on a hit |
 | `+foe/hp`, `/mp <foe>=<+n\|-n\|n>`, `/status <foe>=<effect>\|clear`, `/remove <foe>` | GM | Change a foe's copy, or take it out |
 | `+foe/ultima <foe>=escape\|recover\|invoke` | GM | Spend a villain's Ultima Point |
+| `+foe/picture <foe>=[<address>]`, `/art <foe>=[<text>]` | GM | What the battle screen draws for a foe: a picture (https:// or a site path), and text art for a client that cannot show it |
 | `+sheet/affinity [<name>/]<type>=<vu\|rs\|im\|ab> [<source>]` | all, keeper for others | A build entry for a vulnerability, resistance, immunity or absorption |
 
 Keepers (`softcode.fabula.admin`, the **JRPG Sheet Keeper** role) put `<name>/` before the
-`/set`, `/class`, `/skill`, `/levelup`, `/raise`, `/bonus`, `/buy`, `/revoke` and `/bond` arguments, and use
+`/set`, `/class`, `/benefit`, `/skill`, `/levelup`, `/raise`, `/bonus`, `/buy`, `/revoke` and `/bond` arguments, and use
 `<name>=<value>` with the resources, traits and `/status`. A keeper runs any encounter as its GM. The GM
 changes a member's copy with `+sheet/hp <name>=<value>`, and `/mp`, `/ip`, `/status` and `/rest`, while
 that encounter is the one the member uses.
@@ -96,7 +101,7 @@ that encounter is the one the member uses.
   Dexterity, weak Might, shaken Willpower, enraged Dexterity and Insight, poisoned Might and
   Willpower.
 - Maximum HP is 5 times the base Might die plus the level, maximum MP the same with Willpower, maximum IP 6.
-  Each class that gives HP or MP adds 5, IP 2; `+sheet/bonus` adds the rest. Crisis is half HP or less.
+  Each class that gives HP or MP adds 5, IP 2, and a class that gives either adds 5 to the one picked; `+sheet/bonus` adds the rest. Crisis is half HP or less.
 - Defense is the Dexterity die now, or martial armour's Defense, plus the `def` bonus; Magic Defense the
   Insight die now plus `mdef`; Initiative the `init` bonus.
 - A character has at most 3 classes below level 10 at once.
@@ -133,7 +138,7 @@ that encounter is the one the member uses.
 
 ```
 FABULA                        the root: wizard, no_command
-FABULA`LEDGER`<n>             the build: JSON with kind (die raise class skill bonus), key, n,
+FABULA`LEDGER`<n>             the build: JSON with kind (die raise class skill bonus affinity benefit), key, n,
                               phase (chargen play staff), source, by, at, class, name; wizard-flagged
 FABULA`LEDGER`NEXT            the next entry's number, for all three ledgers
 FABULA`EXPERIENCE`<n>         the experience ledger: JSON with kind xp and the same fields; wizard-flagged
@@ -151,12 +156,13 @@ FABULA`BOND`<KEY>             a bond's name, with EMOTIONS beneath
 FABULA`LAST                   the last check, for the invokes
 FABULA`ATTACK                 the last attack: JSON with at, enc and target
 FABULA`AFFINITY`<TYPE>        vu rs im ab, rebuilt from the build ledger's affinity entries
+FABULA`BENEFIT`<KEY>          for a class that gives +5 HP or MP: 1 for HP, 3 for MP, rebuilt from the benefit entries
 FABULA`SUPPORTS               the supporters of their next group check
 FABULA`ENCOUNTERS             the encounters they are in, last joined last
 FABULA`USING                  the one +encounter/use picked
 ```
 
-`ATTR`, `RAISES`, `CLASS`, `SKILL` and `BONUS` are rebuilt from `LEDGER` after every change. `WALLET` moves
+`ATTR`, `RAISES`, `CLASS`, `SKILL`, `BONUS`, `AFFINITY` and `BENEFIT` are rebuilt from `LEDGER` after every change. `WALLET` moves
 with each new experience or zenit entry and is added up again from its ledger when one is taken off.
 
 **JRPG Encounters** holds the encounters: `` ENC`<n> `` a title, with `ROOM`, `GM`, `AT`, `MEMBERS`
@@ -164,19 +170,30 @@ and each member's `` COPY`<number> `` (their HP, MP, IP and status effects) bene
 `` ROOM`<number> `` the encounters in a room. A conflict adds `ROUND`, `FIRST` and `SIDE` (heroes or
 foes), `TAKEN` (one id per turn taken this round), `GUARD`, `OUT` (who surrendered), `UPSPENT`, and
 `` FOE`<k> ``: a foe's label, with `KEY`, `LEVEL`, `RANK`, `SOLDIERS`, `VILLAIN`, the dice, `HPMAX`,
-`MPMAX`, `HP`, `MP`, `DEFB`, `MDEFB`, `INIT`, `UP`, `AFF`, `IMMUNE`, `ATTACKS`, `STATUS` and `STATE`
+`MPMAX`, `HP`, `MP`, `DEFB`, `MDEFB`, `INIT`, `UP`, `AFF`, `IMMUNE`, `ATTACKS`, `PICTURE`, `ART`, `STATUS` and `STATE`
 (escaped) beneath. A character's id is their objid, a foe's `F<k>`.
 
 The bestiary is a `+config` table on **JRPG Sheet Store**, `` FOE`<KEY> `` with `LEVEL`, `RANK`,
 `CHAMPION`, `VILLAIN`, `SPECIES`, `ROLE`, `DEX` `INS` `MIG` `WLP`, the `HP` `MP` `DEF` `MDEF` `INIT`
-bonuses, `AFFINITIES` (`<type>:<vu|rs|im|ab>`), `IMMUNE` (status effects), `ATTACKS` and `NOTES`.
+bonuses, `AFFINITIES` (`<type>:<vu|rs|im|ab>`), `IMMUNE` (status effects), `ATTACKS`, `NOTES`, `PICTURE` (an https:// address or a site
+path) and `ART` (text art, `%r` between lines).
 An attack is `<name>: <attr>+<attr> <accuracy> <damage> <type>`, with `magic` at the end for one
 against Magic Defense, and attacks are separated by `;`. The seventeen foes it ships, from level 5 to
 55, are this package's own.
 
-The class list is a `+config` table on **JRPG Sheet Store**: `CLASS` (with `BENEFIT` hp, mp, ip
-or none, `MARTIAL`, `RITUALS` and `ORDER`). It holds the Core Rulebook's fifteen classes; a game
-adds the classes of other books with `+config/add fabula/classes/<key>=<label>`.
+The class list is a `+config` table on **JRPG Sheet Store**: `CLASS` (with `BENEFIT` hp, mp, either,
+ip or none, `MARTIAL`, `RITUALS` and `ORDER`). It holds the 28 classes of the Core Rulebook, the High,
+Techno and Natural Fantasy Atlases and the two bonus classes, Ace of Cards and Necromancer; a game adds
+more with `+config/add fabula/classes/<key>=<label>`.
+
+## The battle screen
+
+`+encounter` draws a window with the GM, the turn and the battlefield, then the Foes and Party windows
+side by side when the client is wide enough (stacked at 80 columns), then a commands window for whoever
+can act now. The battlefield is rows of four `figure()`s: a character's `IMAGE` (alt text `` IMAGE`ALT ``),
+a foe's `PICTURE` with its `ART` as the text a client without pictures draws, and a name in brackets for
+anyone with neither. HP and MP are `gauge()` bars. The commands are `cmdlink()`s where the command needs
+nothing more.
 
 ## The sheet API
 

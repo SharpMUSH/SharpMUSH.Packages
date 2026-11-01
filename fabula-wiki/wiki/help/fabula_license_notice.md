@@ -10,4 +10,4 @@ These pages contain AI-generated content: they were written with an AI model and
 
 ## What they use
 
-The pages state the rules in their own words. They copy no text, art, logos or trade dress from the books, and hold no skill, spell or item descriptions: those are in the Core Rulebook.
+The pages state the rules in their own words. They copy no text, art, logos or trade dress from the books, and hold no skill, spell or item descriptions: those are in the Core Rulebook and the Atlases.
