@@ -20,7 +20,9 @@ This package adds no Reserved Material of its own.
 
 ## Expressly Designated Licensed Material
 
-The following material in this package is designated as Licensed Material under the ORC License: the seven characteristics and their names, the characteristic rolls and their names, the skill list with each skill's base chance and category, and the rules for success levels (critical, special, success, failure and fumble), difficulty (doubling and halving) and hit points and power points, as the package holds and applies them.
+The following material in this package is designated as Licensed Material under the ORC License: the seven characteristics and their names, the characteristic rolls and their names, the skill list with each skill's base chance and category, and the rules for success levels (critical, special, success, failure and fumble), difficulty (doubling and halving), hit points and power points, the damage bonus, strike ranks, hit locations and major wounds, as the package holds and applies them.
+
+The creatures in the bestiary are this package's own, not Licensed Material.
 
 The softcode, and the wording of the package's help and messages, are not Licensed Material: they are this package's own, under the MIT licence, as `package.yaml` says.
 

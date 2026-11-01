@@ -6,6 +6,6 @@ triggers a move you roll two six-sided dice plus a stat.
 3. [[Playbooks|main:pbta_playbooks]]: the playbooks and their moves.
 4. [[Basic moves|main:pbta_basic_moves]] and [[Special moves|main:pbta_special_moves]]: the moves every character has.
 5. [[Advancement|main:pbta_advancement]]: XP and advances.
-6. [[Encounters|main:pbta_encounters]]: scenes played from copies of your sheet.
+6. [[Encounters|main:pbta_encounters]]: scenes played from copies of your sheet, with foes and harm.
 
 In game, `+help sheet`, `+help check` and `+help encounter` cover the commands.

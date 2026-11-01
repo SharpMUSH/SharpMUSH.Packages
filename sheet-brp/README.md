@@ -44,6 +44,16 @@ Every sheet package answers `+sheet` and `+check`. Install one sheet package per
 | `+encounter [<n>]` | all | The encounters here and yours, or one |
 | `+encounter/start [<title>]`, `/join [<n>]`, `/leave [<n>]`, `/use <n>` | all | Start, join, leave, pick which copy you play from |
 | `+encounter/add <name>[=<n>]`, `/remove`, `/keep`, `/end [<n>]` | its GM, keepers | Run it; `/keep` writes a copy back to the sheet |
+| `+encounter/initiative [<n>][=<name or creature>]` | its GM, keepers | Put everyone in order, by DEX highest first, or by strike rank lowest first; or one more |
+| `+encounter/next [<n>]` | its GM, keepers, whoever's turn it is | Pass the turn on, skipping creatures that are down; after the last, a new round |
+| `+encounter/order [<n>]` | all | The round, the order, hit points and conditions |
+| `+encounter/condition <name or creature>=<condition> [<rounds>]` | its GM, keepers | Mark a condition, counted down at the start of its holder's turns; `=!<condition>` takes it off |
+| `+foe [<creature>]` | all | The creatures in the encounter here, or one |
+| `+foe/bestiary [<kind>]` | all | What a GM can add, or one kind |
+| `+foe/add <kind>[=<count>]`, `/remove <creature>` | its GM, keepers | Add creatures, numbered (`Wolf 1`), or take one out |
+| `+foe/attack <creature>[=<name>[/<armour>]]` | its GM, keepers | Roll its attack and, on a hit, its damage; given a member, it comes off their copy less their armour |
+| `+foe/damage <creature>=<n> [ignore]`, `/heal <creature>=<n\|all>` | its GM, keepers | Take damage off it, less its armour (none with `ignore`), or give hit points back |
+| `+foe/run <n>` | its GM, keepers | Pick which encounter your `+foe` commands use, when the room has several |
 
 Keepers (`softcode.brp.admin`, the **BRP Sheet Keeper** role) put `<name>/` before `/set` (up to 99
 and 999%, without points) and use `<name>=<n>` with `/hp`, `/pp` and `/coin`. They also have:
@@ -122,6 +132,27 @@ An encounter lasts until `/end`, over any number of days; `/end` drops every cop
 writes one character's hit points, power points and coin back to their sheet and adds the copy's
 checks to the sheet's. Nothing one encounter does touches another, or the sheet.
 
+## Creatures and the order of play
+
+The GM of an encounter adds creatures from the bestiary, a `+config` table of kinds (`+config brp/foes`)
+with a label, `str`, `con`, `siz`, `dex`, `pow`, `armor`, `attack` (percent), `weapon`, `damage` (the
+weapon's dice) and `notes`. Hit points come from CON and SIZ as a character's do (`hitpoints`), and the
+damage bonus from STR plus SIZ: -1d6 at 12 or less, -1d4 to 16, none to 24, +1d4 to 32, +1d6 to 40, and 1d6
+more for each 16 past that. The package ships eleven creatures of its own. A creature added to an
+encounter is a copy of its kind, numbered in that encounter, with its own hit points and conditions; an
+encounter holds at most 30.
+
+`+foe/attack` rolls 1d100 against the attack and reads it as `+check` does. A hit rolls the weapon's dice
+plus the damage bonus; a special or critical hit rolls the weapon's dice twice, and a critical ignores the
+target's armour. Given a member, the damage less their armour comes off their copy's hit points. One blow of
+half the target's hit points or more is a major wound; at 0 a character is dying and a creature is down.
+With `locations` on, each blow rolls 1d20 for where it lands: 1-4 right leg, 5-8 left leg, 9-11 abdomen, 12
+chest, 13-15 right arm, 16-18 left arm, 19-20 head.
+
+`+encounter/initiative` orders the members and the creatures still standing by DEX, highest first; with
+`strikeranks` on, by strike rank, lowest first: DEX 9 or less gives 4, 10-15 3, 16-18 2, 19 or more 1, and
+SIZ 9 or less adds 3, 10-15 2, 16-18 1. `+encounter/end` drops the creatures, the order and the conditions.
+
 The Duties provider and every `API`` function always use the sheet itself.
 
 ## Where the data lives
@@ -139,10 +170,14 @@ BRP`USING               the encounter /use picked
 ```
 
 On **BRP Encounters**: `ENC`<n>` the title, with `ROOM`, `GM`, `STARTED` and `COPY`<dbref number>`,
-each member's copy, with `HP`, `PP`, `COIN` and `MARKS` beneath.
+each member's copy, with `HP`, `PP`, `COIN` and `MARKS` beneath; `FOE`<k>`, creature `k`, a JSON object with
+`key` (its kind), `label`, `str`, `con`, `siz`, `dex`, `pow`, `hp`, `hpmax`, `armor`, `attack`, `weapon`,
+`damage`, `db` and `notes`; `ORDER` (`<token>~<DEX or strike rank>`), `ROUND` and `TURN`; and
+`COND`<token>`, conditions.
 
 The skill list is a `+config` table on **BRP Sheet Store**: `SKILL` (with `BASE` and `CATEGORY`).
-The characteristics are `CHAR`, with `ROLL` and `ORDER`.
+The characteristics are `CHAR`, with `ROLL` and `ORDER`. The bestiary is `FOE`<KIND>`, with `STR`, `CON`,
+`SIZ`, `DEX`, `POW`, `ARMOR`, `ATTACK`, `WEAPON`, `DAMAGE` and `NOTES`.
 
 ## The sheet API
 

@@ -1,9 +1,9 @@
 format: "1.16"
 package: sheet-fitd
 title: "Forged in the Dark sheet"
-version: 2.1.0
+version: 2.2.0
 authors: [SharpMUSH]
-description: "A Forged in the Dark character sheet: twelve action ratings under three attributes, built from a ledger, with XP for each attribute spent on advances, stress, trauma, harm and coin, separate audited ledgers for XP and coin, encounters that play from copies of the sheets, and progress clocks. +check rolls a pool of six-sided dice and reads the highest against a position for the room; +check/resist rolls an attribute to resist a consequence. Based on the Blades in the Dark SRD under CC BY 3.0."
+description: "A Forged in the Dark character sheet: twelve action ratings under three attributes, built from a ledger, with XP for each attribute spent on advances, stress, trauma, harm and coin, separate audited ledgers for XP and coin, encounters that play from copies of the sheets, with threats from a list the game edits and positions and effect, and progress clocks. +check rolls a pool of six-sided dice and reads the highest against a position for the room; +check/resist rolls an attribute to resist a consequence. Based on the Blades in the Dark SRD under CC BY 3.0."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, fitd, forged in the dark, dice, clocks]
@@ -369,8 +369,29 @@ objects:
         ENCOUNTER`KEEP
       DATA`ROUTE`ENCOUNTER`END: |-
         ENCOUNTER`END
+      DATA`ROUTE`FOE`BARE: |-
+        FOE`LIST
+      DATA`ROUTE`FOE`ARG: |-
+        FOE`SHOW
+      DATA`ROUTE`FOE`BESTIARY: |-
+        FOE`BESTIARY
+      DATA`ROUTE`FOE`RUN: |-
+        FOE`RUN
+      DATA`ROUTE`FOE`ADD: |-
+        FOE`ADD
+      DATA`ROUTE`FOE`REMOVE: |-
+        FOE`REMOVE
+      DATA`ROUTE`FOE`TICK: |-
+        FOE`TICK
+      DATA`ROUTE`FOE`HARM: |-
+        FOE`HARM
+      DATA`ROUTE`ENCOUNTER`POSITION: |-
+        ENCOUNTER`POSITION
       DATA`DIFFICULTIES: |-
         trivial easy standard hard extreme
+      # A threat's clock fills by the effect: limited 1, standard 2, great 3.
+      DATA`EFFECTS: |-
+        limited standard great
       DATA`POSITIONS: |-
         controlled risky desperate
       # Harm: the slots of each level, and what each level is called.
@@ -392,6 +413,98 @@ objects:
       DATA`LOG`MAX: |-
         500
 
+      DATA`CONFIG`FOES`TYPE: |-
+        table
+      DATA`CONFIG`FOES`LABEL: |-
+        Foes
+      DATA`CONFIG`FOES`DESCRIPTION: |-
+        The threats: what a GM adds to an encounter with +foe/add, each with a clock to overcome it.
+      DATA`CONFIG`FOES`STORE: |-
+        {{store}}
+      DATA`CONFIG`FOES`PATH: |-
+        FOE
+      DATA`CONFIG`FOES`ENTRY: |-
+        label
+      DATA`CONFIG`FOES`FIELDS: |-
+        label tier clock harm harmtext notes
+      DATA`CONFIG`FOES`KEYPATTERN: |-
+        ^[A-Za-z0-9-]{1,20}$
+      DATA`CONFIG`FOES`FIELD`LABEL`TYPE: |-
+        text
+      DATA`CONFIG`FOES`FIELD`LABEL`MIN: |-
+        1
+      DATA`CONFIG`FOES`FIELD`LABEL`MAX: |-
+        30
+      DATA`CONFIG`FOES`FIELD`LABEL`LABEL: |-
+        Label
+      DATA`CONFIG`FOES`FIELD`LABEL`DESCRIPTION: |-
+        The name it goes by; each one added gets a number after it.
+      DATA`CONFIG`FOES`FIELD`TIER`TYPE: |-
+        integer
+      DATA`CONFIG`FOES`FIELD`TIER`DEFAULT: |-
+        1
+      DATA`CONFIG`FOES`FIELD`TIER`MIN: |-
+        0
+      DATA`CONFIG`FOES`FIELD`TIER`MAX: |-
+        5
+      DATA`CONFIG`FOES`FIELD`TIER`LABEL: |-
+        Tier
+      DATA`CONFIG`FOES`FIELD`TIER`DESCRIPTION: |-
+        How strong it is, from 0 for the weakest to 4 or 5 for the most dangerous.
+      DATA`CONFIG`FOES`FIELD`CLOCK`TYPE: |-
+        integer
+      DATA`CONFIG`FOES`FIELD`CLOCK`DEFAULT: |-
+        4
+      DATA`CONFIG`FOES`FIELD`CLOCK`MIN: |-
+        4
+      DATA`CONFIG`FOES`FIELD`CLOCK`MAX: |-
+        12
+      DATA`CONFIG`FOES`FIELD`CLOCK`CHECK: |-
+        CHECK`CLOCK
+      DATA`CONFIG`FOES`FIELD`CLOCK`LABEL: |-
+        Clock
+      DATA`CONFIG`FOES`FIELD`CLOCK`DESCRIPTION: |-
+        The segments of the clock that overcomes it: 4, 6, 8 or 12.
+      DATA`CONFIG`FOES`FIELD`HARM`TYPE: |-
+        integer
+      DATA`CONFIG`FOES`FIELD`HARM`DEFAULT: |-
+        2
+      DATA`CONFIG`FOES`FIELD`HARM`MIN: |-
+        1
+      DATA`CONFIG`FOES`FIELD`HARM`MAX: |-
+        3
+      DATA`CONFIG`FOES`FIELD`HARM`LABEL: |-
+        Harm level
+      DATA`CONFIG`FOES`FIELD`HARM`DESCRIPTION: |-
+        The level of harm it deals, 1 to 3.
+      DATA`CONFIG`FOES`FIELD`HARMTEXT`TYPE: |-
+        text
+      DATA`CONFIG`FOES`FIELD`HARMTEXT`DEFAULT: |-
+        Hurt
+      DATA`CONFIG`FOES`FIELD`HARMTEXT`MIN: |-
+        1
+      DATA`CONFIG`FOES`FIELD`HARMTEXT`MAX: |-
+        40
+      DATA`CONFIG`FOES`FIELD`HARMTEXT`LABEL: |-
+        Harm
+      DATA`CONFIG`FOES`FIELD`HARMTEXT`DESCRIPTION: |-
+        What its harm is called, such as Cut or Shot.
+      DATA`CONFIG`FOES`FIELD`NOTES`TYPE: |-
+        text
+      DATA`CONFIG`FOES`FIELD`NOTES`MIN: |-
+        0
+      DATA`CONFIG`FOES`FIELD`NOTES`MAX: |-
+        300
+      DATA`CONFIG`FOES`FIELD`NOTES`LABEL: |-
+        Notes
+      DATA`CONFIG`FOES`FIELD`NOTES`DESCRIPTION: |-
+        How it acts, for the GM.
+      # +config's CHECK for a threat's clock (%0): a clock size.
+      CHECK`CLOCK: |-
+        if(member(v(DATA`CLOCK`SIZES),%0),,A clock has [itemize(v(DATA`CLOCK`SIZES),,or)] segments.)
+      # The most foes one encounter holds.
+      DATA`FOE`MAX: |-
+        30
       # ---- commands ---------------------------------------------------------------
       # %1 the switches and %2 what follows, exactly as typed.
       CMD`SHEET:
@@ -409,6 +522,10 @@ objects:
       CMD`ENCOUNTER:
         value: |-
           $(?is)^\+encounter(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,encounter,table,ENCOUNTER,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`FOE:
+        value: |-
+          $(?is)^\+foe(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,foe,table,FOE,switches,%1,argument,%2
         flags: [regexp, cmdsyntax]
       # A line a bridge adds to one of this object's messages: HINT`<message>, set here by a bridge such as
       # sheet-fitd-help. %1 on are passed to it. Nothing when no bridge set one, so the message stands without it.
@@ -577,10 +694,10 @@ objects:
           @pemit %#=notice(SHEET,+check <action>%[=<position>%]%, such as +check skirmish=risky. +<n> or -<n> after the action adds or takes dice. /private rolls where only you see it%, /resist <attribute> resists a consequence.,warn)
         flags: [cmdsyntax]
       # +check[/private] <action>[+<n>|-<n>][=<position or difficulty>]: rolls the pool for the room. In an
-      # encounter the copy's ratings roll.
+      # encounter the copy's ratings roll, and with no position given, the one the GM set there.
       INC`CHECK`ROLL:
         value: |-
-          @assert strlen(%q<cmd_argument>)=@include %!/INC`CHECK`USAGE; think u(%!/FUN`CHECK`READ,%q<cmd_left_side>); @assert isint(%q<check_modifier>)=@pemit %#=notice(SHEET,'%q<cmd_left_side>' ends in something that is not a number of dice.,warn); @include/args %!/INC`NEED`ACTION=key,%q<check_typed>; think setq(check_position,u(%!/API`TARGET,%q<cmd_right_side>)); @assert cor(not(%q<cmd_has_equals>),strlen(%q<check_position>))=@pemit %#=notice(SHEET,'%q<cmd_right_side>' is not a position. Give controlled%, risky or desperate%, or one of [itemize(v(DATA`DIFFICULTIES))].,warn); think setq(check_result,u(%!/FUN`CHECK`ROLLED,%q<trait_key>,max(0,add(u(%!/FUN`R,u(%!/FUN`RATINGS,%q<viewer_objid>),%q<trait_key>),%q<check_modifier>)),%q<check_position>)); think setq(check_line,u(%!/FUN`DISPLAY`CHECK,%q<check_result>)); @break member(%q<cmd_switch_list>,private)=@pemit %#=notice(SHEET,You privately roll %q<check_line>); @remit %l=notice(SHEET,tone(strong,name(%#)) rolls %q<check_line>)
+          @assert strlen(%q<cmd_argument>)=@include %!/INC`CHECK`USAGE; think u(%!/FUN`CHECK`READ,%q<cmd_left_side>); @assert isint(%q<check_modifier>)=@pemit %#=notice(SHEET,'%q<cmd_left_side>' ends in something that is not a number of dice.,warn); @include/args %!/INC`NEED`ACTION=key,%q<check_typed>; think setqm(check_position,u(%!/API`TARGET,%q<cmd_right_side>),check_set,u(%!/FUN`ENC`POSITION,%#)); think if(cand(not(%q<cmd_has_equals>),strlen(%q<check_set>)),setq(check_position,first(%q<check_set>))); @assert cor(not(%q<cmd_has_equals>),strlen(%q<check_position>))=@pemit %#=notice(SHEET,'%q<cmd_right_side>' is not a position. Give controlled%, risky or desperate%, or one of [itemize(v(DATA`DIFFICULTIES))].,warn); think setq(check_result,u(%!/FUN`CHECK`ROLLED,%q<trait_key>,max(0,add(u(%!/FUN`R,u(%!/FUN`RATINGS,%q<viewer_objid>),%q<trait_key>),%q<check_modifier>)),%q<check_position>)); think setq(check_line,u(%!/FUN`DISPLAY`CHECK,%q<check_result>)); think if(cand(strlen(%q<check_set>),not(comp(%q<check_position>,first(%q<check_set>)))),setq(check_line,edit(%q<check_line>,%(%q<check_position>%),%(%q<check_position>%, [rest(%q<check_set>)] effect%)))); @break member(%q<cmd_switch_list>,private)=@pemit %#=notice(SHEET,You privately roll %q<check_line>); @remit %l=notice(SHEET,tone(strong,name(%#)) rolls %q<check_line>)
         flags: [cmdsyntax]
       # +check/resist <attribute>: rolls the attribute and marks the stress it costs.
       INC`CHECK`RESIST:
@@ -703,6 +820,74 @@ objects:
           @assert u(%!/FUN`ENC`MEMBER,%q<sheet_who>,%q<enc_n>)=@pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)] is not in [u(%!/FUN`ENC`NAME,%q<enc_n>)].,warn)
         flags: [cmdsyntax]
 
+      # ---- +foe -------------------------------------------------------------------------
+      # Foes are the GM's side of an encounter: ENC`<n>`FOE`<k> on the encounter store, a JSON object copied from
+      # the bestiary (FOE`<KEY> on the store, +config fitd/foes) when the GM adds it, with key (the kind) and
+      # label, the kind's name and its number in the encounter. Nothing a foe takes reaches the bestiary.
+      # +foe [<foe>]: the foes in the encounter here, or one.
+      INC`FOE`LIST:
+        value: |-
+          @include %!/INC`NEED`FOEENC; @pemit %#=u(%!/FUN`SCREEN`FOES,%q<enc_n>,%#)
+        flags: [cmdsyntax]
+      INC`FOE`SHOW:
+        value: |-
+          @include %!/INC`NEED`FOEENC; @include/args %!/INC`NEED`FOE=typed,%q<cmd_argument>; @pemit %#=u(%!/FUN`SCREEN`FOE,%q<enc_n>,%q<foe_k>,%#)
+        flags: [cmdsyntax]
+      # +foe/bestiary [<kind>]: what the GM can add.
+      INC`FOE`BESTIARY:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=u(%!/FUN`SCREEN`BESTIARY); @assert strlen(setr(foe_kind,u(%!/FUN`FOE`KIND,%q<cmd_argument>)))=@pemit %#=notice(FOE,There is no '%q<cmd_argument>' in the bestiary. +foe/bestiary lists it.,warn); @pemit %#=u(%!/FUN`SCREEN`KIND,%q<foe_kind>)
+        flags: [cmdsyntax]
+      # +foe/run <n>: which encounter here the GM's +foe commands use, when the room has several.
+      INC`FOE`RUN:
+        value: |-
+          @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>,from,u(%!/FUN`ENC`HERE,%#),verb,run; @assert member(u(%!/FUN`ENC`HERE,%#),%q<enc_n>)=@pemit %#=notice(FOE,Encounter %q<enc_n> is not in this room.,warn); &RUN`[after(num(%#),#)] {{encounters}}=%q<enc_n>; @pemit %#=notice(FOE,Your +foe commands use [u(%!/FUN`ENC`NAME,%q<enc_n>)] while you are in its room.,ok)
+        flags: [cmdsyntax]
+      # +foe/add <kind>[=<count>]: the GM adds foes from the bestiary.
+      INC`FOE`ADD:
+        value: |-
+          @include %!/INC`NEED`FOEENC; @include %!/INC`NEED`GM; @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(FOE,+foe/add <kind>%[=<count>%]%, such as +foe/add guard=2. +foe/bestiary lists the kinds.,warn); think setqm(add_kind,u(%!/FUN`FOE`KIND,%q<cmd_left_side>),add_count,if(strlen(%q<cmd_right_side>),%q<cmd_right_side>,1)); @assert strlen(%q<add_kind>)=@pemit %#=notice(FOE,There is no '%q<cmd_left_side>' in the bestiary. +foe/bestiary lists it.,warn); @assert cand(isint(%q<add_count>),gte(%q<add_count>,1),lte(%q<add_count>,20))=@pemit %#=notice(FOE,Add 1 to 20 foes at a time.,warn); @assert lte(add(words(u(%!/FUN`FOE`NUMS,%q<enc_n>)),%q<add_count>),get(%!/DATA`FOE`MAX))=@pemit %#=notice(FOE,An encounter holds at most [get(%!/DATA`FOE`MAX)] foes.,warn); think setq(add_made,iter(lnum(%q<add_count>),u(%!/FUN`FOE`MAKE,%q<enc_n>,%q<add_kind>))); @remit get({{encounters}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,tone(strong,name(%#)) adds [itemize(iter(%q<add_made>,u(%!/FUN`FOE`LABEL,%q<enc_n>,%i0),%b,|),|)] to [u(%!/FUN`ENC`NAME,%q<enc_n>)].)
+        flags: [cmdsyntax]
+      # +foe/remove <foe>: the GM takes one out.
+      INC`FOE`REMOVE:
+        value: |-
+          @include %!/INC`NEED`FOEENC; @include %!/INC`NEED`GM; @include/args %!/INC`NEED`FOE=typed,%q<cmd_argument>; think setq(foe_label,u(%!/FUN`FOE`LABEL,%q<enc_n>,%q<foe_k>)); @wipe {{encounters}}/ENC`%q<enc_n>`FOE`%q<foe_k>; &ENC`%q<enc_n>`FOE`%q<foe_k> {{encounters}}; @remit get({{encounters}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,tone(strong,name(%#)) takes %q<foe_label> out of [u(%!/FUN`ENC`NAME,%q<enc_n>)].)
+        flags: [cmdsyntax]
+      # +foe/tick <threat>[=<effect>]: the GM fills its clock by an effect, limited 1, standard 2 (the default) or great 3,
+      # or by a number of segments; below 0 empties some. Full, it is overcome.
+      INC`FOE`TICK:
+        value: |-
+          @include %!/INC`NEED`FOEENC; @include %!/INC`NEED`GM; @include/args %!/INC`NEED`FOE=typed,%q<cmd_left_side>; think setq(tick_by,u(%!/FUN`EFFECT`SEGMENTS,firstof(%q<cmd_right_side>,standard))); @assert cand(isint(%q<tick_by>),neq(%q<tick_by>,0))=@pemit %#=notice(FOE,+foe/tick <threat>%[=<effect>%]: limited%, standard or great%, or a number of segments. Below 0 empties some.,warn); think setqm(tick_size,u(%!/FUN`FOE`GET,%q<enc_n>,%q<foe_k>,clock),tick_was,u(%!/FUN`FOE`GET,%q<enc_n>,%q<foe_k>,filled)); think setq(tick_to,bound(add(%q<tick_was>,%q<tick_by>),0,%q<tick_size>)); think u(%!/FUN`FOE`SET,%q<enc_n>,%q<foe_k>,filled,%q<tick_to>); @remit get({{encounters}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,[u(%!/FUN`FOE`LABEL,%q<enc_n>,%q<foe_k>)]'s clock: [edit(u(%!/FUN`FOE`STATE,%q<enc_n>,%q<foe_k>),%bovercome,)][if(cand(eq(%q<tick_to>,%q<tick_size>),lt(%q<tick_was>,%q<tick_size>)),. [tone(strong,It is overcome.)])])
+        flags: [cmdsyntax]
+      # +foe/harm <threat>=<name>[/<level>]: the GM marks the threat's harm on a member's copy, at its level or the one
+      # given, in the first free slot of that level or above.
+      INC`FOE`HARM:
+        value: |-
+          @include %!/INC`NEED`FOEENC; @include %!/INC`NEED`GM; @include/args %!/INC`NEED`FOE=typed,%q<cmd_left_side>; @assert lt(u(%!/FUN`FOE`GET,%q<enc_n>,%q<foe_k>,filled),u(%!/FUN`FOE`GET,%q<enc_n>,%q<foe_k>,clock))=@pemit %#=notice(FOE,[u(%!/FUN`FOE`LABEL,%q<enc_n>,%q<foe_k>)] is overcome.,warn); @assert strlen(%q<cmd_right_side>)=@pemit %#=notice(FOE,+foe/harm <threat>=<name>%[/<level>%]%, such as +foe/harm guard 1=Alice.,warn); think setqm(fh_name,trim(before(%q<cmd_right_side>,/)),fh_level,firstof(trim(after(%q<cmd_right_side>,/)),u(%!/FUN`FOE`GET,%q<enc_n>,%q<foe_k>,harm))); @assert member(1 2 3,%q<fh_level>)=@pemit %#=notice(FOE,Harm comes at level 1%, 2 or 3.,warn); @include/args %!/INC`NEED`MEMBERNAMED=name,%q<fh_name>; think setqm(fh_path,u(%!/FUN`ENC`PATH,%q<enc_n>,%q<sheet_who>),fh_text,u(%!/FUN`FOE`GET,%q<enc_n>,%q<foe_k>,harmtext)); think setq(fh_slot,first(iter(v(DATA`HARM`SLOTS),if(cand(gte(left(%i0,1),%q<fh_level>),not(strlen(get(%q<fh_path>HARM`%i0)))),%i0)))); @assert strlen(%q<fh_slot>)=@remit get({{encounters}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,[u(%!/FUN`FOE`LABEL,%q<enc_n>,%q<foe_k>)] hurts [name(%q<sheet_who>)]%, whose level 3 harm is full: harm beyond it is fatal%, or whatever the GM says it is.); think u(%!/FUN`SETLEAF,%q<fh_path>HARM`%q<fh_slot>,%q<fh_text>); @remit get({{encounters}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,[u(%!/FUN`FOE`LABEL,%q<enc_n>,%q<foe_k>)] deals [name(%q<sheet_who>)] level [left(%q<fh_slot>,1)] harm: %q<fh_text>[if(gt(left(%q<fh_slot>,1),%q<fh_level>),%b%(level %q<fh_level> was full%))].)
+        flags: [cmdsyntax]
+      # +encounter/position <name>=<position> [<effect>]: the GM sets a member's position and effect in the encounter.
+      # Their +check uses that position when they give none, and says the effect. Nothing after = clears it.
+      INC`ENCOUNTER`POSITION:
+        value: |-
+          @include %!/INC`NEED`FOEENC; @include %!/INC`NEED`GM; @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>))=@pemit %#=notice(ENCOUNTER,+encounter/position <name>=<position> %[<effect>%]%, such as +encounter/position Alice=risky great. Nothing after = clears it.,warn); @include/args %!/INC`NEED`MEMBERNAMED=name,%q<cmd_left_side>; think setqm(pos_attr,ENC`%q<enc_n>`POS`[after(num(%q<sheet_who>),#)],pos_position,u(%!/API`TARGET,first(%q<cmd_right_side>)),pos_effect,lcstr(firstof(rest(%q<cmd_right_side>),standard))); @break not(strlen(%q<cmd_right_side>))={&%q<pos_attr> {{encounters}}; @pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)] has no position set in [u(%!/FUN`ENC`NAME,%q<enc_n>)].,ok)}; @assert strlen(%q<pos_position>)=@pemit %#=notice(ENCOUNTER,'[first(%q<cmd_right_side>)]' is not a position. Give controlled%, risky or desperate.,warn); @assert member(v(DATA`EFFECTS),%q<pos_effect>)=@pemit %#=notice(ENCOUNTER,An effect is [itemize(v(DATA`EFFECTS),,or)].,warn); &%q<pos_attr> {{encounters}}=%q<pos_position> %q<pos_effect>; @remit get({{encounters}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,[name(%q<sheet_who>)] acts from a [tone(strong,%q<pos_position>)] position with [tone(strong,%q<pos_effect>)] effect.)
+        flags: [cmdsyntax]
+      # Which encounter +foe means: enc_n, the one here; with several, the one +foe/run picked, else the one the
+      # player runs, else the one they play from.
+      INC`NEED`FOEENC:
+        value: |-
+          think setq(enc_n,u(%!/FUN`FOE`ENC,%#)); @assert not(strmatch(%q<enc_n>,#-*))=@pemit %#=notice(FOE,after(%q<enc_n>,#-1%b),warn)
+        flags: [cmdsyntax]
+      # foe_k: the foe %<typed> names in enc_n, by number or by name.
+      INC`NEED`FOE:
+        value: |-
+          @assert strlen(%<typed>)=@pemit %#=notice(FOE,Name a foe. +foe lists them.,warn); think setq(foe_k,u(%!/FUN`FOE`FIND,%q<enc_n>,%<typed>)); @assert words(%q<foe_k>)=@pemit %#=notice(FOE,There is no foe '%<typed>' in [u(%!/FUN`ENC`NAME,%q<enc_n>)]. +foe lists them.,warn); @assert eq(words(%q<foe_k>),1)=@pemit %#=notice(FOE,'%<typed>' could be [itemize(iter(%q<foe_k>,u(%!/FUN`FOE`LABEL,%q<enc_n>,%i0),%b,|),|,or)].,warn)
+        flags: [cmdsyntax]
+      # sheet_who: the member of enc_n %<name> names.
+      INC`NEED`MEMBERNAMED:
+        value: |-
+          @assert strlen(setr(sheet_who,u(%!/FUN`PLAYER`MATCH,%<name>)))=@pemit %#=notice(FOE,There is no player called '%<name>'.,warn); @assert u(%!/FUN`ENC`MEMBER,%q<sheet_who>,%q<enc_n>)=@pemit %#=notice(FOE,[name(%q<sheet_who>)] is not in [u(%!/FUN`ENC`NAME,%q<enc_n>)].,warn)
+        flags: [cmdsyntax]
+
       # ---- writes -----------------------------------------------------------------
       # %<who> an objid. The FITD root is wizard-flagged and no_command, and its leaves take that from it.
       INC`DO`ROOT:
@@ -731,7 +916,7 @@ objects:
       # %<who> leaves encounter %<n>; the copy goes.
       INC`DO`ENCDROP:
         value: |-
-          think u(%!/FUN`WIPE,{{encounters}},ENC`%<n>`COPY`[after(num(%<who>),#)]); @include/args %!/INC`DO`SET=who,%<who>,leaf,ENCOUNTERS,value,squish(iter(get(%<who>/FITD`ENCOUNTERS),if(comp(%i0,%<n>),%i0))); @if not(comp(get(%<who>/FITD`USING),%<n>))={&FITD`USING %<who>}
+          think u(%!/FUN`WIPE,{{encounters}},ENC`%<n>`COPY`[after(num(%<who>),#)]); &ENC`%<n>`POS`[after(num(%<who>),#)] {{encounters}}; @include/args %!/INC`DO`SET=who,%<who>,leaf,ENCOUNTERS,value,squish(iter(get(%<who>/FITD`ENCOUNTERS),if(comp(%i0,%<n>),%i0))); @if not(comp(get(%<who>/FITD`USING),%<n>))={&FITD`USING %<who>}
         flags: [cmdsyntax]
       # %0 an object, %1 an attribute: clears it and every attribute beneath it, deepest first.
       FUN`WIPE:
@@ -936,6 +1121,80 @@ objects:
           if(isdbref(setr(found_player,pmatch(%0))),objid(%q<found_player>))
         flags: [funsyntax]
 
+      # ---- foes ---------------------------------------------------------------------------
+      # %0 someone: the encounter here their +foe commands use, or #-1 and why.
+      FUN`FOE`ENC:
+        value: |-
+          setqm(fe_here,u(%!/FUN`ENC`HERE,%0),fe_run,get({{encounters}}/RUN`[after(num(%0),#)]))[setq(fe_gm,squish(iter(%q<fe_here>,if(not(comp(get({{encounters}}/ENC`%i0`GM),objid(%0))),%i0))))][setq(fe_active,u(%!/FUN`ENC`ACTIVE,%0))][cond(not(words(%q<fe_here>)),#-1 There is no encounter here. +encounter/start begins one.,eq(words(%q<fe_here>),1),%q<fe_here>,member(%q<fe_here>,%q<fe_run>),%q<fe_run>,eq(words(%q<fe_gm>),1),%q<fe_gm>,strlen(%q<fe_active>),%q<fe_active>,#-1 There are several encounters here. +foe/run <n> picks the one your +foe commands use.)]
+        flags: [funsyntax]
+      # %0 an encounter: its foes' numbers.
+      FUN`FOE`NUMS:
+        value: |-
+          sort(iter(lattr({{encounters}}/ENC`%0`FOE`*),last(%i0,`)),n)
+        flags: [funsyntax]
+      # %0 an encounter, %1 a foe, %2 a field.
+      FUN`FOE`GET:
+        value: |-
+          json_query(get({{encounters}}/ENC`%0`FOE`%1),extract,$.%2)
+        flags: [funsyntax]
+      # %0 an encounter, %1 a foe, %2 a field, %3 its value as JSON.
+      FUN`FOE`SET:
+        value: |-
+          attrib_set({{encounters}}/ENC`%0`FOE`%1,json_mod(get({{encounters}}/ENC`%0`FOE`%1),patch,json(object,%2,%3)))
+        flags: [funsyntax]
+      FUN`FOE`LABEL:
+        value: |-
+          u(%!/FUN`FOE`GET,%0,%1,label)
+        flags: [funsyntax]
+      # %0 an encounter, %1 what was typed: the foe with that number, else the ones with that name, else the ones
+      # whose name ends in it as words (guard 2 for Watch guard 2), else starts with it, else has it anywhere.
+      FUN`FOE`FIND:
+        value: |-
+          cond(cand(isint(%1),hasattr({{encounters}},ENC`%0`FOE`%1)),%1,words(setr(ff_m,u(%!/FUN`FOE`MATCH,%0,%1,0))),%q<ff_m>,words(setr(ff_m,u(%!/FUN`FOE`MATCH,%0,%1,1))),%q<ff_m>,words(setr(ff_m,u(%!/FUN`FOE`MATCH,%0,%1,2))),%q<ff_m>,u(%!/FUN`FOE`MATCH,%0,%1,3))
+        flags: [funsyntax]
+      FUN`FOE`MATCH:
+        value: |-
+          squish(iter(u(%!/FUN`FOE`NUMS,%0),if(switch(%2,0,not(comp(lcstr(u(%!/FUN`FOE`LABEL,%0,%i0)),lcstr(trim(%1)))),1,strmatch(u(%!/FUN`FOE`LABEL,%0,%i0),* [trim(%1)]),2,strmatch(u(%!/FUN`FOE`LABEL,%0,%i0),trim(%1)*),strmatch(u(%!/FUN`FOE`LABEL,%0,%i0),*[trim(%1)]*)),%i0)))
+        flags: [funsyntax]
+      # %0 what was typed: the bestiary key it names, by key or by name.
+      FUN`FOE`KIND:
+        value: |-
+          setq(fk_key,ucstr(edit(trim(%0),%b,-)))[cond(cand(regmatch(%q<fk_key>,^%[A-Z0-9-%]+$),hasattr({{store}},FOE`%q<fk_key>)),%q<fk_key>,first(iter(lattr({{store}}/FOE`*),if(not(comp(lcstr(get({{store}}/%i0)),lcstr(trim(%0)))),last(%i0,`)))))]
+        flags: [funsyntax]
+      # %0 an encounter, %1 a bestiary key: a new foe copied from it. Returns its number.
+      FUN`FOE`MAKE:
+        value: |-
+          setq(fm_k,inc(lmax(0 [u(%!/FUN`FOE`NUMS,%0)])))[attrib_set({{encounters}}/ENC`%0`FOE`%q<fm_k>,json(object,key,json(string,%1),label,json(string,[get({{store}}/FOE`%1)] %q<fm_k>),tier,u(%!/FUN`FOE`STORE,%1,TIER,1),clock,u(%!/FUN`FOE`STORE,%1,CLOCK,4),filled,0,harm,u(%!/FUN`FOE`STORE,%1,HARM,2),harmtext,json(string,u(%!/FUN`FOE`STORE,%1,HARMTEXT,Hurt)),notes,json(string,get({{store}}/FOE`%1`NOTES))))]%q<fm_k>
+        flags: [funsyntax]
+      # %0 a kind, %1 a field, %2 its default.
+      FUN`FOE`STORE:
+        value: |-
+          default({{store}}/FOE`%0`%1,%2)
+        flags: [funsyntax]
+      FUN`KIND`SORTKEY:
+        value: |-
+          u(%!/FUN`FOE`STORE,%0,TIER,1)
+        flags: [funsyntax]
+      # %0 an encounter, %1 a threat: its clock, and whether it is overcome.
+      FUN`FOE`STATE:
+        value: |-
+          setqm(fs_filled,u(%!/FUN`FOE`GET,%0,%1,filled),fs_size,u(%!/FUN`FOE`GET,%0,%1,clock))[u(%!/FUN`DISPLAY`TRACK,%q<fs_filled>,%q<fs_size>)] %q<fs_filled>/%q<fs_size>[if(gte(%q<fs_filled>,%q<fs_size>),%bovercome)]
+        flags: [funsyntax]
+      FUN`FOE`HARMTEXT:
+        value: |-
+          [u(%!/FUN`FOE`GET,%0,%1,harmtext)] %(level [u(%!/FUN`FOE`GET,%0,%1,harm)]%)
+        flags: [funsyntax]
+      # %0 an effect word or a number: the segments it fills.
+      FUN`EFFECT`SEGMENTS:
+        value: |-
+          cond(member(v(DATA`EFFECTS),lcstr(%0)),member(v(DATA`EFFECTS),lcstr(%0)),isint(%0),%0,#-1)
+        flags: [funsyntax]
+      # %0 a character: <position> <effect> the GM set for them in the encounter they play from, or nothing.
+      FUN`ENC`POSITION:
+        value: |-
+          setq(ep_n,u(%!/FUN`ENC`ACTIVE,%0))[if(strlen(%q<ep_n>),get({{encounters}}/ENC`%q<ep_n>`POS`[after(num(%0),#)]))]
+        flags: [funsyntax]
+
       # ---- the XP and money ledgers --------------------------------------------------------
       # Each book is its own ledger, apart from the sheet's: FITD`<BOOK>LEDGER`<n>, a JSON object with n, delta,
       # total (the running total after it), item and label (what it counts, when the book counts more than one
@@ -1115,7 +1374,7 @@ objects:
       # %0 an encounter, %1 who reads it.
       FUN`SCREEN`ENCOUNTER:
         value: |-
-          setq(enc_members,u(%!/FUN`ENC`MEMBERS,%0))[box(Run by [name(get({{encounters}}/ENC`%0`GM))] in [name(get({{encounters}}/ENC`%0`ROOM))].%r[rule()]%r[if(words(%q<enc_members>),ldatatable(lit({"nowrap":"1|2|4","grow":"||1|"}),Name|>Stress|Harm|>Coin|Trauma,iter(%q<enc_members>,u(%!/FUN`DISPLAY`ENCROW,%i0,%0),%b,%*<^>),%*<^>),Nobody has joined yet.)]%r[rule()]%r[tone(muted,if(u(%!/FUN`ENC`GM,%1,%0),/add%, /remove and /keep <name>=%0%, and /end %0 run it. +sheet/harm <name>/<level>=<harm> hurts a member here.,if(u(%!/FUN`ENC`MEMBER,%1,%0),You roll from your copy while you are in its room. /leave %0 comes out.,+encounter/join %0 takes part with a copy of your sheet.)))],Encounter [u(%!/FUN`ENC`NAME,%0)])]
+          setq(enc_members,u(%!/FUN`ENC`MEMBERS,%0))[box(Run by [name(get({{encounters}}/ENC`%0`GM))] in [name(get({{encounters}}/ENC`%0`ROOM))].%r[rule()]%r[if(words(%q<enc_members>),ldatatable(lit({"nowrap":"1|2|4|6","grow":"||1|"}),Name|>Stress|Harm|>Coin|Trauma|Position,iter(%q<enc_members>,u(%!/FUN`DISPLAY`ENCROW,%i0,%0),%b,%*<^>),%*<^>),Nobody has joined yet.)][if(words(u(%!/FUN`FOE`NUMS,%0)),%r[rule(Threats)]%r[itemize(iter(u(%!/FUN`FOE`NUMS,%0),[u(%!/FUN`FOE`LABEL,%0,%i0)] [u(%!/FUN`FOE`STATE,%0,%i0)],%b,|),|)])]%r[rule()]%r[tone(muted,if(u(%!/FUN`ENC`GM,%1,%0),/add%, /remove and /keep <name>=%0%, and /end %0 run it. +foe/add brings in threats and /position sets a member's position.,if(u(%!/FUN`ENC`MEMBER,%1,%0),You roll from your copy while you are in its room. /leave %0 comes out.,+encounter/join %0 takes part with a copy of your sheet.)))],Encounter [u(%!/FUN`ENC`NAME,%0)])]
         flags: [funsyntax]
       # %0 the encounters here, %1 the ones %2 is in.
       FUN`SCREEN`ENCOUNTERS:
@@ -1125,11 +1384,30 @@ objects:
       # %0 a member, %1 the encounter: their copy in it, one table row.
       FUN`DISPLAY`ENCROW:
         value: |-
-          setq(encrow_path,u(%!/FUN`ENC`PATH,%1,%0))[name(%0)]|[default(%q<encrow_path>STRESS,0)]/[get(%!/DATA`CONFIG`STRESS)]|[firstof(itemize(squish(iter(v(DATA`HARM`SLOTS),get(%q<encrow_path>HARM`%i0),%b,|),|),|),-)]|[default(%q<encrow_path>COIN,0)]|[firstof(itemize(get(%q<encrow_path>TRAUMA),|),-)]
+          setq(encrow_path,u(%!/FUN`ENC`PATH,%1,%0))[name(%0)]|[default(%q<encrow_path>STRESS,0)]/[get(%!/DATA`CONFIG`STRESS)]|[firstof(itemize(squish(iter(v(DATA`HARM`SLOTS),get(%q<encrow_path>HARM`%i0),%b,|),|),|),-)]|[default(%q<encrow_path>COIN,0)]|[firstof(itemize(get(%q<encrow_path>TRAUMA),|),-)]|[firstof(edit(get({{encounters}}/ENC`%1`POS`[after(num(%0),#)]),%b,%,%b),-)]
         flags: [funsyntax]
       FUN`SCREEN`TRAITS:
         value: |-
           box(ldatatable(lit({"nowrap":"1|2"}),Key|Action|Attribute,iter(u(%!/FUN`LIST`ALL,ACTION),lcstr(%i0)|[u(%!/FUN`LIST`LABEL,ACTION,%i0)]|[u(%!/FUN`LIST`LABEL,ATTRIBUTE,get({{store}}/ACTION`%i0`ATTRIBUTE))],,%*<^>),%*<^>)%r[rule()]%r[tone(muted,Positions: controlled%, risky%, desperate. Difficulties: [itemize(v(DATA`DIFFICULTIES))].)],Forged in the Dark actions)
+        flags: [funsyntax]
+
+      # %0 an encounter, %1 who reads it.
+      FUN`SCREEN`FOES:
+        value: |-
+          setq(sf_nums,u(%!/FUN`FOE`NUMS,%0))[box(if(words(%q<sf_nums>),ldatatable(lit({"nowrap":"1|3|4|5","grow":"|1"}),#|Threat|>Tier|Clock|Harm,iter(%q<sf_nums>,%i0|[u(%!/FUN`FOE`LABEL,%0,%i0)]|[u(%!/FUN`FOE`GET,%0,%i0,tier)]|[u(%!/FUN`FOE`STATE,%0,%i0)]|[u(%!/FUN`FOE`HARMTEXT,%0,%i0)],%b,%*<^>),%*<^>),No foes yet.)%r[rule()]%r[tone(muted,if(u(%!/FUN`ENC`GM,%1,%0),+foe/add <kind>%[=<count>%] adds more. +foe/tick fills a threat's clock%, +foe/harm hurts a member.,+foe <threat> shows one. Your effect fills its clock.))],Foes: [u(%!/FUN`ENC`NAME,%0)])]
+        flags: [funsyntax]
+      # %0 an encounter, %1 a foe, %2 who reads it.
+      FUN`SCREEN`FOE:
+        value: |-
+          box(lfields(lit({"cols":2}),Tier%*<|>Clock%*<|>Harm,[u(%!/FUN`FOE`GET,%0,%1,tier)]%*<|>[u(%!/FUN`FOE`STATE,%0,%1)]%*<|>[u(%!/FUN`FOE`HARMTEXT,%0,%1)],%*<|>)[if(cand(u(%!/FUN`ENC`GM,%2,%0),strlen(u(%!/FUN`FOE`GET,%0,%1,notes))),%r[rule()]%r[u(%!/FUN`FOE`GET,%0,%1,notes)])],[u(%!/FUN`FOE`LABEL,%0,%1)] in [u(%!/FUN`ENC`NAME,%0)])
+        flags: [funsyntax]
+      FUN`SCREEN`BESTIARY:
+        value: |-
+          setq(sb_keys,sortkey(%!/FUN`KIND`SORTKEY,iter(lattr({{store}}/FOE`*),last(%i0,`)),n))[box(if(words(%q<sb_keys>),ldatatable(lit({"nowrap":"1|3|4","grow":"|1"}),Key|Name|>Tier|>Clock|Harm,iter(%q<sb_keys>,[lcstr(%i0)]|[get({{store}}/FOE`%i0)]|[u(%!/FUN`FOE`STORE,%i0,TIER,1)]|[u(%!/FUN`FOE`STORE,%i0,CLOCK,4)]|[u(%!/FUN`FOE`STORE,%i0,HARMTEXT,Hurt)] %(level [u(%!/FUN`FOE`STORE,%i0,HARM,2)]%),%b,%*<^>),%*<^>),The bestiary is empty.)%r[rule()]%r[tone(muted,+foe/bestiary <kind> shows one. The GM adds them with +foe/add <kind>%[=<count>%]. Staff change the list with +config fitd/foes.)],Bestiary)]
+        flags: [funsyntax]
+      FUN`SCREEN`KIND:
+        value: |-
+          box(lfields(lit({"cols":2}),Tier%*<|>Clock%*<|>Harm,[u(%!/FUN`FOE`STORE,%0,TIER,1)]%*<|>[u(%!/FUN`FOE`STORE,%0,CLOCK,4) segments]%*<|>[u(%!/FUN`FOE`STORE,%0,HARMTEXT,Hurt) %(level [u(%!/FUN`FOE`STORE,%0,HARM,2)]%)],%*<|>)[if(strlen(get({{store}}/FOE`%0`NOTES)),%r[rule()]%r[get({{store}}/FOE`%0`NOTES)])],[get({{store}}/FOE`%0)] %([lcstr(%0)]%))
         flags: [funsyntax]
 
       # ---- the sheet API ------------------------------------------------------------
@@ -1286,7 +1564,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add/noparse/rsnoparse +sheet; @hook/override/inline +sheet=%!,CMD`SHEET; @command/add/noparse/rsnoparse +check; @hook/override/inline +check=%!,CMD`CHECK; @command/add/noparse/rsnoparse +clock; @hook/override/inline +clock=%!,CMD`CLOCK; @command/add/noparse/rsnoparse +encounter; @hook/override/inline +encounter=%!,CMD`ENCOUNTER
+          @command/add/noparse/rsnoparse +sheet; @hook/override/inline +sheet=%!,CMD`SHEET; @command/add/noparse/rsnoparse +check; @hook/override/inline +check=%!,CMD`CHECK; @command/add/noparse/rsnoparse +clock; @hook/override/inline +clock=%!,CMD`CLOCK; @command/add/noparse/rsnoparse +encounter; @hook/override/inline +encounter=%!,CMD`ENCOUNTER; @command/add/noparse/rsnoparse +foe; @hook/override/inline +foe=%!,CMD`FOE
         flags: [cmdsyntax]
       AINSTALL:
         value: |-
@@ -1307,6 +1585,127 @@ objects:
     location: "{{sheet}}"
     flags: [no_command]
     attributes:
+      # The threats, +config fitd/foes: the package's own, with no setting's names.
+      FOE`HOUND: |-
+        Guard hounds
+      FOE`HOUND`TIER: |-
+        0
+      FOE`HOUND`CLOCK: |-
+        4
+      FOE`HOUND`HARM: |-
+        1
+      FOE`HOUND`HARMTEXT: |-
+        Bitten
+      FOE`HOUND`NOTES: |-
+        A pack; they bark before they bite, and that brings the guards.
+      FOE`GUARD: |-
+        Watch guard
+      FOE`GUARD`TIER: |-
+        1
+      FOE`GUARD`CLOCK: |-
+        4
+      FOE`GUARD`HARM: |-
+        2
+      FOE`GUARD`HARMTEXT: |-
+        Cut
+      FOE`GUARD`NOTES: |-
+        Calls for help when outmatched, and takes a bribe when not watched.
+      FOE`THUG: |-
+        Hired thug
+      FOE`THUG`TIER: |-
+        1
+      FOE`THUG`CLOCK: |-
+        4
+      FOE`THUG`HARM: |-
+        2
+      FOE`THUG`HARMTEXT: |-
+        Battered
+      FOE`THUG`NOTES: |-
+        Paid to hurt people; runs when the pay stops being worth it.
+      FOE`GANG: |-
+        Street gang
+      FOE`GANG`TIER: |-
+        1
+      FOE`GANG`CLOCK: |-
+        6
+      FOE`GANG`HARM: |-
+        2
+      FOE`GANG`HARMTEXT: |-
+        Stabbed
+      FOE`GANG`NOTES: |-
+        A crowd that fights as one; scatter it and it is a few scared kids.
+      FOE`RIVAL: |-
+        Rival scoundrel
+      FOE`RIVAL`TIER: |-
+        2
+      FOE`RIVAL`CLOCK: |-
+        6
+      FOE`RIVAL`HARM: |-
+        2
+      FOE`RIVAL`HARMTEXT: |-
+        Sliced
+      FOE`RIVAL`NOTES: |-
+        Wants the same prize, and knows the crew's tricks.
+      FOE`GHOST: |-
+        Restless ghost
+      FOE`GHOST`TIER: |-
+        2
+      FOE`GHOST`CLOCK: |-
+        6
+      FOE`GHOST`HARM: |-
+        2
+      FOE`GHOST`HARMTEXT: |-
+        Chilled
+      FOE`GHOST`NOTES: |-
+        Cannot be cut; it is driven off, bound or laid to rest.
+      FOE`SQUAD: |-
+        Squad of soldiers
+      FOE`SQUAD`TIER: |-
+        2
+      FOE`SQUAD`CLOCK: |-
+        8
+      FOE`SQUAD`HARM: |-
+        2
+      FOE`SQUAD`HARMTEXT: |-
+        Shot
+      FOE`SQUAD`NOTES: |-
+        Drilled and armed; they hold ground and wait for orders.
+      FOE`SENTRY: |-
+        Clockwork sentry
+      FOE`SENTRY`TIER: |-
+        2
+      FOE`SENTRY`CLOCK: |-
+        8
+      FOE`SENTRY`HARM: |-
+        3
+      FOE`SENTRY`HARMTEXT: |-
+        Crushed
+      FOE`SENTRY`NOTES: |-
+        Tireless, follows its orders to the letter, and nothing else.
+      FOE`ASSASSIN: |-
+        Assassin
+      FOE`ASSASSIN`TIER: |-
+        3
+      FOE`ASSASSIN`CLOCK: |-
+        8
+      FOE`ASSASSIN`HARM: |-
+        3
+      FOE`ASSASSIN`HARMTEXT: |-
+        Throat cut
+      FOE`ASSASSIN`NOTES: |-
+        Strikes from hiding, once, and is gone before the alarm.
+      FOE`HORROR: |-
+        Bound horror
+      FOE`HORROR`TIER: |-
+        4
+      FOE`HORROR`CLOCK: |-
+        12
+      FOE`HORROR`HARM: |-
+        3
+      FOE`HORROR`HARMTEXT: |-
+        Torn apart
+      FOE`HORROR`NOTES: |-
+        Something summoned and barely held; every bond on it is slipping.
       ATTRIBUTE: |-
         The attributes, one branch each, keyed as a player types it.
       ATTRIBUTE`INSIGHT: |-
@@ -1418,7 +1817,7 @@ objects:
     location: "{{sheet}}"
     attributes:
       HELP: |-
-        Your character's Forged in the Dark sheet, rolling against it, encounters and progress clocks: +sheet, +check, +encounter and +clock.
+        Your character's Forged in the Dark sheet, rolling against it, encounters and their threats, and progress clocks: +sheet, +check, +encounter, +foe and +clock.
       SEE: |-
         Cross-references. One leaf per topic; subtopics come from the tree, not from here.
       SEE`SHEET: |-
@@ -1426,7 +1825,9 @@ objects:
       SEE`CHECK: |-
         sheet encounter clock
       SEE`ENCOUNTER: |-
-        sheet check
+        sheet check foe
+      SEE`FOE: |-
+        encounter clock
       SEE`CLOCK: |-
         sheet check
       HELP`SHEET: |-
@@ -1508,7 +1909,7 @@ objects:
         - `+encounter/leave [<n>]` comes out; your copy there is gone.
         - `+encounter/use <n>` picks which copy you roll from, when you are in more than one here.
 
-        While you are in an encounter's room, `+check`, `+check/resist`, stress, trauma, harm and coin use your copy in it. Anywhere else, your sheet.
+        While you are in an encounter's room, `+check`, `+check/resist`, stress, trauma, harm and coin use your copy in it. Anywhere else, your sheet. When the GM has set your position there, `+check` with no position uses it, and says your effect.
 
         For example:
 
@@ -1516,7 +1917,7 @@ objects:
 
         Output: `\[ENCOUNTER\] Alice joins 1 (Rooftop chase).`
 
-        See `+help encounter gm` for running one.
+        See `+help encounter gm` for running one, and `+help foe` for threats.
       HELP`ENCOUNTER`GM: |-
         Whoever starts an encounter runs it; sheet keepers run any. Give the number after `=` when the room has more than one.
 
@@ -1524,6 +1925,7 @@ objects:
         - `+encounter/remove <name>[=<n>]` takes them out; their copy goes.
         - `+encounter/keep <name>[=<n>]` writes their stress, trauma, harm and coin from the copy to their sheet.
         - `+encounter/end [<n>]` ends it. Every copy goes, and nothing is written back unless you kept it first.
+        - `+encounter/position <name>=<position> [<effect>]` sets a member's position, and their effect: limited, standard or great. Nothing after `=` clears it.
 
         While a member plays from your encounter's copy, you change it: `+sheet/stress <name>=+<n>`, `/trauma <name>/<trauma>`, `/harm <name>/<level>=<harm>` and `/coin <name>=<n>`.
 
@@ -1532,6 +1934,36 @@ objects:
         `+encounter/keep Alice=1`
 
         Output: `\[ENCOUNTER\] Done: Alice's sheet keeps the stress, trauma, harm and coin from 1 (Rooftop chase).`
+      HELP`FOE: |-
+        Threats are the GM's side of an encounter, added from the game's list of them. Each is numbered, so two guards are Watch guard 1 and Watch guard 2, and each has a clock: fill it and the threat is overcome.
+
+        - `+foe` lists the threats in the encounter here, with their tier, clock and the harm they deal; `+foe <threat>` shows one. Name a threat by its number or its name.
+        - `+foe/bestiary` lists what the GM can add; `+foe/bestiary <kind>` shows one.
+
+        When you act against a threat, your effect fills its clock: limited 1 segment, standard 2, great 3. Nothing a threat takes reaches the list, and the threats go when the encounter ends.
+
+        For example:
+
+        `+foe guard 2`
+
+        Output: a box with Watch guard 2's tier, clock and harm.
+
+        See `+help foe gm` for running them.
+      HELP`FOE`GM: |-
+        The GM of an encounter, or a sheet keeper, runs its threats:
+
+        - `+foe/add <kind>[=<count>]` adds threats from the list: `+foe/add guard=3`. `+foe/remove <threat>` takes one out.
+        - `+foe/tick <threat>[=<effect>]` fills its clock by an effect, limited, standard (the default) or great, or by a number of segments; below 0 empties some. Full, it is overcome.
+        - `+foe/harm <threat>=<name>[/<level>]` marks the threat's harm on that member's copy, at its level or the one given. A full level pushes it up one, as `+sheet/harm` does.
+        - `+foe/run <n>` picks which encounter your `+foe` commands use, when the room has several.
+
+        For example:
+
+        `+foe/harm guard 1=Alice`
+
+        Output: `\[ENCOUNTER\] Watch guard 1 deals Alice level 2 harm: Cut.`
+
+        Staff change the list with `+config fitd/foes`.
       HELP`CLOCK: |-
         A clock tracks progress against something: a guard growing suspicious, a ritual nearly done. Clocks belong to the game, so anyone may read them.
 

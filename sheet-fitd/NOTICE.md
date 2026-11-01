@@ -1,6 +1,6 @@
 # Blades in the Dark SRD Notice
 
-The sheet-fitd package's actions and attributes, stress, trauma, harm levels, coin, positions, progress clocks, and the dice rules its help describes are based on the Blades in the Dark system reference document. The wording of the help and of every message is this package's own; the rules are restated, not copied, and the setting is left out.
+The sheet-fitd package's actions and attributes, stress, trauma, harm levels, coin, positions and effect, threat tiers, progress clocks, and the dice rules its help describes are based on the Blades in the Dark system reference document. The threats it ships are its own. The wording of the help and of every message is this package's own; the rules are restated, not copied, and the setting is left out.
 
 ## Attribution
 

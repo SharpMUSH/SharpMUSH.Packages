@@ -5,7 +5,8 @@ skill list the game edits, each skill untrained, trained or expert. Players make
 guided steps (abilities, skills) until they are approved, then spend XP on advances. They keep their own
 hit points, coin and gear in play, and roll against the sheet with `+check`, which the whole room sees and
 the game keeps as a recorded roll. Encounters play a scene from copies of the sheets, so nothing that
-happens in one reaches the sheet or another scene unless its GM keeps it.
+happens in one reaches the sheet or another scene unless its GM keeps it, with foes from a bestiary,
+initiative, turns and conditions.
 
 The rules are generic d20 mechanics written for this package; no rulebook text is used.
 
@@ -46,6 +47,16 @@ one sheet package per game.
 | `+encounter/start [<title>]` | all | Start one in your room and run it |
 | `+encounter/join [<n>]`, `/leave [<n>]`, `/use [<n>]` | all | Take part with a copy of your sheet, come out, or pick which copy you roll from here |
 | `+encounter/add`, `/remove`, `/keep <name>[=<n>]`, `/end [<n>]` | its GM, keeper | Bring someone in, take them out, write their copy's damage, coin and gear to their sheet, end it |
+| `+encounter/initiative [<n>][=<name or foe>]` | its GM, keeper | Roll initiative for everyone, or one more: 1d20 plus Dexterity, or a foe's initiative |
+| `+encounter/next [<n>]` | its GM, keeper, whoever's turn it is | Pass the turn on, skipping foes that are down; after the last, a new round |
+| `+encounter/order [<n>]` | all | The round, the order, hit points and conditions |
+| `+encounter/condition <name or foe>=<condition> [<rounds>]` | its GM, keeper | Mark a condition, counted down at the start of its holder's turns; `=!<condition>` takes it off |
+| `+foe [<foe>]` | all | The foes in the encounter here, or one |
+| `+foe/bestiary [<kind>]` | all | What a GM can add, or one kind |
+| `+foe/add <kind>[=<count>]`, `/remove <foe>` | its GM, keeper | Add foes from the bestiary, numbered (`Goblin 1`), or take one out |
+| `+foe/attack <foe>[=<name>[/<AC>]]` | its GM, keeper | Roll its attack and damage; with an AC, a hit comes off the member's copy |
+| `+foe/damage <foe>=<n>`, `/heal <foe>=<n\|all>` | its GM, keeper | Change a foe's hit points; at 0 it is down |
+| `+foe/run <n>` | its GM, keeper | Pick which encounter your `+foe` commands use, when the room has several |
 
 Keepers (`softcode.d20.admin`, the **D20 Sheet Keeper** role) put `<name>/` before the trait or item of
 `/set`, `/advance`, `/gear` and `/use`, and `<name>=` before the value of `/damage`, `/heal` and `/coin`,
@@ -67,6 +78,9 @@ anyone's.
   `crit-fail`, whatever the total.
 - The difficulty words trivial, easy, standard, hard and extreme are DC 5, 10, 15, 20 and 25
   (`+config d20/dcs`).
+- `+check <trait>=<foe>` uses that foe's AC as the DC.
+- A foe's attack is 1d20 plus its attack bonus against the AC given. A natural 20 hits and doubles the damage
+  dice; a natural 1 misses. With `crits` off, only the total counts.
 
 ## The ledger
 
@@ -115,6 +129,19 @@ sheet. Nothing one encounter does touches another, or the sheet.
 
 The Duties provider and every `API`` function always use the sheet itself.
 
+## Foes and turns
+
+The GM of an encounter adds foes from the bestiary, a `+config` table of kinds (`+config d20/foes`) with a
+label, `ac`, `hp`, `init`, `attack`, `damage` (dice such as `1d6+2`), `level` and `notes`. The package ships
+thirteen, from a giant rat to a young dragon. A foe added to an encounter is a copy of its kind, numbered in
+that encounter, with its own hit points and conditions; changing the bestiary changes no foe already added.
+An encounter holds at most 30 foes. In a room with several encounters, `+foe/run <n>` picks the one
+`+foe` and `+encounter/condition` use.
+
+`+encounter/initiative` puts every member and every foe still standing in order. A condition with rounds
+counts down at the start of its holder's turn and goes at 0. `+encounter/end` drops the foes, the order and
+the conditions with the copies.
+
 ## Where the data lives
 
 ```
@@ -135,9 +162,14 @@ D20`USING           the encounter /use picked
 On **D20 Encounters**: `ENC`<n>` the title, with `ROOM`, `GM`, `STARTED` and `COPY`<dbref number>`, each
 member's copy, a JSON object with `level`, `scores` (`STR=15 DEX=14 ...`), `training` (`ATHLETICS=1 ...`),
 `hp`, `damage`, `coin`, `gear` (`<count>~<KEY>~<name>` items between `|`) and `encounter`.
+`FOE`<k>` is foe `k`, a JSON object with `key` (its kind), `label`, `ac`, `hp`, `hpmax`, `init`, `attack`, `damage`, `level`
+and `notes`;
+`ORDER` the initiative order (`<token>~<roll>` between spaces, a token `P<dbref number>` or `F<k>`), `ROUND`
+and `TURN`; `COND`<token>` that token's conditions.
 
 The traits are a `+config` table on **D20 Sheet Store**: `TRAIT`<KEY>` holds the label, with `KIND`
-(ability or skill), `ABILITY` (a skill's ability key) and `ORDER` beneath.
+(ability or skill), `ABILITY` (a skill's ability key) and `ORDER` beneath. The bestiary is `FOE`<KIND>`, the
+label, with `AC`, `HP`, `INIT`, `ATTACK`, `DAMAGE`, `LEVEL` and `NOTES` beneath.
 
 ## The sheet API
 

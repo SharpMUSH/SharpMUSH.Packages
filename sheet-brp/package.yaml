@@ -1,9 +1,9 @@
 format: "1.16"
 package: sheet-brp
 title: "Percentile sheet (BRP)"
-version: 2.1.0
+version: 2.2.0
 authors: [SharpMUSH]
-description: "A percentile character sheet on the Basic Roleplaying rules: seven characteristics and a skill list with base chances the game edits, built from a ledger, with point-buy character creation, experience checks that raise skills, hit points, power points and coin, an audited coin ledger, and encounters that play from copies of the sheets. +check rolls 1d100 under a skill or a characteristic roll, doubled or halved for difficulty, and reads critical, special, success, failure or fumble. The skill list is ORC Licensed Material from Basic Roleplaying: Universal Game Engine."
+description: "A percentile character sheet on the Basic Roleplaying rules: seven characteristics and a skill list with base chances the game edits, built from a ledger, with point-buy character creation, experience checks that raise skills, hit points, power points and coin, an audited coin ledger, and encounters that play from copies of the sheets, with creatures from a bestiary the game edits, hit locations and an order of play. +check rolls 1d100 under a skill or a characteristic roll, doubled or halved for difficulty, and reads critical, special, success, failure or fumble. The skill list is ORC Licensed Material from Basic Roleplaying: Universal Game Engine."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, brp, percentile, d100, skills]
@@ -306,6 +306,32 @@ objects:
         ENCOUNTER`KEEP
       DATA`ROUTE`ENCOUNTER`END: |-
         ENCOUNTER`END
+      DATA`ROUTE`FOE`BARE: |-
+        FOE`LIST
+      DATA`ROUTE`FOE`ARG: |-
+        FOE`SHOW
+      DATA`ROUTE`FOE`BESTIARY: |-
+        FOE`BESTIARY
+      DATA`ROUTE`FOE`RUN: |-
+        FOE`RUN
+      DATA`ROUTE`FOE`ADD: |-
+        FOE`ADD
+      DATA`ROUTE`FOE`REMOVE: |-
+        FOE`REMOVE
+      DATA`ROUTE`FOE`ATTACK: |-
+        FOE`ATTACK
+      DATA`ROUTE`FOE`DAMAGE: |-
+        FOE`DAMAGE
+      DATA`ROUTE`FOE`HEAL: |-
+        FOE`HEAL
+      DATA`ROUTE`ENCOUNTER`INITIATIVE: |-
+        ENCOUNTER`INITIATIVE
+      DATA`ROUTE`ENCOUNTER`NEXT: |-
+        ENCOUNTER`NEXT
+      DATA`ROUTE`ENCOUNTER`ORDER: |-
+        ENCOUNTER`ORDER
+      DATA`ROUTE`ENCOUNTER`CONDITION: |-
+        ENCOUNTER`CONDITION
       DATA`DIFFICULTIES: |-
         trivial easy standard hard extreme
       # What +check also takes after =, and what each comes to.
@@ -330,6 +356,185 @@ objects:
       DATA`LOG`MAX: |-
         500
 
+      DATA`CONFIG`FOES`TYPE: |-
+        table
+      DATA`CONFIG`FOES`LABEL: |-
+        Foes
+      DATA`CONFIG`FOES`DESCRIPTION: |-
+        The bestiary: the creatures a GM adds to an encounter with +foe/add.
+      DATA`CONFIG`FOES`STORE: |-
+        {{store}}
+      DATA`CONFIG`FOES`PATH: |-
+        FOE
+      DATA`CONFIG`FOES`ENTRY: |-
+        label
+      DATA`CONFIG`FOES`FIELDS: |-
+        label str con siz dex pow armor attack weapon damage notes
+      DATA`CONFIG`FOES`KEYPATTERN: |-
+        ^[A-Za-z0-9-]{1,20}$
+      DATA`CONFIG`FOES`FIELD`LABEL`TYPE: |-
+        text
+      DATA`CONFIG`FOES`FIELD`LABEL`MIN: |-
+        1
+      DATA`CONFIG`FOES`FIELD`LABEL`MAX: |-
+        30
+      DATA`CONFIG`FOES`FIELD`LABEL`LABEL: |-
+        Label
+      DATA`CONFIG`FOES`FIELD`LABEL`DESCRIPTION: |-
+        The name it goes by; each one added gets a number after it.
+      DATA`CONFIG`FOES`FIELD`STR`TYPE: |-
+        integer
+      DATA`CONFIG`FOES`FIELD`STR`DEFAULT: |-
+        10
+      DATA`CONFIG`FOES`FIELD`STR`MIN: |-
+        1
+      DATA`CONFIG`FOES`FIELD`STR`MAX: |-
+        99
+      DATA`CONFIG`FOES`FIELD`STR`LABEL: |-
+        STR
+      DATA`CONFIG`FOES`FIELD`STR`DESCRIPTION: |-
+        Strength; with SIZ it sets the damage bonus.
+      DATA`CONFIG`FOES`FIELD`CON`TYPE: |-
+        integer
+      DATA`CONFIG`FOES`FIELD`CON`DEFAULT: |-
+        10
+      DATA`CONFIG`FOES`FIELD`CON`MIN: |-
+        1
+      DATA`CONFIG`FOES`FIELD`CON`MAX: |-
+        99
+      DATA`CONFIG`FOES`FIELD`CON`LABEL: |-
+        CON
+      DATA`CONFIG`FOES`FIELD`CON`DESCRIPTION: |-
+        Constitution; with SIZ it sets the hit points.
+      DATA`CONFIG`FOES`FIELD`SIZ`TYPE: |-
+        integer
+      DATA`CONFIG`FOES`FIELD`SIZ`DEFAULT: |-
+        10
+      DATA`CONFIG`FOES`FIELD`SIZ`MIN: |-
+        1
+      DATA`CONFIG`FOES`FIELD`SIZ`MAX: |-
+        99
+      DATA`CONFIG`FOES`FIELD`SIZ`LABEL: |-
+        SIZ
+      DATA`CONFIG`FOES`FIELD`SIZ`DESCRIPTION: |-
+        Size.
+      DATA`CONFIG`FOES`FIELD`DEX`TYPE: |-
+        integer
+      DATA`CONFIG`FOES`FIELD`DEX`DEFAULT: |-
+        10
+      DATA`CONFIG`FOES`FIELD`DEX`MIN: |-
+        1
+      DATA`CONFIG`FOES`FIELD`DEX`MAX: |-
+        99
+      DATA`CONFIG`FOES`FIELD`DEX`LABEL: |-
+        DEX
+      DATA`CONFIG`FOES`FIELD`DEX`DESCRIPTION: |-
+        Dexterity: the order it acts in.
+      DATA`CONFIG`FOES`FIELD`POW`TYPE: |-
+        integer
+      DATA`CONFIG`FOES`FIELD`POW`DEFAULT: |-
+        10
+      DATA`CONFIG`FOES`FIELD`POW`MIN: |-
+        1
+      DATA`CONFIG`FOES`FIELD`POW`MAX: |-
+        99
+      DATA`CONFIG`FOES`FIELD`POW`LABEL: |-
+        POW
+      DATA`CONFIG`FOES`FIELD`POW`DESCRIPTION: |-
+        Power.
+      DATA`CONFIG`FOES`FIELD`ARMOR`TYPE: |-
+        integer
+      DATA`CONFIG`FOES`FIELD`ARMOR`DEFAULT: |-
+        0
+      DATA`CONFIG`FOES`FIELD`ARMOR`MIN: |-
+        0
+      DATA`CONFIG`FOES`FIELD`ARMOR`MAX: |-
+        20
+      DATA`CONFIG`FOES`FIELD`ARMOR`LABEL: |-
+        Armour
+      DATA`CONFIG`FOES`FIELD`ARMOR`DESCRIPTION: |-
+        What it takes off each blow.
+      DATA`CONFIG`FOES`FIELD`ATTACK`TYPE: |-
+        integer
+      DATA`CONFIG`FOES`FIELD`ATTACK`DEFAULT: |-
+        40
+      DATA`CONFIG`FOES`FIELD`ATTACK`MIN: |-
+        1
+      DATA`CONFIG`FOES`FIELD`ATTACK`MAX: |-
+        200
+      DATA`CONFIG`FOES`FIELD`ATTACK`LABEL: |-
+        Attack
+      DATA`CONFIG`FOES`FIELD`ATTACK`DESCRIPTION: |-
+        Its attack skill, in percent.
+      DATA`CONFIG`FOES`FIELD`WEAPON`TYPE: |-
+        text
+      DATA`CONFIG`FOES`FIELD`WEAPON`DEFAULT: |-
+        Strike
+      DATA`CONFIG`FOES`FIELD`WEAPON`MIN: |-
+        1
+      DATA`CONFIG`FOES`FIELD`WEAPON`MAX: |-
+        30
+      DATA`CONFIG`FOES`FIELD`WEAPON`LABEL: |-
+        Weapon
+      DATA`CONFIG`FOES`FIELD`WEAPON`DESCRIPTION: |-
+        What it attacks with: Bite, Claw, Sword.
+      DATA`CONFIG`FOES`FIELD`DAMAGE`TYPE: |-
+        text
+      DATA`CONFIG`FOES`FIELD`DAMAGE`DEFAULT: |-
+        1d6
+      DATA`CONFIG`FOES`FIELD`DAMAGE`MIN: |-
+        1
+      DATA`CONFIG`FOES`FIELD`DAMAGE`MAX: |-
+        20
+      DATA`CONFIG`FOES`FIELD`DAMAGE`CHECK: |-
+        CHECK`DICE
+      DATA`CONFIG`FOES`FIELD`DAMAGE`LABEL: |-
+        Damage
+      DATA`CONFIG`FOES`FIELD`DAMAGE`DESCRIPTION: |-
+        Its weapon's dice, such as 1d8+1. The damage bonus is added to it.
+      DATA`CONFIG`FOES`FIELD`NOTES`TYPE: |-
+        text
+      DATA`CONFIG`FOES`FIELD`NOTES`MIN: |-
+        0
+      DATA`CONFIG`FOES`FIELD`NOTES`MAX: |-
+        300
+      DATA`CONFIG`FOES`FIELD`NOTES`LABEL: |-
+        Notes
+      DATA`CONFIG`FOES`FIELD`NOTES`DESCRIPTION: |-
+        How it fights, for the GM.
+      DATA`CONFIG`LOCATIONS: |-
+        0
+      DATA`CONFIG`LOCATIONS`TYPE: |-
+        boolean
+      DATA`CONFIG`LOCATIONS`DEFAULT: |-
+        0
+      DATA`CONFIG`LOCATIONS`LABEL: |-
+        Hit locations
+      DATA`CONFIG`LOCATIONS`DESCRIPTION: |-
+        Whether a blow in an encounter rolls 1d20 for where it lands: legs, abdomen, chest, arms or head.
+      DATA`CONFIG`LOCATIONS`EXAMPLE: |-
+        yes
+      DATA`CONFIG`STRIKERANKS: |-
+        0
+      DATA`CONFIG`STRIKERANKS`TYPE: |-
+        boolean
+      DATA`CONFIG`STRIKERANKS`DEFAULT: |-
+        0
+      DATA`CONFIG`STRIKERANKS`LABEL: |-
+        Strike ranks
+      DATA`CONFIG`STRIKERANKS`DESCRIPTION: |-
+        Whether an encounter's order goes by strike rank, from DEX and SIZ, lowest first, rather than by DEX, highest first.
+      DATA`CONFIG`STRIKERANKS`EXAMPLE: |-
+        yes
+      # +config's CHECK for a creature's damage (%0): dice that roll() reads.
+      CHECK`DICE: |-
+        if(cand(lte(strlen(%0),20),strmatch(lcstr(%0),*d*),isint(roll(%0))),,Give dice such as 1d6+2.)
+      # Hit locations, from 1d20: <highest roll>:<place> between |, in order.
+      DATA`LOCATIONS: |-
+        4:right leg|8:left leg|11:abdomen|12:chest|15:right arm|18:left arm|20:head
+      # The most foes one encounter holds.
+      DATA`FOE`MAX: |-
+        30
       # ---- commands ---------------------------------------------------------------
       # %1 the switches and %2 what follows, exactly as typed.
       CMD`SHEET:
@@ -343,6 +548,10 @@ objects:
       CMD`ENCOUNTER:
         value: |-
           $(?is)^\+encounter(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,encounter,table,ENCOUNTER,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`FOE:
+        value: |-
+          $(?is)^\+foe(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,foe,table,FOE,switches,%1,argument,%2
         flags: [regexp, cmdsyntax]
       # A line a bridge adds to one of this object's messages: HINT`<message>, set here by a bridge such as
       # sheet-brp-help. %1 on are passed to it. Nothing when no bridge set one, so the message stands without it.
@@ -609,6 +818,107 @@ objects:
           @assert u(%!/FUN`ENC`MEMBER,%q<sheet_who>,%q<enc_n>)=@pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)] is not in [u(%!/FUN`ENC`NAME,%q<enc_n>)].,warn)
         flags: [cmdsyntax]
 
+      # ---- +foe -------------------------------------------------------------------------
+      # Foes are the GM's side of an encounter: ENC`<n>`FOE`<k> on the encounter store, a JSON object copied from
+      # the bestiary (FOE`<KEY> on the store, +config brp/foes) when the GM adds it, with key (the kind) and
+      # label, the kind's name and its number in the encounter. Nothing a foe takes reaches the bestiary.
+      # +foe [<foe>]: the foes in the encounter here, or one.
+      INC`FOE`LIST:
+        value: |-
+          @include %!/INC`NEED`FOEENC; @pemit %#=u(%!/FUN`SCREEN`FOES,%q<enc_n>,%#)
+        flags: [cmdsyntax]
+      INC`FOE`SHOW:
+        value: |-
+          @include %!/INC`NEED`FOEENC; @include/args %!/INC`NEED`FOE=typed,%q<cmd_argument>; @pemit %#=u(%!/FUN`SCREEN`FOE,%q<enc_n>,%q<foe_k>,%#)
+        flags: [cmdsyntax]
+      # +foe/bestiary [<kind>]: what the GM can add.
+      INC`FOE`BESTIARY:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=u(%!/FUN`SCREEN`BESTIARY); @assert strlen(setr(foe_kind,u(%!/FUN`FOE`KIND,%q<cmd_argument>)))=@pemit %#=notice(FOE,There is no '%q<cmd_argument>' in the bestiary. +foe/bestiary lists it.,warn); @pemit %#=u(%!/FUN`SCREEN`KIND,%q<foe_kind>)
+        flags: [cmdsyntax]
+      # +foe/run <n>: which encounter here the GM's +foe commands use, when the room has several.
+      INC`FOE`RUN:
+        value: |-
+          @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>,from,u(%!/FUN`ENC`HERE,%#),verb,run; @assert member(u(%!/FUN`ENC`HERE,%#),%q<enc_n>)=@pemit %#=notice(FOE,Encounter %q<enc_n> is not in this room.,warn); &RUN`[after(num(%#),#)] {{encounters}}=%q<enc_n>; @pemit %#=notice(FOE,Your +foe commands use [u(%!/FUN`ENC`NAME,%q<enc_n>)] while you are in its room.,ok)
+        flags: [cmdsyntax]
+      # +foe/add <kind>[=<count>]: the GM adds foes from the bestiary.
+      INC`FOE`ADD:
+        value: |-
+          @include %!/INC`NEED`FOEENC; @include %!/INC`NEED`GM; @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(FOE,+foe/add <kind>%[=<count>%]%, such as +foe/add wolf=2. +foe/bestiary lists the kinds.,warn); think setqm(add_kind,u(%!/FUN`FOE`KIND,%q<cmd_left_side>),add_count,if(strlen(%q<cmd_right_side>),%q<cmd_right_side>,1)); @assert strlen(%q<add_kind>)=@pemit %#=notice(FOE,There is no '%q<cmd_left_side>' in the bestiary. +foe/bestiary lists it.,warn); @assert cand(isint(%q<add_count>),gte(%q<add_count>,1),lte(%q<add_count>,20))=@pemit %#=notice(FOE,Add 1 to 20 foes at a time.,warn); @assert lte(add(words(u(%!/FUN`FOE`NUMS,%q<enc_n>)),%q<add_count>),get(%!/DATA`FOE`MAX))=@pemit %#=notice(FOE,An encounter holds at most [get(%!/DATA`FOE`MAX)] foes.,warn); think setq(add_made,iter(lnum(%q<add_count>),u(%!/FUN`FOE`MAKE,%q<enc_n>,%q<add_kind>))); @remit get({{encounters}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,tone(strong,name(%#)) adds [itemize(iter(%q<add_made>,u(%!/FUN`FOE`LABEL,%q<enc_n>,%i0),%b,|),|)] to [u(%!/FUN`ENC`NAME,%q<enc_n>)].)
+        flags: [cmdsyntax]
+      # +foe/remove <foe>: the GM takes one out.
+      INC`FOE`REMOVE:
+        value: |-
+          @include %!/INC`NEED`FOEENC; @include %!/INC`NEED`GM; @include/args %!/INC`NEED`FOE=typed,%q<cmd_argument>; think setq(foe_label,u(%!/FUN`FOE`LABEL,%q<enc_n>,%q<foe_k>)); @wipe {{encounters}}/ENC`%q<enc_n>`FOE`%q<foe_k>; &ENC`%q<enc_n>`FOE`%q<foe_k> {{encounters}}; @remit get({{encounters}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,tone(strong,name(%#)) takes %q<foe_label> out of [u(%!/FUN`ENC`NAME,%q<enc_n>)].)
+        flags: [cmdsyntax]
+      # +foe/attack <creature>[=<name>[/<armour>]]: the GM rolls its attack and, on a hit, its damage for the room. Given a
+      # member, the damage less their armour (none on a critical) comes off their copy's hit points. A parry or dodge is the
+      # member's own roll, before this one counts.
+      INC`FOE`ATTACK:
+        value: |-
+          @include %!/INC`NEED`FOEENC; @include %!/INC`NEED`GM; @include/args %!/INC`NEED`FOE=typed,%q<cmd_left_side>; @assert gt(u(%!/FUN`FOE`GET,%q<enc_n>,%q<foe_k>,hp),0)=@pemit %#=notice(FOE,[u(%!/FUN`FOE`LABEL,%q<enc_n>,%q<foe_k>)] is down.,warn); think setqm(att_name,trim(before(%q<cmd_right_side>,/)),att_armor,firstof(trim(after(%q<cmd_right_side>,/)),0),sheet_who,,att_left,); @assert cand(isint(%q<att_armor>),gte(%q<att_armor>,0),lte(%q<att_armor>,20))=@pemit %#=notice(FOE,Armour is a whole number from 0 to 20.,warn); think if(strlen(%q<att_name>),setq(sheet_who,u(%!/FUN`PLAYER`MATCH,%q<att_name>))); @assert cor(not(strlen(%q<att_name>)),strlen(%q<sheet_who>))=@pemit %#=notice(FOE,There is no player called '%q<att_name>'.,warn); @assert cor(not(strlen(%q<att_name>)),u(%!/FUN`ENC`MEMBER,%q<sheet_who>,%q<enc_n>))=@pemit %#=notice(FOE,[name(%q<sheet_who>)] is not in [u(%!/FUN`ENC`NAME,%q<enc_n>)].,warn); think setq(att_result,u(%!/FUN`FOE`ATTACK,%q<enc_n>,%q<foe_k>)); think setqm(att_hit,json_query(%q<att_result>,extract,$.hit),att_level,json_query(%q<att_result>,extract,$.level)); think setq(att_taken,if(%q<att_hit>,max(0,sub(json_query(%q<att_result>,extract,$.damage),if(strmatch(%q<att_level>,critical),0,%q<att_armor>))),0)); think setq(att_place,if(cand(%q<att_hit>,get(%!/DATA`CONFIG`LOCATIONS)),u(%!/FUN`LOCATION`ROLL))); think if(cand(%q<att_hit>,strlen(%q<sheet_who>)),[setqm(att_path,u(%!/FUN`ENC`PATH,%q<enc_n>,%q<sheet_who>),att_most,u(%!/API`MOST,%q<sheet_who>,HP))][setq(att_now,get(%q<att_path>HP))][setq(att_hp,sub(if(strlen(%q<att_now>),%q<att_now>,%q<att_most>),%q<att_taken>))][null(u(%!/FUN`SETLEAF,%q<att_path>HP,%q<att_hp>))][setq(att_left,u(%!/FUN`DISPLAY`BLOW,%q<sheet_who>,%q<att_taken>,%q<att_hp>,%q<att_most>,%q<att_place>,if(strmatch(%q<att_level>,critical),0,%q<att_armor>)))]); @remit get({{encounters}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,[u(%!/FUN`FOE`LABEL,%q<enc_n>,%q<foe_k>)] attacks[if(strlen(%q<sheet_who>),%b[name(%q<sheet_who>)])] with [u(%!/FUN`FOE`GET,%q<enc_n>,%q<foe_k>,weapon)]: [json_query(%q<att_result>,extract,$.text)].%q<att_left> [tone(muted,%(roll [json_query(%q<att_result>,extract,$.roll)]%))])
+        flags: [cmdsyntax]
+      # +foe/damage <creature>=<n> [ignore]: the GM takes damage off its hit points, less its armour (none with ignore).
+      # With hit locations on, it says where the blow lands. Half its hit points or more in one blow is a major wound.
+      INC`FOE`DAMAGE:
+        value: |-
+          @include %!/INC`NEED`FOEENC; @include %!/INC`NEED`GM; @include/args %!/INC`NEED`FOE=typed,%q<cmd_left_side>; think setqm(dmg_n,first(%q<cmd_right_side>),dmg_ignore,strmatch(rest(%q<cmd_right_side>),ignore)); @assert cand(isint(%q<dmg_n>),gt(%q<dmg_n>,0),lte(%q<dmg_n>,999),cor(not(strlen(rest(%q<cmd_right_side>))),%q<dmg_ignore>))=@pemit %#=notice(FOE,+foe/damage <creature>=<n> %[ignore%]%, such as +foe/damage wolf 1=6. ignore is for a blow that ignores armour.,warn); think setqm(dmg_armor,if(%q<dmg_ignore>,0,u(%!/FUN`FOE`GET,%q<enc_n>,%q<foe_k>,armor)),dmg_place,if(get(%!/DATA`CONFIG`LOCATIONS),u(%!/FUN`LOCATION`ROLL))); think setqm(dmg_taken,max(0,sub(%q<dmg_n>,%q<dmg_armor>)),dmg_max,u(%!/FUN`FOE`GET,%q<enc_n>,%q<foe_k>,hpmax)); think setq(dmg_hp,max(0,sub(u(%!/FUN`FOE`GET,%q<enc_n>,%q<foe_k>,hp),%q<dmg_taken>))); think u(%!/FUN`FOE`SET,%q<enc_n>,%q<foe_k>,hp,%q<dmg_hp>); @remit get({{encounters}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,[u(%!/FUN`FOE`LABEL,%q<enc_n>,%q<foe_k>)] takes %q<dmg_taken> damage[if(%q<dmg_armor>,%b%(%q<dmg_n>%, less %q<dmg_armor> armour%))][if(strlen(%q<dmg_place>),%bto the %q<dmg_place>)]: [u(%!/FUN`FOE`HPTEXT,%q<enc_n>,%q<foe_k>)][if(cand(gt(%q<dmg_hp>,0),gte(%q<dmg_taken>,ceil(fdiv(%q<dmg_max>,2)))),%, [tone(strong,a major wound)])].)
+        flags: [cmdsyntax]
+      # +foe/heal <creature>=<n> or all: gives its hit points back.
+      INC`FOE`HEAL:
+        value: |-
+          @include %!/INC`NEED`FOEENC; @include %!/INC`NEED`GM; @include/args %!/INC`NEED`FOE=typed,%q<cmd_left_side>; @assert cor(strmatch(%q<cmd_right_side>,all),cand(isint(%q<cmd_right_side>),gt(%q<cmd_right_side>,0),lte(%q<cmd_right_side>,999)))=@pemit %#=notice(FOE,+foe/heal <creature>=<n> or all.,warn); think setq(foe_max,u(%!/FUN`FOE`GET,%q<enc_n>,%q<foe_k>,hpmax)); think u(%!/FUN`FOE`SET,%q<enc_n>,%q<foe_k>,hp,if(strmatch(%q<cmd_right_side>,all),%q<foe_max>,min(%q<foe_max>,add(u(%!/FUN`FOE`GET,%q<enc_n>,%q<foe_k>,hp),%q<cmd_right_side>)))); @remit get({{encounters}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,[u(%!/FUN`FOE`LABEL,%q<enc_n>,%q<foe_k>)] has [u(%!/FUN`FOE`HPTEXT,%q<enc_n>,%q<foe_k>)].)
+        flags: [cmdsyntax]
+      # ---- +encounter: combat ------------------------------------------------------------
+      # ENC`<n>`ORDER the order, <token>~<DEX or strike rank> in turn order, a token P<dbref number> for a member or
+      # F<k> for a foe; ENC`<n>`TURN the place in it whose turn it is; ENC`<n>`ROUND the round; ENC`<n>`COND`<token>
+      # conditions, <name>:<rounds left> or <name>:- until taken off.
+      # +encounter/initiative [<n>]: the GM puts every member and creature still standing in order, by DEX highest
+      # first, or with strike ranks on, by strike rank lowest first. [<n>]=<name or creature> puts one more in.
+      INC`ENCOUNTER`INITIATIVE:
+        value: |-
+          @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_left_side>,from,u(%!/FUN`ENC`HERE,%#),verb,initiative; @include %!/INC`NEED`GM; @break %q<cmd_has_equals>={@include/args %!/INC`NEED`TOKEN=typed,%q<cmd_right_side>; think setq(init_one,u(%!/FUN`INIT`ROLL,%q<enc_n>,%q<enc_token>)); &ENC`%q<enc_n>`ORDER {{encounters}}=[u(%!/FUN`INIT`SORT,[iter(get({{encounters}}/ENC`%q<enc_n>`ORDER),if(comp(first(%i0,~),%q<enc_token>),%i0))] %q<init_one>)]; @if not(get({{encounters}}/ENC`%q<enc_n>`ROUND))={&ENC`%q<enc_n>`ROUND {{encounters}}=1; &ENC`%q<enc_n>`TURN {{encounters}}=1}; @remit get({{encounters}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,[u(%!/FUN`TOKEN`NAME,%q<enc_n>,%q<enc_token>)] joins the order: [u(%!/FUN`INIT`SHOW,last(%q<init_one>,~))].)}; think setq(init_all,u(%!/FUN`INIT`SORT,iter([iter(u(%!/FUN`ENC`MEMBERS,%q<enc_n>),P[after(num(%i0),#)])] [iter(u(%!/FUN`FOE`NUMS,%q<enc_n>),if(gt(u(%!/FUN`FOE`GET,%q<enc_n>,%i0,hp),0),F%i0))],u(%!/FUN`INIT`ROLL,%q<enc_n>,%i0)))); @assert words(%q<init_all>)=@pemit %#=notice(ENCOUNTER,Nobody is in [u(%!/FUN`ENC`NAME,%q<enc_n>)] to put in order.,warn); &ENC`%q<enc_n>`ORDER {{encounters}}=%q<init_all>; &ENC`%q<enc_n>`TURN {{encounters}}=1; &ENC`%q<enc_n>`ROUND {{encounters}}=1; @remit get({{encounters}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,The order in [u(%!/FUN`ENC`NAME,%q<enc_n>)]: [itemize(iter(%q<init_all>,[u(%!/FUN`TOKEN`NAME,%q<enc_n>,first(%i0,~))] [u(%!/FUN`INIT`SHOW,last(%i0,~))],%b,|),|)]. Round 1: [tone(strong,u(%!/FUN`TOKEN`NAME,%q<enc_n>,first(first(%q<init_all>),~)))]'s turn.)
+        flags: [cmdsyntax]
+      # +encounter/next [<n>]: the GM, or whoever's turn it is, passes it on. Foes at 0 hit points and anyone
+      # no longer in the encounter are passed over; past the last, a new round starts. The conditions of the one
+      # whose turn begins count down.
+      INC`ENCOUNTER`NEXT:
+        value: |-
+          think setq(enc_n,firstof(%q<cmd_argument>,u(%!/FUN`FOE`ENC,%#))); @assert not(strmatch(%q<enc_n>,#-*))=@pemit %#=notice(ENCOUNTER,after(%q<enc_n>,#-1%b),warn); @assert cand(isint(%q<enc_n>),hasattr({{encounters}},ENC`%q<enc_n>))=@pemit %#=notice(ENCOUNTER,There is no encounter %q<enc_n>.,warn); think setq(next_order,get({{encounters}}/ENC`%q<enc_n>`ORDER)); @assert words(%q<next_order>)=@pemit %#=notice(ENCOUNTER,[u(%!/FUN`ENC`NAME,%q<enc_n>)] has no order yet. +encounter/initiative sets it.,warn); @assert cor(u(%!/FUN`ENC`GM,%#,%q<enc_n>),not(comp(first(extract(%q<next_order>,get({{encounters}}/ENC`%q<enc_n>`TURN),1),~),P[after(num(%#),#)])))=@pemit %#=notice(ENCOUNTER,Only the GM%, or whoever's turn it is%, passes the turn on.,error); think setq(next_turn,u(%!/FUN`INIT`NEXT,%q<enc_n>,%q<next_order>,get({{encounters}}/ENC`%q<enc_n>`TURN))); @assert %q<next_turn>=@pemit %#=notice(ENCOUNTER,Nobody in the order can act. +encounter/initiative sets it again.,warn); think setqm(next_round,add(get({{encounters}}/ENC`%q<enc_n>`ROUND),lte(%q<next_turn>,get({{encounters}}/ENC`%q<enc_n>`TURN))),next_token,first(extract(%q<next_order>,%q<next_turn>,1),~)); &ENC`%q<enc_n>`TURN {{encounters}}=%q<next_turn>; &ENC`%q<enc_n>`ROUND {{encounters}}=%q<next_round>; think setq(next_ended,u(%!/FUN`COND`TICK,%q<enc_n>,%q<next_token>)); @remit get({{encounters}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,Round %q<next_round>: [tone(strong,u(%!/FUN`TOKEN`NAME,%q<enc_n>,%q<next_token>))]'s turn[if(strlen(%q<next_ended>),. No longer [itemize(%q<next_ended>)])].)
+        flags: [cmdsyntax]
+      # +encounter/order [<n>]: the round, the order and whose turn it is.
+      INC`ENCOUNTER`ORDER:
+        value: |-
+          think setq(enc_n,firstof(%q<cmd_argument>,u(%!/FUN`FOE`ENC,%#))); @assert not(strmatch(%q<enc_n>,#-*))=@pemit %#=notice(ENCOUNTER,after(%q<enc_n>,#-1%b),warn); @assert cand(isint(%q<enc_n>),hasattr({{encounters}},ENC`%q<enc_n>))=@pemit %#=notice(ENCOUNTER,There is no encounter %q<enc_n>.,warn); @pemit %#=u(%!/FUN`SCREEN`ORDER,%q<enc_n>)
+        flags: [cmdsyntax]
+      # +encounter/condition <name or foe>=<condition> [<rounds>]: the GM marks a condition, for that many of its
+      # holder's turns or until taken off. =!<condition> takes it off.
+      INC`ENCOUNTER`CONDITION:
+        value: |-
+          @include %!/INC`NEED`FOEENC; @include %!/INC`NEED`GM; @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_right_side>))=@pemit %#=notice(ENCOUNTER,+encounter/condition <name or foe>=<condition> %[<rounds>%]%, such as +encounter/condition wolf 1=prone 1. =!<condition> takes it off.,warn); @include/args %!/INC`NEED`TOKEN=typed,%q<cmd_left_side>; think setqm(cond_name,lcstr(edit(first(%q<cmd_right_side>),!,)),cond_rounds,firstof(rest(%q<cmd_right_side>),-),cond_off,strmatch(%q<cmd_right_side>,!*)); @assert cand(lte(strlen(%q<cond_name>),20),regmatch(%q<cond_name>,^%[a-z%]%[a-z0-9-%]*$))=@pemit %#=notice(ENCOUNTER,A condition is one word of letters%, digits and dashes.,warn); @assert cor(%q<cond_off>,strmatch(%q<cond_rounds>,-),cand(isint(%q<cond_rounds>),gte(%q<cond_rounds>,1),lte(%q<cond_rounds>,99)))=@pemit %#=notice(ENCOUNTER,Rounds are a whole number from 1 to 99.,warn); think setq(cond_now,squish(iter(get({{encounters}}/ENC`%q<enc_n>`COND`%q<enc_token>),if(comp(first(%i0,:),%q<cond_name>),%i0)))); @assert cor(not(%q<cond_off>),neq(words(%q<cond_now>),words(get({{encounters}}/ENC`%q<enc_n>`COND`%q<enc_token>))))=@pemit %#=notice(ENCOUNTER,[u(%!/FUN`TOKEN`NAME,%q<enc_n>,%q<enc_token>)] is not %q<cond_name>.,warn); think attrib_set({{encounters}}/ENC`%q<enc_n>`COND`%q<enc_token>,squish(%q<cond_now> [if(not(%q<cond_off>),%q<cond_name>:%q<cond_rounds>)])); @remit get({{encounters}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,[u(%!/FUN`TOKEN`NAME,%q<enc_n>,%q<enc_token>)] [if(%q<cond_off>,is no longer %q<cond_name>,is %q<cond_name>[if(isint(%q<cond_rounds>),%bfor %q<cond_rounds> [if(eq(%q<cond_rounds>,1),round,rounds)])])].)
+        flags: [cmdsyntax]
+      # enc_token: the member or foe %<typed> names in enc_n.
+      INC`NEED`TOKEN:
+        value: |-
+          think setq(foe_k,u(%!/FUN`FOE`FIND,%q<enc_n>,%<typed>)); think setqm(enc_token,if(eq(words(%q<foe_k>),1),F%q<foe_k>),sheet_who,); @assert cor(strlen(%q<enc_token>),strlen(setr(sheet_who,u(%!/FUN`PLAYER`MATCH,%<typed>))))=@pemit %#=notice(ENCOUNTER,There is no foe or player '%<typed>' in [u(%!/FUN`ENC`NAME,%q<enc_n>)].,warn); @assert cor(strlen(%q<enc_token>),u(%!/FUN`ENC`MEMBER,%q<sheet_who>,%q<enc_n>))=@pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)] is not in [u(%!/FUN`ENC`NAME,%q<enc_n>)].,warn); think if(not(strlen(%q<enc_token>)),setq(enc_token,P[after(num(%q<sheet_who>),#)]))
+        flags: [cmdsyntax]
+      # Which encounter +foe means: enc_n, the one here; with several, the one +foe/run picked, else the one the
+      # player runs, else the one they play from.
+      INC`NEED`FOEENC:
+        value: |-
+          think setq(enc_n,u(%!/FUN`FOE`ENC,%#)); @assert not(strmatch(%q<enc_n>,#-*))=@pemit %#=notice(FOE,after(%q<enc_n>,#-1%b),warn)
+        flags: [cmdsyntax]
+      # foe_k: the foe %<typed> names in enc_n, by number or by name.
+      INC`NEED`FOE:
+        value: |-
+          @assert strlen(%<typed>)=@pemit %#=notice(FOE,Name a foe. +foe lists them.,warn); think setq(foe_k,u(%!/FUN`FOE`FIND,%q<enc_n>,%<typed>)); @assert words(%q<foe_k>)=@pemit %#=notice(FOE,There is no foe '%<typed>' in [u(%!/FUN`ENC`NAME,%q<enc_n>)]. +foe lists them.,warn); @assert eq(words(%q<foe_k>),1)=@pemit %#=notice(FOE,'%<typed>' could be [itemize(iter(%q<foe_k>,u(%!/FUN`FOE`LABEL,%q<enc_n>,%i0),%b,|),|,or)].,warn)
+        flags: [cmdsyntax]
+      # sheet_who: the member of enc_n %<name> names.
+      INC`NEED`MEMBERNAMED:
+        value: |-
+          @assert strlen(setr(sheet_who,u(%!/FUN`PLAYER`MATCH,%<name>)))=@pemit %#=notice(FOE,There is no player called '%<name>'.,warn); @assert u(%!/FUN`ENC`MEMBER,%q<sheet_who>,%q<enc_n>)=@pemit %#=notice(FOE,[name(%q<sheet_who>)] is not in [u(%!/FUN`ENC`NAME,%q<enc_n>)].,warn)
+        flags: [cmdsyntax]
+
       # ---- writes -----------------------------------------------------------------
       # %<who> an objid. The BRP root is wizard-flagged and no_command, and its leaves take that from it.
       INC`DO`ROOT:
@@ -641,7 +951,7 @@ objects:
       # %<who> leaves encounter %<n>; the copy goes.
       INC`DO`ENCDROP:
         value: |-
-          think u(%!/FUN`WIPE,{{encounters}},ENC`%<n>`COPY`[after(num(%<who>),#)]); @include/args %!/INC`DO`SET=who,%<who>,leaf,ENCOUNTERS,value,squish(iter(get(%<who>/BRP`ENCOUNTERS),if(comp(%i0,%<n>),%i0))); @if not(comp(get(%<who>/BRP`USING),%<n>))={&BRP`USING %<who>}
+          think u(%!/FUN`WIPE,{{encounters}},ENC`%<n>`COPY`[after(num(%<who>),#)]); &ENC`%<n>`COND`P[after(num(%<who>),#)] {{encounters}}; @include/args %!/INC`DO`SET=who,%<who>,leaf,ENCOUNTERS,value,squish(iter(get(%<who>/BRP`ENCOUNTERS),if(comp(%i0,%<n>),%i0))); @if not(comp(get(%<who>/BRP`USING),%<n>))={&BRP`USING %<who>}
         flags: [cmdsyntax]
       # %0 an object, %1 an attribute: clears it and every attribute beneath it, deepest first.
       FUN`WIPE:
@@ -956,6 +1266,166 @@ objects:
           if(isdbref(setr(found_player,pmatch(%0))),objid(%q<found_player>))
         flags: [funsyntax]
 
+      # ---- foes ---------------------------------------------------------------------------
+      # %0 someone: the encounter here their +foe commands use, or #-1 and why.
+      FUN`FOE`ENC:
+        value: |-
+          setqm(fe_here,u(%!/FUN`ENC`HERE,%0),fe_run,get({{encounters}}/RUN`[after(num(%0),#)]))[setq(fe_gm,squish(iter(%q<fe_here>,if(not(comp(get({{encounters}}/ENC`%i0`GM),objid(%0))),%i0))))][setq(fe_active,u(%!/FUN`ENC`ACTIVE,%0))][cond(not(words(%q<fe_here>)),#-1 There is no encounter here. +encounter/start begins one.,eq(words(%q<fe_here>),1),%q<fe_here>,member(%q<fe_here>,%q<fe_run>),%q<fe_run>,eq(words(%q<fe_gm>),1),%q<fe_gm>,strlen(%q<fe_active>),%q<fe_active>,#-1 There are several encounters here. +foe/run <n> picks the one your +foe commands use.)]
+        flags: [funsyntax]
+      # %0 an encounter: its foes' numbers.
+      FUN`FOE`NUMS:
+        value: |-
+          sort(iter(lattr({{encounters}}/ENC`%0`FOE`*),last(%i0,`)),n)
+        flags: [funsyntax]
+      # %0 an encounter, %1 a foe, %2 a field.
+      FUN`FOE`GET:
+        value: |-
+          json_query(get({{encounters}}/ENC`%0`FOE`%1),extract,$.%2)
+        flags: [funsyntax]
+      # %0 an encounter, %1 a foe, %2 a field, %3 its value as JSON.
+      FUN`FOE`SET:
+        value: |-
+          attrib_set({{encounters}}/ENC`%0`FOE`%1,json_mod(get({{encounters}}/ENC`%0`FOE`%1),patch,json(object,%2,%3)))
+        flags: [funsyntax]
+      FUN`FOE`LABEL:
+        value: |-
+          u(%!/FUN`FOE`GET,%0,%1,label)
+        flags: [funsyntax]
+      # %0 an encounter, %1 what was typed: the foe with that number, else the ones with that name, else the ones
+      # whose name ends in it as words (guard 2 for Watch guard 2), else starts with it, else has it anywhere.
+      FUN`FOE`FIND:
+        value: |-
+          cond(cand(isint(%1),hasattr({{encounters}},ENC`%0`FOE`%1)),%1,words(setr(ff_m,u(%!/FUN`FOE`MATCH,%0,%1,0))),%q<ff_m>,words(setr(ff_m,u(%!/FUN`FOE`MATCH,%0,%1,1))),%q<ff_m>,words(setr(ff_m,u(%!/FUN`FOE`MATCH,%0,%1,2))),%q<ff_m>,u(%!/FUN`FOE`MATCH,%0,%1,3))
+        flags: [funsyntax]
+      FUN`FOE`MATCH:
+        value: |-
+          squish(iter(u(%!/FUN`FOE`NUMS,%0),if(switch(%2,0,not(comp(lcstr(u(%!/FUN`FOE`LABEL,%0,%i0)),lcstr(trim(%1)))),1,strmatch(u(%!/FUN`FOE`LABEL,%0,%i0),* [trim(%1)]),2,strmatch(u(%!/FUN`FOE`LABEL,%0,%i0),trim(%1)*),strmatch(u(%!/FUN`FOE`LABEL,%0,%i0),*[trim(%1)]*)),%i0)))
+        flags: [funsyntax]
+      # %0 what was typed: the bestiary key it names, by key or by name.
+      FUN`FOE`KIND:
+        value: |-
+          setq(fk_key,ucstr(edit(trim(%0),%b,-)))[cond(cand(regmatch(%q<fk_key>,^%[A-Z0-9-%]+$),hasattr({{store}},FOE`%q<fk_key>)),%q<fk_key>,first(iter(lattr({{store}}/FOE`*),if(not(comp(lcstr(get({{store}}/%i0)),lcstr(trim(%0)))),last(%i0,`)))))]
+        flags: [funsyntax]
+      # %0 an encounter, %1 a bestiary key: a new foe copied from it. Returns its number.
+      FUN`FOE`MAKE:
+        value: |-
+          setq(fm_k,inc(lmax(0 [u(%!/FUN`FOE`NUMS,%0)])))[attrib_set({{encounters}}/ENC`%0`FOE`%q<fm_k>,json(object,key,json(string,%1),label,json(string,[get({{store}}/FOE`%1)] %q<fm_k>),str,u(%!/FUN`FOE`STORE,%1,STR,10),con,u(%!/FUN`FOE`STORE,%1,CON,10),siz,u(%!/FUN`FOE`STORE,%1,SIZ,10),dex,u(%!/FUN`FOE`STORE,%1,DEX,10),pow,u(%!/FUN`FOE`STORE,%1,POW,10),hp,u(%!/FUN`KIND`HP,%1),hpmax,u(%!/FUN`KIND`HP,%1),armor,u(%!/FUN`FOE`STORE,%1,ARMOR,0),attack,u(%!/FUN`FOE`STORE,%1,ATTACK,40),weapon,json(string,u(%!/FUN`FOE`STORE,%1,WEAPON,Strike)),damage,json(string,u(%!/FUN`FOE`STORE,%1,DAMAGE,1d6)),db,json(string,u(%!/FUN`KIND`DB,%1)),notes,json(string,get({{store}}/FOE`%1`NOTES))))]%q<fm_k>
+        flags: [funsyntax]
+      # %0 a kind, %1 a field, %2 its default.
+      FUN`FOE`STORE:
+        value: |-
+          default({{store}}/FOE`%0`%1,%2)
+        flags: [funsyntax]
+      FUN`KIND`SORTKEY:
+        value: |-
+          u(%!/FUN`KIND`HP,%0)
+        flags: [funsyntax]
+      # %0 a kind: its hit points, from CON and SIZ as a character's are.
+      FUN`KIND`HP:
+        value: |-
+          setq(kh_sum,add(u(%!/FUN`FOE`STORE,%0,CON,10),u(%!/FUN`FOE`STORE,%0,SIZ,10)))[if(strmatch(get(%!/DATA`CONFIG`HITPOINTS),total),%q<kh_sum>,ceil(fdiv(%q<kh_sum>,2)))]
+        flags: [funsyntax]
+      # %0 a kind: its damage bonus.
+      FUN`KIND`DB:
+        value: |-
+          u(%!/FUN`DB,add(u(%!/FUN`FOE`STORE,%0,STR,10),u(%!/FUN`FOE`STORE,%0,SIZ,10)))
+        flags: [funsyntax]
+      # %0 STR plus SIZ: the damage bonus, -1d6 at 12 or less up to +1d6 at 33 to 40, and 1d6 more for each 16 past that.
+      FUN`DB:
+        value: |-
+          cond(lte(%0,12),-1d6,lte(%0,16),-1d4,lte(%0,24),,lte(%0,32),+1d4,lte(%0,40),+1d6,+[add(2,div(sub(%0,41),16))]d6)
+        flags: [funsyntax]
+      FUN`KIND`ATTACKTEXT:
+        value: |-
+          [u(%!/FUN`FOE`STORE,%0,WEAPON,Strike)] [u(%!/FUN`FOE`STORE,%0,ATTACK,40)]%%, [u(%!/FUN`FOE`STORE,%0,DAMAGE,1d6)][u(%!/FUN`KIND`DB,%0)]
+        flags: [funsyntax]
+      FUN`FOE`ATTACKTEXT:
+        value: |-
+          [u(%!/FUN`FOE`GET,%0,%1,weapon)] [u(%!/FUN`FOE`GET,%0,%1,attack)]%%, [u(%!/FUN`FOE`GET,%0,%1,damage)][u(%!/FUN`FOE`GET,%0,%1,db)]
+        flags: [funsyntax]
+      FUN`FOE`HPSHORT:
+        value: |-
+          setq(fh_hp,u(%!/FUN`FOE`GET,%0,%1,hp))[if(gt(%q<fh_hp>,0),%q<fh_hp>/[u(%!/FUN`FOE`GET,%0,%1,hpmax)],down)]
+        flags: [funsyntax]
+      FUN`FOE`HPTEXT:
+        value: |-
+          setq(fh_hp,u(%!/FUN`FOE`GET,%0,%1,hp))[if(gt(%q<fh_hp>,0),%q<fh_hp>/[u(%!/FUN`FOE`GET,%0,%1,hpmax)] hit points,down)]
+        flags: [funsyntax]
+      # %0 an encounter, %1 a creature: rolls 1d100 against its attack and, on a hit, its damage and damage bonus.
+      # A special or critical hit rolls the weapon's dice twice (impaling); a critical also ignores armour, which the caller
+      # leaves off. Returns {"hit","level","damage","text","roll"}.
+      FUN`FOE`ATTACK:
+        value: |-
+          setqm(fa_chance,u(%!/FUN`FOE`GET,%0,%1,attack),fa_dice,[u(%!/FUN`FOE`GET,%0,%1,damage)],fa_db,u(%!/FUN`FOE`GET,%0,%1,db))[setq(fa_att,roll(1d100,,record))][setq(fa_level,u(%!/FUN`CHANCE`LEVEL,json_query(%q<fa_att>,extract,$.total),%q<fa_chance>,1))][setq(fa_hit,member(critical special success,%q<fa_level>))][setq(fa_dmg,if(%q<fa_hit>,roll([if(member(critical special,%q<fa_level>),u(%!/FUN`DICE`DOUBLE,%q<fa_dice>),%q<fa_dice>)]%q<fa_db>,,record)))][json(object,hit,t(%q<fa_hit>),level,json(string,%q<fa_level>),damage,if(%q<fa_hit>,max(0,json_query(%q<fa_dmg>,extract,$.total)),0),text,json(string,[json_query(%q<fa_att>,extract,$.text)] vs %q<fa_chance>%%: [switch(%q<fa_level>,critical,a critical hit,special,a special hit,success,a hit,fumble,a fumble,a miss)][if(%q<fa_hit>,%, [json_query(%q<fa_dmg>,extract,$.text)] damage)]),roll,json_query(%q<fa_att>,extract,$.id))]
+        flags: [funsyntax]
+      # %0 dice such as 1d8+1: twice the dice.
+      FUN`DICE`DOUBLE:
+        value: |-
+          [mul(before(%0,d),2)]d[after(%0,d)]
+        flags: [funsyntax]
+      # A hit location, rolled on 1d20.
+      FUN`LOCATION`ROLL:
+        value: |-
+          setq(lr_d,die(1,20))[after(first(squish(iter(v(DATA`LOCATIONS),if(lte(%q<lr_d>,before(%i0,:)),%i0),|,|),|),|),:)]
+        flags: [funsyntax]
+      # %0 a member, %1 the damage, %2 their hit points after, %3 their most, %4 where it landed, %5 armour taken off.
+      FUN`DISPLAY`BLOW:
+        value: |-
+          %b[name(%0)] takes %1[if(%5,%b%(less %5 armour%))][if(strlen(%4),%bto the %4)]: %2/%3 hit points[cond(lte(%2,0),%, [tone(strong,dying)],gte(%1,ceil(fdiv(%3,2))),%, [tone(strong,a major wound)])].
+        flags: [funsyntax]
+      # %0 an encounter, %1 a token (P<dbref number> or F<foe>): who it is.
+      FUN`TOKEN`NAME:
+        value: |-
+          if(strmatch(%1,F*),u(%!/FUN`FOE`LABEL,%0,after(%1,F)),name(#[after(%1,P)]))
+        flags: [funsyntax]
+      # Whether the token can take a turn: a member still in, a foe still standing.
+      FUN`TOKEN`LIVE:
+        value: |-
+          if(strmatch(%1,F*),cand(hasattr({{encounters}},ENC`%0`FOE`[after(%1,F)]),gt(u(%!/FUN`FOE`GET,%0,after(%1,F),hp),0)),hasattr({{encounters}},ENC`%0`COPY`[after(%1,P)]))
+        flags: [funsyntax]
+      # %0 an encounter, %1 a token: its hit points now.
+      FUN`TOKEN`HP:
+        value: |-
+          if(strmatch(%1,F*),u(%!/FUN`FOE`HPSHORT,%0,after(%1,F)),[setq(th_path,u(%!/FUN`ENC`PATH,%0,#[after(%1,P)]))][setq(th_hp,get(%q<th_path>HP))][if(hasattr({{encounters}},ENC`%0`COPY`[after(%1,P)]),[if(strlen(%q<th_hp>),%q<th_hp>,u(%!/API`MOST,#[after(%1,P)],HP))]/[u(%!/API`MOST,#[after(%1,P)],HP)],-)])
+        flags: [funsyntax]
+      # %0 an encounter, %1 a token: <token>~<DEX>, or with strike ranks on, <token>~<strike rank>.
+      FUN`INIT`ROLL:
+        value: |-
+          %1~[if(strmatch(%1,F*),setqm(ir_dex,u(%!/FUN`FOE`GET,%0,after(%1,F),dex),ir_siz,u(%!/FUN`FOE`GET,%0,after(%1,F),siz)),[null(u(%!/FUN`BUILD`OF,#[after(%1,P)]))][setqm(ir_dex,u(%!/FUN`CHAR`VALUE,%q<build_chars>,DEX),ir_siz,u(%!/FUN`CHAR`VALUE,%q<build_chars>,SIZ))])][if(get(%!/DATA`CONFIG`STRIKERANKS),u(%!/FUN`STRIKE`RANK,%q<ir_dex>,%q<ir_siz>),%q<ir_dex>)]
+        flags: [funsyntax]
+      FUN`INIT`SORT:
+        value: |-
+          if(get(%!/DATA`CONFIG`STRIKERANKS),sortkey(%!/FUN`INIT`KEY,squish(%0),n),revwords(sortkey(%!/FUN`INIT`KEY,squish(%0),n)))
+        flags: [funsyntax]
+      FUN`INIT`KEY:
+        value: |-
+          last(%0,~)
+        flags: [funsyntax]
+      # %0 an encounter, %1 its order, %2 the turn now: the next place whose token can act, or 0.
+      FUN`INIT`NEXT:
+        value: |-
+          firstof(first(squish(iter(lnum(1,words(%1)),[setq(in_idx,inc(mod(add(dec(%2),%i0),words(%1))))][if(u(%!/FUN`TOKEN`LIVE,%0,first(extract(%1,%q<in_idx>,1),~)),%q<in_idx>)]))),0)
+        flags: [funsyntax]
+      # %0 an encounter, %1 a token: counts its conditions down by one, takes off those that run out, and returns
+      # their names.
+      FUN`COND`TICK:
+        value: |-
+          setqm(ct_new,,ct_end,)[iter(get({{encounters}}/ENC`%0`COND`%1),if(isint(last(%i0,:)),if(gt(last(%i0,:),1),setq(ct_new,%q<ct_new> [first(%i0,:)]:[dec(last(%i0,:))]),setq(ct_end,%q<ct_end> [first(%i0,:)])),setq(ct_new,%q<ct_new> %i0)))][if(hasattr({{encounters}},ENC`%0`COND`%1),attrib_set({{encounters}}/ENC`%0`COND`%1,squish(%q<ct_new>)))][squish(%q<ct_end>)]
+        flags: [funsyntax]
+      FUN`COND`TEXT:
+        value: |-
+          iter(get({{encounters}}/ENC`%0`COND`%1),[first(%i0,:)][if(isint(last(%i0,:)),%b%([last(%i0,:)]%))],%b,%,%b)
+        flags: [funsyntax]
+      # %0 DEX, %1 SIZ: the strike rank, DEX's (4 at 9 or less down to 1 at 19 or more) and SIZ's (3 down to 0).
+      FUN`STRIKE`RANK:
+        value: |-
+          add(cond(lte(%0,9),4,lte(%0,15),3,lte(%0,18),2,1),cond(lte(%1,9),3,lte(%1,15),2,lte(%1,18),1,0))
+        flags: [funsyntax]
+      FUN`INIT`SHOW:
+        value: |-
+          if(get(%!/DATA`CONFIG`STRIKERANKS),SR %0,DEX %0)
+        flags: [funsyntax]
+
       # ---- the XP and money ledgers --------------------------------------------------------
       # Each book is its own ledger, apart from the sheet's: BRP`<BOOK>LEDGER`<n>, a JSON object with n, delta,
       # total (the running total after it), item and label (what it counts, when the book counts more than one
@@ -1122,7 +1592,7 @@ objects:
       # %0 an encounter, %1 who reads it.
       FUN`SCREEN`ENCOUNTER:
         value: |-
-          setq(enc_members,u(%!/FUN`ENC`MEMBERS,%0))[box(Run by [name(get({{encounters}}/ENC`%0`GM))] in [name(get({{encounters}}/ENC`%0`ROOM))].%r[rule()]%r[if(words(%q<enc_members>),ldatatable(lit({"nowrap":"1|2|3|4","grow":"||||1"}),Name|>HP|>PP|>Coin|Checks,iter(%q<enc_members>,u(%!/FUN`DISPLAY`ENCROW,%i0,%0),%b,%*<^>),%*<^>),Nobody has joined yet.)]%r[rule()]%r[tone(muted,if(u(%!/FUN`ENC`GM,%1,%0),/add%, /remove and /keep <name>=%0%, and /end %0 run it. +sheet/hp <name>=-<n> hurts a member here.,if(u(%!/FUN`ENC`MEMBER,%1,%0),Your hit points%, power points and coin change on your copy while you are in its room. /leave %0 comes out.,+encounter/join %0 takes part with a copy of your sheet.)))],Encounter [u(%!/FUN`ENC`NAME,%0)])]
+          setq(enc_members,u(%!/FUN`ENC`MEMBERS,%0))[box(Run by [name(get({{encounters}}/ENC`%0`GM))] in [name(get({{encounters}}/ENC`%0`ROOM))].%r[rule()]%r[if(words(%q<enc_members>),ldatatable(lit({"nowrap":"1|2|3|4","grow":"||||1"}),Name|>HP|>PP|>Coin|Checks,iter(%q<enc_members>,u(%!/FUN`DISPLAY`ENCROW,%i0,%0),%b,%*<^>),%*<^>),Nobody has joined yet.)][if(words(u(%!/FUN`FOE`NUMS,%0)),%r[rule(Creatures)]%r[itemize(iter(u(%!/FUN`FOE`NUMS,%0),[u(%!/FUN`FOE`LABEL,%0,%i0)] %([u(%!/FUN`FOE`HPSHORT,%0,%i0)]%),%b,|),|)])][if(get({{encounters}}/ENC`%0`ROUND),%r[tone(muted,Round [get({{encounters}}/ENC`%0`ROUND)]: [u(%!/FUN`TOKEN`NAME,%0,first(extract(get({{encounters}}/ENC`%0`ORDER),get({{encounters}}/ENC`%0`TURN),1),~))]'s turn. +encounter/order shows the order.)])]%r[rule()]%r[tone(muted,if(u(%!/FUN`ENC`GM,%1,%0),/add%, /remove and /keep <name>=%0%, and /end %0 run it. +foe/add brings in creatures and /initiative sets the order.,if(u(%!/FUN`ENC`MEMBER,%1,%0),Your hit points%, power points and coin change on your copy while you are in its room. /leave %0 comes out.,+encounter/join %0 takes part with a copy of your sheet.)))],Encounter [u(%!/FUN`ENC`NAME,%0)])]
         flags: [funsyntax]
       # %0 a member, %1 the encounter: their copy in it, one table row.
       FUN`DISPLAY`ENCROW:
@@ -1132,6 +1602,30 @@ objects:
       FUN`SCREEN`TRAITS:
         value: |-
           box(ldatatable(lit({"nowrap":"1|2|3"}),Key|Characteristic|Roll,iter(u(%!/FUN`LIST`ALL,CHAR),lcstr(%i0)|[get({{store}}/CHAR`%i0)]|[firstof(get({{store}}/CHAR`%i0`ROLL),-)],,%*<^>),%*<^>)%r[rule()]%r[ldatatable(lit({"nowrap":"1|2|3|4"}),Key|Skill|Base|Category,iter(u(%!/FUN`LIST`ALL,SKILL),lcstr(%i0)|[get({{store}}/SKILL`%i0)]|[edit(default({{store}}/SKILL`%i0`BASE,0),*,x)]|[default({{store}}/SKILL`%i0`CATEGORY,mental)],,%*<^>),%*<^>)]%r[rule()]%r[tone(muted,Difficulty: [itemize(v(DATA`LEVELS),,or)]%, or [itemize(v(DATA`DIFFICULTIES),,or)].)],Characteristics and skills)
+        flags: [funsyntax]
+
+      # %0 an encounter, %1 who reads it.
+      FUN`SCREEN`FOES:
+        value: |-
+          setq(sf_nums,u(%!/FUN`FOE`NUMS,%0))[box(if(words(%q<sf_nums>),ldatatable(lit({"nowrap":"1|3|4|5","grow":"|1"}),#|Creature|>HP|>Armour|Attack,iter(%q<sf_nums>,%i0|[u(%!/FUN`FOE`LABEL,%0,%i0)]|[u(%!/FUN`FOE`HPSHORT,%0,%i0)]|[u(%!/FUN`FOE`GET,%0,%i0,armor)]|[u(%!/FUN`FOE`ATTACKTEXT,%0,%i0)],%b,%*<^>),%*<^>),No foes yet.)%r[rule()]%r[tone(muted,if(u(%!/FUN`ENC`GM,%1,%0),+foe/add <kind>%[=<count>%] adds more. +foe/attack and +foe/damage run them.,+foe <creature> shows one. Tell the GM the damage you deal.))],Foes: [u(%!/FUN`ENC`NAME,%0)])]
+        flags: [funsyntax]
+      # %0 an encounter, %1 a foe, %2 who reads it.
+      FUN`SCREEN`FOE:
+        value: |-
+          box(lfields(lit({"cols":2}),Hit points%*<|>Armour%*<|>Attack%*<|>Characteristics%*<|>Conditions,[u(%!/FUN`FOE`HPSHORT,%0,%1)]%*<|>[u(%!/FUN`FOE`GET,%0,%1,armor)]%*<|>[u(%!/FUN`FOE`ATTACKTEXT,%0,%1)]%*<|>[STR [u(%!/FUN`FOE`GET,%0,%1,str)] CON [u(%!/FUN`FOE`GET,%0,%1,con)] SIZ [u(%!/FUN`FOE`GET,%0,%1,siz)] DEX [u(%!/FUN`FOE`GET,%0,%1,dex)] POW [u(%!/FUN`FOE`GET,%0,%1,pow)]]%*<|>[firstof(u(%!/FUN`COND`TEXT,%0,F%1),-)],%*<|>)[if(cand(u(%!/FUN`ENC`GM,%2,%0),strlen(u(%!/FUN`FOE`GET,%0,%1,notes))),%r[rule()]%r[u(%!/FUN`FOE`GET,%0,%1,notes)])],[u(%!/FUN`FOE`LABEL,%0,%1)] in [u(%!/FUN`ENC`NAME,%0)])
+        flags: [funsyntax]
+      FUN`SCREEN`BESTIARY:
+        value: |-
+          setq(sb_keys,sortkey(%!/FUN`KIND`SORTKEY,iter(lattr({{store}}/FOE`*),last(%i0,`)),n))[box(if(words(%q<sb_keys>),ldatatable(lit({"nowrap":"1|3|4|5","grow":"|1"}),Key|Name|>HP|>Armour|Attack,iter(%q<sb_keys>,[lcstr(%i0)]|[get({{store}}/FOE`%i0)]|[u(%!/FUN`KIND`HP,%i0)]|[u(%!/FUN`FOE`STORE,%i0,ARMOR,0)]|[u(%!/FUN`KIND`ATTACKTEXT,%i0)],%b,%*<^>),%*<^>),The bestiary is empty.)%r[rule()]%r[tone(muted,+foe/bestiary <kind> shows one. The GM adds them with +foe/add <kind>%[=<count>%]. Staff change the list with +config brp/foes.)],Bestiary)]
+        flags: [funsyntax]
+      FUN`SCREEN`KIND:
+        value: |-
+          box(lfields(lit({"cols":2}),Hit points%*<|>Armour%*<|>Attack%*<|>Characteristics,[u(%!/FUN`KIND`HP,%0)]%*<|>[u(%!/FUN`FOE`STORE,%0,ARMOR,0)]%*<|>[u(%!/FUN`KIND`ATTACKTEXT,%0)]%*<|>[STR [u(%!/FUN`FOE`STORE,%0,STR,10)] CON [u(%!/FUN`FOE`STORE,%0,CON,10)] SIZ [u(%!/FUN`FOE`STORE,%0,SIZ,10)] DEX [u(%!/FUN`FOE`STORE,%0,DEX,10)] POW [u(%!/FUN`FOE`STORE,%0,POW,10)]],%*<|>)[if(strlen(get({{store}}/FOE`%0`NOTES)),%r[rule()]%r[get({{store}}/FOE`%0`NOTES)])],[get({{store}}/FOE`%0)] %([lcstr(%0)]%))
+        flags: [funsyntax]
+      # %0 an encounter: the round, the order and whose turn it is.
+      FUN`SCREEN`ORDER:
+        value: |-
+          setqm(so_order,get({{encounters}}/ENC`%0`ORDER),so_turn,get({{encounters}}/ENC`%0`TURN))[box(if(words(%q<so_order>),Round [get({{encounters}}/ENC`%0`ROUND)].%r[rule()]%r[ldatatable(lit({"nowrap":"1|2|3|4","grow":"||||1"}),|Name|>[if(get(%!/DATA`CONFIG`STRIKERANKS),SR,DEX)]|>HP|Conditions,iter(%q<so_order>,[if(eq(inum(0),%q<so_turn>),>)]|[if(u(%!/FUN`TOKEN`LIVE,%0,first(%i0,~)),u(%!/FUN`TOKEN`NAME,%0,first(%i0,~)),tone(muted,u(%!/FUN`TOKEN`NAME,%0,first(%i0,~))))]|[last(%i0,~)]|[u(%!/FUN`TOKEN`HP,%0,first(%i0,~))]|[firstof(u(%!/FUN`COND`TEXT,%0,first(%i0,~)),-)],%b,%*<^>),%*<^>)],No order yet. The GM sets it with +encounter/initiative.)%r[rule()]%r[tone(muted,+encounter/next passes the turn on. Muted names are down or out.)],Order: [u(%!/FUN`ENC`NAME,%0)])]
         flags: [funsyntax]
 
       # ---- the sheet API ----------------------------------------------------------
@@ -1245,7 +1739,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add/noparse/rsnoparse +sheet; @hook/override/inline +sheet=%!,CMD`SHEET; @command/add/noparse/rsnoparse +check; @hook/override/inline +check=%!,CMD`CHECK; @command/add/noparse/rsnoparse +encounter; @hook/override/inline +encounter=%!,CMD`ENCOUNTER
+          @command/add/noparse/rsnoparse +sheet; @hook/override/inline +sheet=%!,CMD`SHEET; @command/add/noparse/rsnoparse +check; @hook/override/inline +check=%!,CMD`CHECK; @command/add/noparse/rsnoparse +encounter; @hook/override/inline +encounter=%!,CMD`ENCOUNTER; @command/add/noparse/rsnoparse +foe; @hook/override/inline +foe=%!,CMD`FOE
         flags: [cmdsyntax]
       AINSTALL:
         value: |-
@@ -1268,6 +1762,250 @@ objects:
     location: "{{sheet}}"
     flags: [no_command]
     attributes:
+      # The bestiary, +config brp/foes: the package's own creatures. Hit points and damage bonus come from the
+      # characteristics, as a character's do.
+      FOE`RAT-SWARM: |-
+        Rat swarm
+      FOE`RAT-SWARM`STR: |-
+        4
+      FOE`RAT-SWARM`CON: |-
+        8
+      FOE`RAT-SWARM`SIZ: |-
+        4
+      FOE`RAT-SWARM`DEX: |-
+        16
+      FOE`RAT-SWARM`POW: |-
+        6
+      FOE`RAT-SWARM`ARMOR: |-
+        0
+      FOE`RAT-SWARM`ATTACK: |-
+        40
+      FOE`RAT-SWARM`WEAPON: |-
+        Bites
+      FOE`RAT-SWARM`DAMAGE: |-
+        1d3
+      FOE`RAT-SWARM`NOTES: |-
+        A carpet of rats; scatters from fire and bright light.
+      FOE`WOLF: |-
+        Wolf
+      FOE`WOLF`STR: |-
+        10
+      FOE`WOLF`CON: |-
+        11
+      FOE`WOLF`SIZ: |-
+        8
+      FOE`WOLF`DEX: |-
+        13
+      FOE`WOLF`POW: |-
+        8
+      FOE`WOLF`ARMOR: |-
+        1
+      FOE`WOLF`ATTACK: |-
+        40
+      FOE`WOLF`WEAPON: |-
+        Bite
+      FOE`WOLF`DAMAGE: |-
+        1d8
+      FOE`WOLF`NOTES: |-
+        Hunts in packs; the pack circles before it closes.
+      FOE`CULTIST: |-
+        Cultist
+      FOE`CULTIST`STR: |-
+        10
+      FOE`CULTIST`CON: |-
+        10
+      FOE`CULTIST`SIZ: |-
+        11
+      FOE`CULTIST`DEX: |-
+        11
+      FOE`CULTIST`POW: |-
+        14
+      FOE`CULTIST`ARMOR: |-
+        0
+      FOE`CULTIST`ATTACK: |-
+        35
+      FOE`CULTIST`WEAPON: |-
+        Dagger
+      FOE`CULTIST`DAMAGE: |-
+        1d4+2
+      FOE`CULTIST`NOTES: |-
+        Fights for a cause, and breaks when the leader falls.
+      FOE`BANDIT: |-
+        Bandit
+      FOE`BANDIT`STR: |-
+        12
+      FOE`BANDIT`CON: |-
+        12
+      FOE`BANDIT`SIZ: |-
+        12
+      FOE`BANDIT`DEX: |-
+        11
+      FOE`BANDIT`POW: |-
+        10
+      FOE`BANDIT`ARMOR: |-
+        1
+      FOE`BANDIT`ATTACK: |-
+        45
+      FOE`BANDIT`WEAPON: |-
+        Short sword
+      FOE`BANDIT`DAMAGE: |-
+        1d6+1
+      FOE`BANDIT`NOTES: |-
+        Wants the loot, not a fight; surrenders when it turns.
+      FOE`ZOMBIE: |-
+        Zombie
+      FOE`ZOMBIE`STR: |-
+        15
+      FOE`ZOMBIE`CON: |-
+        15
+      FOE`ZOMBIE`SIZ: |-
+        12
+      FOE`ZOMBIE`DEX: |-
+        6
+      FOE`ZOMBIE`POW: |-
+        1
+      FOE`ZOMBIE`ARMOR: |-
+        0
+      FOE`ZOMBIE`ATTACK: |-
+        30
+      FOE`ZOMBIE`WEAPON: |-
+        Fist
+      FOE`ZOMBIE`DAMAGE: |-
+        1d3
+      FOE`ZOMBIE`NOTES: |-
+        Slow, tireless, and never flees.
+      FOE`SOLDIER: |-
+        Soldier
+      FOE`SOLDIER`STR: |-
+        13
+      FOE`SOLDIER`CON: |-
+        13
+      FOE`SOLDIER`SIZ: |-
+        13
+      FOE`SOLDIER`DEX: |-
+        12
+      FOE`SOLDIER`POW: |-
+        10
+      FOE`SOLDIER`ARMOR: |-
+        4
+      FOE`SOLDIER`ATTACK: |-
+        55
+      FOE`SOLDIER`WEAPON: |-
+        Spear
+      FOE`SOLDIER`DAMAGE: |-
+        1d8+1
+      FOE`SOLDIER`NOTES: |-
+        Drilled; holds a line with the others.
+      FOE`GHOUL: |-
+        Ghoul
+      FOE`GHOUL`STR: |-
+        14
+      FOE`GHOUL`CON: |-
+        12
+      FOE`GHOUL`SIZ: |-
+        13
+      FOE`GHOUL`DEX: |-
+        13
+      FOE`GHOUL`POW: |-
+        13
+      FOE`GHOUL`ARMOR: |-
+        1
+      FOE`GHOUL`ATTACK: |-
+        45
+      FOE`GHOUL`WEAPON: |-
+        Claw
+      FOE`GHOUL`DAMAGE: |-
+        1d6
+      FOE`GHOUL`NOTES: |-
+        Prefers the dead, and drags the living off to make more.
+      FOE`GIANT-SPIDER: |-
+        Giant spider
+      FOE`GIANT-SPIDER`STR: |-
+        14
+      FOE`GIANT-SPIDER`CON: |-
+        12
+      FOE`GIANT-SPIDER`SIZ: |-
+        14
+      FOE`GIANT-SPIDER`DEX: |-
+        16
+      FOE`GIANT-SPIDER`POW: |-
+        9
+      FOE`GIANT-SPIDER`ARMOR: |-
+        2
+      FOE`GIANT-SPIDER`ATTACK: |-
+        45
+      FOE`GIANT-SPIDER`WEAPON: |-
+        Bite
+      FOE`GIANT-SPIDER`DAMAGE: |-
+        1d6
+      FOE`GIANT-SPIDER`NOTES: |-
+        Waits in its web; its bite numbs.
+      FOE`BEAR: |-
+        Bear
+      FOE`BEAR`STR: |-
+        22
+      FOE`BEAR`CON: |-
+        14
+      FOE`BEAR`SIZ: |-
+        22
+      FOE`BEAR`DEX: |-
+        9
+      FOE`BEAR`POW: |-
+        11
+      FOE`BEAR`ARMOR: |-
+        3
+      FOE`BEAR`ATTACK: |-
+        50
+      FOE`BEAR`WEAPON: |-
+        Claw
+      FOE`BEAR`DAMAGE: |-
+        1d6
+      FOE`BEAR`NOTES: |-
+        Defends its young and its ground; leaves a foe who stops moving.
+      FOE`TROLL: |-
+        Troll
+      FOE`TROLL`STR: |-
+        24
+      FOE`TROLL`CON: |-
+        20
+      FOE`TROLL`SIZ: |-
+        24
+      FOE`TROLL`DEX: |-
+        9
+      FOE`TROLL`POW: |-
+        10
+      FOE`TROLL`ARMOR: |-
+        3
+      FOE`TROLL`ATTACK: |-
+        45
+      FOE`TROLL`WEAPON: |-
+        Club
+      FOE`TROLL`DAMAGE: |-
+        2d6
+      FOE`TROLL`NOTES: |-
+        Its wounds close unless burned.
+      FOE`YOUNG-DRAGON: |-
+        Young dragon
+      FOE`YOUNG-DRAGON`STR: |-
+        30
+      FOE`YOUNG-DRAGON`CON: |-
+        25
+      FOE`YOUNG-DRAGON`SIZ: |-
+        35
+      FOE`YOUNG-DRAGON`DEX: |-
+        12
+      FOE`YOUNG-DRAGON`POW: |-
+        18
+      FOE`YOUNG-DRAGON`ARMOR: |-
+        8
+      FOE`YOUNG-DRAGON`ATTACK: |-
+        60
+      FOE`YOUNG-DRAGON`WEAPON: |-
+        Bite
+      FOE`YOUNG-DRAGON`DAMAGE: |-
+        1d10
+      FOE`YOUNG-DRAGON`NOTES: |-
+        Proud and greedy; can be talked to, and lies.
       CHAR: |-
         The seven characteristics, one branch each, with the name of their roll beneath.
       CHAR`STR: |-
@@ -1614,7 +2352,7 @@ objects:
     location: "{{sheet}}"
     attributes:
       HELP: |-
-        Your character's percentile sheet, rolling against it, and encounters: +sheet, +check and +encounter.
+        Your character's percentile sheet, rolling against it, encounters and their creatures: +sheet, +check, +encounter and +foe.
       SEE: |-
         Cross-references. One leaf per topic; subtopics come from the tree, not from here.
       SEE`SHEET: |-
@@ -1622,7 +2360,9 @@ objects:
       SEE`CHECK: |-
         sheet encounter
       SEE`ENCOUNTER: |-
-        sheet check
+        sheet check foe
+      SEE`FOE: |-
+        encounter
       HELP`SHEET: |-
         `+sheet` shows your character's sheet: seven characteristics, hit points, power points, coin, the skills marked for an experience check, the characteristic rolls, and every skill as a percentage.
 
@@ -1702,7 +2442,7 @@ objects:
 
         Output: `\[ENCOUNTER\] Alice joins 1 (Cave).`
 
-        See `+help encounter gm` for running one.
+        See `+help encounter gm` for running one, `+help encounter combat` for the order of play, and `+help foe` for creatures.
       HELP`ENCOUNTER`GM: |-
         Whoever starts an encounter runs it; sheet keepers run any. Give the number after `=` when the room has more than one.
 
@@ -1718,6 +2458,54 @@ objects:
         `+encounter/keep Alice=1`
 
         Output: `\[ENCOUNTER\] Done: Alice's sheet keeps the hit points, power points, coin and experience checks from 1 (Cave).`
+      HELP`ENCOUNTER`COMBAT: |-
+        Fighting in an encounter goes in order. The GM, or a sheet keeper, runs it:
+
+        - `+encounter/initiative` puts everyone in it in order: highest DEX first. With the `strikeranks` setting, lowest strike rank first: DEX gives 1 to 4 and SIZ 0 to 3.
+        - `+encounter/initiative =<name or creature>` puts one more in, such as someone who joined late.
+        - `+encounter/next` passes the turn on. Whoever's turn it is may pass it too. Creatures that are down and anyone who left are passed over; after the last comes a new round.
+        - `+encounter/order` shows the round, the order, hit points and conditions.
+        - `+encounter/condition <name or creature>=<condition> [<rounds>]` marks a condition, such as `prone 1`. With rounds, it counts down at the start of each of its holder's turns. `=!<condition>` takes it off.
+
+        Give the encounter's number before `=` when the room has more than one: `+encounter/initiative 2`.
+
+        For example:
+
+        `+encounter/next`
+
+        Output: `\[ENCOUNTER\] Round 2: Wolf 1's turn.`
+
+        See `+help foe` for adding and running creatures.
+      HELP`FOE: |-
+        Creatures are the GM's side of an encounter, added from the game's bestiary. Each is numbered, so two wolves are Wolf 1 and Wolf 2. Their hit points and damage bonus come from their characteristics, as yours do.
+
+        - `+foe` lists the creatures in the encounter here, with hit points, armour and attack; `+foe <creature>` shows one. Name it by its number or its name.
+        - `+foe/bestiary` lists what the GM can add; `+foe/bestiary <kind>` shows one.
+
+        When you hit a creature, roll your weapon's damage and tell the GM, who takes it off. Nothing a creature takes reaches the bestiary, and the creatures go when the encounter ends.
+
+        For example:
+
+        `+foe wolf 2`
+
+        Output: a box with Wolf 2's hit points, armour, attack and characteristics.
+
+        See `+help foe gm` for running them.
+      HELP`FOE`GM: |-
+        The GM of an encounter, or a sheet keeper, runs its creatures:
+
+        - `+foe/add <kind>[=<count>]` adds creatures from the bestiary: `+foe/add wolf=3`. `+foe/remove <creature>` takes one out.
+        - `+foe/attack <creature>=<name>[/<armour>]` rolls its attack, and on a hit, its damage with its damage bonus, which comes off that member's copy less their armour. A special hit rolls the weapon's dice twice; a critical does too, and ignores armour. A parry or dodge is the member's own roll first.
+        - `+foe/damage <creature>=<n> [ignore]` takes damage off it, less its armour, none with `ignore`. Half its hit points or more in one blow is a major wound; at 0 it is down. `+foe/heal <creature>=<n>` or `=all` gives them back.
+        - `+foe/run <n>` picks which encounter your `+foe` commands use, when the room has several.
+
+        With the `locations` setting, each blow also says where it lands, from 1d20: legs, abdomen, chest, arms or head.
+
+        For example:
+
+        `+foe/attack wolf 1=Alice/1`
+
+        Output: `\[ENCOUNTER\] Wolf 1 attacks Alice with Bite: 1d100\[20\] = 20 vs 40%: a hit, 1d8\[6\] = 6 damage. Alice takes 5 \(less 1 armour\): 7/12 hit points. \(roll 81\)`
       HELP`SHEET`CREDITS: |-
         This sheet's characteristics, characteristic rolls and skill list, with each skill's base chance and category, come from Basic Roleplaying: Universal Game Engine, copyright 2023 Chaosium Inc., by Jason Durall and Steve Perrin, and are used under the ORC License \(www.chaosium.com/orclicense\). Basic Roleplaying is the trademark of Chaosium Inc.; Chaosium Inc. and the Chaosium logo are its registered trademarks.
 
@@ -1746,6 +2534,8 @@ objects:
         - `hitpoints`: `average` \(CON and SIZ halved\) or `total` \(CON and SIZ added\).
         - `difficulty`: what trivial, easy, standard, hard and extreme mean \(`automatic easy average difficult difficult`\).
         - `public`: whether anyone may read anyone's sheet \(no\).
+        - `locations`: whether a blow in an encounter rolls a hit location \(no\). `strikeranks`: whether the order goes by strike rank \(no\).
+        - `foes`: the bestiary. `+config/add brp/foes/boar=Boar` adds a creature; set its characteristics, `armor`, `attack`, `weapon` and `damage`.
         - `skills`: the skill list. `+config/add brp/skills/sail=Sail` adds one; set its `base`, a number, `DEX*2` or `INT+POW`, and its `category`.
 
         Removing a skill leaves what characters had stored, but the sheet stops showing it.

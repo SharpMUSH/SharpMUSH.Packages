@@ -49,6 +49,14 @@ Every sheet package answers `+sheet` and `+check`. Install one sheet package per
 | `+encounter [<n>]` | all | The encounters here and yours, or one |
 | `+encounter/start [<title>]`, `/join [<n>]`, `/leave [<n>]`, `/use <n>` | all | Start, join, leave, pick which copy you roll from |
 | `+encounter/add <name>[=<n>]`, `/remove`, `/keep`, `/end [<n>]` | its GM, keepers | Run it; `/keep` writes a copy back to the sheet |
+| `+encounter/initiative [<name>][=yes\|no]` | members for themselves, its GM, keepers | Whether a member has the initiative or is in a bad spot |
+| `+foe [<foe>]` | all | The foes in the encounter here, or one with its features, drives and tactics |
+| `+foe/bestiary [<kind>]` | all | What a GM can add, or one kind |
+| `+foe/add <kind>[=<count>]`, `/remove <foe>` | its GM, keepers | Add foes, numbered (`Wolf 1`), or take one out |
+| `+foe/mark <foe>[=<n>]` | its members, GM, keepers | Mark progress against a foe n times by its rank; below 0 takes it off |
+| `+foe/end <foe>` | its members, GM, keepers | The progress roll to end the fight; a hit beats the foe |
+| `+foe/harm <foe>=<name>[/<harm>]` | its GM, keepers | The foe's harm, by its rank or given, off that member's copy's health |
+| `+foe/run <n>` | its GM, keepers | Pick which encounter your `+foe` commands use, when the room has several |
 
 The meter and companion switches take `+<n>`, `-<n>`, `<n>` or `reset`. Keepers
 (`softcode.ironsworn.admin`, the **Ironsworn Sheet Keeper** role) put `<name>/` before `/set`,
@@ -123,6 +131,20 @@ encounter lasts until `/end`, over any number of days; `/end` drops every copy, 
 writes one character's meters and companions' health back to their sheet. Nothing one encounter does
 touches another, or the sheet. Vows and experience stay on the sheet.
 
+## Foes
+
+The GM of an encounter adds foes from the bestiary, a `+config` table of kinds (`+config ironsworn/foes`)
+with a label, `rank`, `nature`, `features`, `drives` and `tactics`. The package ships ten foes of its own.
+A foe added to an encounter is a copy of its kind, numbered in that encounter, with a progress track of
+ten boxes (40 ticks); an encounter holds at most 30.
+
+`+foe/mark` marks progress by the foe's rank, as `+vow/mark` does: 12 ticks for troublesome, 8 for
+dangerous, 4 for formidable, 2 for extreme and 1 for epic. `+foe/end` rolls the full boxes against two
+ten-sided dice; a strong hit beats the foe, a weak hit beats it at a cost, and a miss leaves it in the
+fight. A beaten foe takes no more progress and deals no harm. `+foe/harm` takes the foe's harm, 1 for
+troublesome up to 5 for epic, off a member's copy's health. `+encounter/initiative` records who has the
+initiative, shown on `+encounter`. `+encounter/end` drops the foes and the initiative.
+
 The Duties provider and every `API`` function always use the sheet itself.
 
 ## Where the data lives
@@ -142,10 +164,13 @@ IRONSWORN`USING                 the encounter /use picked
 
 On **Ironsworn Encounters**: `ENC`<n>` the title, with `ROOM`, `GM`, `STARTED` and `COPY`<dbref
 number>`, each member's copy, with `STATS` (`IRON=3 HEART=2 ...`, or `none`), `ASSETS` (`HOUND=2 ...`,
-or `none`), `METER`<KEY>` and `COMPANION`<ASSET>` beneath.
+or `none`), `METER`<KEY>` and `COMPANION`<ASSET>` beneath; `INIT`<dbref number>`, 1 when that member has
+the initiative; and `FOE`<k>`, foe `k`, a JSON object with `key` (its kind), `label`, `rank`, `ticks`,
+`beaten`, `nature`, `features`, `drives` and `tactics`.
 
 The lists are `+config` tables on **Ironsworn Sheet Store**: `STAT` (with `ORDER`) and `ASSET` (with
-`TYPE`, `HEALTH`, `FIRST`, `SECOND`, `THIRD` and `ORDER`). The twelve starting assets are a sample in
+`TYPE`, `HEALTH`, `FIRST`, `SECOND`, `THIRD` and `ORDER`). The bestiary is `FOE`<KIND>`, with `RANK`,
+`NATURE`, `FEATURES`, `DRIVES` and `TACTICS`. The twelve starting assets are a sample in
 this package's own words; staff add the rest with `+config ironsworn/assets`.
 
 ## The sheet API

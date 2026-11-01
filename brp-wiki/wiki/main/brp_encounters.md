@@ -21,6 +21,29 @@ never mix.
 `+encounter/keep <name>` writes that character's hit points, power points and coin from the copy to their
 sheet, and adds the copy's experience checks.
 
+## Creatures
+
+The GM adds creatures from the game's bestiary: `+foe/bestiary` lists the kinds with their hit points,
+armour and attack, and `+foe/add wolf=2` brings in Wolf 1 and Wolf 2. Their hit points and damage bonus come
+from their characteristics, as yours do, and they all go when the encounter ends.
+
+- `+foe` lists the creatures in the encounter; `+foe <creature>` shows one.
+- When you hit one, roll your weapon's damage and tell the GM, who takes it off with
+  `+foe/damage <creature>=<n>`, less its armour. A blow of half its hit points or more is a major wound.
+- The GM rolls a creature's attack with `+foe/attack <creature>=<name>/<armour>`. A hit comes off your copy's
+  hit points, less your armour. A special hit rolls the weapon's dice twice; a critical does too, and ignores
+  armour. Parry or dodge with your own `+check` first.
+- With the game's `locations` setting, each blow says where it lands: legs, abdomen, chest, arms or head.
+
+## The order of play
+
+`+encounter/initiative` puts everyone in order, highest DEX first. With the game's `strikeranks` setting,
+lowest strike rank goes first: DEX and SIZ each give part of it. `+encounter/next` passes the turn on, and
+`+encounter/order` shows the round and whose turn it is. `+encounter/condition <name>=prone 1` marks a
+condition for a number of rounds.
+
+Staff change the bestiary with `+config brp/foes`.
+
 
 ---
 
