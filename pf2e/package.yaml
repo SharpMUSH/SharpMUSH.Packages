@@ -1808,7 +1808,7 @@ objects:
               if(words(%q<prereq_stats>),gte(lmax(iter(%q<prereq_stats>,u({{core}}/FUN`CHECK`RANK,%i0))),%q<prereq_rank>),?)],
             regmatch(%0,^%(strength|dexterity|constitution|intelligence|wisdom|charisma%) \\+?%(-?\\d+%)$),
               gte(u({{core}}/FUN`CHECK`ABILITY,left(%0,3)),last(edit(%0,+,))),
-            gt(words(iter(%q<check_names>,if(strmatch(lcstr(%i0),%0),x),|)),0), 1,
+            gt(words(iter(%q<check_names>,if(strmatch(lcstr(%i0),%0),x),|,%b)),0), 1,
             words(u({{core}}/FUN`ITEM`FIND,feats,%0)), 0,
             words(u({{core}}/FUN`ITEM`FIND,class-features,%0)), 0,
             ?)]
@@ -2026,7 +2026,7 @@ objects:
               skill, get(%q<list_store>/OPT`CATEGORY`SKILL),
               general, setunion(get(%q<list_store>/OPT`CATEGORY`GENERAL),get(%q<list_store>/OPT`CATEGORY`SKILL))))][
             iter(sort(iter(setunion(%q<list_ids>,),
-              if(cand(member(u({{core}}/DATA`CONFIG`BOOKS),get(%q<list_store>/ITEM`%i0`BOOK)),lte(json_query(setr(list_prep,get(%q<list_store>/ITEM`%i0`PREP)),extract,$.level),%q<list_level>),u(%!/FUN`BUILD`FEAT`FITS,%q<list_kind>,%q<list_prep>),cor(not(strlen(%1)),strmatch(json_query(%q<list_prep>,extract,$.name),*%1*))),
+              if(cand(member(u({{core}}/DATA`CONFIG`BOOKS),get(%q<list_store>/ITEM`%i0`BOOK)),lte(json_query(setr(list_prep,get(%q<list_store>/ITEM`%i0`PREP)),extract,$.level),%q<list_level>),u(%!/FUN`BUILD`FEAT`FITS,%q<list_kind>,%q<list_prep>),cor(not(strlen(%1)),strmatch(json_query(%q<list_prep>,extract,$.name),*%1*)),not(words(graball(%q<check_grants>,*~feats~%i0~*))),not(words(u(%!/FUN`BUILD`PREREQ`UNMET,%i0),|))),
                 [rjust(json_query(%q<list_prep>,extract,$.level),2,0)] [json_query(%q<list_prep>,extract,$.name)]),
               %b,|),a,|,|),%i0,|,|)],
             #-1)]
