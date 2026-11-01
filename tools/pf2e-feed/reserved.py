@@ -193,7 +193,7 @@ def reword(name, html):
 			how.append("plane names replaced with plain descriptions")
 	if _PATTERN.search(html):
 		html = cut_sentences(html)
-		how.append("sentences naming it cut" if name in CUT else "sentences naming it cut (not yet reviewed)")
+		how.append("sentences naming it cut" if name in CUT else "sentences naming it cut (general rule)")
 	return html, sorted(set(how))
 
 

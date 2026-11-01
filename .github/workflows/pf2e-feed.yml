@@ -41,6 +41,6 @@ jobs:
           body: |
             The weekly rebuild of `pf2e-feed/` from the Foundry VTT pf2e system changed the feed.
 
-            Before merging, read `pf2e-feed/reports/reserved.md` (items under "Not yet reviewed" had sentences
-            cut by the general rule) and `pf2e-feed/reports/rules.md`. Games pick the change up from the
+            Before merging, check that "Left in the feed" in `pf2e-feed/reports/reserved.md` says "None." and
+            read `pf2e-feed/reports/rules.md`. Games pick the change up from the
             PF2e app's Overview page.

@@ -24,8 +24,9 @@ python3 -I tools/pf2e-feed/build.py foundry pf2e-feed --write   # writes the fee
 
 The ORC License does not cover Paizo's proper nouns. `reserved.py` holds the term list (setting names plus every
 deity in the Foundry deities pack), item-specific rewordings, and items dropped because the proper noun is the rule
-itself. Any other description that still names a term has that sentence cut and is listed under "Not yet reviewed"
-in `reports/reserved.md`. A reviewer accepts the cut or adds a rewording. The build fails nothing on its own; the
+itself. Any other description that still names a term has that sentence cut and is listed under "Cut by the
+general rule" in `reports/reserved.md`. The cuts stand as they are; a rewording in `reserved.py` replaces one that
+reads badly. The build fails nothing on its own; the
 report's "Left in the feed" section must say "None." before a feed is merged.
 
 ## Adding a book

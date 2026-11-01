@@ -301,20 +301,20 @@ def write(out, foundry, result):
 def write_reserved(path, commit, rows, left):
 	dropped = [r for r in rows if r[2][0].startswith("dropped")]
 	embedded = [r for r in rows if r[2][0].startswith("embedded")]
-	unreviewed = [r for r in rows if any("not yet reviewed" in h for h in r[2])]
+	unreviewed = [r for r in rows if any("general rule" in h for h in r[2])]
 	other = [r for r in rows if r not in dropped and r not in embedded and r not in unreviewed]
 	lines = ["# Reserved Material report", "", f"Foundry pf2e commit `{commit}`.", "",
 		"The ORC License does not license Paizo's proper nouns: deities, places, organizations, planes, named characters.",
 		"Terms matched: every deity in the Foundry deities pack (less a few ordinary words) and the setting list in",
-		"`tools/pf2e-feed/reserved.py`. Items under \"Not yet reviewed\" had sentences cut by the general rule; a reviewer",
-		"either accepts the cut or adds a rewording to `reserved.py`.", "",
+		"`tools/pf2e-feed/reserved.py`. Items under \"Cut by the general rule\" had every sentence naming a term removed;",
+		"a rewording in `reserved.py` replaces the cut for an item that reads badly without them.", "",
 		f"## Dropped ({len(dropped)})", ""]
 	lines += [f"- **{n}**: {h[0][len('dropped: '):]}" for n, _, h in dropped]
 	lines += ["", f"## Embedded items dropped ({len(embedded)})", ""]
 	lines += [f"- **{n}**, {p}" for n, p, _ in embedded]
 	lines += ["", f"## Reworded ({len(other)})", ""]
 	lines += [f"- **{n}** `{p}`: {'; '.join(h)}" for n, p, h in other]
-	lines += ["", f"## Not yet reviewed ({len(unreviewed)})", ""]
+	lines += ["", f"## Cut by the general rule ({len(unreviewed)})", ""]
 	lines += [f"- **{n}** `{p}`: {'; '.join(h)}" for n, p, h in unreviewed]
 	lines += ["", "## Left in the feed", ""]
 	lines += [f"- **{n}**: {', '.join(found)}" for n, found in left] or ["None."]
