@@ -1389,7 +1389,7 @@ objects:
       FUN`BUILD`TREE:
         value: |-
           @@(%0 items, each pack~ID~parent~step~level~depth~choices)[
-          setqm(tree_queue,%0,tree_count,0,tree_seen,)][
+          setqm(tree_queue,%0,tree_count,0,tree_seen,,tree_opts,)][
           null(iter(lnum(80),
             if(words(%q<tree_queue>),
               [setq(tree_item,first(%q<tree_queue>))][
@@ -1586,7 +1586,8 @@ objects:
             [setq(child_item,u({{core}}/FUN`ITEM`GET,%0,%1))][
             setq(child_prep,get(u({{core}}/DATA`PACK`%0)/ITEM`%1`PREP))][
             setq(child_data,json(object,item,json(object,flags,json(object,system,json(object,rulesSelections,firstof(%2,json(object)))))))][
-            setq(child_options,u({{core}}/FUN`CHECK`CHOICE`OPTIONS,json_query(%q<child_prep>,extract,$.choiceopts),firstof(%2,json(object))))][
+            setq(tree_opts,%q<tree_opts> [json_query(%q<child_prep>,extract,$.kind)]:[json_query(%q<child_prep>,extract,$.slug)])][
+            setq(child_options,%q<check_options> %q<tree_opts> [u({{core}}/FUN`CHECK`CHOICE`OPTIONS,json_query(%q<child_prep>,extract,$.choiceopts),firstof(%2,json(object)))])][
             setq(child_base,%3~%4~[firstof(%5,)]~[inc(%6)])][
             squish(
               [iter(json_query(%q<child_prep>,extract,$.grants),u(%!/FUN`BUILD`CHILD`RULE,json_query(%q<child_item>,extract,$.system.rules\[%i0\]),%7))] [
