@@ -2519,8 +2519,8 @@ objects:
           \[[squish(trim(
             [if(strmatch(u(FUN`ENC`C,%0,kind),pc),
               json_map(%!/FUN`ENC`LEDGER`KEEP,u({{commands}}/FUN`LEDGER`OF,u(FUN`ENC`C,%0,who)),\,),
-              json(object,kind,"level",level,firstof(json_query(u(FUN`ENC`ITEM,%0),extract,$.system.details.level.value),0),n,1))],[
-            iter(json_map(%!/FUN`JSON`KEY,%q<enc_conds>,%b),if(strlen(setr(enc_cid,u({{core}}/FUN`ITEM`FIND,conditions,%i0))),json(object,kind,"grant",pack,"conditions",id,json(string,%q<enc_cid>),badge,if(setr(enc_badge,json_query(%q<enc_conds>,extract,$.%i0)),%q<enc_badge>,null),n,add(100000,inum(0)))),%b,\,)],[
+              json(object,kind,"level",level,firstof(json_query(u(FUN`ENC`ITEM,%0),extract,$.system.details.level.value),0),n,1))]\,[
+            iter(json_map(%!/FUN`JSON`KEY,%q<enc_conds>,%b),if(strlen(setr(enc_cid,u({{core}}/FUN`ITEM`FIND,conditions,%i0))),json(object,kind,"grant",pack,"conditions",id,json(string,%q<enc_cid>),badge,if(setr(enc_badge,json_query(%q<enc_conds>,extract,$.%i0)),%q<enc_badge>,null),n,add(100000,inum(0)))),%b,\,)]\,[
             iter(json_map(%!/FUN`JSON`KEY,setr(enc_used,firstof(u(FUN`ENC`C,%0,used),json(object))),%b),json(object,kind,"gear",id,json(string,%i0),qty,first(json_query(%q<enc_used>,extract,$.%i0),|),where,json(string,rest(json_query(%q<enc_used>,extract,$.%i0),|)),n,add(200000,inum(0))),%b,\,)],\,),\,)]\]]
         flags: [funsyntax]
       FUN`ENC`ITEM:
