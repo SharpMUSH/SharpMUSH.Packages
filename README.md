@@ -61,6 +61,21 @@ constraints checked before anything is planned.
 | [`duties-d20/`](duties-d20/) | 1.0.0 | Duties roll provider `d20` on the D20 sheet |
 | [`duties-fate/`](duties-fate/) | 1.0.0 | Duties roll provider `fate` on the Fate sheet: teamwork, paid invokes, fate points as rewards |
 | [`duties-pbta/`](duties-pbta/) | 1.0.0 | Duties roll provider `pbta` on the PbtA sheet: aid, forward and ongoing, XP as a reward |
+| [`sheet-fitd/`](sheet-fitd/) | 1.0.0 | Forged in the Dark character sheet: twelve actions under three attributes, stress, trauma, harm, coin and progress clocks; `+check` on a d6 pool against a position. Blades in the Dark SRD under CC BY 3.0 (see its NOTICE) |
+| [`sheet-fitd-help/`](sheet-fitd-help/) | 1.0.0 | Bridge: the FitD sheet's topics in `+help` |
+| [`sheet-fitd-config/`](sheet-fitd-config/) | 1.0.0 | Bridge: the FitD sheet's settings and lists in `+config` |
+| [`sheet-fitd-chargen/`](sheet-fitd-chargen/) | 1.0.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |
+| [`sheet-brp/`](sheet-brp/) | 1.0.0 | Percentile character sheet on Basic Roleplaying: characteristics, a skill list with base chances, hit points and power points; `+check` on 1d100. ORC Licensed Material (see its NOTICE) |
+| [`sheet-brp-help/`](sheet-brp-help/) | 1.0.0 | Bridge: the BRP sheet's topics in `+help` |
+| [`sheet-brp-config/`](sheet-brp-config/) | 1.0.0 | Bridge: the BRP sheet's settings and skill list in `+config` |
+| [`sheet-brp-chargen/`](sheet-brp-chargen/) | 1.0.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |
+| [`sheet-ironsworn/`](sheet-ironsworn/) | 1.0.0 | Ironsworn character sheet: five stats, meters, momentum and iron vows with progress; `+check` action rolls and `+vow`. Ironsworn SRD under CC BY 4.0 (see its NOTICE) |
+| [`sheet-ironsworn-help/`](sheet-ironsworn-help/) | 1.0.0 | Bridge: the Ironsworn sheet's topics in `+help` |
+| [`sheet-ironsworn-config/`](sheet-ironsworn-config/) | 1.0.0 | Bridge: the Ironsworn sheet's settings and stat list in `+config` |
+| [`sheet-ironsworn-chargen/`](sheet-ironsworn-chargen/) | 1.0.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |
+| [`duties-fitd/`](duties-fitd/) | 1.0.0 | Duties roll provider `fitd` on the FitD sheet: assists and pushes paid in stress, coin and stress relief as rewards |
+| [`duties-brp/`](duties-brp/) | 1.0.0 | Duties roll provider `brp` on the BRP sheet: help as an augment, skill increases and healing as rewards |
+| [`duties-ironsworn/`](duties-ironsworn/) | 1.0.0 | Duties roll provider `ironsworn` on the Ironsworn sheet: help adds 1, experience and momentum as rewards |
 
 These currently double as the reference implementations for package authors —
 each README explains which manifest features it demonstrates. The curated

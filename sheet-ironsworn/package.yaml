@@ -1,0 +1,749 @@
+format: "1.16"
+package: sheet-ironsworn
+title: "Ironsworn sheet"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "An Ironsworn character sheet: five stats, health, spirit, supply, momentum and experience, and iron vows with progress tracks. +check makes an action roll, a six-sided die plus a stat against two ten-sided challenge dice, for the room; +vow swears, marks and fulfils vows. Based on the Ironsworn SRD under CC BY 4.0."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [sheet, ironsworn, vows, progress, dice]
+category: Characters
+requires_server: ">=0.1"
+
+# One permission, for the people who keep sheets: change any character's sheet and vows at any time and read
+# every sheet. A player sets their own stats until they are approved, and keeps their own meters and vows at
+# any time. Changing the stat list and the settings is config.admin, as +config is.
+categories:
+  roles:
+    - name: Ironsworn sheet
+      description: Roles for the people who keep Ironsworn character sheets.
+  permissions:
+    - name: Ironsworn sheet
+      description: Keeping Ironsworn character sheets.
+permissions:
+  - name: softcode.ironsworn.admin
+    category: Ironsworn sheet
+    description: Read every Ironsworn sheet, and change any character's sheet and vows at any time.
+roles:
+  - slug: ironsworn-sheet-keeper
+    name: Ironsworn Sheet Keeper
+    category: Ironsworn sheet
+    priority: 11
+    permissions:
+      softcode.ironsworn.admin: allow
+
+# Every character's IRONSWORN tree is their Ironsworn sheet: only wizards write it, so a player can't make the
+# root before the sheet does, and it is never a command.
+attributes:
+  IRONSWORN:
+    flags: [wizard, no_command]
+
+objects:
+  # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook),
+  # writes the sheet attributes on characters, and reads them for other packages.
+  #
+  # A character's sheet is their own attributes under IRONSWORN`: IRONSWORN`STAT`<KEY> a stat (unset is 1),
+  # IRONSWORN`METER`<KEY> a meter (unset is its start), IRONSWORN`VOW`<KEY> a vow's name with RANK and TICKS
+  # beneath. The IRONSWORN root is wizard-flagged, so only this object writes them.
+  #
+  # +sheet, +check and +vow are added with /noparse/rsnoparse and hooked to CMD`<word>, so what a player types
+  # reaches the code exactly as typed and nothing a player wrote is ever evaluated.
+  #
+  # Trees: CMD` the hooked commands, INC`COMMAND` the parse and dispatch, INC`SHEET`, INC`CHECK` and INC`VOW`
+  # one routine per switch, INC`NEED` the guards they share, INC`DO` the writes. FUN`LIST` the stats, FUN`METER`
+  # the meters, FUN`VOW` the vows, FUN`ROLL` the dice, FUN`PERM` who may do what, FUN`SCREEN` and FUN`DISPLAY`
+  # the screens. API` the functions other packages call (VISUAL), the same names in every sheet package.
+  # Bridges add HINT`<message> lines, GATE`EDIT (a reason a player may not change their own sheet now) and
+  # ALLOW`VIEW`<name> (who else may read a sheet).
+  - ref: sheet
+    type: thing
+    name: Ironsworn Sheet
+    location: "{{$master_room}}"
+    flags: [WIZARD]
+    attributes:
+      # ---- settings ---------------------------------------------------------------
+      # +config ironsworn shows and changes them (sheet-ironsworn-config); the code reads each with
+      # get(%!/DATA`CONFIG`<NAME>).
+      DATA`CONFIG: |-
+        Settings for the Ironsworn sheet. One leaf per setting.
+      DATA`CONFIG`LABEL: |-
+        Ironsworn sheet
+      DATA`CONFIG`CAP: |-
+        3
+      DATA`CONFIG`CAP`TYPE: |-
+        integer
+      DATA`CONFIG`CAP`DEFAULT: |-
+        3
+      DATA`CONFIG`CAP`MIN: |-
+        1
+      DATA`CONFIG`CAP`MAX: |-
+        5
+      DATA`CONFIG`CAP`LABEL: |-
+        Highest stat
+      DATA`CONFIG`CAP`DESCRIPTION: |-
+        The highest a player sets a stat. Sheet keepers may go to 5.
+      DATA`CONFIG`CAP`EXAMPLE: |-
+        4
+      DATA`CONFIG`ADDS: |-
+        2 1 0 -1 -2
+      DATA`CONFIG`ADDS`TYPE: |-
+        text
+      DATA`CONFIG`ADDS`DEFAULT: |-
+        2 1 0 -1 -2
+      DATA`CONFIG`ADDS`MAX: |-
+        30
+      DATA`CONFIG`ADDS`CHECK: |-
+        CHECK`ADDS
+      DATA`CONFIG`ADDS`LABEL: |-
+        Adds for each difficulty
+      DATA`CONFIG`ADDS`DESCRIPTION: |-
+        What is added to the action die at trivial, easy, standard, hard and extreme, in that order.
+      DATA`CONFIG`ADDS`EXAMPLE: |-
+        1 1 0 0 -1
+      DATA`CONFIG`PUBLIC: |-
+        0
+      DATA`CONFIG`PUBLIC`TYPE: |-
+        boolean
+      DATA`CONFIG`PUBLIC`DEFAULT: |-
+        0
+      DATA`CONFIG`PUBLIC`LABEL: |-
+        Sheets anyone can read
+      DATA`CONFIG`PUBLIC`DESCRIPTION: |-
+        Whether +sheet <name> and +vow <name> show anyone's sheet to everyone. Otherwise only the character and sheet keepers see it.
+      DATA`CONFIG`PUBLIC`EXAMPLE: |-
+        yes
+      DATA`CONFIG`STATS`TYPE: |-
+        table
+      DATA`CONFIG`STATS`LABEL: |-
+        Stats
+      DATA`CONFIG`STATS`DESCRIPTION: |-
+        The stats a sheet rates and +check rolls.
+      DATA`CONFIG`STATS`STORE: |-
+        {{store}}
+      DATA`CONFIG`STATS`PATH: |-
+        STAT
+      DATA`CONFIG`STATS`ENTRY: |-
+        label
+      DATA`CONFIG`STATS`FIELDS: |-
+        label order
+      DATA`CONFIG`STATS`KEYPATTERN: |-
+        ^[A-Za-z0-9-]{1,20}$
+      DATA`CONFIG`STATS`FIELD`LABEL`TYPE: |-
+        text
+      DATA`CONFIG`STATS`FIELD`LABEL`MIN: |-
+        1
+      DATA`CONFIG`STATS`FIELD`LABEL`MAX: |-
+        30
+      DATA`CONFIG`STATS`FIELD`LABEL`LABEL: |-
+        Label
+      DATA`CONFIG`STATS`FIELD`LABEL`DESCRIPTION: |-
+        The name the sheet shows.
+      DATA`CONFIG`STATS`FIELD`ORDER`TYPE: |-
+        integer
+      DATA`CONFIG`STATS`FIELD`ORDER`DEFAULT: |-
+        50
+      DATA`CONFIG`STATS`FIELD`ORDER`MIN: |-
+        0
+      DATA`CONFIG`STATS`FIELD`ORDER`MAX: |-
+        999
+      DATA`CONFIG`STATS`FIELD`ORDER`LABEL: |-
+        Order
+      DATA`CONFIG`STATS`FIELD`ORDER`DESCRIPTION: |-
+        Where it comes in the list: lower first, then by name.
+      CHECK`ADDS: |-
+        if(cand(eq(words(%0),5),every(%!/FUN`IS`ADD,%0)),,Give five numbers from -5 to 5%, trivial to extreme.)
+      FUN`IS`ADD: |-
+        cand(isint(%0),gte(%0,-5),lte(%0,5))
+
+      # Which INC` routine each switch runs: DATA`ROUTE`<table>`<switch>. BARE is the command alone, ARG the
+      # command with something after it and no switch.
+      DATA`ROUTE: |-
+        Which routine each switch runs. One leaf per switch.
+      DATA`ROUTE`SHEET`BARE: |-
+        SHEET`SHOW
+      DATA`ROUTE`SHEET`ARG: |-
+        SHEET`SHOW
+      DATA`ROUTE`SHEET`SET: |-
+        SHEET`SET
+      DATA`ROUTE`SHEET`HEALTH: |-
+        SHEET`METER
+      DATA`ROUTE`SHEET`SPIRIT: |-
+        SHEET`METER
+      DATA`ROUTE`SHEET`SUPPLY: |-
+        SHEET`METER
+      DATA`ROUTE`SHEET`MOMENTUM: |-
+        SHEET`METER
+      DATA`ROUTE`SHEET`XP: |-
+        SHEET`METER
+      DATA`ROUTE`SHEET`TRAITS: |-
+        SHEET`TRAITS
+      DATA`ROUTE`CHECK`BARE: |-
+        CHECK`USAGE
+      DATA`ROUTE`CHECK`ARG: |-
+        CHECK`ROLL
+      DATA`ROUTE`CHECK`PRIVATE: |-
+        CHECK`ROLL
+      DATA`ROUTE`VOW`BARE: |-
+        VOW`LIST
+      DATA`ROUTE`VOW`ARG: |-
+        VOW`LIST
+      DATA`ROUTE`VOW`SWEAR: |-
+        VOW`SWEAR
+      DATA`ROUTE`VOW`MARK: |-
+        VOW`MARK
+      DATA`ROUTE`VOW`FULFIL: |-
+        VOW`FULFIL
+      DATA`ROUTE`VOW`FORSAKE: |-
+        VOW`FORSAKE
+      DATA`DIFFICULTIES: |-
+        trivial easy standard hard extreme
+      # The meters: the switch that changes each, its label, and its range and start (unset counts as the start).
+      DATA`METERS: |-
+        HEALTH SPIRIT SUPPLY MOMENTUM XP
+      DATA`METER`HEALTH: |-
+        Health
+      DATA`METER`HEALTH`RANGE: |-
+        0 5 5
+      DATA`METER`SPIRIT: |-
+        Spirit
+      DATA`METER`SPIRIT`RANGE: |-
+        0 5 5
+      DATA`METER`SUPPLY: |-
+        Supply
+      DATA`METER`SUPPLY`RANGE: |-
+        0 5 5
+      DATA`METER`MOMENTUM: |-
+        Momentum
+      DATA`METER`MOMENTUM`RANGE: |-
+        -6 10 2
+      DATA`METER`XP: |-
+        Experience
+      DATA`METER`XP`RANGE: |-
+        0 999 0
+      # Vow ranks, easiest first: the ticks one mark of progress fills. Ten boxes of four ticks each.
+      DATA`RANKS: |-
+        troublesome dangerous formidable extreme epic
+      DATA`RANK`TROUBLESOME: |-
+        12
+      DATA`RANK`DANGEROUS: |-
+        8
+      DATA`RANK`FORMIDABLE: |-
+        4
+      DATA`RANK`EXTREME: |-
+        2
+      DATA`RANK`EPIC: |-
+        1
+
+      # ---- commands ---------------------------------------------------------------
+      # %1 the switches and %2 what follows, exactly as typed.
+      CMD`SHEET:
+        value: |-
+          $(?is)^\+sheet(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,sheet,table,SHEET,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`CHECK:
+        value: |-
+          $(?is)^\+check(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,check,table,CHECK,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`VOW:
+        value: |-
+          $(?is)^\+vow(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,vow,table,VOW,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      # A line a bridge adds to one of this object's messages: HINT`<message>, set here by a bridge such as
+      # sheet-ironsworn-help. %1 on are passed to it. Nothing when no bridge set one, so the message stands without it.
+      FUN`HINT:
+        value: |-
+          if(hasattr(%!,HINT`%0),%b[u(%!/HINT`%0,%1,%2)])
+        flags: [funsyntax]
+      INC`COMMAND`RUN:
+        value: |-
+          @assert hastype(%#,player)=@pemit %#=notice(SHEET,Only players have a sheet.,warn); think u(%!/FUN`COMMAND`PARSE,%<word>,%<table>,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(SHEET,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(SHEET,+%q<cmd_word> has no /%q<cmd_switch> switch.[u(%!/FUN`HINT,SWITCHES,%q<cmd_word>)],warn); @include %!/INC`%q<cmd_route>
+        flags: [cmdsyntax]
+      # %0 the word, %1 its route table, %2 the switches and %3 the argument, as typed. Sets cmd_word,
+      # cmd_switch_list, cmd_switch, cmd_argument, cmd_has_equals, cmd_left_side and cmd_right_side around the
+      # first =, cmd_route (the INC` routine to run), viewer_objid and viewer_keeper.
+      FUN`COMMAND`PARSE:
+        value: |-
+          setqm(cmd_word,lcstr(%0),
+          cmd_switch_list,lcstr(trim(edit(%2,/,%b))),
+          cmd_switch,first(%q<cmd_switch_list>),
+          cmd_argument,trim(%3),
+          cmd_has_equals,strmatch(%3,*=*),
+          cmd_left_side,trim(before(%3,=)),
+          cmd_right_side,trim(after(%3,=)),
+          cmd_route,get(%!/DATA`ROUTE`%1`[if(strlen(%q<cmd_switch>),ucstr(%q<cmd_switch>),if(strlen(%q<cmd_argument>),ARG,BARE))]),
+          viewer_objid,objid(%#),
+          viewer_keeper,u(%!/FUN`PERM`KEEPER,%#))
+        flags: [funsyntax]
+
+      # ---- guards -----------------------------------------------------------------
+      # %<name> a player's name: sheet_who, their objid.
+      INC`NEED`TARGET:
+        value: |-
+          @assert strlen(setr(sheet_who,u(%!/FUN`PLAYER`MATCH,%<name>)))=@pemit %#=notice(SHEET,There is no player called '%<name>'.,warn)
+        flags: [cmdsyntax]
+      # %<text>: <name>/<what> for a sheet keeper, else <what> on your own sheet. sheet_who and sheet_what.
+      INC`NEED`WHO:
+        value: |-
+          @if strmatch(%<text>,*/*)={@include/args %!/INC`NEED`TARGET=name,before(%<text>,/); think setq(sheet_what,trim(after(%<text>,/)))},{think setqm(sheet_who,%q<viewer_objid>,sheet_what,%<text>)}; @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error)
+        flags: [cmdsyntax]
+      # Changes only a keeper makes once a character is approved: stats.
+      INC`NEED`EDITABLE:
+        value: |-
+          @assert cor(%q<viewer_keeper>,not(isapproved(%#)))=@pemit %#=notice(SHEET,Your character is approved%, so staff change your sheet now.,error); @assert cor(%q<viewer_keeper>,not(strlen(setr(set_gate,u(%!/FUN`GATE`EDIT,%#)))))=@pemit %#=notice(SHEET,%q<set_gate>,warn)
+        flags: [cmdsyntax]
+      # %<key> typed text: trait_key, the stat it names.
+      INC`NEED`STAT:
+        value: |-
+          @assert strlen(setr(trait_key,u(%!/FUN`LIST`FIND,STAT,%<key>)))=@pemit %#=notice(SHEET,There is no stat '%<key>'. Give [itemize(lcstr(u(%!/FUN`LIST`ALL,STAT)),,or)].,warn)
+        flags: [cmdsyntax]
+      # %<name> typed text: vow_key, the vow of sheet_who it names.
+      INC`NEED`VOW:
+        value: |-
+          @assert strlen(%<name>)=@pemit %#=notice(VOW,Name the vow.,warn); @assert strlen(setr(vow_key,u(%!/FUN`VOW`FIND,%q<sheet_who>,%<name>)))=@pemit %#=notice(VOW,[name(%q<sheet_who>)] has sworn no vow '%<name>'. +vow lists them.,warn)
+        flags: [cmdsyntax]
+
+      # ---- +sheet -----------------------------------------------------------------
+      INC`SHEET`SHOW:
+        value: |-
+          @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`SHEET,%q<sheet_who>,%#)
+        flags: [cmdsyntax]
+      # +sheet/set [<name>/]<stat>=<n>: 1 up to the cap, or 5 for a keeper. Empty puts it back to 1.
+      INC`SHEET`SET:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/set <stat>=<value>%, such as +sheet/set [lcstr(first(u(%!/FUN`LIST`ALL,STAT)))]=3.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_left_side>; @include %!/INC`NEED`EDITABLE; @include/args %!/INC`NEED`STAT=key,%q<sheet_what>; think setqm(set_value,firstof(%q<cmd_right_side>,1),set_high,if(%q<viewer_keeper>,5,get(%!/DATA`CONFIG`CAP))); @assert cand(isint(%q<set_value>),gte(%q<set_value>,1),lte(%q<set_value>,%q<set_high>))=@pemit %#=notice(SHEET,A stat is a whole number from 1 to %q<set_high>.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,STAT`%q<trait_key>,value,if(neq(%q<set_value>,1),%q<set_value>); @pemit %#=notice(SHEET,[u(%!/FUN`LIST`LABEL,STAT,%q<trait_key>)] is %q<set_value> on [name(%q<sheet_who>)]'s sheet.[if(not(comp(%q<sheet_who>,%q<viewer_objid>)),u(%!/FUN`HINT,SET))],ok)
+        flags: [cmdsyntax]
+      # +sheet/<meter> [<name>=]+<n>|-<n>|<n>|reset: health, spirit, supply, momentum or xp, kept within its range.
+      # reset puts it back to its start: momentum to +2, the others to their most.
+      INC`SHEET`METER:
+        value: |-
+          think setqm(meter_key,ucstr(%q<cmd_switch>),meter_label,lcstr(v(DATA`METER`[ucstr(%q<cmd_switch>)])),meter_range,v(DATA`METER`[ucstr(%q<cmd_switch>)]`RANGE)); @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/%q<cmd_switch> +<n> adds%, -<n> takes away%, <n> sets it and reset puts it back to [last(%q<meter_range>)]. [capstr(%q<meter_label>)] runs from [first(%q<meter_range>)] to [extract(%q<meter_range>,2,1)].,warn); @if %q<cmd_has_equals>={@include/args %!/INC`NEED`WHO=text,%q<cmd_left_side>/; think setq(meter_typed,%q<cmd_right_side>)},{think setqm(sheet_who,%q<viewer_objid>,meter_typed,%q<cmd_argument>)}; think setqm(meter_now,u(%!/API`METER,%q<sheet_who>,%q<meter_key>),meter_to,cond(strmatch(%q<meter_typed>,reset),last(%q<meter_range>),strmatch(%q<meter_typed>,+*),add(%q<meter_now>,rest(%q<meter_typed>,+)),strmatch(%q<meter_typed>,-*),add(%q<meter_now>,%q<meter_typed>),%q<meter_typed>)); @assert isint(%q<meter_to>)=@pemit %#=notice(SHEET,'%q<meter_typed>' is not a number. Give +<n>%, -<n>%, <n> or reset.,warn); think setq(meter_new,u(%!/API`ADJUST,%q<sheet_who>,%q<meter_key>,sub(%q<meter_to>,%q<meter_now>))); @pemit %#=notice(SHEET,u(%!/FUN`DISPLAY`METER,%q<sheet_who>,%q<meter_key>,%q<meter_new>)[if(neq(%q<meter_new>,%q<meter_to>),%b%(it runs from [first(%q<meter_range>)] to [extract(%q<meter_range>,2,1)]%))].,ok)
+        flags: [cmdsyntax]
+      INC`SHEET`TRAITS:
+        value: |-
+          @pemit %#=u(%!/FUN`SCREEN`TRAITS)
+        flags: [cmdsyntax]
+
+      # ---- +check -----------------------------------------------------------------
+      INC`CHECK`USAGE:
+        value: |-
+          @pemit %#=notice(SHEET,+check <stat>%[=<difficulty>%]%, such as +check iron or +check wits=hard. +<n> or -<n> after the stat adds or takes from the action die. /private rolls where only you see it.,warn)
+        flags: [cmdsyntax]
+      # +check[/private] <stat>[+<n>|-<n>][=<difficulty>]: an action roll for the room.
+      INC`CHECK`ROLL:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@include %!/INC`CHECK`USAGE; think u(%!/FUN`CHECK`READ,%q<cmd_left_side>); @assert isint(%q<check_modifier>)=@pemit %#=notice(SHEET,'%q<cmd_left_side>' ends in something that is not a number to add.,warn); @include/args %!/INC`NEED`STAT=key,%q<check_typed>; think setq(check_adds,u(%!/API`TARGET,%q<cmd_right_side>)); @assert cor(not(%q<cmd_has_equals>),strlen(%q<check_adds>))=@pemit %#=notice(SHEET,'%q<cmd_right_side>' is not a difficulty. Give [itemize(v(DATA`DIFFICULTIES),,or)].,warn); think setq(check_result,uargs(%!/API`CHECK,roller,%q<viewer_objid>,trait,%q<trait_key>,modifier,%q<check_modifier>,target,%q<check_adds>)); @assert not(strmatch(%q<check_result>,#-*))=@pemit %#=notice(SHEET,%q<check_result>,error); think setq(check_line,u(%!/FUN`DISPLAY`CHECK,%q<check_result>)); @break member(%q<cmd_switch_list>,private)=@pemit %#=notice(SHEET,You privately roll %q<check_line>); @remit %l=notice(SHEET,tone(strong,name(%#)) rolls %q<check_line>)
+        flags: [cmdsyntax]
+      # %0 the stat as typed, with a number to add at its end: check_typed and check_modifier (0 when none).
+      FUN`CHECK`READ:
+        value: |-
+          setqm(check_plus,if(pos(+,%0),trim(last(%0,+))),
+          check_minus,if(pos(-,%0),trim(last(%0,-))),
+          check_modifier,cond(strlen(%q<check_plus>),%q<check_plus>,isint(%q<check_minus>),-%q<check_minus>,0),
+          check_typed,trim(cond(strlen(%q<check_plus>),left(%0,sub(strlen(%0),inc(strlen(last(%0,+))))),isint(%q<check_minus>),left(%0,sub(strlen(%0),inc(strlen(last(%0,-))))),%0)))
+        flags: [funsyntax]
+
+      # ---- +vow -------------------------------------------------------------------
+      # +vow [<name>]: a character's vows.
+      INC`VOW`LIST:
+        value: |-
+          @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(VOW,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] vows.,error); @pemit %#=u(%!/FUN`SCREEN`VOWS,%q<sheet_who>)
+        flags: [cmdsyntax]
+      # +vow/swear [<name>/]<vow>=<rank>.
+      INC`VOW`SWEAR:
+        value: |-
+          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>))=@pemit %#=notice(VOW,+vow/swear <vow>=<rank>%, the rank [itemize(v(DATA`RANKS),,or)].,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_left_side>; @assert cand(lte(strlen(%q<sheet_what>),60),not(strmatch(%q<sheet_what>,*`*)))=@pemit %#=notice(VOW,Name a vow in 60 characters or fewer.,warn); @assert member(v(DATA`RANKS),lcstr(%q<cmd_right_side>))=@pemit %#=notice(VOW,A vow is [itemize(v(DATA`RANKS),,or)].,warn); think setq(vow_key,u(%!/FUN`VOW`KEY,%q<sheet_what>)); @assert strlen(%q<vow_key>)=@pemit %#=notice(VOW,Give the vow a name with a letter or number in it.,warn); @assert not(hasattr(%q<sheet_who>,IRONSWORN`VOW`%q<vow_key>))=@pemit %#=notice(VOW,[name(%q<sheet_who>)] has sworn a vow called that already.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,VOW`%q<vow_key>,value,%q<sheet_what>; @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,VOW`%q<vow_key>`RANK,value,lcstr(%q<cmd_right_side>); @remit %l=notice(VOW,tone(strong,name(%q<sheet_who>)) swears an iron vow: %q<sheet_what> %([lcstr(%q<cmd_right_side>)]%).)
+        flags: [cmdsyntax]
+      # +vow/mark [<name>/]<vow>[=<n>]: marks progress n times (1 when none), by the vow's rank; below 0 takes it off.
+      INC`VOW`MARK:
+        value: |-
+          @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(VOW,+vow/mark <vow> marks progress%, +vow/mark <vow>=<n> marks it n times.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_left_side>; @include/args %!/INC`NEED`VOW=name,%q<sheet_what>; think setq(mark_times,firstof(%q<cmd_right_side>,1)); @assert cand(isint(%q<mark_times>),neq(%q<mark_times>,0))=@pemit %#=notice(VOW,Mark a whole number of times%, not 0.,warn); think setq(mark_ticks,bound(add(u(%!/FUN`VOW`TICKS,%q<sheet_who>,%q<vow_key>),mul(%q<mark_times>,v(DATA`RANK`[ucstr(get(%q<sheet_who>/IRONSWORN`VOW`%q<vow_key>`RANK))]))),0,40)); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,VOW`%q<vow_key>`TICKS,value,if(%q<mark_ticks>,%q<mark_ticks>); @pemit %#=notice(VOW,u(%!/FUN`DISPLAY`VOW,%q<sheet_who>,%q<vow_key>),ok)
+        flags: [cmdsyntax]
+      # +vow/fulfil [<name>/]<vow>: the progress roll. A hit fulfils it and marks experience by its rank (one less
+      # on a weak hit); a miss leaves it sworn.
+      INC`VOW`FULFIL:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(VOW,+vow/fulfil <vow> makes the progress roll.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_argument>; @include/args %!/INC`NEED`VOW=name,%q<sheet_what>; think setqm(fulfil_label,get(%q<sheet_who>/IRONSWORN`VOW`%q<vow_key>),fulfil_rank,get(%q<sheet_who>/IRONSWORN`VOW`%q<vow_key>`RANK),fulfil_rolled,u(%!/FUN`ROLL`PROGRESS,floor(fdiv(u(%!/FUN`VOW`TICKS,%q<sheet_who>,%q<vow_key>),4)))); think setqm(fulfil_tier,json_query(%q<fulfil_rolled>,extract,$.tier),fulfil_xp,sub(member(v(DATA`RANKS),%q<fulfil_rank>),if(strmatch(json_query(%q<fulfil_rolled>,extract,$.tier),partial),1,0))); @remit %l=notice(VOW,tone(strong,name(%q<sheet_who>)) makes the progress roll for %q<fulfil_label>: [json_query(%q<fulfil_rolled>,extract,$.text)]: [tone(u(%!/FUN`DISPLAY`TIERTONE,%q<fulfil_tier>),u(%!/FUN`DISPLAY`TIER,%q<fulfil_tier>))] [tone(muted,%(roll [json_query(%q<fulfil_rolled>,extract,$.roll)]%))]); @break strmatch(%q<fulfil_tier>,*fail)=@pemit %#=notice(VOW,The vow stands. +vow/forsake takes it off.); @wipe %q<sheet_who>/IRONSWORN`VOW`%q<vow_key>; @pemit %#=notice(VOW,[name(%q<sheet_who>)] fulfils the vow[if(%q<fulfil_xp>,%band marks %q<fulfil_xp> experience: [u(%!/API`ADJUST,%q<sheet_who>,XP,%q<fulfil_xp>)] in all)].,ok)
+        flags: [cmdsyntax]
+      # +vow/forsake [<name>/]<vow>: takes a vow off.
+      INC`VOW`FORSAKE:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(VOW,+vow/forsake <vow> takes a vow off.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_argument>; @include/args %!/INC`NEED`VOW=name,%q<sheet_what>; think setq(forsake_label,get(%q<sheet_who>/IRONSWORN`VOW`%q<vow_key>)); @wipe %q<sheet_who>/IRONSWORN`VOW`%q<vow_key>; @pemit %#=notice(VOW,[name(%q<sheet_who>)] forsakes the vow %q<forsake_label>.,ok)
+        flags: [cmdsyntax]
+
+      # ---- writes -----------------------------------------------------------------
+      # %<who> an objid, %<leaf> what under IRONSWORN` to write, %<value> what to store; empty clears it. The
+      # root is wizard-flagged and no_command the first time, and its leaves take that from it.
+      INC`DO`SET:
+        value: |-
+          @if not(hasattr(%<who>,IRONSWORN))={&IRONSWORN %<who>=This character's Ironsworn sheet. +sheet shows it.; @set %<who>/IRONSWORN=wizard; @set %<who>/IRONSWORN=no_command}; @if strlen(%<value>)={&IRONSWORN`%<leaf> %<who>=%<value>},{&IRONSWORN`%<leaf> %<who>}
+        flags: [cmdsyntax]
+
+      # ---- lists ------------------------------------------------------------------
+      # %0 a list on the store (STAT): its keys, in order then by key.
+      FUN`LIST`ALL:
+        value: |-
+          setq(list_path,%0)[sortkey(%!/FUN`LIST`SORTKEY,iter(lattr({{store}}/%0`*),after(%i0,`)))]
+        flags: [funsyntax]
+      FUN`LIST`SORTKEY:
+        value: |-
+          rjust(default({{store}}/%q<list_path>`%0`ORDER,50),3,0)%0
+        flags: [funsyntax]
+      FUN`LIST`LABEL:
+        value: |-
+          firstof(get({{store}}/%0`%1),lcstr(%1))
+        flags: [funsyntax]
+      # %0 a list, %1 typed text: the key it names, by key, by label, or by the start of one, or nothing.
+      FUN`LIST`FIND:
+        value: |-
+          setqm(find_typed,trim(%1),
+          find_all,u(%!/FUN`LIST`ALL,%0),
+          find_exact,iter(%q<find_all>,if(cor(not(comp(%i0,ucstr(%q<find_typed>))),not(comp(lcstr(get({{store}}/%0`%i0)),lcstr(%q<find_typed>)))),%i0)),
+          find_start,iter(%q<find_all>,if(cor(not(comp(left(%i0,strlen(%q<find_typed>)),ucstr(%q<find_typed>))),not(comp(lcstr(left(get({{store}}/%0`%i0),strlen(%q<find_typed>))),lcstr(%q<find_typed>)))),%i0)))[if(strlen(%q<find_typed>),first(firstof(%q<find_exact>,if(eq(words(%q<find_start>),1),%q<find_start>))))]
+        flags: [funsyntax]
+
+      # ---- vows -------------------------------------------------------------------
+      # %0 a vow's name as typed: its key, the letters, digits and hyphens of it.
+      FUN`VOW`KEY:
+        value: |-
+          left(ucstr(edit(squish(regeditall(%0,\[^A-Za-z0-9 -\],)),%b,-)),20)
+        flags: [funsyntax]
+      # %0 a character: their vows' keys, in the order they were sworn by name.
+      FUN`VOW`ALL:
+        value: |-
+          sort(iter(lattr(%0/IRONSWORN`VOW`*),last(%i0,`)))
+        flags: [funsyntax]
+      # %0 a character, %1 typed text: the vow it names, by key, by name, or by the start of one, or nothing.
+      FUN`VOW`FIND:
+        value: |-
+          setqm(find_typed,trim(%1),
+          find_all,u(%!/FUN`VOW`ALL,%0),
+          find_exact,iter(%q<find_all>,if(cor(not(comp(%i0,u(%!/FUN`VOW`KEY,%q<find_typed>))),not(comp(lcstr(get(%0/IRONSWORN`VOW`%i0)),lcstr(%q<find_typed>)))),%i0)),
+          find_start,iter(%q<find_all>,if(not(comp(lcstr(left(get(%0/IRONSWORN`VOW`%i0),strlen(%q<find_typed>))),lcstr(%q<find_typed>))),%i0)))[if(strlen(%q<find_typed>),first(firstof(%q<find_exact>,if(eq(words(%q<find_start>),1),%q<find_start>))))]
+        flags: [funsyntax]
+      FUN`VOW`TICKS:
+        value: |-
+          default(%0/IRONSWORN`VOW`%1`TICKS,0)
+        flags: [funsyntax]
+
+      # ---- dice -------------------------------------------------------------------
+      # %0 what is added to the action die (stat and adds). Rolls {1d6+<n>,1d10,1d10} and keeps the roll; returns
+      # {"tier","action","challenge","match","text","roll","formula"}, the action score no more than 10.
+      FUN`ROLL`ACTION:
+        value: |-
+          setqm(rolled,roll([chr(123)]1d6[if(gte(%0,0),+%0,%0)]%,1d10%,1d10[chr(125)],,record),
+          rolled_die,json_query(%q<rolled>,extract,$.dice%[0%].total),
+          rolled_action,min(10,add(%q<rolled_die>,%0)),
+          rolled_c1,json_query(%q<rolled>,extract,$.dice%[1%].total),
+          rolled_c2,json_query(%q<rolled>,extract,$.dice%[2%].total))[u(%!/FUN`ROLL`RESULT,%q<rolled_action>,1d6%[%q<rolled_die>%][if(%0,%b[if(gt(%0,0),+,-)]%b[abs(%0)])] = %q<rolled_action>[if(gt(add(%q<rolled_die>,%0),10),%b%(at most 10%))])]
+        flags: [funsyntax]
+      # %0 a progress score: rolls 2d10 against it and keeps the roll. Returns what FUN`ROLL`ACTION does.
+      FUN`ROLL`PROGRESS:
+        value: |-
+          setqm(rolled,roll(2d10,,record),
+          rolled_c1,json_query(%q<rolled>,extract,$.dice%[0%].results%[0%].result),
+          rolled_c2,json_query(%q<rolled>,extract,$.dice%[0%].results%[1%].result))[u(%!/FUN`ROLL`RESULT,%0,progress %0)]
+        flags: [funsyntax]
+      # %0 the score, %1 how the score reads; rolled, rolled_c1 and rolled_c2 set.
+      FUN`ROLL`RESULT:
+        value: |-
+          json(object,tier,json(string,u(%!/API`TIER,%0,%q<rolled_c1>,%q<rolled_c2>)),action,%0,challenge,json(array,%q<rolled_c1>,%q<rolled_c2>),match,eq(%q<rolled_c1>,%q<rolled_c2>),text,json(string,%1 vs %q<rolled_c1> and %q<rolled_c2>),roll,json_query(%q<rolled>,extract,$.id),formula,json(string,json_query(%q<rolled>,extract,$.formula)))
+        flags: [funsyntax]
+
+      # ---- who may do what ----------------------------------------------------------
+      FUN`PERM`KEEPER:
+        value: |-
+          permission(%0,softcode.ironsworn.admin)
+        flags: [funsyntax]
+      # %0 who asks, %1 whose sheet: 1 when they may read it. ALLOW`VIEW`<name>, which a bridge adds, may let
+      # more people read it.
+      FUN`PERM`VIEW:
+        value: |-
+          cor(not(comp(objid(%0),%1)),u(%!/FUN`PERM`KEEPER,%0),get(%!/DATA`CONFIG`PUBLIC),words(filterbool(%!/FUN`PERM`ALLOWS,lattr(%!/ALLOW`VIEW`*),,,%0,%1)))
+        flags: [funsyntax]
+      FUN`PERM`ALLOWS:
+        value: |-
+          u(%!/%0,%1,%2)
+        flags: [funsyntax]
+      FUN`GATE`EDIT:
+        value: |-
+          if(hasattr(%!,GATE`EDIT),u(%!/GATE`EDIT,%0))
+        flags: [funsyntax]
+      FUN`PLAYER`MATCH:
+        value: |-
+          if(isdbref(setr(found_player,pmatch(%0))),objid(%q<found_player>))
+        flags: [funsyntax]
+
+      # ---- screens ------------------------------------------------------------------
+      # %0 a check's JSON: "Iron +1: 1d6[4] + 3 = 7 vs 5 and 9: a weak hit (roll 42)".
+      FUN`DISPLAY`CHECK:
+        value: |-
+          setqm(display_tier,json_query(%0,extract,$.tier),
+          display_target,json_query(%0,extract,$.target))[json_query(%0,extract,$.label)][if(strlen(%q<display_target>),%b%([if(gte(%q<display_target>,0),+)]%q<display_target>%))]: [json_query(%0,extract,$.text)]: [tone(u(%!/FUN`DISPLAY`TIERTONE,%q<display_tier>),u(%!/FUN`DISPLAY`TIER,%q<display_tier>))] [tone(muted,%(roll [json_query(%0,extract,$.roll)]%))]
+        flags: [funsyntax]
+      FUN`DISPLAY`TIER:
+        value: |-
+          switch(%0,crit-success,a strong hit with a match,success,a strong hit,partial,a weak hit,crit-fail,a miss with a match,a miss)
+        flags: [funsyntax]
+      FUN`DISPLAY`TIERTONE:
+        value: |-
+          switch(%0,crit-success,success,success,success,partial,warning,error)
+        flags: [funsyntax]
+      # %0 a character, %1 a meter, %2 its value: "Alice's health is 3 of 5."
+      FUN`DISPLAY`METER:
+        value: |-
+          [name(%0)]'s [lcstr(v(DATA`METER`%1))] is [if(cand(strmatch(%1,MOMENTUM),gt(%2,0)),+)]%2[if(member(HEALTH SPIRIT SUPPLY,%1),%bof [extract(v(DATA`METER`%1`RANGE),2,1)])]
+        flags: [funsyntax]
+      # %0 ticks: ten boxes of four ticks, [#xx/......].
+      FUN`DISPLAY`PROGRESS:
+        value: |-
+          %[[edit(iter(lnum(0,9),extract(. / x * #,inc(bound(sub(%0,mul(%i0,4)),0,4)),1)),%b,)]%]
+        flags: [funsyntax]
+      # %0 a character, %1 a vow: "Find my brother (dangerous) [##x.......] 2/10".
+      FUN`DISPLAY`VOW:
+        value: |-
+          setq(vow_ticks,u(%!/FUN`VOW`TICKS,%0,%1))[get(%0/IRONSWORN`VOW`%1)] %([get(%0/IRONSWORN`VOW`%1`RANK)]%) [u(%!/FUN`DISPLAY`PROGRESS,%q<vow_ticks>)] [floor(fdiv(%q<vow_ticks>,4))]/10
+        flags: [funsyntax]
+      # %0 the character, %1 who reads it.
+      FUN`SCREEN`SHEET:
+        value: |-
+          setq(screen_stats,u(%!/FUN`LIST`ALL,STAT))[box(ldatatable(lit({"rule":""}),iter(%q<screen_stats>,u(%!/FUN`LIST`LABEL,STAT,%i0),%b,|),iter(%q<screen_stats>,u(%!/API`RATING,%0,%i0),%b,|),^)%r[rule(Meters)]%r[lfields(lit({"cols":3}),iter(v(DATA`METERS),v(DATA`METER`%i0),%b,%*<|>),iter(v(DATA`METERS),u(%!/FUN`DISPLAY`METERVALUE,%0,%i0),%b,%*<|>),%*<|>)]%r[rule(Vows)]%r[u(%!/FUN`SCREEN`VOWLIST,%0)]%r[rule()]%r[tone(muted,u(%!/FUN`DISPLAY`FOOTER,%0,%1))],name(%0))]
+        flags: [funsyntax]
+      FUN`DISPLAY`METERVALUE:
+        value: |-
+          setq(meter_value,u(%!/API`METER,%0,%1))[cond(strmatch(%1,MOMENTUM),[if(gt(%q<meter_value>,0),+)]%q<meter_value>,member(HEALTH SPIRIT SUPPLY,%1),%q<meter_value>/[extract(v(DATA`METER`%1`RANGE),2,1)],%q<meter_value>)]
+        flags: [funsyntax]
+      # %0 the character: their vows as a table, or a line saying there are none.
+      FUN`SCREEN`VOWLIST:
+        value: |-
+          setq(screen_vows,u(%!/FUN`VOW`ALL,%0))[if(words(%q<screen_vows>),ldatatable(lit({"nowrap":"2|3|4","rule":""}),Vow|Rank|Progress|>Score,iter(%q<screen_vows>,get(%0/IRONSWORN`VOW`%i0)|[get(%0/IRONSWORN`VOW`%i0`RANK)]|[u(%!/FUN`DISPLAY`PROGRESS,u(%!/FUN`VOW`TICKS,%0,%i0))]|[floor(fdiv(u(%!/FUN`VOW`TICKS,%0,%i0),4))]/10,,%*<^>),%*<^>),tone(muted,No vows sworn.))]
+        flags: [funsyntax]
+      FUN`SCREEN`VOWS:
+        value: |-
+          box(u(%!/FUN`SCREEN`VOWLIST,%0)%r[rule()]%r[tone(muted,+vow/swear <vow>=<rank> swears one%, +vow/mark <vow> marks progress%, +vow/fulfil <vow> makes the progress roll.)],[name(%0)]'s vows)
+        flags: [funsyntax]
+      FUN`DISPLAY`FOOTER:
+        value: |-
+          cond(cand(not(comp(objid(%1),%0)),not(isapproved(%1)),not(u(%!/FUN`PERM`KEEPER,%1))),+sheet/set <stat>=<value> sets a stat. +check <stat> rolls.[u(%!/FUN`HINT,FOOTER)],not(comp(objid(%1),%0)),+check <stat> rolls. +sheet/health -<n> takes harm%, +sheet/momentum +<n> gains momentum.,+check <stat> rolls a six-sided die plus the stat against two ten-sided dice.)
+        flags: [funsyntax]
+      FUN`SCREEN`TRAITS:
+        value: |-
+          box(ldatatable(lit({"nowrap":"1|2"}),Key|Stat,iter(u(%!/FUN`LIST`ALL,STAT),lcstr(%i0)|[u(%!/FUN`LIST`LABEL,STAT,%i0)],,%*<^>),%*<^>)%r[rule()]%r[tone(muted,Difficulties: [itemize(v(DATA`DIFFICULTIES))]. Vow ranks: [itemize(v(DATA`RANKS))].)],Ironsworn stats)
+        flags: [funsyntax]
+
+      # ---- the sheet API ------------------------------------------------------------
+      # What other packages call: u({{sheet-ironsworn/sheet}}/API`<NAME>,...). Every sheet package has these
+      # names. They read and roll; API`ADJUST is the one that writes.
+      API:
+        value: |-
+          The Ironsworn sheet's functions for other packages. See the package README.
+        flags: [VISUAL]
+      # JSON list of the stats: [{"key","label","group","always"}], group stat. always is true for every one.
+      API`TRAITS:
+        value: |-
+          json_array(iter(u(%!/FUN`LIST`ALL,STAT),json(object,key,json(string,lcstr(%i0)),label,json(string,u(%!/FUN`LIST`LABEL,STAT,%i0)),group,json(string,stat),always,json(boolean,1)),%b,|),|)
+        flags: [VISUAL]
+      API`ALWAYS:
+        value: |-
+          lcstr(u(%!/FUN`LIST`ALL,STAT))
+        flags: [VISUAL]
+      API`FIND:
+        value: |-
+          lcstr(u(%!/FUN`LIST`FIND,STAT,%0))
+        flags: [VISUAL]
+      API`LABEL:
+        value: |-
+          u(%!/FUN`LIST`LABEL,STAT,ucstr(%0))
+        flags: [VISUAL]
+      # %0 a character, %1 a stat: its value, 1 when not set.
+      API`RATING:
+        value: |-
+          default(%0/IRONSWORN`STAT`[ucstr(%1)],1)
+        flags: [VISUAL]
+      API`HAS:
+        value: |-
+          hasattr(%0,IRONSWORN)
+        flags: [VISUAL]
+      # %0 a difficulty word or a number from -5 to 5: what it adds to the action die, or nothing.
+      API`TARGET:
+        value: |-
+          cond(member(v(DATA`DIFFICULTIES),lcstr(%0)),extract(get(%!/DATA`CONFIG`ADDS),member(v(DATA`DIFFICULTIES),lcstr(%0)),1),u(%!/FUN`IS`ADD,%0),%0)
+        flags: [VISUAL]
+      # %0 the action (or progress) score, %1 and %2 the challenge dice. A hit beats a die; ties go to the die.
+      # Two hits a strong hit (success), one a weak hit (partial), none a miss (fail); a match on the challenge
+      # dice makes a strong hit crit-success and a miss crit-fail.
+      API`TIER:
+        value: |-
+          setq(tier_hits,add(gt(%0,%1),gt(%0,%2)))[cond(not(cand(isint(%0),isint(%1),isint(%2))),,eq(%q<tier_hits>,2),if(eq(%1,%2),crit-success,success),eq(%q<tier_hits>,1),partial,if(eq(%1,%2),crit-fail,fail))]
+        flags: [VISUAL]
+      # %0 a character, %1 a meter (HEALTH SPIRIT SUPPLY MOMENTUM XP): its value, the start when not set.
+      API`METER:
+        value: |-
+          default(%0/IRONSWORN`METER`[ucstr(%1)],last(v(DATA`METER`[ucstr(%1)]`RANGE)))
+        flags: [VISUAL]
+      # %0 a character, %1 a meter, %2 how much to add (or take, below 0): writes it within the meter's range and
+      # returns the new value.
+      API`ADJUST:
+        value: |-
+          setqm(adjust_key,ucstr(%1),
+          adjust_range,v(DATA`METER`[ucstr(%1)]`RANGE),
+          adjust_new,bound(add(u(%!/API`METER,%0,%1),%2),first(%q<adjust_range>),extract(%q<adjust_range>,2,1)))[if(words(%q<adjust_range>),[if(hasattr(%0,IRONSWORN),,attrib_set(%0/IRONSWORN,This character's Ironsworn sheet. +sheet shows it.)[set(%0/IRONSWORN,wizard)][set(%0/IRONSWORN,no_command)])][attrib_set(%0/IRONSWORN`METER`%q<adjust_key>,if(neq(%q<adjust_new>,last(%q<adjust_range>)),%q<adjust_new>))]%q<adjust_new>,#-1 NO SUCH METER)]
+        flags: [VISUAL]
+      # Named: %<roller> an objid, %<trait> a stat key, %<modifier> adds, %<target> adds from the difficulty or
+      # nothing. Makes the action roll and keeps it (roll() record), and returns {"tier","action","challenge",
+      # "match","stat","target","label","text","roll","formula"}. #-1 and why when the stat or roller is wrong.
+      API`CHECK:
+        value: |-
+          setq(check_api_key,u(%!/FUN`LIST`FIND,STAT,%<trait>))[cond(not(hastype(%<roller>,player)),#-1 There is no character to roll for.,not(strlen(%q<check_api_key>)),#-1 There is no stat '%<trait>'.,u(%!/FUN`CHECK`ROLLED,%q<check_api_key>,u(%!/API`RATING,%<roller>,%q<check_api_key>),add(firstof(%<modifier>,0),firstof(%<target>,0)),%<target>))]
+        flags: [VISUAL]
+      # %0 the key, %1 the stat, %2 all the adds, %3 the target as given.
+      FUN`CHECK`ROLLED:
+        value: |-
+          setq(rolled_check,u(%!/FUN`ROLL`ACTION,add(%1,%2)))[json(object,tier,json(string,json_query(%q<rolled_check>,extract,$.tier)),action,json_query(%q<rolled_check>,extract,$.action),challenge,json_query(%q<rolled_check>,extract,$.challenge),match,json_query(%q<rolled_check>,extract,$.match),stat,%1,target,json(string,%3),label,json(string,u(%!/FUN`LIST`LABEL,STAT,%0)),text,json(string,json_query(%q<rolled_check>,extract,$.text)),roll,json_query(%q<rolled_check>,extract,$.roll),formula,json(string,json_query(%q<rolled_check>,extract,$.formula)))]
+        flags: [funsyntax]
+
+      # ---- lifecycle ----------------------------------------------------------------
+      # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
+      STARTUP:
+        value: |-
+          @command/add/noparse/rsnoparse +sheet; @hook/override/inline +sheet=%!,CMD`SHEET; @command/add/noparse/rsnoparse +check; @hook/override/inline +check=%!,CMD`CHECK; @command/add/noparse/rsnoparse +vow; @hook/override/inline +vow=%!,CMD`VOW
+        flags: [cmdsyntax]
+      AINSTALL:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+      AUPDATE:
+        value: |-
+          @trigger %!/STARTUP
+        flags: [cmdsyntax]
+
+  # The stat list. Inside the Ironsworn Sheet, so no player can reach it, and no_command, so nothing kept on it is
+  # ever matched as a command. STAT`<KEY> a stat's label, with ORDER beneath. Staff change it with
+  # +config ironsworn/stats.
+  - ref: store
+    type: thing
+    name: Ironsworn Sheet Store
+    location: "{{sheet}}"
+    flags: [no_command]
+    attributes:
+      STAT: |-
+        The stats, one branch each, keyed as a player types it.
+      STAT`EDGE: |-
+        Edge
+      STAT`EDGE`ORDER: |-
+        1
+      STAT`HEART: |-
+        Heart
+      STAT`HEART`ORDER: |-
+        2
+      STAT`IRON: |-
+        Iron
+      STAT`IRON`ORDER: |-
+        3
+      STAT`SHADOW: |-
+        Shadow
+      STAT`SHADOW`ORDER: |-
+        4
+      STAT`WITS: |-
+        Wits
+      STAT`WITS`ORDER: |-
+        5
+
+  # The +help topics, on an object of their own. sheet-ironsworn-help registers it with +help; without that
+  # bridge nothing reads it. HELP`<TOPIC> is a topic, its subtopics the leaves beneath, LOCK`<TOPIC> who may read it.
+  - ref: sheet_help
+    type: thing
+    name: Ironsworn Sheet Help
+    location: "{{sheet}}"
+    attributes:
+      HELP: |-
+        Your character's Ironsworn sheet, action rolls and iron vows: +sheet, +check and +vow.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`SHEET: |-
+        check vow
+      SEE`CHECK: |-
+        sheet vow
+      SEE`VOW: |-
+        sheet check
+      HELP`SHEET: |-
+        `+sheet` shows your character's sheet: five stats, Edge, Heart, Iron, Shadow and Wits, the meters, and your vows.
+
+        - `+sheet` shows your own; `+sheet <name>` another character's, when the game lets you read it.
+        - `+sheet/set <stat>=<value>` sets a stat from 1 to 3: `+sheet/set iron=3`. Leave the value out to put it back to 1.
+        - `+sheet/traits` lists the stats.
+
+        A new character usually gives their stats 3, 2, 2, 1 and 1. You set stats until your character is approved; then staff change them.
+
+        For example:
+
+        `+sheet/set heart=2`
+
+        Output: `\[SHEET\] Done: Heart is 2 on Alice's sheet.`
+
+        See `+help sheet play` for the meters, `+help check` for rolling and `+help vow` for vows.
+      HELP`SHEET`PLAY: |-
+        In play you keep your own meters:
+
+        - `+sheet/health`, `/spirit` and `/supply` run from 0 to 5 and start at 5.
+        - `+sheet/momentum` runs from -6 to +10 and starts at +2.
+        - `+sheet/xp` is the experience you have marked.
+
+        Each takes `+<n>`, `-<n>`, `<n>`, or `reset` to go back to where it starts: `+sheet/health -2`, `+sheet/momentum reset`.
+
+        For example:
+
+        `+sheet/momentum +2`
+
+        Output: `\[SHEET\] Done: Alice's momentum is +4.`
+      HELP`CHECK: |-
+        `+check <stat>` makes an action roll where the room sees it: a six-sided die plus the stat is the action score, no more than 10, against two ten-sided challenge dice.
+
+        - `+check <stat>+<n>` or `-<n>` adds or takes from the action score: `+check iron+1`.
+        - `+check <stat>=<difficulty>`: trivial adds 2, easy 1, standard nothing, hard takes 1 and extreme 2.
+        - `/private` rolls where only you see it.
+
+        Beating both challenge dice is a strong hit, one a weak hit, neither a miss; a tie goes to the die. Both challenge dice the same is a match. Every check is kept under a number that `rollinfo()` reads back.
+
+        For example:
+
+        `+check iron+1`
+
+        Output: `\[SHEET\] Alice rolls Iron: 1d6\[4\] + 3 = 7 vs 5 and 9: a weak hit (roll 42)`
+      HELP`VOW: |-
+        An iron vow is a promise your character swears, with a progress track of ten boxes.
+
+        - `+vow` lists your vows; `+vow <name>` another character's, when the game lets you read it.
+        - `+vow/swear <vow>=<rank>` swears one: troublesome, dangerous, formidable, extreme or epic.
+        - `+vow/mark <vow>` marks progress by its rank: three boxes for troublesome, two for dangerous, one for formidable, two ticks for extreme and one for epic. `=<n>` marks n times; below 0 takes it off.
+        - `+vow/fulfil <vow>` makes the progress roll: the full boxes against two ten-sided dice. A strong hit fulfils it and marks experience, 1 for troublesome up to 5 for epic; a weak hit fulfils it for one less. A miss leaves it sworn.
+        - `+vow/forsake <vow>` takes it off.
+
+        For example:
+
+        `+vow/swear Find my brother=dangerous`
+
+        Output: `\[VOW\] Alice swears an iron vow: Find my brother (dangerous).`
+      HELP`SHEET`CREDITS: |-
+        This sheet is based on Ironsworn, created by Shawn Tomkin, and licensed for our use under the Creative Commons Attribution 4.0 International License \(https://creativecommons.org/licenses/by/4.0/\). It is not an official Ironsworn product.
+      LOCK`SHEET`STAFF: |-
+        perm^softcode.ironsworn.admin
+      HELP`SHEET`STAFF: |-
+        Sheet keepers \(`softcode.ironsworn.admin`, or the Ironsworn Sheet Keeper role\) read every sheet and change any character's at any time:
+
+        - `+sheet <name>` and `+vow <name>` show a character's sheet and vows.
+        - `/set` takes `<name>/` first: `+sheet/set Alice/iron=4`. A keeper may set a stat up to 5.
+        - `+sheet/health <name>=<n>`, and the other meters the same way, change theirs.
+        - The `+vow` switches take `<name>/` first: `+vow/mark Alice/Find my brother`.
+
+        `@role/assign <player>=ironsworn-sheet-keeper` makes someone a keeper.
+      LOCK`SHEET`SETTINGS: |-
+        perm^config.admin
+      HELP`SHEET`SETTINGS: |-
+        `+config ironsworn` lists the settings and `+config ironsworn/<setting>=<value>` changes one \(`config.admin`\):
+
+        - `cap`: the highest a player sets a stat \(3\).
+        - `adds`: what trivial, easy, standard, hard and extreme add to the action score \(`2 1 0 -1 -2`\).
+        - `public`: whether anyone may read anyone's sheet and vows \(no\).
+        - `stats`: the stat list. `+config/add ironsworn/stats/luck=Luck` adds one.
+
+        Removing a stat leaves what characters had stored, but the sheet stops showing it.
