@@ -1,0 +1,73 @@
+format: "1.16"
+package: ironsworn-wiki
+title: "Ironsworn rules"
+version: 1.0.0
+wiki_landing_page: category:ironsworn_start_here
+wiki_collection_name: Ironsworn rules
+authors: [SharpMUSH]
+description: "Wiki pages for playing with the Ironsworn sheet: action rolls, making a character, assets and experience, meters and momentum, iron vows and encounters. Based on the Ironsworn SRD under CC BY 4.0; an unofficial offering."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [ironsworn, vows, wiki, rules]
+category: Characters
+requires_server: ">=0.1"
+locale: en
+
+# A content package: wiki pages only. The asset page lists the stats and assets sheet-ironsworn ships; a game
+# that edits them in +config changes the sheet, not these pages. help:ironsworn_license_notice carries the
+# Ironsworn attribution CC BY 4.0 asks for.
+wiki:
+- page: category:ironsworn_start_here
+  title: 'Start here: Ironsworn'
+  categories: []
+  file: wiki/category/ironsworn_start_here.md
+  pin: true
+- page: main:ironsworn_how_to_play
+  title: How to play (Ironsworn)
+  categories:
+  - ironsworn_start_here
+  - ironsworn
+  file: wiki/main/ironsworn_how_to_play.md
+- page: main:ironsworn_making_a_character
+  title: Making a character (Ironsworn)
+  categories:
+  - ironsworn_start_here
+  - ironsworn
+  file: wiki/main/ironsworn_making_a_character.md
+- page: main:ironsworn_assets_and_experience
+  title: Assets and experience (Ironsworn)
+  categories:
+  - ironsworn_start_here
+  - ironsworn
+  file: wiki/main/ironsworn_assets_and_experience.md
+- page: main:ironsworn_meters
+  title: Meters and momentum (Ironsworn)
+  categories:
+  - ironsworn_start_here
+  - ironsworn
+  file: wiki/main/ironsworn_meters.md
+- page: main:ironsworn_vows
+  title: Iron vows (Ironsworn)
+  categories:
+  - ironsworn_start_here
+  - ironsworn
+  file: wiki/main/ironsworn_vows.md
+- page: main:ironsworn_encounters
+  title: Encounters (Ironsworn)
+  categories:
+  - ironsworn_start_here
+  - ironsworn
+  file: wiki/main/ironsworn_encounters.md
+- page: help:ironsworn_license_notice
+  title: About these pages
+  categories: []
+  file: wiki/help/ironsworn_license_notice.md
+  requires:
+    edit:
+    - wiki.admin
+    delete:
+    - wiki.admin
+- page: category:ironsworn
+  title: Ironsworn
+  categories: []
+  file: wiki/category/ironsworn.md

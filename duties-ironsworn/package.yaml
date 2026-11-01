@@ -1,7 +1,7 @@
 format: "1.16"
 package: duties-ironsworn
 title: "Duties: Ironsworn rolls"
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
 description: "Lets Duties roll on the Ironsworn sheet: a roll provider called ironsworn, so a duty's checks make action rolls with a stat against two challenge dice, with help adding to the action score, and experience or momentum as rewards. Pick it with +config duties/system=ironsworn."
 license: MIT
@@ -21,7 +21,7 @@ depends:
       path: examples/packages/duties/
       branch: main
   - package: sheet-ironsworn
-    version: ">=1.0 <2.0"
+    version: ">=2.0 <3.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH.Packages
       path: sheet-ironsworn/
@@ -87,7 +87,7 @@ objects:
       # experience or gains the momentum (1 when no amount), and tells the player.
       ON`DUTIES`GRANT:
         value: |-
-          @assert hastype(%<roller>,player); think setqm(grant_kind,json_query(%<reward>,extract,$.kind),grant_amount,firstof(json_query(%<reward>,extract,$.amount),1)); @assert cand(isint(%q<grant_amount>),gt(%q<grant_amount>,0)); @switch %q<grant_kind>=experience,{@pemit %<roller>=notice(DUTIES,You mark %q<grant_amount> experience. You have [u({{sheet-ironsworn/sheet}}/API`ADJUST,%<roller>,XP,%q<grant_amount>)].,ok)},momentum,{@pemit %<roller>=notice(DUTIES,You gain %q<grant_amount> momentum. Your momentum is [setq(grant_now,u({{sheet-ironsworn/sheet}}/API`ADJUST,%<roller>,MOMENTUM,%q<grant_amount>))][if(gt(%q<grant_now>,0),+)]%q<grant_now>.,ok)}
+          @assert hastype(%<roller>,player); think setqm(grant_kind,json_query(%<reward>,extract,$.kind),grant_amount,firstof(json_query(%<reward>,extract,$.amount),1)); @assert cand(isint(%q<grant_amount>),gt(%q<grant_amount>,0)); @switch %q<grant_kind>=experience,{@pemit %<roller>=notice(DUTIES,You mark %q<grant_amount> experience. You have [u({{sheet-ironsworn/sheet}}/API`AWARD,%<roller>,%q<grant_amount>,Duty reward)] to spend.,ok)},momentum,{@pemit %<roller>=notice(DUTIES,You gain %q<grant_amount> momentum. Your momentum is [setq(grant_now,u({{sheet-ironsworn/sheet}}/API`ADJUST,%<roller>,MOMENTUM,%q<grant_amount>))][if(gt(%q<grant_now>,0),+)]%q<grant_now>.,ok)}
         flags: [cmdsyntax]
 
       # %0 %<mods>: how many helpers it names.

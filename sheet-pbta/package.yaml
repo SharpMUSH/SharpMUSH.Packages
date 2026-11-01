@@ -1,7 +1,7 @@
 format: "1.16"
 package: sheet-pbta
 title: "PbtA sheet"
-version: 2.0.0
+version: 2.1.0
 authors: [SharpMUSH]
 description: "A Powered by the Apocalypse character sheet built from a ledger: playbooks, stats and moves the game edits, guided character creation, advances, forward, ongoing, hold and XP. +sheet shows and builds it, +check rolls 2d6 plus a stat for a move, and +encounter plays a scene from copies of the sheets. Ships the Dungeon World basic and special moves (CC BY 3.0) as its example set."
 license: MIT
@@ -424,6 +424,8 @@ objects:
         SHEET`XP
       DATA`ROUTE`SHEET`TRAITS: |-
         SHEET`TRAITS
+      DATA`ROUTE`SHEET`LOG: |-
+        SHEET`LOG
       DATA`ROUTE`CHECK`BARE: |-
         CHECK`USAGE
       DATA`ROUTE`CHECK`ARG: |-
@@ -455,6 +457,9 @@ objects:
       # The most entries a character's ledger holds; +sheet/clear starts it again.
       DATA`LEDGER`MAX: |-
         200
+      # The most entries a character's log keeps; past it the oldest goes.
+      DATA`LOG`MAX: |-
+        500
 
       # ---- commands ---------------------------------------------------------------
       # %1 the switches and %2 what follows, exactly as typed.
@@ -580,7 +585,7 @@ objects:
       # spends the advance's XP; a keeper gives it free and may give a move from any playbook.
       INC`SHEET`ADVANCE:
         value: |-
-          @include %!/INC`NEED`WHO; @assert strlen(%q<sheet_what>)=@pemit %#=notice(SHEET,+sheet/advance <stat or move>%, such as +sheet/advance str or +sheet/advance [lcstr(first(u(%!/FUN`LIST`ALL,STAT)))].,warn); @assert cor(%q<viewer_keeper>,isapproved(%#))=@pemit %#=notice(SHEET,Advances come after approval. +sheet/chargen shows what to set now.,warn); @include %!/INC`NEED`ROOM; think setqm(advance_view,u(%!/FUN`VIEW`LIVE,%q<sheet_who>),advance_cost,if(%q<viewer_keeper>,0,get(%!/DATA`CONFIG`ADVANCE)),advance_phase,if(%q<viewer_keeper>,staff,play),advance_trait,u(%!/API`FIND,%q<sheet_what>)); @assert strlen(%q<advance_trait>)=@pemit %#=notice(SHEET,There is no move or stat '%q<sheet_what>'. +sheet/traits lists them.,warn); @assert gte(default(%q<sheet_who>/PBTA`XP,0),%q<advance_cost>)=@pemit %#=notice(SHEET,An advance costs %q<advance_cost> XP%, and you have [default(%q<sheet_who>/PBTA`XP,0)].,warn); @include/args %!/INC`SHEET`ADVANCE`[if(strlen(u(%!/FUN`TRAIT`MOVE,%q<advance_trait>)),MOVE,STAT)]=trait,%q<advance_trait>; @if %q<advance_cost>={&PBTA`XP %q<sheet_who>=sub(get(%q<sheet_who>/PBTA`XP),%q<advance_cost>)}; @pemit %#=notice(SHEET,[name(%q<sheet_who>)] advances: %q<advance_text>[if(%q<advance_cost>,%b%(%q<advance_cost> XP spent%))].,ok)
+          @include %!/INC`NEED`WHO; @assert strlen(%q<sheet_what>)=@pemit %#=notice(SHEET,+sheet/advance <stat or move>%, such as +sheet/advance str or +sheet/advance [lcstr(first(u(%!/FUN`LIST`ALL,STAT)))].,warn); @assert cor(%q<viewer_keeper>,isapproved(%#))=@pemit %#=notice(SHEET,Advances come after approval. +sheet/chargen shows what to set now.,warn); @include %!/INC`NEED`ROOM; think setqm(advance_view,u(%!/FUN`VIEW`LIVE,%q<sheet_who>),advance_cost,if(%q<viewer_keeper>,0,get(%!/DATA`CONFIG`ADVANCE)),advance_phase,if(%q<viewer_keeper>,staff,play),advance_trait,u(%!/API`FIND,%q<sheet_what>)); @assert strlen(%q<advance_trait>)=@pemit %#=notice(SHEET,There is no move or stat '%q<sheet_what>'. +sheet/traits lists them.,warn); @assert gte(default(%q<sheet_who>/PBTA`XP,0),%q<advance_cost>)=@pemit %#=notice(SHEET,An advance costs %q<advance_cost> XP%, and you have [default(%q<sheet_who>/PBTA`XP,0)].,warn); @include/args %!/INC`SHEET`ADVANCE`[if(strlen(u(%!/FUN`TRAIT`MOVE,%q<advance_trait>)),MOVE,STAT)]=trait,%q<advance_trait>; @if %q<advance_cost>={&PBTA`XP %q<sheet_who>=sub(get(%q<sheet_who>/PBTA`XP),%q<advance_cost>); think u(%!/FUN`LOG`ADD,%q<sheet_who>,xp,-%q<advance_cost>,get(%q<sheet_who>/PBTA`XP),Advance: %q<advance_text>)}; @pemit %#=notice(SHEET,[name(%q<sheet_who>)] advances: %q<advance_text>[if(%q<advance_cost>,%b%(%q<advance_cost> XP spent%))].,ok)
         flags: [cmdsyntax]
       INC`SHEET`ADVANCE`STAT:
         value: |-
@@ -630,10 +635,15 @@ objects:
         value: |-
           @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/hold <move>=<hold>%, such as +sheet/hold defend=3. 0 clears it.,warn); @include %!/INC`NEED`WHO; @include/args %!/INC`NEED`MOVE=typed,%q<sheet_what>; think setq(set_value,firstof(%q<cmd_right_side>,0)); @assert cand(isint(%q<set_value>),gte(%q<set_value>,0),lte(%q<set_value>,9))=@pemit %#=notice(SHEET,Hold is a whole number from 0 to 9.,warn); @include/args %!/INC`DO`PLAY=who,%q<sheet_who>,field,HOLD,value,u(%!/FUN`PAIRS`SET,u(%!/FUN`V,u(%!/FUN`VIEW`OF,%q<sheet_who>),hold),%q<move_key>,%q<set_value>); @pemit %#=notice(SHEET,if(%q<set_value>,[name(%q<sheet_who>)] has %q<set_value> hold on [u(%!/FUN`MOVE`LABEL,%q<move_key>)],[name(%q<sheet_who>)] has no hold on [u(%!/FUN`MOVE`LABEL,%q<move_key>)])[u(%!/FUN`DISPLAY`WHERE,%q<sheet_who>)].,ok)
         flags: [cmdsyntax]
-      # +sheet/xp <name>=<n> sets XP; <name>=+<n> or -<n> adds or takes.
+      # +sheet/xp <name>=<n> [<reason>] sets XP; +<n> or -<n> adds or takes. Each change goes in the log.
       INC`SHEET`XP:
         value: |-
-          @include %!/INC`NEED`KEEPER; @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>))=@pemit %#=notice(SHEET,+sheet/xp <name>=<xp> sets it%, =+<n> or =-<n> adds or takes.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; think setq(set_value,if(member(+ -,left(%q<cmd_right_side>,1)),add(default(%q<sheet_who>/PBTA`XP,0),edit(%q<cmd_right_side>,+,)),%q<cmd_right_side>)); @assert cand(isint(%q<set_value>),gte(%q<set_value>,0),lte(%q<set_value>,999))=@pemit %#=notice(SHEET,XP is a whole number from 0 to 999.,warn); @include/args %!/INC`DO`ROOT=who,%q<sheet_who>; &PBTA`XP %q<sheet_who>=%q<set_value>; @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<set_value> XP.,ok)
+          @include %!/INC`NEED`KEEPER; @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>))=@pemit %#=notice(SHEET,+sheet/xp <name>=<xp> [<reason>] sets it%, =+<n> or =-<n> adds or takes: +sheet/xp Alice=+1 Ended the siege.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; think setqm(xp_typed,first(%q<cmd_right_side>),xp_reason,rest(%q<cmd_right_side>),xp_old,default(%q<sheet_who>/PBTA`XP,0)); think setq(set_value,if(member(+ -,left(%q<xp_typed>,1)),add(%q<xp_old>,edit(%q<xp_typed>,+,)),%q<xp_typed>)); @assert cand(isint(%q<set_value>),gte(%q<set_value>,0),lte(%q<set_value>,999))=@pemit %#=notice(SHEET,XP is a whole number from 0 to 999.,warn); @include/args %!/INC`DO`ROOT=who,%q<sheet_who>; &PBTA`XP %q<sheet_who>=%q<set_value>; think u(%!/FUN`LOG`ADD,%q<sheet_who>,xp,sub(%q<set_value>,%q<xp_old>),%q<set_value>,%q<xp_reason>); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<set_value> XP.,ok); @pemit %q<sheet_who>=notice(SHEET,[name(%#)] [if(lt(%q<set_value>,%q<xp_old>),takes [sub(%q<xp_old>,%q<set_value>)] XP from you,gives you [sub(%q<set_value>,%q<xp_old>)] XP)][if(strlen(%q<xp_reason>),: %q<xp_reason>)]. You have %q<set_value>.)
+        flags: [cmdsyntax]
+      # +sheet/log [<name>]: the latest changes to XP, who made them and why.
+      INC`SHEET`LOG:
+        value: |-
+          @include/args %!/INC`NEED`TARGET=name,firstof(%q<cmd_argument>,%#); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`LOG,%q<sheet_who>)
         flags: [cmdsyntax]
       INC`SHEET`TRAITS:
         value: |-
@@ -1213,10 +1223,32 @@ objects:
         value: |-
           setq(spend_forward,default(%0/PBTA`FORWARD,0))[if(%q<spend_forward>,attrib_set(%0/PBTA`FORWARD))]%q<spend_forward>
         flags: [VISUAL]
-      # %0 a character, %1 XP to give (or take, below 0): writes it, never below 0, and returns the new total.
+      # %0 a character, %1 XP to give (or take, below 0), %2 why (Reward when empty): writes it, never below 0,
+      # logs it, and returns the new total.
       API`AWARD:
         value: |-
-          setq(award_new,max(0,add(default(%0/PBTA`XP,0),%1)))[if(hasattr(%0,PBTA),,attrib_set(%0/PBTA,This character's PbtA sheet. +sheet shows it.)[set(%0/PBTA,wizard)][set(%0/PBTA,no_command)])][attrib_set(%0/PBTA`XP,%q<award_new>)]%q<award_new>
+          setqm(award_old,default(%0/PBTA`XP,0),award_new,max(0,add(default(%0/PBTA`XP,0),%1)))[u(%!/FUN`API`ROOT,%0)][attrib_set(%0/PBTA`XP,%q<award_new>)][u(%!/FUN`LOG`ADD,%0,xp,sub(%q<award_new>,%q<award_old>),%q<award_new>,firstof(%2,Reward))]%q<award_new>
+        flags: [VISUAL]
+      FUN`API`ROOT:
+        value: |-
+          if(hasattr(%0,PBTA),,attrib_set(%0/PBTA,This character's PbtA sheet. +sheet shows it.)[set(%0/PBTA,wizard)][set(%0/PBTA,no_command)])
+        flags: [funsyntax]
+      # ---- the log -------------------------------------------------------------------
+      # Every change to XP is PBTA`LOG`<n>: a JSON object with n, kind (xp), delta, total (after), reason, by (an
+      # objid) and at (secs), with the wizard attribute flag.
+      # %0 a character, %1 the kind, %2 the change, %3 the total after, %4 why. Nothing for no change.
+      FUN`LOG`ADD:
+        value: |-
+          if(%2,[setq(log_n,inc(lmax(0 [iter(lattr(%0/PBTA`LOG`*),last(%i0,`))])))][u(%!/FUN`API`ROOT,%0)][attrib_set(%0/PBTA`LOG`%q<log_n>,json(object,n,%q<log_n>,kind,json(string,%1),delta,%2,total,firstof(%3,0),reason,json(string,left(%4,200)),by,json(string,objid(%#)),at,secs()))][set(%0/PBTA`LOG`%q<log_n>,wizard)][iter(lnum(max(0,sub(words(lattr(%0/PBTA`LOG`*)),get(%!/DATA`LOG`MAX)))),attrib_set(%0/PBTA`LOG`[first(sort(iter(lattr(%0/PBTA`LOG`*),last(%i0,`)),n))]))])
+        flags: [funsyntax]
+      # %0 the character: the latest 30 log entries, oldest first.
+      FUN`SCREEN`LOG:
+        value: |-
+          setq(log_nums,sort(iter(lattr(%0/PBTA`LOG`*),if(hasflag(%0/%i0,wizard),last(%i0,`))),n))[setq(log_nums,extract(%q<log_nums>,max(1,sub(words(%q<log_nums>),29)),30))][box(if(words(%q<log_nums>),ldatatable(lit({"nowrap":"1|2|3|4|6","grow":"||||1"}),#|When|Change|>Now|Why|By,iter(%q<log_nums>,u(%!/FUN`DISPLAY`LOGROW,get(%0/PBTA`LOG`%i0)),%b,%*<^>),%*<^>),Nothing is logged yet.)%r[rule()]%r[tone(muted,Every change to XP%, with who made it.)],Log: [name(%0)])]
+        flags: [funsyntax]
+      FUN`DISPLAY`LOGROW:
+        value: |-
+          [json_query(%0,extract,$.n)]|[timefmt($Y-$m-$d,json_query(%0,extract,$.at))]|[u(%!/FUN`DISPLAY`SIGNED,json_query(%0,extract,$.delta))] XP|[json_query(%0,extract,$.total)]|[firstof(json_query(%0,extract,$.reason),-)]|[name(json_query(%0,extract,$.by))]
         flags: [VISUAL]
       # Named: %<roller> an objid, %<trait> a key, %<stat> a stat key for a move that offers several (the best
       # when empty), %<modifier> a number to add, %<target> the difficulty's modifier or nothing. Rolls 2d6 plus the
@@ -1755,7 +1787,7 @@ objects:
 
         In an encounter these change your copy there, not your sheet. See `+help encounter`.
 
-        Staff give XP. Once you are approved, `+sheet/advance <stat>` spends 5 XP on +1 to a stat, up to +3, and `+sheet/advance <move>` on a move from your playbook, unless your game changed the numbers.
+        Staff give XP; `+sheet/log` lists every change, who made it and why. Once you are approved, `+sheet/advance <stat>` spends 5 XP on +1 to a stat, up to +3, and `+sheet/advance <move>` on a move from your playbook, unless your game changed the numbers.
 
         For example:
 
@@ -1821,7 +1853,7 @@ objects:
 
         - `/set`, `/take`, `/drop` and `/advance` take `<name>/` first: `+sheet/set Alice/str=3`. A keeper may set a stat up to the highest, give a move from any playbook, and give an advance without XP.
         - `/playbook`, `/forward` and `/ongoing` take `<name>=` first: `+sheet/playbook Alice=wayfarer`.
-        - `+sheet/xp <name>=<xp>` sets XP; `=+1` or `=-1` adds or takes.
+        - `+sheet/xp <name>=+<n> [<reason>]` gives XP, `-<n>` takes, `<n>` sets: `+sheet/xp Alice=+1 Ended the siege`. `+sheet/log <name>` lists every change, who made it and why.
         - `+sheet/ledger <name>` lists their entries. `+sheet/revoke <name>/<n>` takes one back.
         - `+sheet/clear <name>` revokes their whole build, so character creation starts again. XP, forward, ongoing and hold stay.
 

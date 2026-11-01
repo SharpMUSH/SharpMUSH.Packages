@@ -1,18 +1,19 @@
 format: "1.16"
 package: sheet-brp
 title: "Percentile sheet (BRP)"
-version: 1.0.1
+version: 2.0.0
 authors: [SharpMUSH]
-description: "A percentile character sheet on the Basic Roleplaying rules: seven characteristics, a skill list with base chances the game edits, hit points and power points. +check rolls 1d100 under a skill or a characteristic roll, doubled or halved for difficulty, and reads critical, special, success, failure or fumble. The skill list is ORC Licensed Material from Basic Roleplaying: Universal Game Engine."
+description: "A percentile character sheet on the Basic Roleplaying rules: seven characteristics and a skill list with base chances the game edits, built from a ledger, with point-buy character creation, experience checks that raise skills, hit points, power points and coin, an audited log of coin and skill gains, and encounters that play from copies of the sheets. +check rolls 1d100 under a skill or a characteristic roll, doubled or halved for difficulty, and reads critical, special, success, failure or fumble. The skill list is ORC Licensed Material from Basic Roleplaying: Universal Game Engine."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, brp, percentile, d100, skills]
 category: Characters
 requires_server: ">=0.1"
 
-# One permission, for the people who keep sheets: change any character's sheet at any time and read every
-# sheet. A player fills in their own characteristics and skills until they are approved, and keeps their own hit
-# points and power points at any time. Changing the lists and settings is config.admin, as +config is.
+# One permission, for the people who keep sheets: change any character's sheet at any time, read every sheet,
+# give coin, mark experience checks, revoke and clear ledger entries, and run any encounter. A player shares out
+# their own characteristic and skill points until they are approved, then raises skills with experience checks,
+# and keeps their own hit points, power points and coin at any time. Changing the lists and settings is config.admin, as +config is.
 categories:
   roles:
     - name: Percentile sheet
@@ -42,15 +43,18 @@ objects:
   # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook),
   # writes the sheet attributes on characters, and reads them for other packages.
   #
-  # A character's sheet is their own attributes under BRP`: BRP`CHAR`<KEY> a characteristic (unset is 10),
-  # BRP`SKILL`<KEY> a skill's percentage (unset is its base chance), BRP`HP and BRP`PP the hit points and power
-  # points left (unset is the most). The BRP root is wizard-flagged, so only this object writes them.
+  # A character's sheet is their own attributes under BRP`: BRP`LEDGER`<n> the entries their characteristics
+  # and skills are built from, BRP`HP and BRP`PP the hit points and power points left (unset is the most),
+  # BRP`COIN the coin, BRP`MARKS the skills marked for an experience check, BRP`LOG`<n> the log of coin and skill
+  # gains, and BRP`ENCOUNTERS and BRP`USING the encounters they are in. The BRP root is wizard-flagged, so only
+  # this object writes them.
   #
-  # +sheet and +check are added with /noparse/rsnoparse and hooked to CMD`<word>, so what a player types reaches
-  # the code exactly as typed and nothing a player wrote is ever evaluated.
+  # +sheet, +check and +encounter are added with /noparse/rsnoparse and hooked to CMD`<word>, so what a player
+  # types reaches the code exactly as typed and nothing a player wrote is ever evaluated.
   #
-  # Trees: CMD` the hooked commands, INC`COMMAND` the parse and dispatch, INC`SHEET` and INC`CHECK` one routine
-  # per switch, INC`NEED` the guards they share, INC`DO` the writes. FUN`TRAIT` characteristics and skills together,
+  # Trees: CMD` the hooked commands, INC`COMMAND` the parse and dispatch, INC`SHEET`, INC`CHECK` and INC`ENCOUNTER`
+  # one routine per switch, INC`NEED` the guards they share, INC`DO` the writes. FUN`LEDGER` and FUN`BUILD` the
+  # ledger, FUN`P and FUN`PSET where play happens, FUN`ENC` the encounters, FUN`LOG` the log, FUN`TRAIT` characteristics and skills together,
   # FUN`LIST` the store's lists, FUN`BASE` base chances, FUN`CHANCE` the numbers, FUN`PERM` who may do what,
   # FUN`SCREEN` and FUN`DISPLAY` the screens. API` the functions other packages call (VISUAL), the same names in
   # every sheet package. Bridges add HINT`<message> lines, GATE`EDIT (a reason a player may not change their own
@@ -80,7 +84,7 @@ objects:
       DATA`CONFIG`CHARCAP`LABEL: |-
         Highest characteristic
       DATA`CONFIG`CHARCAP`DESCRIPTION: |-
-        The highest characteristic a player gives themselves. Sheet keepers may go to 99.
+        The highest characteristic a player gives themselves while making a character. Sheet keepers may go to 99.
       DATA`CONFIG`CHARCAP`EXAMPLE: |-
         21
       DATA`CONFIG`SKILLCAP: |-
@@ -96,9 +100,57 @@ objects:
       DATA`CONFIG`SKILLCAP`LABEL: |-
         Highest skill
       DATA`CONFIG`SKILLCAP`DESCRIPTION: |-
-        The highest percentage a player gives a skill. Sheet keepers may go to 999.
+        The highest percentage a player gives a skill while making a character. Experience checks and sheet keepers go past it.
       DATA`CONFIG`SKILLCAP`EXAMPLE: |-
         90
+      DATA`CONFIG`CHARPOINTS: |-
+        75
+      DATA`CONFIG`CHARPOINTS`TYPE: |-
+        integer
+      DATA`CONFIG`CHARPOINTS`DEFAULT: |-
+        75
+      DATA`CONFIG`CHARPOINTS`MIN: |-
+        7
+      DATA`CONFIG`CHARPOINTS`MAX: |-
+        693
+      DATA`CONFIG`CHARPOINTS`LABEL: |-
+        Characteristic points
+      DATA`CONFIG`CHARPOINTS`DESCRIPTION: |-
+        The points a new character shares out among their characteristics, each from 3 to the highest characteristic.
+      DATA`CONFIG`CHARPOINTS`EXAMPLE: |-
+        84
+      DATA`CONFIG`SKILLPOINTS: |-
+        300
+      DATA`CONFIG`SKILLPOINTS`TYPE: |-
+        integer
+      DATA`CONFIG`SKILLPOINTS`DEFAULT: |-
+        300
+      DATA`CONFIG`SKILLPOINTS`MIN: |-
+        0
+      DATA`CONFIG`SKILLPOINTS`MAX: |-
+        9999
+      DATA`CONFIG`SKILLPOINTS`LABEL: |-
+        Skill points
+      DATA`CONFIG`SKILLPOINTS`DESCRIPTION: |-
+        The percent a new character adds to their skills above the base chances.
+      DATA`CONFIG`SKILLPOINTS`EXAMPLE: |-
+        250
+      DATA`CONFIG`IMPROVE: |-
+        6
+      DATA`CONFIG`IMPROVE`TYPE: |-
+        integer
+      DATA`CONFIG`IMPROVE`DEFAULT: |-
+        6
+      DATA`CONFIG`IMPROVE`MIN: |-
+        1
+      DATA`CONFIG`IMPROVE`MAX: |-
+        20
+      DATA`CONFIG`IMPROVE`LABEL: |-
+        Experience die
+      DATA`CONFIG`IMPROVE`DESCRIPTION: |-
+        The sides of the die an experience check adds to a skill when the roll is over its percentage.
+      DATA`CONFIG`IMPROVE`EXAMPLE: |-
+        10
       DATA`CONFIG`HITPOINTS: |-
         average
       DATA`CONFIG`HITPOINTS`TYPE: |-
@@ -204,6 +256,22 @@ objects:
         SHEET`SHOW
       DATA`ROUTE`SHEET`SET: |-
         SHEET`SET
+      DATA`ROUTE`SHEET`CHARGEN: |-
+        SHEET`CHARGEN
+      DATA`ROUTE`SHEET`IMPROVE: |-
+        SHEET`IMPROVE
+      DATA`ROUTE`SHEET`MARK: |-
+        SHEET`MARK
+      DATA`ROUTE`SHEET`COIN: |-
+        SHEET`COIN
+      DATA`ROUTE`SHEET`LEDGER: |-
+        SHEET`LEDGER
+      DATA`ROUTE`SHEET`LOG: |-
+        SHEET`LOG
+      DATA`ROUTE`SHEET`REVOKE: |-
+        SHEET`REVOKE
+      DATA`ROUTE`SHEET`CLEAR: |-
+        SHEET`CLEAR
       DATA`ROUTE`SHEET`HP: |-
         SHEET`HP
       DATA`ROUTE`SHEET`PP: |-
@@ -216,6 +284,26 @@ objects:
         CHECK`ROLL
       DATA`ROUTE`CHECK`PRIVATE: |-
         CHECK`ROLL
+      DATA`ROUTE`ENCOUNTER`BARE: |-
+        ENCOUNTER`SHOW
+      DATA`ROUTE`ENCOUNTER`ARG: |-
+        ENCOUNTER`SHOW
+      DATA`ROUTE`ENCOUNTER`START: |-
+        ENCOUNTER`START
+      DATA`ROUTE`ENCOUNTER`JOIN: |-
+        ENCOUNTER`JOIN
+      DATA`ROUTE`ENCOUNTER`USE: |-
+        ENCOUNTER`USE
+      DATA`ROUTE`ENCOUNTER`ADD: |-
+        ENCOUNTER`ADD
+      DATA`ROUTE`ENCOUNTER`REMOVE: |-
+        ENCOUNTER`REMOVE
+      DATA`ROUTE`ENCOUNTER`LEAVE: |-
+        ENCOUNTER`LEAVE
+      DATA`ROUTE`ENCOUNTER`KEEP: |-
+        ENCOUNTER`KEEP
+      DATA`ROUTE`ENCOUNTER`END: |-
+        ENCOUNTER`END
       DATA`DIFFICULTIES: |-
         trivial easy standard hard extreme
       # What +check also takes after =, and what each comes to.
@@ -233,6 +321,12 @@ objects:
         impossible
       DATA`CATEGORIES: |-
         combat communication manipulation mental perception physical
+      # The most entries a character's ledger holds; a sheet keeper's +sheet/clear starts it again.
+      DATA`LEDGER`MAX: |-
+        200
+      # The most entries a character's log keeps; past it the oldest goes.
+      DATA`LOG`MAX: |-
+        500
 
       # ---- commands ---------------------------------------------------------------
       # %1 the switches and %2 what follows, exactly as typed.
@@ -243,6 +337,10 @@ objects:
       CMD`CHECK:
         value: |-
           $(?is)^\+check(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,check,table,CHECK,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
+      CMD`ENCOUNTER:
+        value: |-
+          $(?is)^\+encounter(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,encounter,table,ENCOUNTER,switches,%1,argument,%2
         flags: [regexp, cmdsyntax]
       # A line a bridge adds to one of this object's messages: HINT`<message>, set here by a bridge such as
       # sheet-brp-help. %1 on are passed to it. Nothing when no bridge set one, so the message stands without it.
@@ -277,15 +375,41 @@ objects:
         value: |-
           @assert strlen(setr(sheet_who,u(%!/FUN`PLAYER`MATCH,%<name>)))=@pemit %#=notice(SHEET,There is no player called '%<name>'.,warn)
         flags: [cmdsyntax]
-      # %<text>: <name>/<what> for a sheet keeper, else <what> on your own sheet. sheet_who and sheet_what.
+      # The left of =, or the whole argument when there is no =: <name>/<what> names someone else, else <what>
+      # is on your own sheet. sheet_who and sheet_what. The routine then says who may change it.
       INC`NEED`WHO:
         value: |-
-          @if strmatch(%<text>,*/*)={@include/args %!/INC`NEED`TARGET=name,before(%<text>,/); think setq(sheet_what,trim(after(%<text>,/)))},{think setqm(sheet_who,%q<viewer_objid>,sheet_what,%<text>)}; @assert strlen(%q<sheet_who>); @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error)
+          think setq(who_typed,if(%q<cmd_has_equals>,%q<cmd_left_side>,%q<cmd_argument>)); think setq(who_named,if(strmatch(%q<who_typed>,*/*),trim(before(%q<who_typed>,/)))); @include/args %!/INC`NEED`TARGET=name,firstof(%q<who_named>,%#); think setq(sheet_what,trim(if(strlen(%q<who_named>),after(%q<who_typed>,/),%q<who_typed>)))
         flags: [cmdsyntax]
-      # Changes only a keeper makes once a character is approved: characteristics and skills.
-      INC`NEED`EDITABLE:
+      # <name>=<value> names someone else, else <value> is for your own sheet: sheet_who and sheet_value.
+      INC`NEED`WHOVALUE:
         value: |-
-          @assert cor(%q<viewer_keeper>,not(isapproved(%#)))=@pemit %#=notice(SHEET,Your character is approved%, so staff change your sheet now.,error); @assert cor(%q<viewer_keeper>,not(strlen(setr(set_gate,u(%!/FUN`GATE`EDIT,%#)))))=@pemit %#=notice(SHEET,%q<set_gate>,warn)
+          @include/args %!/INC`NEED`TARGET=name,if(%q<cmd_has_equals>,%q<cmd_left_side>,%#); think setq(sheet_value,if(%q<cmd_has_equals>,%q<cmd_right_side>,%q<cmd_argument>))
+        flags: [cmdsyntax]
+      # Changes to the build: only a sheet keeper names someone else.
+      INC`NEED`OWNSHEET:
+        value: |-
+          @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error)
+        flags: [cmdsyntax]
+      # Changes in play (hit points, power points, coin, experience checks): yourself, a sheet keeper, or the GM of the encounter whose
+      # copy the character plays from.
+      INC`NEED`PLAY:
+        value: |-
+          think setq(play_runs,u(%!/FUN`PERM`RUNS,%#,%q<sheet_who>)); @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)),%q<play_runs>)=@pemit %#=notice(SHEET,Only sheet keepers%, and the GM of an encounter [name(%q<sheet_who>)] plays in%, change [poss(%q<sheet_who>)] sheet.,error)
+        flags: [cmdsyntax]
+      # Building the sheet: a keeper at any time (phase staff), a player on their own sheet until they are
+      # approved (phase chargen). sheet_phase, and sheet_rows, the ledger's entries in force.
+      INC`NEED`BUILD:
+        value: |-
+          @include %!/INC`NEED`OWNSHEET; @assert cor(%q<viewer_keeper>,not(isapproved(%#)))=@pemit %#=notice(SHEET,Your character is approved%, so staff change your sheet now. +sheet/improve rolls your experience checks.,error); @assert cor(%q<viewer_keeper>,not(strlen(setr(set_gate,u(%!/FUN`GATE`EDIT,%#)))))=@pemit %#=notice(SHEET,%q<set_gate>,warn); @include %!/INC`NEED`ROOM; think setqm(sheet_phase,if(%q<viewer_keeper>,staff,chargen),sheet_rows,u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%q<sheet_who>)))
+        flags: [cmdsyntax]
+      INC`NEED`ROOM:
+        value: |-
+          @assert lt(words(lattr(%q<sheet_who>/BRP`LEDGER`*)),get(%!/DATA`LEDGER`MAX))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s ledger is full. A sheet keeper's +sheet/clear starts it again.,warn)
+        flags: [cmdsyntax]
+      INC`NEED`KEEPER:
+        value: |-
+          @assert %q<viewer_keeper>=@pemit %#=notice(SHEET,Only sheet keepers do that.,error)
         flags: [cmdsyntax]
       # %<key> typed text: trait_key, the characteristic or skill it names, and trait_kind, CHAR or SKILL.
       INC`NEED`TRAIT:
@@ -293,16 +417,72 @@ objects:
           @assert strlen(setr(trait_key,u(%!/FUN`TRAIT`FIND,%<key>)))=@pemit %#=notice(SHEET,There is no characteristic or skill '%<key>'. +sheet/traits lists them.,warn); think setq(trait_kind,u(%!/FUN`TRAIT`KIND,%q<trait_key>))
         flags: [cmdsyntax]
 
-      # ---- +sheet -----------------------------------------------------------------
+      # ---- +sheet: the build ------------------------------------------------------
       INC`SHEET`SHOW:
         value: |-
-          @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert strlen(%q<sheet_who>); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`SHEET,%q<sheet_who>,%#)
+          @include/args %!/INC`NEED`TARGET=name,firstof(%q<cmd_argument>,%#); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`SHEET,%q<sheet_who>,%#)
         flags: [cmdsyntax]
-      # +sheet/set [<name>/]<characteristic or skill>=<value>. Empty puts it back: 10, or the base chance.
+      # +sheet/set [<name>/]<characteristic or skill>=<value>. A player shares out the characteristic points and
+      # the skill points; a keeper sets anything. Empty unassigns a characteristic, or puts a skill back to its
+      # base chance.
       INC`SHEET`SET:
         value: |-
-          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/set <characteristic or skill>=<value>%, such as +sheet/set dex=14 or +sheet/set climb=55.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_left_side>; @include %!/INC`NEED`EDITABLE; @include/args %!/INC`NEED`TRAIT=key,%q<sheet_what>; think setqm(set_value,edit(%q<cmd_right_side>,%%,),set_low,if(strmatch(%q<trait_kind>,CHAR),1,0),set_high,if(strmatch(%q<trait_kind>,CHAR),if(%q<viewer_keeper>,99,get(%!/DATA`CONFIG`CHARCAP)),if(%q<viewer_keeper>,999,get(%!/DATA`CONFIG`SKILLCAP)))); @break not(strlen(%q<set_value>))={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,%q<trait_kind>`%q<trait_key>,value,; @pemit %#=notice(SHEET,[u(%!/FUN`TRAIT`NAME,%q<trait_key>)] is back to [u(%!/API`RATING,%q<sheet_who>,%q<trait_key>)][if(strmatch(%q<trait_kind>,SKILL),%%)] on [name(%q<sheet_who>)]'s sheet.,ok)}; @assert cand(isint(%q<set_value>),gte(%q<set_value>,%q<set_low>),lte(%q<set_value>,%q<set_high>))=@pemit %#=notice(SHEET,[if(strmatch(%q<trait_kind>,CHAR),A characteristic,A skill)] is a whole number from %q<set_low> to %q<set_high>.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,%q<trait_kind>`%q<trait_key>,value,%q<set_value>; @pemit %#=notice(SHEET,[u(%!/FUN`TRAIT`NAME,%q<trait_key>)] is %q<set_value>[if(strmatch(%q<trait_kind>,SKILL),%%)] on [name(%q<sheet_who>)]'s sheet.[if(not(comp(%q<sheet_who>,%q<viewer_objid>)),u(%!/FUN`HINT,SET))],ok)
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/set <characteristic or skill>=<value>%, such as +sheet/set dex=14 or +sheet/set climb=55.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`BUILD; @include/args %!/INC`NEED`TRAIT=key,%q<sheet_what>; think setq(set_typed,edit(%q<cmd_right_side>,%%,)); think u(%!/FUN`BUILD`ROWS,%q<sheet_rows>); @include %!/INC`SHEET`SET`%q<trait_kind>
         flags: [cmdsyntax]
+      INC`SHEET`SET`CHAR:
+        value: |-
+          think setqm(set_low,if(%q<viewer_keeper>,1,3),set_high,if(%q<viewer_keeper>,99,get(%!/DATA`CONFIG`CHARCAP)),set_left,sub(get(%!/DATA`CONFIG`CHARPOINTS),sub(u(%!/FUN`R`SUM,%q<build_chars>),u(%!/FUN`R,%q<build_chars>,%q<trait_key>)))); @assert cor(not(strlen(%q<set_typed>)),cand(isint(%q<set_typed>),gte(%q<set_typed>,%q<set_low>),lte(%q<set_typed>,%q<set_high>)))=@pemit %#=notice(SHEET,A characteristic is a whole number from %q<set_low> to %q<set_high>.,warn); @assert cor(%q<viewer_keeper>,not(strlen(%q<set_typed>)),lte(%q<set_typed>,%q<set_left>))=@pemit %#=notice(SHEET,That takes more points than are left: [max(0,%q<set_left>)] for [u(%!/FUN`TRAIT`NAME,%q<trait_key>)]. Lower another characteristic to free some.,warn); @include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,char,key,%q<trait_key>,value,%q<set_typed>,phase,%q<sheet_phase>; @pemit %#=notice(SHEET,[u(%!/FUN`TRAIT`NAME,%q<trait_key>)] is [firstof(%q<set_typed>,unassigned)] on [name(%q<sheet_who>)]'s sheet.[u(%!/FUN`CHARGEN`AFTER,%q<sheet_who>)],ok)
+        flags: [cmdsyntax]
+      # A skill's entry holds the points put into it above its base chance and its experience gains.
+      INC`SHEET`SET`SKILL:
+        value: |-
+          think setqm(skill_floor,add(u(%!/FUN`SKILL`BASE,%q<build_chars>,%q<trait_key>),u(%!/FUN`BUILD`IMPROVED,%q<build_rows>,%q<trait_key>)),set_high,if(%q<viewer_keeper>,999,get(%!/DATA`CONFIG`SKILLCAP))); think setqm(set_value,firstof(%q<set_typed>,%q<skill_floor>),set_left,sub(get(%!/DATA`CONFIG`SKILLPOINTS),sub(u(%!/FUN`BUILD`SPENT,%q<build_rows>),u(%!/FUN`BUILD`POINTS,%q<build_rows>,%q<trait_key>)))); @assert cand(isint(%q<set_value>),lte(%q<set_value>,%q<set_high>))=@pemit %#=notice(SHEET,A skill is a whole number up to %q<set_high>%%.,warn); @assert gte(%q<set_value>,%q<skill_floor>)=@pemit %#=notice(SHEET,[u(%!/FUN`TRAIT`NAME,%q<trait_key>)] starts at %q<skill_floor>%% and goes no lower.,warn); @assert cor(%q<viewer_keeper>,lte(sub(%q<set_value>,%q<skill_floor>),%q<set_left>))=@pemit %#=notice(SHEET,That takes more skill points than are left: [max(0,%q<set_left>)]. Lower another skill to free some.,warn); @include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,skill,key,%q<trait_key>,value,sub(%q<set_value>,%q<skill_floor>),phase,%q<sheet_phase>; @pemit %#=notice(SHEET,[u(%!/FUN`TRAIT`NAME,%q<trait_key>)] is %q<set_value>%% on [name(%q<sheet_who>)]'s sheet.[u(%!/FUN`CHARGEN`AFTER,%q<sheet_who>)],ok)
+        flags: [cmdsyntax]
+      # +sheet/chargen [<name>]: the steps of making a character and how far they are.
+      INC`SHEET`CHARGEN:
+        value: |-
+          @include/args %!/INC`NEED`TARGET=name,firstof(%q<cmd_argument>,%#); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`CHARGEN,%q<sheet_who>,%#)
+        flags: [cmdsyntax]
+      # +sheet/improve [<name>]: rolls every experience check marked on the sheet. Over the skill's percentage
+      # raises it by a die of IMPROVE sides. Each gain is a ledger entry and goes in the log; the marks clear.
+      INC`SHEET`IMPROVE:
+        value: |-
+          @include/args %!/INC`NEED`TARGET=name,firstof(%q<cmd_argument>,%#); @include %!/INC`NEED`OWNSHEET; @assert cor(%q<viewer_keeper>,isapproved(%#))=@pemit %#=notice(SHEET,Experience checks are rolled after approval.,warn); @include %!/INC`NEED`ROOM; think setq(improve_marks,get(%q<sheet_who>/BRP`MARKS)); @assert words(%q<improve_marks>)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has no experience checks marked. A successful roll on a skill marks one.,warn); think u(%!/FUN`BUILD`OF,%q<sheet_who>); think setq(improve_res,iter(%q<improve_marks>,u(%!/FUN`IMPROVE`ROLL,%i0))); @dolist/inline %q<improve_res>={@if last(##,:)={@include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,improve,key,first(##,:),value,last(##,:),phase,play; think u(%!/FUN`LOG`ADD,%q<sheet_who>,improve,last(##,:),add(elements(##,3,:),last(##,:)),Experience check: rolled [elements(##,2,:)],u(%!/FUN`TRAIT`LABEL,first(##,:)))}}; &BRP`MARKS %q<sheet_who>; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s experience checks: [itemize(iter(%q<improve_res>,u(%!/FUN`DISPLAY`IMPROVED,%i0),%b,|),|)].,ok); @if comp(%q<sheet_who>,%q<viewer_objid>)={@pemit %q<sheet_who>=notice(SHEET,[name(%#)] rolls your experience checks: [itemize(iter(%q<improve_res>,u(%!/FUN`DISPLAY`IMPROVED,%i0),%b,|),|)].)}
+        flags: [cmdsyntax]
+      # %0 a skill: KEY:roll:percentage:gain, from build_rows and build_chars.
+      FUN`IMPROVE`ROLL:
+        value: |-
+          setq(ir_rate,u(%!/FUN`RATE,%q<build_rows>,%q<build_chars>,%0))[setq(ir_roll,die(1,100))]%0:%q<ir_roll>:%q<ir_rate>:[if(gt(%q<ir_roll>,%q<ir_rate>),die(1,get(%!/DATA`CONFIG`IMPROVE)),0)]
+        flags: [funsyntax]
+      # +sheet/ledger [<name>]: every entry the sheet is built from, oldest first.
+      INC`SHEET`LEDGER:
+        value: |-
+          @include/args %!/INC`NEED`TARGET=name,firstof(%q<cmd_argument>,%#); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`LEDGER,%q<sheet_who>)
+        flags: [cmdsyntax]
+      # +sheet/log [<name>]: the latest changes to coin and skills, who made them and why.
+      INC`SHEET`LOG:
+        value: |-
+          @include/args %!/INC`NEED`TARGET=name,firstof(%q<cmd_argument>,%#); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`LOG,%q<sheet_who>)
+        flags: [cmdsyntax]
+      # +sheet/revoke <name>/<n>: takes back one entry.
+      INC`SHEET`REVOKE:
+        value: |-
+          @include %!/INC`NEED`KEEPER; @include %!/INC`NEED`WHO; @include %!/INC`NEED`ROOM; think setq(revoke_row,grab(u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%q<sheet_who>)),%q<sheet_what>~*)); @assert cand(isint(%q<sheet_what>),strlen(%q<revoke_row>))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has no entry '%q<sheet_what>' in force. +sheet/ledger [name(%q<sheet_who>)] lists them.,warn); @include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,revoke,key,,value,%q<sheet_what>,phase,staff; @pemit %#=notice(SHEET,Revoked [name(%q<sheet_who>)]'s entry %q<sheet_what>: [u(%!/FUN`DISPLAY`ENTRY,%q<revoke_row>)].,ok)
+        flags: [cmdsyntax]
+      # +sheet/clear <name>: revokes the whole build; character creation starts again. Hit points, power points,
+      # coin and experience checks stay.
+      INC`SHEET`CLEAR:
+        value: |-
+          @include %!/INC`NEED`KEEPER; @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/clear <name> revokes everything on their sheet's ledger.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>; @assert words(u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%q<sheet_who>)))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s sheet has nothing to clear.,warn); @include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,clear,key,,value,,phase,staff; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s build is cleared %(entry %q<entry_n>%). +sheet/chargen [name(%q<sheet_who>)] shows the steps.,ok)
+        flags: [cmdsyntax]
+      INC`SHEET`TRAITS:
+        value: |-
+          @pemit %#=u(%!/FUN`SCREEN`TRAITS)
+        flags: [cmdsyntax]
+
+      # ---- +sheet: play -----------------------------------------------------------
+      # Hit points, power points, coin and experience checks change on the encounter's copy when the character
+      # plays from one, else on the sheet. FUN`P reads one of them and FUN`PSET writes it, wherever it is now.
       # +sheet/hp [<name>=]<n>|+<n>|-<n>|full, and the same for /pp.
       INC`SHEET`HP:
         value: |-
@@ -312,14 +492,22 @@ objects:
         value: |-
           @include/args %!/INC`SHEET`POOL=pool,PP,noun,power points
         flags: [cmdsyntax]
-      # %<pool> HP or PP, %<noun> what it is called.
+      # %<pool> HP or PP, %<noun> what it is called. Unset is the most.
       INC`SHEET`POOL:
         value: |-
-          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/[lcstr(%<pool>)] -<n> loses %<noun>%, +<n> gets some back%, <n> sets them%, full fills them.,warn); @if %q<cmd_has_equals>={@include/args %!/INC`NEED`WHO=text,%q<cmd_left_side>/; think setq(pool_typed,%q<cmd_right_side>)},{think setqm(sheet_who,%q<viewer_objid>,pool_typed,%q<cmd_argument>)}; @assert cand(strlen(%q<sheet_who>),cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))); think setqm(pool_most,u(%!/API`MOST,%q<sheet_who>,%<pool>),pool_now,u(%!/API`LEFT,%q<sheet_who>,%<pool>),pool_to,cond(strmatch(%q<pool_typed>,full),%q<pool_most>,strmatch(%q<pool_typed>,+*),add(%q<pool_now>,rest(%q<pool_typed>,+)),strmatch(%q<pool_typed>,-*),add(%q<pool_now>,%q<pool_typed>),%q<pool_typed>)); @assert isint(%q<pool_to>)=@pemit %#=notice(SHEET,'%q<pool_typed>' is not a number of %<noun>. Give -<n>%, +<n>%, <n> or full.,warn); think setq(pool_to,min(%q<pool_to>,%q<pool_most>)); @include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,%<pool>,value,if(neq(%q<pool_to>,%q<pool_most>),%q<pool_to>); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<pool_to> of %q<pool_most> %<noun>.[if(lte(%q<pool_to>,0),%b[if(strmatch(%<pool>,HP),tone(strong,At 0 or below a character is dying.),tone(strong,No power points are left.))])],ok)
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/[lcstr(%<pool>)] -<n> loses %<noun>%, +<n> gets some back%, <n> sets them%, full fills them.,warn); @include %!/INC`NEED`WHOVALUE; @include %!/INC`NEED`PLAY; think setqm(pool_typed,%q<sheet_value>,pool_most,u(%!/API`MOST,%q<sheet_who>,%<pool>),pool_now,u(%!/FUN`LEFT,%q<sheet_who>,%<pool>,)); think setq(pool_to,cond(strmatch(%q<pool_typed>,full),%q<pool_most>,strmatch(%q<pool_typed>,+*),add(%q<pool_now>,rest(%q<pool_typed>,+)),strmatch(%q<pool_typed>,-*),add(%q<pool_now>,%q<pool_typed>),%q<pool_typed>)); @assert isint(%q<pool_to>)=@pemit %#=notice(SHEET,'%q<pool_typed>' is not a number of %<noun>. Give -<n>%, +<n>%, <n> or full.,warn); think setq(pool_to,min(%q<pool_to>,%q<pool_most>)); think u(%!/FUN`PSET,%q<sheet_who>,%<pool>,if(neq(%q<pool_to>,%q<pool_most>),%q<pool_to>),); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<pool_to> of %q<pool_most> %<noun>[u(%!/FUN`DISPLAY`WHERE,%q<sheet_who>)].[if(lte(%q<pool_to>,0),%b[if(strmatch(%<pool>,HP),tone(strong,At 0 or below a character is dying.),tone(strong,No power points are left.))])],ok)
         flags: [cmdsyntax]
-      INC`SHEET`TRAITS:
+      # +sheet/coin [<name>=]<n> [<reason>]: -<n> spends your own coin; a keeper or the encounter's GM gives
+      # (+<n>), takes (-<n>) or sets (<n>).
+      INC`SHEET`COIN:
         value: |-
-          @pemit %#=u(%!/FUN`SCREEN`TRAITS)
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/coin -<n> %[<reason>%] spends coin: +sheet/coin -20 Train ticket.,warn); @include %!/INC`NEED`WHOVALUE; @include %!/INC`NEED`PLAY; think setqm(coin_typed,first(%q<sheet_value>),coin_reason,rest(%q<sheet_value>),coin_now,firstof(u(%!/FUN`P,%q<sheet_who>,COIN),0),coin_staff,cor(%q<viewer_keeper>,%q<play_runs>)); @assert isint(edit(%q<coin_typed>,+,))=@pemit %#=notice(SHEET,Give a whole number of coin.,warn); @assert cor(%q<coin_staff>,strmatch(%q<coin_typed>,-*))=@pemit %#=notice(SHEET,You spend coin with -<n>. Staff give it.,warn); think setq(coin_new,if(member(+ -,left(%q<coin_typed>,1)),add(%q<coin_now>,edit(%q<coin_typed>,+,)),%q<coin_typed>)); @assert gte(%q<coin_new>,0)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<coin_now> coin.,warn); @assert lte(%q<coin_new>,999999999)=@pemit %#=notice(SHEET,That is more coin than a sheet holds.,warn); think u(%!/FUN`COIN`ADD,%q<sheet_who>,sub(%q<coin_new>,%q<coin_now>),,%q<coin_reason>); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<coin_new> coin[u(%!/FUN`DISPLAY`WHERE,%q<sheet_who>)].,ok); @if comp(%q<sheet_who>,%q<viewer_objid>)={@pemit %q<sheet_who>=notice(SHEET,[name(%#)] [if(gte(%q<coin_new>,%q<coin_now>),gives you [sub(%q<coin_new>,%q<coin_now>)],takes [sub(%q<coin_now>,%q<coin_new>)] of your)] coin[if(strlen(%q<coin_reason>),: %q<coin_reason>)]. You have %q<coin_new>[u(%!/FUN`DISPLAY`WHERE,%q<sheet_who>)].)}
+        flags: [cmdsyntax]
+      # +sheet/mark <name>/<skill> marks an experience check by hand; =remove takes one off. Keepers, and the GM of
+      # the encounter whose copy the character plays from.
+      INC`SHEET`MARK:
+        value: |-
+          @assert strmatch(%q<cmd_left_side>,*/*)=@pemit %#=notice(SHEET,+sheet/mark <name>/<skill> marks an experience check%, and =remove takes it off.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`PLAY; @assert cor(%q<viewer_keeper>,%q<play_runs>)=@pemit %#=notice(SHEET,A successful roll marks an experience check. Staff and the encounter's GM mark them by hand.,error); @include/args %!/INC`NEED`TRAIT=key,%q<sheet_what>; @assert strmatch(%q<trait_kind>,SKILL)=@pemit %#=notice(SHEET,Only skills take experience checks.,warn); think setq(mark_list,u(%!/FUN`P,%q<sheet_who>,MARKS)); @break %q<cmd_has_equals>={@assert strmatch(%q<cmd_right_side>,remove)=@pemit %#=notice(SHEET,+sheet/mark <name>/<skill>=remove takes a check off.,warn); @assert member(%q<mark_list>,%q<trait_key>)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s [u(%!/FUN`TRAIT`NAME,%q<trait_key>)] is not marked.,warn); think u(%!/FUN`PSET,%q<sheet_who>,MARKS,setdiff(%q<mark_list>,%q<trait_key>),); @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s [u(%!/FUN`TRAIT`NAME,%q<trait_key>)] is no longer marked[u(%!/FUN`DISPLAY`WHERE,%q<sheet_who>)].,ok)}; think u(%!/FUN`PSET,%q<sheet_who>,MARKS,setunion(%q<mark_list>,%q<trait_key>),); @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s [u(%!/FUN`TRAIT`NAME,%q<trait_key>)] is marked for an experience check[u(%!/FUN`DISPLAY`WHERE,%q<sheet_who>)].,ok)
         flags: [cmdsyntax]
 
       # ---- +check -----------------------------------------------------------------
@@ -327,11 +515,18 @@ objects:
         value: |-
           @pemit %#=notice(SHEET,+check <skill or characteristic>%[=<difficulty>%]%, such as +check climb=difficult or +check dex. +<n> or -<n> after it adds or takes percent. /private rolls where only you see it.,warn)
         flags: [cmdsyntax]
-      # +check[/private] <trait>[+<n>|-<n>][=<difficulty>]: rolls 1d100 for the room.
+      # +check[/private] <trait>[+<n>|-<n>][=<difficulty>]: rolls 1d100 for the room. A success on a skill marks
+      # its experience check, on the encounter's copy when the roller plays from one.
       INC`CHECK`ROLL:
         value: |-
-          @assert strlen(%q<cmd_argument>)=@include %!/INC`CHECK`USAGE; think u(%!/FUN`CHECK`READ,%q<cmd_left_side>); @assert isint(%q<check_modifier>)=@pemit %#=notice(SHEET,'%q<cmd_left_side>' ends in something that is not a number to add.,warn); @include/args %!/INC`NEED`TRAIT=key,%q<check_typed>; @assert not(strmatch(%q<trait_key>,SIZ))=@pemit %#=notice(SHEET,SIZ has no roll of its own.,warn); think setq(check_level,u(%!/API`TARGET,%q<cmd_right_side>)); @assert cor(not(%q<cmd_has_equals>),strlen(%q<check_level>))=@pemit %#=notice(SHEET,'%q<cmd_right_side>' is not a difficulty. Give [itemize(v(DATA`LEVELS),,or)]%, or one of [itemize(v(DATA`DIFFICULTIES))].,warn); think setq(check_result,uargs(%!/API`CHECK,roller,%q<viewer_objid>,trait,%q<trait_key>,modifier,%q<check_modifier>,target,%q<check_level>)); @assert not(strmatch(%q<check_result>,#-*))=@pemit %#=notice(SHEET,%q<check_result>,error); think setq(check_line,u(%!/FUN`DISPLAY`CHECK,%q<check_result>)); @break member(%q<cmd_switch_list>,private)=@pemit %#=notice(SHEET,You privately roll %q<check_line>); @remit %l=notice(SHEET,tone(strong,name(%#)) rolls %q<check_line>)
+          @assert strlen(%q<cmd_argument>)=@include %!/INC`CHECK`USAGE; think u(%!/FUN`CHECK`READ,%q<cmd_left_side>); @assert isint(%q<check_modifier>)=@pemit %#=notice(SHEET,'%q<cmd_left_side>' ends in something that is not a number to add.,warn); @include/args %!/INC`NEED`TRAIT=key,%q<check_typed>; @assert not(strmatch(%q<trait_key>,SIZ))=@pemit %#=notice(SHEET,SIZ has no roll of its own.,warn); think setq(check_level,u(%!/API`TARGET,%q<cmd_right_side>)); @assert cor(not(%q<cmd_has_equals>),strlen(%q<check_level>))=@pemit %#=notice(SHEET,'%q<cmd_right_side>' is not a difficulty. Give [itemize(v(DATA`LEVELS),,or)]%, or one of [itemize(v(DATA`DIFFICULTIES))].,warn); think setq(check_result,uargs(%!/API`CHECK,roller,%q<viewer_objid>,trait,%q<trait_key>,modifier,%q<check_modifier>,target,%q<check_level>)); @assert not(strmatch(%q<check_result>,#-*))=@pemit %#=notice(SHEET,%q<check_result>,error); think setq(check_marked,u(%!/FUN`CHECK`MARK,%q<viewer_objid>,%q<trait_key>,json_query(%q<check_result>,extract,$.level))); think setq(check_line,[u(%!/FUN`DISPLAY`CHECK,%q<check_result>)][if(%q<check_marked>,%b[tone(muted,Experience check marked.)])]); @break member(%q<cmd_switch_list>,private)=@pemit %#=notice(SHEET,You privately roll %q<check_line>); @remit %l=notice(SHEET,tone(strong,name(%#)) rolls %q<check_line>)
         flags: [cmdsyntax]
+      # %0 the roller, %1 the key, %2 the level rolled: marks the skill's experience check on a rolled success
+      # and returns 1 when it is newly marked.
+      FUN`CHECK`MARK:
+        value: |-
+          if(cand(strmatch(u(%!/FUN`TRAIT`KIND,%1),SKILL),member(critical special success,%2),not(member(setr(cm_marks,u(%!/FUN`P,%0,MARKS)),%1))),[null(u(%!/FUN`PSET,%0,MARKS,squish(%q<cm_marks> %1),))]1,0)
+        flags: [funsyntax]
       # %0 the trait as typed, with a modifier at its end: check_typed and check_modifier (0 when none).
       FUN`CHECK`READ:
         value: |-
@@ -341,13 +536,253 @@ objects:
           check_typed,trim(cond(strlen(%q<check_plus>),left(%0,sub(strlen(%0),inc(strlen(last(%0,+))))),isint(%q<check_minus>),left(%0,sub(strlen(%0),inc(strlen(last(%0,-))))),%0)))
         flags: [funsyntax]
 
+      # ---- +encounter -------------------------------------------------------------
+      # An encounter is a scene played from copies of the sheets: a member's hit points, power points, coin and
+      # experience checks change on their copy while they are in its room. Several may run in one room; the copy
+      # in use is that of a joined encounter in the room the character is in: the one /use picked, else the last
+      # joined. Anywhere else the sheet itself applies. /keep writes one character's copy back to their sheet.
+      # +encounter [<n>]: one encounter, or the ones here and yours.
+      INC`ENCOUNTER`SHOW:
+        value: |-
+          think setqm(enc_here,u(%!/FUN`ENC`HERE,%#),enc_joined,u(%!/FUN`ENC`JOINED,%#)); @assert cor(strlen(%q<cmd_argument>),words(setunion(%q<enc_here>,%q<enc_joined>)))=@pemit %#=notice(ENCOUNTER,There is no encounter here%, and you are in none. +encounter/start begins one.,warn); @assert cor(strlen(%q<cmd_argument>),gt(words(setunion(%q<enc_here>,%q<enc_joined>)),1))=@pemit %#=u(%!/FUN`SCREEN`ENCOUNTER,setunion(%q<enc_here>,%q<enc_joined>),%#); @assert strlen(%q<cmd_argument>)=@pemit %#=u(%!/FUN`SCREEN`ENCOUNTERS,%q<enc_here>,%q<enc_joined>,%#); @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>,from,,verb,; @pemit %#=u(%!/FUN`SCREEN`ENCOUNTER,%q<enc_n>,%#)
+        flags: [cmdsyntax]
+      # +encounter/start [<title>]: a new encounter in the room you are in.
+      INC`ENCOUNTER`START:
+        value: |-
+          think setqm(enc_n,inc(lmax(0 [iter(lattr({{encounters}}/ENC`*),last(%i0,`))])),enc_title,firstof(left(%q<cmd_argument>,60),Encounter in [name(loc(%#))])); &ENC`%q<enc_n> {{encounters}}=%q<enc_title>; &ENC`%q<enc_n>`ROOM {{encounters}}=objid(loc(%#)); &ENC`%q<enc_n>`GM {{encounters}}=%q<viewer_objid>; &ENC`%q<enc_n>`STARTED {{encounters}}=secs(); @remit %l=notice(ENCOUNTER,tone(strong,name(%#)) starts encounter %q<enc_n>: %q<enc_title>. +encounter/join %q<enc_n> takes part with a copy of your sheet.)
+        flags: [cmdsyntax]
+      # +encounter/join [<n>]: takes part in an encounter here, with a copy of your sheet as it stands.
+      INC`ENCOUNTER`JOIN:
+        value: |-
+          @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>,from,u(%!/FUN`ENC`HERE,%#),verb,join; @assert member(u(%!/FUN`ENC`HERE,%#),%q<enc_n>)=@pemit %#=notice(ENCOUNTER,Encounter %q<enc_n> is not in this room.,warn); @assert not(u(%!/FUN`ENC`MEMBER,%q<viewer_objid>,%q<enc_n>))=@pemit %#=notice(ENCOUNTER,You are in [u(%!/FUN`ENC`NAME,%q<enc_n>)] already.,warn); @include/args %!/INC`DO`ENCJOIN=who,%q<viewer_objid>,n,%q<enc_n>; @remit %l=notice(ENCOUNTER,tone(strong,name(%#)) joins [u(%!/FUN`ENC`NAME,%q<enc_n>)].)
+        flags: [cmdsyntax]
+      # +encounter/use [<n>]: which of your encounters here your rolls use; nothing goes back to the last joined.
+      INC`ENCOUNTER`USE:
+        value: |-
+          @break not(strlen(%q<cmd_argument>))={@include/args %!/INC`DO`SET=who,%q<viewer_objid>,leaf,USING,value,; @pemit %#=notice(ENCOUNTER,Your rolls use [firstof(u(%!/FUN`ENC`NAME,u(%!/FUN`ENC`ACTIVE,%q<viewer_objid>)),your sheet)].,ok)}; @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>,from,,verb,; @assert u(%!/FUN`ENC`MEMBER,%q<viewer_objid>,%q<enc_n>)=@pemit %#=notice(ENCOUNTER,You are not in [u(%!/FUN`ENC`NAME,%q<enc_n>)]. +encounter/join %q<enc_n> takes part.,warn); @include/args %!/INC`DO`SET=who,%q<viewer_objid>,leaf,USING,value,%q<enc_n>; @pemit %#=notice(ENCOUNTER,Your rolls use your copy in [u(%!/FUN`ENC`NAME,%q<enc_n>)][if(member(u(%!/FUN`ENC`HERE,%#),%q<enc_n>),,%b when you are in its room)].,ok)
+        flags: [cmdsyntax]
+      # +encounter/add <name>[=<n>]: the GM brings someone in the encounter's room into it.
+      INC`ENCOUNTER`ADD:
+        value: |-
+          @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_right_side>,from,u(%!/FUN`ENC`HERE,%#),verb,add <name>=; @include %!/INC`NEED`GM; @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; @assert not(comp(objid(loc(%q<sheet_who>)),get({{encounters}}/ENC`%q<enc_n>`ROOM)))=@pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)] is not in the encounter's room.,warn); @assert not(u(%!/FUN`ENC`MEMBER,%q<sheet_who>,%q<enc_n>))=@pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)] is in [u(%!/FUN`ENC`NAME,%q<enc_n>)] already.,warn); @include/args %!/INC`DO`ENCJOIN=who,%q<sheet_who>,n,%q<enc_n>; @remit get({{encounters}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,tone(strong,name(%#)) brings [name(%q<sheet_who>)] into [u(%!/FUN`ENC`NAME,%q<enc_n>)].)
+        flags: [cmdsyntax]
+      # +encounter/remove <name>[=<n>]: the GM takes someone out; their copy goes.
+      INC`ENCOUNTER`REMOVE:
+        value: |-
+          @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_right_side>,from,u(%!/FUN`ENC`JOINED,%q<sheet_who>),verb,remove <name>=; @include %!/INC`NEED`GM; @include %!/INC`NEED`MEMBER; @include/args %!/INC`DO`ENCDROP=who,%q<sheet_who>,n,%q<enc_n>; @pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)] is out of [u(%!/FUN`ENC`NAME,%q<enc_n>)].,ok); @pemit %q<sheet_who>=notice(ENCOUNTER,[name(%#)] takes you out of [u(%!/FUN`ENC`NAME,%q<enc_n>)]. Its copy of your sheet is gone.)
+        flags: [cmdsyntax]
+      # +encounter/leave [<n>]: out of an encounter you are in; your copy goes.
+      INC`ENCOUNTER`LEAVE:
+        value: |-
+          @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>,from,firstof(u(%!/FUN`ENC`ACTIVE,%#),u(%!/FUN`ENC`JOINED,%#)),verb,leave; @assert u(%!/FUN`ENC`MEMBER,%q<viewer_objid>,%q<enc_n>)=@pemit %#=notice(ENCOUNTER,You are not in [u(%!/FUN`ENC`NAME,%q<enc_n>)].,warn); @include/args %!/INC`DO`ENCDROP=who,%q<viewer_objid>,n,%q<enc_n>; @pemit %#=notice(ENCOUNTER,You leave [u(%!/FUN`ENC`NAME,%q<enc_n>)]. Its copy of your sheet is gone.,ok)
+        flags: [cmdsyntax]
+      # +encounter/keep <name>[=<n>]: the GM writes a character's hit points, power points and coin from the copy
+      # to their sheet, and adds the copy's experience checks to the sheet's. The coin's change is logged.
+      INC`ENCOUNTER`KEEP:
+        value: |-
+          @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_right_side>,from,u(%!/FUN`ENC`JOINED,%q<sheet_who>),verb,keep <name>=; @include %!/INC`NEED`GM; @include %!/INC`NEED`MEMBER; think setq(keep_path,u(%!/FUN`ENC`PATH,%q<enc_n>,%q<sheet_who>)); think u(%!/FUN`LOG`ADD,%q<sheet_who>,coin,sub(default(%q<keep_path>COIN,0),default(%q<sheet_who>/BRP`COIN,0)),default(%q<keep_path>COIN,0),Kept from encounter [u(%!/FUN`ENC`NAME,%q<enc_n>)],); think [u(%!/FUN`API`ROOT,%q<sheet_who>)][iter(u(%!/FUN`PLAY`LEAVES),u(%!/FUN`SETLEAF,%q<sheet_who>/BRP`%i0,get(%q<keep_path>%i0)))][u(%!/FUN`SETLEAF,%q<sheet_who>/BRP`MARKS,setunion(get(%q<sheet_who>/BRP`MARKS),get(%q<keep_path>MARKS)))]; @pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)]'s sheet keeps the hit points%, power points%, coin and experience checks from [u(%!/FUN`ENC`NAME,%q<enc_n>)].,ok); @pemit %q<sheet_who>=notice(ENCOUNTER,[name(%#)] writes your hit points%, power points%, coin and experience checks from [u(%!/FUN`ENC`NAME,%q<enc_n>)] to your sheet.)
+        flags: [cmdsyntax]
+      # +encounter/end [<n>]: the GM ends it; every copy goes.
+      INC`ENCOUNTER`END:
+        value: |-
+          @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>,from,u(%!/FUN`ENC`HERE,%#),verb,end; @include %!/INC`NEED`GM; think setqm(end_title,u(%!/FUN`ENC`NAME,%q<enc_n>),end_room,get({{encounters}}/ENC`%q<enc_n>`ROOM)); @dolist/inline u(%!/FUN`ENC`MEMBERS,%q<enc_n>)={@include/args %!/INC`DO`ENCDROP=who,##,n,%q<enc_n>}; think u(%!/FUN`WIPE,{{encounters}},ENC`%q<enc_n>); @remit %q<end_room>=notice(ENCOUNTER,tone(strong,name(%#)) ends %q<end_title>. Its copies are gone.); @if comp(objid(loc(%#)),%q<end_room>)={@pemit %#=notice(ENCOUNTER,%q<end_title> is ended.,ok)}
+        flags: [cmdsyntax]
+      # Which encounter a command means: enc_n. %<typed> a number, or nothing for the one in %<from>; several there,
+      # and the player is asked which, as +encounter/%<verb> <n>.
+      INC`NEED`ENCOUNTER:
+        value: |-
+          think setq(enc_n,if(strlen(%<typed>),%<typed>,if(eq(words(%<from>),1),%<from>))); @assert cor(strlen(%<typed>),words(%<from>))=@pemit %#=notice(ENCOUNTER,There is no encounter here[if(strlen(%<verb>),%b for that)]. +encounter lists them.,warn); @assert strlen(%q<enc_n>)=@pemit %#=notice(ENCOUNTER,Say which: [itemize(iter(%<from>,+encounter/[edit(%<verb> %i0,=%b,=)] for [get({{encounters}}/ENC`%i0)],%b,|),|,or)].,warn); @assert cand(isint(%q<enc_n>),hasattr({{encounters}},ENC`%q<enc_n>))=@pemit %#=notice(ENCOUNTER,There is no encounter %q<enc_n>.,warn)
+        flags: [cmdsyntax]
+      INC`NEED`GM:
+        value: |-
+          @assert u(%!/FUN`ENC`GM,%#,%q<enc_n>)=@pemit %#=notice(ENCOUNTER,Only [name(get({{encounters}}/ENC`%q<enc_n>`GM))]%, who runs [u(%!/FUN`ENC`NAME,%q<enc_n>)]%, and sheet keepers do that.,error)
+        flags: [cmdsyntax]
+      INC`NEED`MEMBER:
+        value: |-
+          @assert u(%!/FUN`ENC`MEMBER,%q<sheet_who>,%q<enc_n>)=@pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)] is not in [u(%!/FUN`ENC`NAME,%q<enc_n>)].,warn)
+        flags: [cmdsyntax]
+
       # ---- writes -----------------------------------------------------------------
-      # %<who> an objid, %<leaf> what under BRP` to write, %<value> what to store; empty clears it. The BRP root is
-      # wizard-flagged and no_command the first time, and its leaves take that from it.
+      # %<who> an objid. The BRP root is wizard-flagged and no_command, and its leaves take that from it.
+      INC`DO`ROOT:
+        value: |-
+          think u(%!/FUN`API`ROOT,%<who>)
+        flags: [cmdsyntax]
+      # %<who> an objid, %<leaf> what under BRP` to write on the sheet itself, %<value> what to store (numbers and
+      # encounter lists only); empty clears it.
       INC`DO`SET:
         value: |-
-          @if not(hasattr(%<who>,BRP))={&BRP %<who>=This character's percentile sheet. +sheet shows it.; @set %<who>/BRP=wizard; @set %<who>/BRP=no_command}; @if strlen(%<value>)={&BRP`%<leaf> %<who>=%<value>},{&BRP`%<leaf> %<who>}
+          @include/args %!/INC`DO`ROOT=who,%<who>; @if strlen(%<value>)={&BRP`%<leaf> %<who>=%<value>},{&BRP`%<leaf> %<who>}
         flags: [cmdsyntax]
+      # A ledger entry: %<who>, %<kind>, %<key>, %<value>, %<phase> (chargen, play or staff). entry_n is its number.
+      INC`DO`ENTRY:
+        value: |-
+          think setq(entry_n,u(%!/FUN`ENTRY`ADD,%<who>,%<kind>,%<key>,%<value>,%<phase>))
+        flags: [cmdsyntax]
+      # A ledger entry written from a function: %0 who, %1 kind, %2 key, %3 value, %4 phase. Returns its number.
+      # A chargen entry rewrites the chargen entry in force of the same kind and key.
+      FUN`ENTRY`ADD:
+        value: |-
+          setq(ea_n,if(strmatch(%4,chargen),u(%!/FUN`LEDGER`CHARGENOF,%0,%1,%2)))[setq(ea_n,firstof(%q<ea_n>,inc(lmax(0 [iter(lattr(%0/BRP`LEDGER`*),last(%i0,`))]))))][u(%!/FUN`API`ROOT,%0)][attrib_set(%0/BRP`LEDGER`%q<ea_n>,json(object,n,%q<ea_n>,kind,json(string,%1),key,json(string,%2),value,json(string,%3),phase,json(string,%4),by,json(string,objid(%#)),at,secs()))][set(%0/BRP`LEDGER`%q<ea_n>,wizard)]%q<ea_n>
+        flags: [funsyntax]
+      # %<who> joins encounter %<n> with a copy of their sheet: hit points, power points and coin. Its experience
+      # checks start empty. It goes last in their BRP`ENCOUNTERS.
+      INC`DO`ENCJOIN:
+        value: |-
+          think setq(join_path,u(%!/FUN`ENC`PATH,%<n>,%<who>)); think [attrib_set(left(%q<join_path>,dec(strlen(%q<join_path>))),copy)][iter(u(%!/FUN`PLAY`LEAVES),if(strlen(get(%<who>/BRP`%i0)),attrib_set(%q<join_path>%i0,get(%<who>/BRP`%i0))))]; @include/args %!/INC`DO`SET=who,%<who>,leaf,ENCOUNTERS,value,squish([setdiff(get(%<who>/BRP`ENCOUNTERS),%<n>)] %<n>)
+        flags: [cmdsyntax]
+      # %<who> leaves encounter %<n>; the copy goes.
+      INC`DO`ENCDROP:
+        value: |-
+          think u(%!/FUN`WIPE,{{encounters}},ENC`%<n>`COPY`[after(num(%<who>),#)]); @include/args %!/INC`DO`SET=who,%<who>,leaf,ENCOUNTERS,value,squish(iter(get(%<who>/BRP`ENCOUNTERS),if(comp(%i0,%<n>),%i0))); @if not(comp(get(%<who>/BRP`USING),%<n>))={&BRP`USING %<who>}
+        flags: [cmdsyntax]
+      # %0 an object, %1 an attribute: clears it and every attribute beneath it, deepest first.
+      FUN`WIPE:
+        value: |-
+          iter(revwords(lattr(%0/%1`**)) %1,attrib_set(%0/%i0))
+        flags: [funsyntax]
+      # %0 obj/attr, %1 a value: writes it, or clears it when empty. Nothing a player wrote is evaluated.
+      FUN`SETLEAF:
+        value: |-
+          if(strlen(%1),attrib_set(%0,%1),if(strlen(get(%0)),attrib_set(%0)))
+        flags: [funsyntax]
+      # The leaves an encounter's copy takes from the sheet and /keep writes back. MARKS is added to, apart.
+      FUN`PLAY`LEAVES:
+        value: |-
+          HP PP COIN
+        flags: [funsyntax]
+
+      # ---- where play happens -----------------------------------------------------
+      # %0 a character, %1 1 for their sheet whatever encounter they are in: where their hit points, power points,
+      # coin and experience checks are now, as obj/prefix to put a leaf after: the copy in use, else the sheet.
+      FUN`PATH:
+        value: |-
+          if(cor(%1,not(strlen(setr(path_n,u(%!/FUN`ENC`ACTIVE,%0))))),%0/BRP`,u(%!/FUN`ENC`PATH,%q<path_n>,%0))
+        flags: [funsyntax]
+      # %0 a character, %1 a leaf (HP, PP, COIN, MARKS), %2 1 for the sheet itself.
+      FUN`P:
+        value: |-
+          get([u(%!/FUN`PATH,%0,%2)]%1)
+        flags: [funsyntax]
+      # %0 a character, %1 a leaf, %2 its new value (empty clears it), %3 1 for the sheet itself.
+      FUN`PSET:
+        value: |-
+          setq(pset_path,u(%!/FUN`PATH,%0,%3))[if(strmatch(%q<pset_path>,*/BRP`),u(%!/FUN`API`ROOT,%0))][u(%!/FUN`SETLEAF,%q<pset_path>%1,%2)]
+        flags: [funsyntax]
+      # %0 a character, %1 coin to give (or take, below 0), %2 1 for the sheet itself, %3 why. Never below 0. A
+      # change to the sheet itself goes in the log; a copy's waits for /keep. Returns the new count.
+      FUN`COIN`ADD:
+        value: |-
+          setqm(coinadd_old,firstof(u(%!/FUN`P,%0,COIN,%2),0),
+          coinadd_live,cor(%2,not(strlen(u(%!/FUN`ENC`ACTIVE,%0)))))[setq(coinadd_new,max(0,add(%q<coinadd_old>,%1)))][u(%!/FUN`PSET,%0,COIN,if(%q<coinadd_new>,%q<coinadd_new>),%2)][if(%q<coinadd_live>,u(%!/FUN`LOG`ADD,%0,coin,sub(%q<coinadd_new>,%q<coinadd_old>),%q<coinadd_new>,%3,))]%q<coinadd_new>
+        flags: [funsyntax]
+      # %0 a character, %1 HP or PP, %2 1 for the sheet itself: what they have left where they play now. Unset is
+      # the most.
+      FUN`LEFT:
+        value: |-
+          setq(left_value,u(%!/FUN`P,%0,%1,%2))[if(strlen(%q<left_value>),%q<left_value>,u(%!/API`MOST,%0,%1))]
+        flags: [funsyntax]
+
+      # ---- the ledger -------------------------------------------------------------
+      # A character's build is the entries under BRP`LEDGER`<n>, each a JSON object: n, kind, key, value, phase
+      # (chargen, play or staff), by (an objid) and at (secs). Kinds: char {key a characteristic, value; empty is
+      # unassigned}, skill {key a skill, value the points put in above its base}, improve {key a skill, value the
+      # percent an experience check or a reward added}, revoke {value: the entry it takes back}, clear (every entry
+      # before it). Rows are n~kind~key~value~phase~by.
+      FUN`LEDGER`NUMS:
+        value: |-
+          sort(iter(lattr(%0/BRP`LEDGER`*),if(hasflag(%0/%i0,wizard),last(%i0,`))),n)
+        flags: [funsyntax]
+      FUN`LEDGER`ROWS:
+        value: |-
+          iter(u(%!/FUN`LEDGER`NUMS,%0),u(%!/FUN`LEDGER`ROW,get(%0/BRP`LEDGER`%i0),%i0))
+        flags: [funsyntax]
+      FUN`LEDGER`ROW:
+        value: |-
+          %1~[json_query(%0,extract,$.kind)]~[json_query(%0,extract,$.key)]~[json_query(%0,extract,$.value)]~[json_query(%0,extract,$.phase)]~[json_query(%0,extract,$.by)]
+        flags: [funsyntax]
+      # %0 rows: the ones in force, after the last clear and not revoked; clears and revokes left out.
+      FUN`LEDGER`LIVE:
+        value: |-
+          setqm(live_clear,last(0 [iter(graball(%0,*~clear~*),first(%i0,~))]),live_revoked,iter(graball(%0,*~revoke~*),elements(%i0,4,~)))[squish(iter(%0,if(cor(lte(first(%i0,~),%q<live_clear>),member(%q<live_revoked>,first(%i0,~)),match(clear revoke,elements(%i0,2,~))),,%i0)))]
+        flags: [funsyntax]
+      # %0 a character, %1 a kind, %2 a key: the number of the chargen entry in force that matches.
+      FUN`LEDGER`CHARGENOF:
+        value: |-
+          first(iter(revwords(graball(u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%0)),*~%1~%2~*~chargen~*)),first(%i0,~)))
+        flags: [funsyntax]
+
+      # ---- the build --------------------------------------------------------------
+      # A character's build comes from their ledger: characteristics (KEY=value for each one assigned; an
+      # unassigned one counts as 10) and, per skill, the points put in and the experience gained.
+      # %0 a character: build_rows and build_chars.
+      FUN`BUILD`OF:
+        value: |-
+          u(%!/FUN`BUILD`ROWS,u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%0)))
+        flags: [funsyntax]
+      # %0 rows in force: build_rows and build_chars.
+      FUN`BUILD`ROWS:
+        value: |-
+          setq(build_rows,%0)[setq(build_chars,u(%!/FUN`BUILD`CHARS,%0))]
+        flags: [funsyntax]
+      FUN`BUILD`CHARS:
+        value: |-
+          squish(iter(u(%!/FUN`LIST`ALL,CHAR),if(strlen(setr(bc_value,elements(last(graball(%0,*~char~%i0~*)),4,~))),%i0=%q<bc_value>)))
+        flags: [funsyntax]
+      # %0 rows, %1 a skill: the points put into it (the last skill entry), and the experience it gained.
+      FUN`BUILD`POINTS:
+        value: |-
+          firstof(elements(last(graball(%0,*~skill~%1~*)),4,~),0)
+        flags: [funsyntax]
+      FUN`BUILD`IMPROVED:
+        value: |-
+          ladd(0 [iter(graball(%0,*~improve~%1~*),elements(%i0,4,~))])
+        flags: [funsyntax]
+      # %0 rows: the skill points spent.
+      FUN`BUILD`SPENT:
+        value: |-
+          ladd(0 [iter(setunion(iter(graball(%0,*~skill~*),elements(%i0,3,~)),),u(%!/FUN`BUILD`POINTS,%0,%i0))])
+        flags: [funsyntax]
+      # %0 KEY=value pairs, %1 a key: its value, 0 when not there.
+      FUN`R:
+        value: |-
+          firstof(after(grab(%0,%1=*),=),0)
+        flags: [funsyntax]
+      FUN`R`SUM:
+        value: |-
+          ladd(0 [iter(%0,after(%i0,=))])
+        flags: [funsyntax]
+      # %0 rows, %1 characteristics, %2 a key: the percentage, a characteristic times 5, or a skill's base chance
+      # plus the points put in and the experience gained.
+      FUN`RATE:
+        value: |-
+          if(strmatch(u(%!/FUN`TRAIT`KIND,%2),CHAR),mul(u(%!/FUN`CHAR`VALUE,%1,%2),5),add(u(%!/FUN`SKILL`BASE,%1,%2),u(%!/FUN`BUILD`POINTS,%0,%2),u(%!/FUN`BUILD`IMPROVED,%0,%2)))
+        flags: [funsyntax]
+      # %0 characteristics, %1 HP or PP: the most.
+      FUN`MOST:
+        value: |-
+          if(strmatch(%1,PP),u(%!/FUN`CHAR`VALUE,%0,POW),setq(most_sum,add(u(%!/FUN`CHAR`VALUE,%0,CON),u(%!/FUN`CHAR`VALUE,%0,SIZ)))[if(strmatch(get(%!/DATA`CONFIG`HITPOINTS),total),%q<most_sum>,ceil(fdiv(%q<most_sum>,2)))])
+        flags: [funsyntax]
+
+      # ---- character creation -----------------------------------------------------
+      # %0 a character: the step they are on (chars, skills), or nothing when done. build_rows and build_chars are
+      # left set.
+      FUN`CHARGEN`STEP:
+        value: |-
+          null(u(%!/FUN`BUILD`OF,%0))[cond(lt(words(%q<build_chars>),words(u(%!/FUN`LIST`ALL,CHAR))),chars,gt(sub(get(%!/DATA`CONFIG`SKILLPOINTS),u(%!/FUN`BUILD`SPENT,%q<build_rows>)),0),skills)]
+        flags: [funsyntax]
+      FUN`CHARGEN`NEXT:
+        value: |-
+          switch(u(%!/FUN`CHARGEN`STEP,%0),chars,Next: +sheet/set <characteristic>=<value>. [u(%!/FUN`DISPLAY`CHARLEFT,%q<build_chars>)],skills,Next: +sheet/set <skill>=<percent>. [u(%!/FUN`DISPLAY`SKILLLEFT,%q<build_rows>)],Your sheet is complete.[u(%!/FUN`HINT,CHARGEN)])
+        flags: [funsyntax]
+      FUN`DISPLAY`CHARLEFT:
+        value: |-
+          sub(get(%!/DATA`CONFIG`CHARPOINTS),u(%!/FUN`R`SUM,%0)) of [get(%!/DATA`CONFIG`CHARPOINTS)] points left to give.
+        flags: [funsyntax]
+      FUN`DISPLAY`SKILLLEFT:
+        value: |-
+          sub(get(%!/DATA`CONFIG`SKILLPOINTS),u(%!/FUN`BUILD`SPENT,%0)) of [get(%!/DATA`CONFIG`SKILLPOINTS)] skill points left.
+        flags: [funsyntax]
 
       # ---- lists ------------------------------------------------------------------
       # %0 a list on the store (CHAR, SKILL): its keys, in order (characteristics) or by label (skills).
@@ -367,7 +802,7 @@ objects:
           find_exact,iter(%q<find_all>,if(cor(not(comp(%i0,ucstr(edit(%q<find_typed>,%b,-)))),not(comp(lcstr(get({{store}}/%0`%i0)),lcstr(%q<find_typed>))),not(comp(lcstr(get({{store}}/%0`%i0`ROLL)),lcstr(%q<find_typed>)))),%i0)),
           find_start,iter(%q<find_all>,if(cor(not(comp(left(%i0,strlen(%q<find_typed>)),ucstr(edit(%q<find_typed>,%b,-)))),not(comp(lcstr(left(get({{store}}/%0`%i0),strlen(%q<find_typed>))),lcstr(%q<find_typed>)))),%i0)))[if(strlen(%q<find_typed>),first(firstof(%q<find_exact>,if(eq(words(%q<find_start>),1),%q<find_start>))))]
         flags: [funsyntax]
-      # ---- characteristics and skills together ------------------------------------------
+      # ---- characteristics and skills together ------------------------------------
       # %0 typed text: a characteristic's key (or its roll's name) first, then a skill's.
       FUN`TRAIT`FIND:
         value: |-
@@ -378,12 +813,12 @@ objects:
         value: |-
           if(hasattr({{store}},CHAR`%0),CHAR,SKILL)
         flags: [funsyntax]
-      # %0 a key: a skill's label, or a characteristic's roll ("Agility").
       # What +sheet/set calls a trait: Dexterity (DEX) for a characteristic, the skill's name for a skill.
       FUN`TRAIT`NAME:
         value: |-
           if(strmatch(u(%!/FUN`TRAIT`KIND,%0),CHAR),[get({{store}}/CHAR`%0)] %(%0%),firstof(get({{store}}/SKILL`%0),lcstr(%0)))
         flags: [funsyntax]
+      # %0 a key: a skill's label, or a characteristic's roll ("Agility").
       FUN`TRAIT`LABEL:
         value: |-
           if(strmatch(u(%!/FUN`TRAIT`KIND,%0),CHAR),firstof(get({{store}}/CHAR`%0`ROLL),get({{store}}/CHAR`%0)),firstof(get({{store}}/SKILL`%0),lcstr(%0)))
@@ -398,33 +833,33 @@ objects:
           hasattr({{store}},CHAR`%0`ROLL)
         flags: [funsyntax]
 
-      # ---- base chances -------------------------------------------------------------
-      # %0 a character (or nothing, for 10s), %1 a base: terms added with +, each a number, a characteristic, or a
-      # characteristic*number. The chance, or #-1 when a term is neither.
+      # ---- base chances -----------------------------------------------------------
+      # %0 characteristics (KEY=value; nothing for 10s), %1 a base: terms added with +, each a number, a
+      # characteristic, or a characteristic*number. The chance, or #-1 when a term is neither.
       FUN`BASE`EVAL:
         value: |-
-          setq(base_who,%0)[setq(base_terms,iter(%1,u(%!/FUN`BASE`TERM,trim(%i0)),+,%b))][if(words(filterbool(%!/FUN`BASE`BAD,%q<base_terms>)),#-1,ladd(%q<base_terms>))]
+          setq(base_chars,%0)[setq(base_terms,iter(%1,u(%!/FUN`BASE`TERM,trim(%i0)),+,%b))][if(words(filterbool(%!/FUN`BASE`BAD,%q<base_terms>)),#-1,ladd(%q<base_terms>))]
         flags: [funsyntax]
       FUN`BASE`TERM:
         value: |-
-          cond(isint(%0),%0,cand(strmatch(%0,*%*),hasattr({{store}},CHAR`[ucstr(trim(before(%0,*)))]),isint(trim(after(%0,*)))),mul(u(%!/FUN`CHAR`VALUE,%q<base_who>,ucstr(trim(before(%0,*)))),trim(after(%0,*))),hasattr({{store}},CHAR`[ucstr(%0)]),u(%!/FUN`CHAR`VALUE,%q<base_who>,ucstr(%0)),x)
+          cond(isint(%0),%0,cand(strmatch(%0,*%*),hasattr({{store}},CHAR`[ucstr(trim(before(%0,*)))]),isint(trim(after(%0,*)))),mul(u(%!/FUN`CHAR`VALUE,%q<base_chars>,ucstr(trim(before(%0,*)))),trim(after(%0,*))),hasattr({{store}},CHAR`[ucstr(%0)]),u(%!/FUN`CHAR`VALUE,%q<base_chars>,ucstr(%0)),x)
         flags: [funsyntax]
       FUN`BASE`BAD:
         value: |-
           not(isint(%0))
         flags: [funsyntax]
-      # %0 a character (or nothing), %1 a characteristic: its value, 10 when not set.
+      # %0 characteristics, %1 a characteristic: its value, 10 when not assigned.
       FUN`CHAR`VALUE:
         value: |-
-          if(strlen(%0),default(%0/BRP`CHAR`%1,10),10)
+          firstof(after(grab(%0,%1=*),=),10)
         flags: [funsyntax]
-      # %0 a character, %1 a skill: its base chance.
+      # %0 characteristics, %1 a skill: its base chance.
       FUN`SKILL`BASE:
         value: |-
           max(0,u(%!/FUN`BASE`EVAL,%0,default({{store}}/SKILL`%1`BASE,0)))
         flags: [funsyntax]
 
-      # ---- the numbers --------------------------------------------------------------
+      # ---- the numbers ------------------------------------------------------------
       # %0 a chance, %1 a level (automatic easy average difficult impossible): the chance at that level, rounded up.
       FUN`CHANCE`AT:
         value: |-
@@ -436,18 +871,56 @@ objects:
         value: |-
           cond(gte(%0,min(100,add(95,ceil(fdiv(max(%1,0),20))))),fumble,lte(%0,ceil(fdiv(max(%1,0),20))),critical,lte(%0,ceil(fdiv(max(%1,0),5))),special,lte(%0,%1),success,cand(%2,lte(%0,5)),success,failure)
         flags: [funsyntax]
-      # %0 a character, %1 HP or PP: the most they hold.
-      API`MOST:
-        value: |-
-          if(strmatch(%1,PP),u(%!/FUN`CHAR`VALUE,%0,POW),setq(most_sum,add(u(%!/FUN`CHAR`VALUE,%0,CON),u(%!/FUN`CHAR`VALUE,%0,SIZ)))[if(strmatch(get(%!/DATA`CONFIG`HITPOINTS),total),%q<most_sum>,ceil(fdiv(%q<most_sum>,2)))])
-        flags: [VISUAL]
-      # %0 a character, %1 HP or PP: what they have left.
-      API`LEFT:
-        value: |-
-          default(%0/BRP`%1,u(%!/API`MOST,%0,%1))
-        flags: [VISUAL]
 
-      # ---- who may do what ----------------------------------------------------------
+      # ---- encounters -------------------------------------------------------------
+      # On the encounter store: ENC`<n> the title, with ROOM, GM (objids), STARTED (secs) and COPY`<dbref number>
+      # one member's copy, its leaves beneath. A member's BRP`ENCOUNTERS lists theirs in the order they joined;
+      # BRP`USING is the one /use picked.
+      FUN`ENC`NAME:
+        value: |-
+          %0 %([get({{encounters}}/ENC`%0)]%)
+        flags: [funsyntax]
+      # %0 an encounter, %1 a member: obj/prefix of their copy, to put a leaf after.
+      FUN`ENC`PATH:
+        value: |-
+          {{encounters}}/ENC`%0`COPY`[after(num(%1),#)]`
+        flags: [funsyntax]
+      # %0 someone: the encounters in their room, oldest first.
+      FUN`ENC`HERE:
+        value: |-
+          setq(here_room,objid(loc(%0)))[squish(iter(sort(iter(lattr({{encounters}}/ENC`*),last(%i0,`)),n),if(not(comp(get({{encounters}}/ENC`%i0`ROOM),%q<here_room>)),%i0)))]
+        flags: [funsyntax]
+      FUN`ENC`MEMBER:
+        value: |-
+          hasattr({{encounters}},ENC`%1`COPY`[after(num(%0),#)])
+        flags: [funsyntax]
+      # %0 a character: the encounters they are in, in the order they joined.
+      FUN`ENC`JOINED:
+        value: |-
+          squish(iter(get(%0/BRP`ENCOUNTERS),if(u(%!/FUN`ENC`MEMBER,%0,%i0),%i0)))
+        flags: [funsyntax]
+      # %0 a character: the encounter whose copy they play from now: one they joined in the room they are in,
+      # the one /use picked when it is one of those, else the last joined. Nothing when none.
+      FUN`ENC`ACTIVE:
+        value: |-
+          setq(active_here,u(%!/FUN`ENC`HERE,%0))[setq(active_set,squish(iter(u(%!/FUN`ENC`JOINED,%0),if(member(%q<active_here>,%i0),%i0))))][if(member(%q<active_set>,get(%0/BRP`USING)),get(%0/BRP`USING),last(%q<active_set>))]
+        flags: [funsyntax]
+      # %0 an encounter: its members' objids.
+      FUN`ENC`MEMBERS:
+        value: |-
+          iter(lattr({{encounters}}/ENC`%0`COPY`*),objid(#[last(%i0,`)]))
+        flags: [funsyntax]
+      FUN`ENC`GM:
+        value: |-
+          cor(u(%!/FUN`PERM`KEEPER,%0),not(comp(objid(%0),get({{encounters}}/ENC`%1`GM))))
+        flags: [funsyntax]
+      # %0 a character: what to do next, after a step, for a player making their own character. Nothing otherwise.
+      FUN`CHARGEN`AFTER:
+        value: |-
+          if(cand(not(comp(%0,%q<viewer_objid>)),not(isapproved(%#))),%b[u(%!/FUN`CHARGEN`NEXT,%0)])
+        flags: [funsyntax]
+
+      # ---- who may do what --------------------------------------------------------
       FUN`PERM`KEEPER:
         value: |-
           permission(%0,softcode.brp.admin)
@@ -462,6 +935,11 @@ objects:
         value: |-
           u(%!/%0,%1,%2)
         flags: [funsyntax]
+      # %0 who asks, %1 a character: 1 when %0 runs the encounter whose copy %1 plays from, and is not %1.
+      FUN`PERM`RUNS:
+        value: |-
+          setq(runs_n,u(%!/FUN`ENC`ACTIVE,%1))[cand(comp(objid(%0),%1),strlen(%q<runs_n>),u(%!/FUN`ENC`GM,%0,%q<runs_n>))]
+        flags: [funsyntax]
       FUN`GATE`EDIT:
         value: |-
           if(hasattr(%!,GATE`EDIT),u(%!/GATE`EDIT,%0))
@@ -471,7 +949,21 @@ objects:
           if(isdbref(setr(found_player,pmatch(%0))),objid(%q<found_player>))
         flags: [funsyntax]
 
-      # ---- screens ------------------------------------------------------------------
+      # ---- the log ----------------------------------------------------------------
+      # Every change to coin on the sheet itself, and every skill gain from an experience check or a reward, is
+      # BRP`LOG`<n>: a JSON object with n, kind (coin or improve), delta, total (after), item (the skill), reason,
+      # by (an objid) and at (secs). Each has the wizard attribute flag; past DATA`LOG`MAX the oldest goes.
+      # %0 a character, %1 the kind, %2 the change, %3 the total after, %4 why, %5 the item. Nothing when %2 is 0.
+      FUN`LOG`ADD:
+        value: |-
+          if(%2,[setq(log_n,inc(lmax(0 [iter(lattr(%0/BRP`LOG`*),last(%i0,`))])))][u(%!/FUN`API`ROOT,%0)][attrib_set(%0/BRP`LOG`%q<log_n>,json(object,n,%q<log_n>,kind,json(string,%1),delta,%2,total,firstof(%3,0),item,json(string,%5),reason,json(string,left(%4,200)),by,json(string,objid(%#)),at,secs()))][set(%0/BRP`LOG`%q<log_n>,wizard)][iter(lnum(max(0,sub(words(lattr(%0/BRP`LOG`*)),get(%!/DATA`LOG`MAX)))),attrib_set(%0/BRP`LOG`[first(sort(iter(lattr(%0/BRP`LOG`*),last(%i0,`)),n))]))])
+        flags: [funsyntax]
+      FUN`API`ROOT:
+        value: |-
+          if(hasattr(%0,BRP),,attrib_set(%0/BRP,This character's percentile sheet. +sheet shows it.)[set(%0/BRP,wizard)][set(%0/BRP,no_command)])
+        flags: [funsyntax]
+
+      # ---- screens ----------------------------------------------------------------
       # %0 a check's JSON: "Climb (55%, difficult, halved: 28%): 1d100[23] = 23: success (roll 9)".
       FUN`DISPLAY`CHECK:
         value: |-
@@ -487,28 +979,97 @@ objects:
         value: |-
           switch(%0,crit-success,success,success,success,crit-fail,error,warning)
         flags: [funsyntax]
-      # %0 the character, %1 who reads it.
+      # %0 KEY:roll:percentage:gain: "Climb rolled 57 over 40%: +3, now 43%".
+      FUN`DISPLAY`IMPROVED:
+        value: |-
+          [u(%!/FUN`TRAIT`LABEL,first(%0,:))] rolled [elements(%0,2,:)] [if(last(%0,:),over [elements(%0,3,:)]%%: +[last(%0,:)]%, now [add(elements(%0,3,:),last(%0,:))]%%,against [elements(%0,3,:)]%%: no gain)]
+        flags: [funsyntax]
+      # %0 skill keys: their labels.
+      FUN`DISPLAY`MARKS:
+        value: |-
+          firstof(itemize(iter(%0,u(%!/FUN`TRAIT`LABEL,%i0),%b,|),|),-)
+        flags: [funsyntax]
+      # %0 the character, %1 who reads it. The sheet itself; +encounter shows the copies.
       FUN`SCREEN`SHEET:
         value: |-
-          setq(screen_chars,u(%!/FUN`LIST`ALL,CHAR))[box(lfields(lit({"cols":4}),iter(%q<screen_chars>,%i0,%b,%*<|>),iter(%q<screen_chars>,u(%!/FUN`CHAR`VALUE,%0,%i0),%b,%*<|>),%*<|>)%r[lfields(lit({"cols":2}),Hit points%*<|>Power points,[u(%!/API`LEFT,%0,HP)]/[u(%!/API`MOST,%0,HP)]%*<|>[u(%!/API`LEFT,%0,PP)]/[u(%!/API`MOST,%0,PP)],%*<|>)]%r[rule(Characteristic rolls)]%r[lfields(lit({"cols":3}),iter(u(%!/FUN`TRAIT`ROLLS),get({{store}}/CHAR`%i0`ROLL),%b,%*<|>),iter(u(%!/FUN`TRAIT`ROLLS),[u(%!/API`RATING,%0,%i0)]%%,%b,%*<|>),%*<|>)]%r[rule(Skills)]%r[u(%!/FUN`SCREEN`SKILLS,%0)]%r[rule()]%r[tone(muted,u(%!/FUN`DISPLAY`FOOTER,%0,%1))],name(%0))]
+          null(u(%!/FUN`BUILD`OF,%0))[setqm(screen_chars,u(%!/FUN`LIST`ALL,CHAR),screen_built,%q<build_chars>,screen_rows,%q<build_rows>)][box(lfields(lit({"cols":4}),iter(%q<screen_chars>,%i0,%b,%*<|>),iter(%q<screen_chars>,u(%!/FUN`CHAR`VALUE,%q<screen_built>,%i0),%b,%*<|>),%*<|>)%r[lfields(lit({"cols":2}),Hit points%*<|>Power points%*<|>Coin%*<|>Checks,[u(%!/API`LEFT,%0,HP)]/[u(%!/FUN`MOST,%q<screen_built>,HP)]%*<|>[u(%!/API`LEFT,%0,PP)]/[u(%!/FUN`MOST,%q<screen_built>,PP)]%*<|>[u(%!/API`COIN,%0)]%*<|>[u(%!/FUN`DISPLAY`MARKS,get(%0/BRP`MARKS))],%*<|>)]%r[rule(Characteristic rolls)]%r[lfields(lit({"cols":3}),iter(u(%!/FUN`TRAIT`ROLLS),get({{store}}/CHAR`%i0`ROLL),%b,%*<|>),iter(u(%!/FUN`TRAIT`ROLLS),[u(%!/FUN`RATE,%q<screen_rows>,%q<screen_built>,%i0)]%%,%b,%*<|>),%*<|>)]%r[rule(Skills)]%r[u(%!/FUN`SCREEN`SKILLS,%q<screen_rows>,%q<screen_built>)]%r[rule()]%r[tone(muted,u(%!/FUN`DISPLAY`FOOTER,%0,%1))],name(%0))]
         flags: [funsyntax]
-      # %0 the character: every skill and its percentage, three to a row; a skill above its base is in strong.
+      # %0 rows, %1 characteristics: every skill and its percentage, three to a row; one above its base is strong.
       FUN`SCREEN`SKILLS:
         value: |-
-          setq(screen_skills,u(%!/FUN`LIST`ALL,SKILL))[ldatatable(lit({"nowrap":"1|2|3|4|5|6"}),Skill|%%|Skill|%%|Skill|%%,iter(lnum(0,dec(ceil(fdiv(words(%q<screen_skills>),3)))),iter(lnum(1,3),setq(screen_cell,extract(%q<screen_skills>,add(mul(%i1,3),%i0),1))[if(strlen(%q<screen_cell>),get({{store}}/SKILL`%q<screen_cell>)|[if(u(%!/API`TRAINED,%0,%q<screen_cell>),tone(strong,[u(%!/API`RATING,%0,%q<screen_cell>)]%%),[u(%!/API`RATING,%0,%q<screen_cell>)]%%)],|)],%b,|),%b,%*<^>),%*<^>)]
+          setq(screen_skills,u(%!/FUN`LIST`ALL,SKILL))[ldatatable(lit({"nowrap":"1|2|3|4|5|6"}),Skill|%%|Skill|%%|Skill|%%,iter(lnum(0,dec(ceil(fdiv(words(%q<screen_skills>),3)))),iter(lnum(1,3),setq(screen_cell,extract(%q<screen_skills>,add(mul(%i1,3),%i0),1))[if(strlen(%q<screen_cell>),get({{store}}/SKILL`%q<screen_cell>)|[setq(screen_pct,u(%!/FUN`RATE,%0,%1,%q<screen_cell>))][if(gt(%q<screen_pct>,u(%!/FUN`SKILL`BASE,%1,%q<screen_cell>)),tone(strong,%q<screen_pct>%%),%q<screen_pct>%%)],|)],%b,|),%b,%*<^>),%*<^>)]
         flags: [funsyntax]
+      # %0 the character, %1 who reads it: what they can do next.
       FUN`DISPLAY`FOOTER:
         value: |-
-          cond(cand(not(comp(objid(%1),%0)),not(isapproved(%1)),not(u(%!/FUN`PERM`KEEPER,%1))),+sheet/set <characteristic or skill>=<value> fills it in. +check <skill> rolls.[u(%!/FUN`HINT,FOOTER)],not(comp(objid(%1),%0)),+check <skill>=<difficulty> rolls. +sheet/hp -<n> loses hit points%, +sheet/pp -<n> spends power points.,+check <skill> rolls 1d100 under the percentage.)
+          setq(footer_n,u(%!/FUN`ENC`JOINED,%0))[cond(cand(not(comp(objid(%1),%0)),not(isapproved(%1)),not(u(%!/FUN`PERM`KEEPER,%1))),u(%!/FUN`CHARGEN`NEXT,%0) +sheet/chargen shows the steps.[u(%!/FUN`HINT,FOOTER)],not(comp(objid(%1),%0)),+check <skill>=<difficulty> rolls. A success marks an experience check%, and +sheet/improve rolls them.,+check <skill> rolls 1d100 under the percentage.)][if(words(%q<footer_n>),%b[name(%0)] plays from a copy in encounter[if(gt(words(%q<footer_n>),1),s)] [itemize(%q<footer_n>)]: +encounter shows [if(gt(words(%q<footer_n>),1),them,it)].)]
+        flags: [funsyntax]
+      FUN`DISPLAY`SIGNED:
+        value: |-
+          if(gte(%0,0),+%0,%0)
+        flags: [funsyntax]
+      # %0 a character: " in encounter <n> (<title>)" when a change went to an encounter's copy.
+      FUN`DISPLAY`WHERE:
+        value: |-
+          setq(where_n,u(%!/FUN`ENC`ACTIVE,%0))[if(strlen(%q<where_n>),%bin encounter [u(%!/FUN`ENC`NAME,%q<where_n>)])]
+        flags: [funsyntax]
+      # %0 the number, %1 the step, %2 1 when done, %3 what it says.
+      FUN`DISPLAY`STEP:
+        value: |-
+          %0. [tone(strong,%1)] [if(%2,tone(success,done),tone(warning,to do))]: %3
+        flags: [funsyntax]
+      # %0 the character: their ledger, oldest first. Entries no longer in force are muted.
+      FUN`SCREEN`LEDGER:
+        value: |-
+          setq(ledger_rows,u(%!/FUN`LEDGER`ROWS,%0))[setq(ledger_live,u(%!/FUN`LEDGER`LIVE,%q<ledger_rows>))][box(if(words(%q<ledger_rows>),ldatatable(lit({"nowrap":"1|3|4","grow":"|1"}),#|Entry|Phase|By,iter(%q<ledger_rows>,u(%!/FUN`DISPLAY`LEDGERROW,%i0),%b,%*<^>),%*<^>),There are no entries yet.)%r[rule()]%r[tone(muted,Muted entries are revoked or cleared. +sheet/chargen shows the steps.)],Ledger: [name(%0)])]
+        flags: [funsyntax]
+      FUN`DISPLAY`LEDGERROW:
+        value: |-
+          setq(ledgerrow_on,cor(member(%q<ledger_live>,%0),match(clear revoke,elements(%0,2,~))))[iter(first(%0,~)|[u(%!/FUN`DISPLAY`ENTRY,%0)]|[elements(%0,5,~)]|[name(elements(%0,6,~))],if(%q<ledgerrow_on>,%i0,tone(muted,%i0)),|,|)]
+        flags: [funsyntax]
+      # %0 the character: the latest 30 log entries, oldest first.
+      FUN`SCREEN`LOG:
+        value: |-
+          setq(log_nums,sort(iter(lattr(%0/BRP`LOG`*),if(hasflag(%0/%i0,wizard),last(%i0,`))),n))[setq(log_nums,extract(%q<log_nums>,max(1,sub(words(%q<log_nums>),29)),30))][box(if(words(%q<log_nums>),ldatatable(lit({"nowrap":"1|2|3|4|6","grow":"||||1"}),#|When|Change|>Now|Why|By,iter(%q<log_nums>,u(%!/FUN`DISPLAY`LOGROW,get(%0/BRP`LOG`%i0)),%b,%*<^>),%*<^>),Nothing is logged yet.)%r[rule()]%r[tone(muted,Every change to coin on the sheet itself%, and every skill gain%, with who made it.)],Log: [name(%0)])]
+        flags: [funsyntax]
+      # %0 the encounters here, %1 the ones %2 is in.
+      FUN`SCREEN`ENCOUNTERS:
+        value: |-
+          setqm(encs_all,setunion(%0,%1,,n),encs_active,u(%!/FUN`ENC`ACTIVE,%2))[box(ldatatable(lit({"nowrap":"1|3|4|5","grow":"|1"}),#|Title|Where|Members|You,iter(%q<encs_all>,%i0|[get({{encounters}}/ENC`%i0)]|[if(member(%0,%i0),here,name(get({{encounters}}/ENC`%i0`ROOM)))]|[words(lattr({{encounters}}/ENC`%i0`COPY`*))]|[cond(member(%q<encs_active>,%i0),rolling here,member(%1,%i0),joined,-)],%b,%*<^>),%*<^>)%r[rule()]%r[tone(muted,+encounter <n> shows one. /join <n> takes part and /use <n> picks which copy you roll from here.)],Encounters)]
+        flags: [funsyntax]
+      # %0 the character, %1 who reads it: the steps of making a character.
+      FUN`SCREEN`CHARGEN:
+        value: |-
+          setq(chargen_now,u(%!/FUN`CHARGEN`STEP,%0))[setq(chargen_skills,trim(squish(iter(u(%!/FUN`LIST`ALL,SKILL),if(u(%!/FUN`BUILD`POINTS,%q<build_rows>,%i0),[u(%!/FUN`TRAIT`LABEL,%i0)] [u(%!/FUN`RATE,%q<build_rows>,%q<build_chars>,%i0)]%%),%b,|),|),b,|))][box([u(%!/FUN`DISPLAY`STEP,1,Characteristics,not(strmatch(%q<chargen_now>,chars)),[itemize(iter(u(%!/FUN`LIST`ALL,CHAR),%i0 [firstof(after(grab(%q<build_chars>,%i0=*),=),-)],%b,|),|)]. [u(%!/FUN`DISPLAY`CHARLEFT,%q<build_chars>)] Each from 3 to [get(%!/DATA`CONFIG`CHARCAP)].)]%r[u(%!/FUN`DISPLAY`STEP,2,Skills,not(strlen(%q<chargen_now>)),[u(%!/FUN`DISPLAY`SKILLLEFT,%q<build_rows>)][if(strlen(%q<chargen_skills>),%b[itemize(%q<chargen_skills>,|)].)] At most [get(%!/DATA`CONFIG`SKILLCAP)]%% in one skill.)]%r[rule()]%r[tone(muted,if(strlen(%q<chargen_now>),u(%!/FUN`CHARGEN`NEXT,%0),Complete. Skills rise with experience checks after approval.[if(not(isapproved(%0)),u(%!/FUN`HINT,CHARGEN))]))],Making [name(%0)])]
+        flags: [funsyntax]
+      # %0 a row: what the entry does.
+      FUN`DISPLAY`ENTRY:
+        value: |-
+          setqm(entry_kind,elements(%0,2,~),entry_key,elements(%0,3,~),entry_value,elements(%0,4,~))[switch(%q<entry_kind>,char,[u(%!/FUN`TRAIT`NAME,%q<entry_key>)] [firstof(%q<entry_value>,unassigned)],skill,[u(%!/FUN`TRAIT`NAME,%q<entry_key>)]: %q<entry_value> points,improve,[u(%!/FUN`TRAIT`NAME,%q<entry_key>)] +%q<entry_value>%% %(experience%),revoke,Revokes entry %q<entry_value>,clear,Clears everything before it,%q<entry_kind>)]
+        flags: [funsyntax]
+      FUN`DISPLAY`LOGROW:
+        value: |-
+          setqm(lr_kind,json_query(%0,extract,$.kind),lr_delta,json_query(%0,extract,$.delta))[json_query(%0,extract,$.n)]|[timefmt($Y-$m-$d,json_query(%0,extract,$.at))]|[u(%!/FUN`DISPLAY`SIGNED,%q<lr_delta>)][switch(%q<lr_kind>,coin,%bcoin,improve,%% [json_query(%0,extract,$.item)],%b[json_query(%0,extract,$.item)])]|[json_query(%0,extract,$.total)][if(strmatch(%q<lr_kind>,improve),%%)]|[firstof(json_query(%0,extract,$.reason),-)]|[name(json_query(%0,extract,$.by))]
+        flags: [funsyntax]
+      # %0 an encounter, %1 who reads it.
+      FUN`SCREEN`ENCOUNTER:
+        value: |-
+          setq(enc_members,u(%!/FUN`ENC`MEMBERS,%0))[box(Run by [name(get({{encounters}}/ENC`%0`GM))] in [name(get({{encounters}}/ENC`%0`ROOM))].%r[rule()]%r[if(words(%q<enc_members>),ldatatable(lit({"nowrap":"1|2|3|4","grow":"||||1"}),Name|>HP|>PP|>Coin|Checks,iter(%q<enc_members>,u(%!/FUN`DISPLAY`ENCROW,%i0,%0),%b,%*<^>),%*<^>),Nobody has joined yet.)]%r[rule()]%r[tone(muted,if(u(%!/FUN`ENC`GM,%1,%0),/add%, /remove and /keep <name>=%0%, and /end %0 run it. +sheet/hp <name>=-<n> hurts a member here.,if(u(%!/FUN`ENC`MEMBER,%1,%0),Your hit points%, power points and coin change on your copy while you are in its room. /leave %0 comes out.,+encounter/join %0 takes part with a copy of your sheet.)))],Encounter [u(%!/FUN`ENC`NAME,%0)])]
+        flags: [funsyntax]
+      # %0 a member, %1 the encounter: their copy in it, one table row.
+      FUN`DISPLAY`ENCROW:
+        value: |-
+          setq(encrow_path,u(%!/FUN`ENC`PATH,%1,%0))[name(%0)]|[setq(encrow_hp,get(%q<encrow_path>HP))][if(strlen(%q<encrow_hp>),%q<encrow_hp>,u(%!/API`MOST,%0,HP))]/[u(%!/API`MOST,%0,HP)]|[setq(encrow_pp,get(%q<encrow_path>PP))][if(strlen(%q<encrow_pp>),%q<encrow_pp>,u(%!/API`MOST,%0,PP))]/[u(%!/API`MOST,%0,PP)]|[default(%q<encrow_path>COIN,0)]|[u(%!/FUN`DISPLAY`MARKS,get(%q<encrow_path>MARKS))]
         flags: [funsyntax]
       FUN`SCREEN`TRAITS:
         value: |-
           box(ldatatable(lit({"nowrap":"1|2|3"}),Key|Characteristic|Roll,iter(u(%!/FUN`LIST`ALL,CHAR),lcstr(%i0)|[get({{store}}/CHAR`%i0)]|[firstof(get({{store}}/CHAR`%i0`ROLL),-)],,%*<^>),%*<^>)%r[rule()]%r[ldatatable(lit({"nowrap":"1|2|3|4"}),Key|Skill|Base|Category,iter(u(%!/FUN`LIST`ALL,SKILL),lcstr(%i0)|[get({{store}}/SKILL`%i0)]|[edit(default({{store}}/SKILL`%i0`BASE,0),*,x)]|[default({{store}}/SKILL`%i0`CATEGORY,mental)],,%*<^>),%*<^>)]%r[rule()]%r[tone(muted,Difficulty: [itemize(v(DATA`LEVELS),,or)]%, or [itemize(v(DATA`DIFFICULTIES),,or)].)],Characteristics and skills)
         flags: [funsyntax]
 
-      # ---- the sheet API ------------------------------------------------------------
+      # ---- the sheet API ----------------------------------------------------------
       # What other packages call: u({{sheet-brp/sheet}}/API`<NAME>,...). Every sheet package has these names.
-      # They read and roll; API`RAISE and API`HEAL are the ones that write.
+      # They read the character's sheet itself, never an encounter's copy. They read and roll; API`RAISE,
+      # API`HEAL and API`AWARD are the ones that write, and API`RAISE and API`AWARD go in the log.
       API:
         value: |-
           The percentile sheet's functions for other packages. See the package README.
@@ -537,15 +1098,15 @@ objects:
         value: |-
           u(%!/FUN`TRAIT`LABEL,ucstr(%0))
         flags: [VISUAL]
-      # %0 a character, %1 a key: the percentage, a characteristic times 5 or a skill's (its base when not set).
+      # %0 a character, %1 a key: the percentage, a characteristic times 5 or a skill's.
       API`RATING:
         value: |-
-          setq(rating_key,ucstr(%1))[if(strmatch(u(%!/FUN`TRAIT`KIND,%q<rating_key>),CHAR),mul(u(%!/FUN`CHAR`VALUE,%0,%q<rating_key>),5),default(%0/BRP`SKILL`%q<rating_key>,u(%!/FUN`SKILL`BASE,%0,%q<rating_key>)))]
+          null(u(%!/FUN`BUILD`OF,%0))[u(%!/FUN`RATE,%q<build_rows>,%q<build_chars>,ucstr(%1))]
         flags: [VISUAL]
       # %0 a character, %1 a key: 1 when a skill stands above its base chance; a characteristic roll always.
       API`TRAINED:
         value: |-
-          setq(trained_key,ucstr(%1))[if(strmatch(u(%!/FUN`TRAIT`KIND,%q<trained_key>),CHAR),1,gt(u(%!/API`RATING,%0,%q<trained_key>),u(%!/FUN`SKILL`BASE,%0,%q<trained_key>)))]
+          setq(trained_key,ucstr(%1))[if(strmatch(u(%!/FUN`TRAIT`KIND,%q<trained_key>),CHAR),1,gt(u(%!/API`RATING,%0,%q<trained_key>),u(%!/FUN`SKILL`BASE,%q<build_chars>,%q<trained_key>)))]
         flags: [VISUAL]
       API`HAS:
         value: |-
@@ -561,15 +1122,38 @@ objects:
         value: |-
           switch(%0,fumble,crit-fail,critical,crit-success,special,success,success,success,automatic,success,failure,fail)
         flags: [VISUAL]
-      # %0 a character, %1 a skill, %2 percent to add: raises it, never past 999, and returns the new percentage.
+      # %0 a character, %1 a skill, %2 percent to add, %3 why (Reward when empty): a ledger entry that raises it,
+      # never past 999, logged. Returns the new percentage.
       API`RAISE:
         value: |-
-          setqm(raise_key,ucstr(%1),raise_new,min(999,max(0,add(u(%!/API`RATING,%0,%1),%2))))[if(hasattr(%0,BRP),,attrib_set(%0/BRP,This character's percentile sheet. +sheet shows it.)[set(%0/BRP,wizard)][set(%0/BRP,no_command)])][attrib_set(%0/BRP`SKILL`%q<raise_key>,%q<raise_new>)]%q<raise_new>
+          setqm(raise_key,ucstr(u(%!/FUN`TRAIT`FIND,%1)),raise_old,u(%!/API`RATING,%0,%1))[setq(raise_new,min(999,max(0,add(%q<raise_old>,%2))))][if(cand(strmatch(u(%!/FUN`TRAIT`KIND,%q<raise_key>),SKILL),hasattr({{store}},SKILL`%q<raise_key>),neq(%q<raise_new>,%q<raise_old>)),null(u(%!/FUN`ENTRY`ADD,%0,improve,%q<raise_key>,sub(%q<raise_new>,%q<raise_old>),play))[u(%!/FUN`LOG`ADD,%0,improve,sub(%q<raise_new>,%q<raise_old>),%q<raise_new>,firstof(%3,Reward),u(%!/FUN`TRAIT`LABEL,%q<raise_key>))])]%q<raise_new>
         flags: [VISUAL]
-      # %0 a character, %1 HP or PP, %2 how many to give back: never past the most. Returns what they have.
+      # %0 a character, %1 HP or PP: the most they hold.
+      API`MOST:
+        value: |-
+          null(u(%!/FUN`BUILD`OF,%0))[u(%!/FUN`MOST,%q<build_chars>,%1)]
+        flags: [VISUAL]
+      # %0 a character, %1 HP or PP: what they have left on their sheet.
+      API`LEFT:
+        value: |-
+          u(%!/FUN`LEFT,%0,%1,1)
+        flags: [VISUAL]
+      # %0 a character, %1 HP or PP, %2 how many to give back on their sheet: never past the most. Returns what
+      # they have.
       API`HEAL:
         value: |-
-          setqm(heal_most,u(%!/API`MOST,%0,%1),heal_new,min(%q<heal_most>,add(u(%!/API`LEFT,%0,%1),%2)))[if(hasattr(%0,BRP),,attrib_set(%0/BRP,This character's percentile sheet. +sheet shows it.)[set(%0/BRP,wizard)][set(%0/BRP,no_command)])][if(neq(%q<heal_new>,%q<heal_most>),attrib_set(%0/BRP`%1,%q<heal_new>),attrib_set(%0/BRP`%1))]%q<heal_new>
+          setqm(heal_most,u(%!/API`MOST,%0,%1),heal_new,min(%q<heal_most>,add(u(%!/API`LEFT,%0,%1),%2)))[u(%!/FUN`PSET,%0,%1,if(neq(%q<heal_new>,%q<heal_most>),%q<heal_new>),1)]%q<heal_new>
+        flags: [VISUAL]
+      # %0 a character: the coin on their sheet.
+      API`COIN:
+        value: |-
+          default(%0/BRP`COIN,0)
+        flags: [VISUAL]
+      # %0 a character, %1 coin to give (or take, below 0), %2 why (Reward when empty): writes it to their sheet,
+      # never below 0, logs it, and returns the new count.
+      API`AWARD:
+        value: |-
+          u(%!/FUN`COIN`ADD,%0,%1,1,firstof(%2,Reward))
         flags: [VISUAL]
       # Named: %<roller> an objid, %<trait> a key, %<modifier> percent to add, %<target> a level or nothing
       # (average). Rolls 1d100 and keeps the roll (roll() record); automatic and impossible roll nothing. Returns
@@ -586,14 +1170,14 @@ objects:
           rolled_chance,add(u(%!/FUN`CHANCE`AT,%q<rolled_rating>,%2),%3),
           rolled,if(member(automatic impossible,%2),,roll(1d100,,record)),
           rolled_total,if(strlen(%q<rolled>),json_query(%q<rolled>,extract,$.total)),
-          rolled_level,switch(%2,automatic,automatic,impossible,failure,u(%!/FUN`CHANCE`LEVEL,%q<rolled_total>,%q<rolled_chance>,cor(strmatch(u(%!/FUN`TRAIT`KIND,%1),CHAR),gte(u(%!/FUN`SKILL`BASE,%0,%1),5)))))[json(object,tier,json(string,u(%!/API`TIER,%q<rolled_level>)),level,json(string,%q<rolled_level>),total,json(string,%q<rolled_total>),rating,%q<rolled_rating>,chance,%q<rolled_chance>,target,json(string,%2),label,json(string,u(%!/FUN`TRAIT`LABEL,%1)),text,json(string,if(strlen(%q<rolled>),json_query(%q<rolled>,extract,$.text))),roll,json(string,if(strlen(%q<rolled>),json_query(%q<rolled>,extract,$.id))),formula,json(string,if(strlen(%q<rolled>),1d100)))]
+          rolled_level,switch(%2,automatic,automatic,impossible,failure,u(%!/FUN`CHANCE`LEVEL,%q<rolled_total>,%q<rolled_chance>,cor(strmatch(u(%!/FUN`TRAIT`KIND,%1),CHAR),gte(u(%!/FUN`SKILL`BASE,%q<build_chars>,%1),5)))))[json(object,tier,json(string,u(%!/API`TIER,%q<rolled_level>)),level,json(string,%q<rolled_level>),total,json(string,%q<rolled_total>),rating,%q<rolled_rating>,chance,%q<rolled_chance>,target,json(string,%2),label,json(string,u(%!/FUN`TRAIT`LABEL,%1)),text,json(string,if(strlen(%q<rolled>),json_query(%q<rolled>,extract,$.text))),roll,json(string,if(strlen(%q<rolled>),json_query(%q<rolled>,extract,$.id))),formula,json(string,if(strlen(%q<rolled>),1d100)))]
         flags: [funsyntax]
 
-      # ---- lifecycle ----------------------------------------------------------------
+      # ---- lifecycle --------------------------------------------------------------
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add/noparse/rsnoparse +sheet; @hook/override/inline +sheet=%!,CMD`SHEET; @command/add/noparse/rsnoparse +check; @hook/override/inline +check=%!,CMD`CHECK
+          @command/add/noparse/rsnoparse +sheet; @hook/override/inline +sheet=%!,CMD`SHEET; @command/add/noparse/rsnoparse +check; @hook/override/inline +check=%!,CMD`CHECK; @command/add/noparse/rsnoparse +encounter; @hook/override/inline +encounter=%!,CMD`ENCOUNTER
         flags: [cmdsyntax]
       AINSTALL:
         value: |-
@@ -943,6 +1527,17 @@ objects:
       SKILL`TRACK`CATEGORY: |-
         perception
 
+  # The encounters running now. Inside the BRP Sheet and no_command, like the store. ENC`<n> is one encounter,
+  # with ROOM, GM, STARTED and COPY`<dbref number> (one member's copy: HP, PP, COIN and MARKS beneath) under it.
+  - ref: encounters
+    type: thing
+    name: BRP Encounters
+    location: "{{sheet}}"
+    flags: [no_command]
+    attributes:
+      ENC: |-
+        The encounters running now, one branch each.
+
   # The +help topics, on an object of their own. sheet-brp-help registers it with +help; without that bridge
   # nothing reads it. HELP`<TOPIC> is a topic, its subtopics the leaves beneath, LOCK`<TOPIC> who may read it.
   - ref: sheet_help
@@ -951,41 +1546,62 @@ objects:
     location: "{{sheet}}"
     attributes:
       HELP: |-
-        Your character's percentile sheet, and rolling against it: +sheet and +check.
+        Your character's percentile sheet, rolling against it, and encounters: +sheet, +check and +encounter.
       SEE: |-
         Cross-references. One leaf per topic; subtopics come from the tree, not from here.
       SEE`SHEET: |-
-        check
+        check encounter
       SEE`CHECK: |-
-        sheet
+        sheet encounter
+      SEE`ENCOUNTER: |-
+        sheet check
       HELP`SHEET: |-
-        `+sheet` shows your character's sheet: seven characteristics, hit points and power points, the characteristic rolls, and every skill as a percentage.
+        `+sheet` shows your character's sheet: seven characteristics, hit points, power points, coin, the skills marked for an experience check, the characteristic rolls, and every skill as a percentage.
 
         - `+sheet` shows your own; `+sheet <name>` another character's, when the game lets you read it.
-        - `+sheet/set <characteristic>=<value>` sets one: `+sheet/set dex=14`. An unset characteristic counts as 10.
-        - `+sheet/set <skill>=<percent>` sets a skill: `+sheet/set climb=55`. Leave the value out to put it back to its base chance.
+        - `+sheet/chargen` shows the steps of making your character and what to do next.
         - `+sheet/traits` lists the characteristics and the skills with their base chances.
+        - `+sheet/ledger` lists every entry your sheet is built from, oldest first.
 
-        You fill in your sheet until your character is approved; then staff change it. A skill above its base chance shows in strong.
+        A skill's percentage is its base chance, from your characteristics, plus the points you put in and what experience added. A skill above its base shows in strong. An unassigned characteristic counts as 10.
 
         For example:
 
-        `+sheet/set first aid=45`
+        `+sheet/chargen`
 
-        Output: `\[SHEET\] Done: First Aid is 45% on Alice's sheet.`
+        Output: `1. Characteristics done: STR 12, CON 14, SIZ 13, ...`
 
-        See `+help sheet play` for hit points and power points, and `+help check` for rolling.
+        See `+help sheet chargen` for making a character, `+help sheet play` for hit points, coin and experience, and `+help check` for rolling.
+      HELP`SHEET`CHARGEN: |-
+        Making a character takes two steps. `+sheet/chargen` shows each and what comes next.
+
+        1. `+sheet/set <characteristic>=<value>` shares out 75 points among the seven characteristics, each from 3 to 18, unless your game changed those numbers. `+sheet/set dex=` takes its points back.
+        2. `+sheet/set <skill>=<percent>` raises a skill above its base chance, from 300 skill points, at most 75% in one skill. `+sheet/set <skill>=` puts it back to its base.
+
+        Base chances follow your characteristics, so set those first.
+
+        For example:
+
+        `+sheet/set climb=55`
+
+        Output: `\[SHEET\] Done: Climb is 55% on Alice's sheet. Next: +sheet/set <skill>=<percent>. 285 of 300 skill points left.`
+
+        When every skill point is spent, your sheet is complete. Once you are approved, staff change it.
       HELP`SHEET`PLAY: |-
-        Hit points are CON and SIZ added and halved, rounded up; power points equal POW. In play you keep your own:
+        In play you keep your own hit points, power points and coin:
 
-        - `+sheet/hp -<n>` loses hit points, `+<n>` gets some back, `<n>` sets them, `full` fills them: `+sheet/hp -4`.
-        - `+sheet/pp` does the same for power points: `+sheet/pp -2`.
+        - `+sheet/hp -<n>` loses hit points, `+<n>` gets some back, `<n>` sets them, `full` fills them. `+sheet/pp` does the same for power points.
+        - `+sheet/coin -<n> [<reason>]` spends coin: `+sheet/coin -20 Train ticket`. Staff give it.
+
+        A successful `+check` on a skill marks it for an experience check. Once you are approved, `+sheet/improve` rolls 1d100 for each marked skill: over its percentage, it rises by 1d6, unless your game changed the die. The marks clear. `+sheet/log` lists every change to your coin and every skill gain, who made it and why.
+
+        In an encounter, hit points, power points, coin and marks change your copy there. See `+help encounter`.
 
         For example:
 
-        `+sheet/hp -4`
+        `+sheet/improve`
 
-        Output: `\[SHEET\] Done: Alice has 9 of 13 hit points.`
+        Output: `\[SHEET\] Done: Alice's experience checks: Climb rolled 72 over 55%: +4, now 59%.`
       HELP`CHECK: |-
         `+check <skill>` rolls 1d100 against the skill's percentage, where the room sees it. Equal or under succeeds.
 
@@ -1001,6 +1617,39 @@ objects:
         `+check climb=difficult`
 
         Output: `\[SHEET\] Alice rolls Climb (55%, difficult, halved: 28%): 1d100\[23\] = 23: a success (roll 9)`
+      HELP`ENCOUNTER: |-
+        An encounter is a scene played from copies of the sheets, so hit points lost, power points and coin spent, and experience checks marked in it stay there. It lasts until its GM ends it, over as many days as it takes.
+
+        - `+encounter` lists the encounters here and yours; `+encounter <n>` shows one.
+        - `+encounter/start [<title>]` starts one in your room. You run it.
+        - `+encounter/join [<n>]` takes part with a copy of your sheet as it is now.
+        - `+encounter/leave [<n>]` comes out; your copy there is gone.
+        - `+encounter/use <n>` picks which copy you play from, when you are in more than one here.
+
+        While you are in an encounter's room, hit points, power points, coin and the checks your rolls mark use your copy in it. Anywhere else, your sheet.
+
+        For example:
+
+        `+encounter/join 1`
+
+        Output: `\[ENCOUNTER\] Alice joins 1 (Cave).`
+
+        See `+help encounter gm` for running one.
+      HELP`ENCOUNTER`GM: |-
+        Whoever starts an encounter runs it; sheet keepers run any. Give the number after `=` when the room has more than one.
+
+        - `+encounter/add <name>[=<n>]` brings someone in the room into it, with a copy of their sheet.
+        - `+encounter/remove <name>[=<n>]` takes them out; their copy goes.
+        - `+encounter/keep <name>[=<n>]` writes their hit points, power points and coin from the copy to their sheet, and adds its experience checks.
+        - `+encounter/end [<n>]` ends it. Every copy goes, and nothing is written back unless you kept it first.
+
+        While a member plays from your encounter's copy, you change it: `+sheet/hp <name>=-<n>`, `/pp`, `/coin <name>=<n>` and `/mark <name>/<skill>`.
+
+        For example:
+
+        `+encounter/keep Alice=1`
+
+        Output: `\[ENCOUNTER\] Done: Alice's sheet keeps the hit points, power points, coin and experience checks from 1 (Cave).`
       HELP`SHEET`CREDITS: |-
         This sheet's characteristics, characteristic rolls and skill list, with each skill's base chance and category, come from Basic Roleplaying: Universal Game Engine, copyright 2023 Chaosium Inc., by Jason Durall and Steve Perrin, and are used under the ORC License \(www.chaosium.com/orclicense\). Basic Roleplaying is the trademark of Chaosium Inc.; Chaosium Inc. and the Chaosium logo are its registered trademarks.
 
@@ -1010,9 +1659,12 @@ objects:
       HELP`SHEET`STAFF: |-
         Sheet keepers \(`softcode.brp.admin`, or the BRP Sheet Keeper role\) read every sheet and change any character's at any time:
 
-        - `+sheet <name>` shows a character's sheet.
-        - `/set` takes `<name>/` first: `+sheet/set Alice/dodge=80`. A keeper may set a characteristic up to 99 and a skill up to 999%.
-        - `+sheet/hp <name>=<n>` and `+sheet/pp <name>=<n>` change their hit points and power points.
+        - `/set` takes `<name>/` first: `+sheet/set Alice/dodge=80`. A keeper sets a characteristic up to 99 and a skill up to 999%, without points.
+        - `/hp`, `/pp` and `/coin` take `<name>=` first: `+sheet/coin Alice=+50 Inheritance`.
+        - `+sheet/mark <name>/<skill>` marks an experience check; `=remove` takes it off. `+sheet/improve <name>` rolls their checks.
+        - `+sheet/log <name>` lists every change to their coin and every skill gain, with who made it and why.
+        - `+sheet/revoke <name>/<n>` takes back one ledger entry; `+sheet/clear <name>` revokes them all, and character creation starts again.
+        - Keepers run any encounter.
 
         `@role/assign <player>=brp-sheet-keeper` makes someone a keeper.
       LOCK`SHEET`SETTINGS: |-
@@ -1020,7 +1672,9 @@ objects:
       HELP`SHEET`SETTINGS: |-
         `+config brp` lists the settings and `+config brp/<setting>=<value>` changes one \(`config.admin`\):
 
-        - `charcap`: the highest characteristic a player gives themselves \(18\). `skillcap`: the highest skill \(75%\).
+        - `charpoints`: points shared among characteristics \(75\). `charcap`: the highest one while making a character \(18\).
+        - `skillpoints`: percent added to skills \(300\). `skillcap`: the highest skill while making a character \(75%\).
+        - `improve`: the sides of the experience die \(6\).
         - `hitpoints`: `average` \(CON and SIZ halved\) or `total` \(CON and SIZ added\).
         - `difficulty`: what trivial, easy, standard, hard and extreme mean \(`automatic easy average difficult difficult`\).
         - `public`: whether anyone may read anyone's sheet \(no\).

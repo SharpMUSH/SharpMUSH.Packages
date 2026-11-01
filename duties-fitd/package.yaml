@@ -1,7 +1,7 @@
 format: "1.16"
 package: duties-fitd
 title: "Duties: Forged in the Dark rolls"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Lets Duties roll on the Forged in the Dark sheet: a roll provider called fitd, so a duty's checks roll an action's dice against a position, with assists and pushes paid in stress, and coin or stress relief as rewards. Pick it with +config duties/system=fitd."
 license: MIT
@@ -21,7 +21,7 @@ depends:
       path: examples/packages/duties/
       branch: main
   - package: sheet-fitd
-    version: ">=1.0 <2.0"
+    version: ">=2.0 <3.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH.Packages
       path: sheet-fitd/

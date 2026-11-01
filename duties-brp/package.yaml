@@ -1,7 +1,7 @@
 format: "1.16"
 package: duties-brp
 title: "Duties: percentile (BRP) rolls"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Lets Duties roll on the percentile (BRP) sheet: a roll provider called brp, so a duty's checks roll 1d100 under a skill or characteristic roll, doubled or halved for difficulty, with help making a roll one step easier, and skill gains or healing as rewards. Pick it with +config duties/system=brp."
 license: MIT
@@ -21,7 +21,7 @@ depends:
       path: examples/packages/duties/
       branch: main
   - package: sheet-brp
-    version: ">=1.0 <2.0"
+    version: ">=2.0 <3.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH.Packages
       path: sheet-brp/

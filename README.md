@@ -46,37 +46,41 @@ constraints checked before anything is planned.
 | [`profile-handler/`](profile-handler/) | 1.0.0 | Read-only character directory and profile API; depends on HTTP Handler |
 | [`roll-tables/`](roll-tables/) | 1.0.0 | Random tables as softcode data: `+table/roll` tells the room, table keepers edit them by command, and a table can be published to a wiki page |
 | [`pf2e-remaster/`](pf2e-remaster/) | 1.4.0 | Pathfinder Second Edition (Remaster) core rules as wiki pages: classes, ancestries, heritages, backgrounds, feats, spells, actions, equipment, skills, conditions and DC tables; a content pack under the ORC License |
-| [`sheet-d20/`](sheet-d20/) | 1.0.1 | d20 character sheet: six abilities, a skill list the game edits, training and level; `+sheet` and `+check` against a DC |
-| [`sheet-d20-help/`](sheet-d20-help/) | 1.0.0 | Bridge: the D20 sheet's topics in `+help` |
-| [`sheet-d20-config/`](sheet-d20-config/) | 1.0.0 | Bridge: the D20 sheet's settings and trait table in `+config` |
-| [`sheet-d20-chargen/`](sheet-d20-chargen/) | 1.0.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |
+| [`sheet-d20/`](sheet-d20/) | 2.0.0 | d20 character sheet built from a ledger: six abilities, a skill list the game edits, training, level, hit points, coin and gear, guided character creation and XP advances; `+check` against a DC; `+encounter` plays scenes from copies of the sheets |
+| [`sheet-d20-help/`](sheet-d20-help/) | 1.0.1 | Bridge: the D20 sheet's topics in `+help` |
+| [`sheet-d20-config/`](sheet-d20-config/) | 1.0.1 | Bridge: the D20 sheet's settings and trait table in `+config` |
+| [`sheet-d20-chargen/`](sheet-d20-chargen/) | 1.1.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |
 | [`sheet-fate/`](sheet-fate/) | 1.0.1 | Fate character sheet: skills or approaches on the ladder, aspects, stress, consequences and fate points; `+check` on four Fate dice. Fate SRD text under CC BY 3.0 (see its NOTICE) |
 | [`sheet-fate-help/`](sheet-fate-help/) | 1.0.0 | Bridge: the Fate sheet's topics in `+help` |
 | [`sheet-fate-config/`](sheet-fate-config/) | 1.0.0 | Bridge: the Fate sheet's settings and tables in `+config` |
 | [`sheet-fate-chargen/`](sheet-fate-chargen/) | 1.0.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |
-| [`sheet-pbta/`](sheet-pbta/) | 2.0.0 | Powered by the Apocalypse character sheet built from a ledger: playbooks, stats and moves the game edits, guided character creation, advances, forward, ongoing, hold and XP; `+check` on 2d6; `+encounter` plays scenes from copies of the sheets. Dungeon World moves under CC BY 3.0 (see its NOTICE) |
+| [`sheet-pbta/`](sheet-pbta/) | 2.1.0 | Powered by the Apocalypse character sheet built from a ledger: playbooks, stats and moves the game edits, guided character creation, advances, forward, ongoing, hold and XP; `+check` on 2d6; `+encounter` plays scenes from copies of the sheets. Dungeon World moves under CC BY 3.0 (see its NOTICE) |
 | [`sheet-pbta-help/`](sheet-pbta-help/) | 1.0.1 | Bridge: the PbtA sheet's topics in `+help` |
 | [`sheet-pbta-config/`](sheet-pbta-config/) | 1.0.1 | Bridge: the PbtA sheet's settings and tables in `+config` |
 | [`sheet-pbta-chargen/`](sheet-pbta-chargen/) | 1.1.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |
-| [`duties-d20/`](duties-d20/) | 1.0.0 | Duties roll provider `d20` on the D20 sheet |
+| [`duties-d20/`](duties-d20/) | 1.0.1 | Duties roll provider `d20` on the D20 sheet |
+| [`d20-wiki/`](d20-wiki/) | 1.0.0 | Wiki pages for the d20 sheet: checks and DCs, making a character, abilities and skills, hit points, gear and advancement, and encounters |
 | [`duties-fate/`](duties-fate/) | 1.0.0 | Duties roll provider `fate` on the Fate sheet: teamwork, paid invokes, fate points as rewards |
 | [`duties-pbta/`](duties-pbta/) | 1.0.1 | Duties roll provider `pbta` on the PbtA sheet: aid, forward and ongoing, XP as a reward |
-| [`pbta-wiki/`](pbta-wiki/) | 1.0.0 | Wiki pages for the PbtA sheet: how to play, making a character, the playbooks, the basic and special moves, advancement and encounters. Dungeon World moves under CC BY 3.0 |
-| [`sheet-fitd/`](sheet-fitd/) | 1.0.1 | Forged in the Dark character sheet: twelve actions under three attributes, stress, trauma, harm, coin and progress clocks; `+check` on a d6 pool against a position. Blades in the Dark SRD under CC BY 3.0 (see its NOTICE) |
-| [`sheet-fitd-help/`](sheet-fitd-help/) | 1.0.0 | Bridge: the FitD sheet's topics in `+help` |
-| [`sheet-fitd-config/`](sheet-fitd-config/) | 1.0.0 | Bridge: the FitD sheet's settings and lists in `+config` |
-| [`sheet-fitd-chargen/`](sheet-fitd-chargen/) | 1.0.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |
-| [`sheet-brp/`](sheet-brp/) | 1.0.1 | Percentile character sheet on Basic Roleplaying: characteristics, a skill list with base chances, hit points and power points; `+check` on 1d100. ORC Licensed Material (see its NOTICE) |
-| [`sheet-brp-help/`](sheet-brp-help/) | 1.0.0 | Bridge: the BRP sheet's topics in `+help` |
-| [`sheet-brp-config/`](sheet-brp-config/) | 1.0.0 | Bridge: the BRP sheet's settings and skill list in `+config` |
-| [`sheet-brp-chargen/`](sheet-brp-chargen/) | 1.0.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |
-| [`sheet-ironsworn/`](sheet-ironsworn/) | 1.0.1 | Ironsworn character sheet: five stats, meters, momentum and iron vows with progress; `+check` action rolls and `+vow`. Ironsworn SRD under CC BY 4.0 (see its NOTICE) |
-| [`sheet-ironsworn-help/`](sheet-ironsworn-help/) | 1.0.0 | Bridge: the Ironsworn sheet's topics in `+help` |
-| [`sheet-ironsworn-config/`](sheet-ironsworn-config/) | 1.0.0 | Bridge: the Ironsworn sheet's settings and stat list in `+config` |
-| [`sheet-ironsworn-chargen/`](sheet-ironsworn-chargen/) | 1.0.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |
-| [`duties-fitd/`](duties-fitd/) | 1.0.0 | Duties roll provider `fitd` on the FitD sheet: assists and pushes paid in stress, coin and stress relief as rewards |
-| [`duties-brp/`](duties-brp/) | 1.0.0 | Duties roll provider `brp` on the BRP sheet: help as an augment, skill increases and healing as rewards |
-| [`duties-ironsworn/`](duties-ironsworn/) | 1.0.0 | Duties roll provider `ironsworn` on the Ironsworn sheet: help adds 1, experience and momentum as rewards |
+| [`pbta-wiki/`](pbta-wiki/) | 1.0.1 | Wiki pages for the PbtA sheet: how to play, making a character, the playbooks, the basic and special moves, advancement and encounters. Dungeon World moves under CC BY 3.0 |
+| [`sheet-fitd/`](sheet-fitd/) | 2.0.0 | Forged in the Dark character sheet: twelve actions under three attributes built from a ledger, XP for each attribute spent on advances, stress, trauma, harm, coin, an audited log of XP and coin, encounters played from copies of the sheets, and progress clocks; `+check` on a d6 pool against a position. Blades in the Dark SRD under CC BY 3.0 (see its NOTICE) |
+| [`sheet-fitd-help/`](sheet-fitd-help/) | 1.0.1 | Bridge: the FitD sheet's topics in `+help` |
+| [`sheet-fitd-config/`](sheet-fitd-config/) | 1.0.1 | Bridge: the FitD sheet's settings and lists in `+config` |
+| [`sheet-fitd-chargen/`](sheet-fitd-chargen/) | 1.1.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |
+| [`sheet-brp/`](sheet-brp/) | 2.0.0 | Percentile character sheet on Basic Roleplaying: characteristics and a skill list with base chances built from a ledger, point-buy character creation, experience checks that raise skills, hit points, power points, coin, an audited log of coin and skill gains, and encounters played from copies of the sheets; `+check` on 1d100. ORC Licensed Material (see its NOTICE) |
+| [`sheet-brp-help/`](sheet-brp-help/) | 1.0.1 | Bridge: the BRP sheet's topics in `+help` |
+| [`sheet-brp-config/`](sheet-brp-config/) | 1.0.1 | Bridge: the BRP sheet's settings and skill list in `+config` |
+| [`sheet-brp-chargen/`](sheet-brp-chargen/) | 1.1.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |
+| [`sheet-ironsworn/`](sheet-ironsworn/) | 2.0.0 | Ironsworn character sheet: five stats and assets built from a ledger, guided character creation, experience spent on new assets and abilities with an audited log, meters, momentum, companion health, iron vows with progress, and encounters that play from copies of the sheets; `+check` action rolls and `+vow`. Ironsworn SRD under CC BY 4.0 (see its NOTICE) |
+| [`sheet-ironsworn-help/`](sheet-ironsworn-help/) | 1.0.1 | Bridge: the Ironsworn sheet's topics in `+help` |
+| [`sheet-ironsworn-config/`](sheet-ironsworn-config/) | 1.0.1 | Bridge: the Ironsworn sheet's settings and its stat and asset lists in `+config` |
+| [`sheet-ironsworn-chargen/`](sheet-ironsworn-chargen/) | 1.1.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |
+| [`duties-fitd/`](duties-fitd/) | 1.0.1 | Duties roll provider `fitd` on the FitD sheet: assists and pushes paid in stress, coin and stress relief as rewards |
+| [`fitd-wiki/`](fitd-wiki/) | 1.0.0 | Wiki pages for the FitD sheet: how to play, making a character, actions and attributes, stress, harm and advancement, encounters and clocks. Based on the Blades in the Dark SRD under CC BY 3.0 |
+| [`duties-brp/`](duties-brp/) | 1.0.1 | Duties roll provider `brp` on the BRP sheet: help as an augment, skill increases and healing as rewards |
+| [`brp-wiki/`](brp-wiki/) | 1.0.0 | Wiki pages for the BRP sheet: how to play, making a character, characteristics and skills, hit points, coin and experience, and encounters. ORC Licensed Material |
+| [`ironsworn-wiki/`](ironsworn-wiki/) | 1.0.0 | Wiki pages for the Ironsworn sheet: action rolls, making a character, assets and experience, meters and momentum, iron vows, and encounters. Ironsworn SRD under CC BY 4.0 |
+| [`duties-ironsworn/`](duties-ironsworn/) | 1.1.0 | Duties roll provider `ironsworn` on the Ironsworn sheet: help adds 1, experience (logged) and momentum as rewards |
 | [`sheet-salvage-union/`](sheet-salvage-union/) | 1.1.0 | Salvage Union pilots, mechs and the Union Crawler: class ability trees, chassis, systems and modules, scrap by tech level, heat; `+check` rolls the d20 on the Core Mechanic table. Unofficial, under the Salvage Union Open Game Licence 1.0b (see its NOTICE) |
 | [`sheet-salvage-union-help/`](sheet-salvage-union-help/) | 1.0.0 | Bridge: the Salvage Union sheet's topics in `+help` |
 | [`sheet-salvage-union-config/`](sheet-salvage-union-config/) | 1.0.0 | Bridge: the Salvage Union sheet's settings in `+config` |

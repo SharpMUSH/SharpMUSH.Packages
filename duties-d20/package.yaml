@@ -1,7 +1,7 @@
 format: "1.16"
 package: duties-d20
 title: "Duties: d20 sheet rolls"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Lets Duties roll on the d20 sheet: a roll provider called d20, so a duty's checks roll 1d20 plus a character's ability or skill against a DC. Pick it with +config duties/system=d20."
 license: MIT
@@ -21,7 +21,7 @@ depends:
       path: examples/packages/duties/
       branch: main
   - package: sheet-d20
-    version: ">=1.0 <2.0"
+    version: ">=2.0 <3.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH.Packages
       path: sheet-d20/

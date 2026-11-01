@@ -1,0 +1,66 @@
+format: "1.16"
+package: d20-wiki
+title: "D20 rules"
+version: 1.0.0
+wiki_landing_page: category:d20_start_here
+wiki_collection_name: d20
+authors: [SharpMUSH]
+description: "Wiki pages for playing with the d20 sheet: checks and DCs, making a character, the abilities and skills, hit points, gear and advancement, and encounters."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [d20, wiki, rules]
+category: Characters
+requires_server: ">=0.1"
+locale: en
+
+# A content package: wiki pages only. The trait page lists the traits sheet-d20 ships; a game that edits them in
+# +config changes the sheet, not these pages.
+wiki:
+- page: category:d20_start_here
+  title: 'Start here: d20'
+  categories: []
+  file: wiki/category/d20_start_here.md
+  pin: true
+- page: main:d20_how_to_play
+  title: How to play (d20)
+  categories:
+  - d20_start_here
+  - d20
+  file: wiki/main/d20_how_to_play.md
+- page: main:d20_making_a_character
+  title: Making a character (d20)
+  categories:
+  - d20_start_here
+  - d20
+  file: wiki/main/d20_making_a_character.md
+- page: main:d20_abilities_and_skills
+  title: Abilities and skills (d20)
+  categories:
+  - d20_start_here
+  - d20
+  file: wiki/main/d20_abilities_and_skills.md
+- page: main:d20_play_and_advancement
+  title: Hit points, gear and advancement (d20)
+  categories:
+  - d20_start_here
+  - d20
+  file: wiki/main/d20_play_and_advancement.md
+- page: main:d20_encounters
+  title: Encounters (d20)
+  categories:
+  - d20_start_here
+  - d20
+  file: wiki/main/d20_encounters.md
+- page: help:d20_license_notice
+  title: About these pages
+  categories: []
+  file: wiki/help/d20_license_notice.md
+  requires:
+    edit:
+    - wiki.admin
+    delete:
+    - wiki.admin
+- page: category:d20
+  title: d20
+  categories: []
+  file: wiki/category/d20.md

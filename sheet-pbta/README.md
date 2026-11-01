@@ -37,7 +37,8 @@ one sheet package per game.
 | `+sheet/hold <move>=<n>` | player | Hold a move gave you; 0 clears |
 | `+sheet/ledger [<name>]` | all | Every entry the sheet is built from |
 | `+sheet/revoke <name>/<n>`, `+sheet/clear <name>` | keeper | Take back one entry, or the whole build so character creation starts again |
-| `+sheet/xp <name>=<n>` | keeper | Set XP, or `=+<n>`/`=-<n>` to add or take |
+| `+sheet/xp <name>=<n> [<reason>]` | keeper | Set XP, or `=+<n>`/`=-<n>` to add or take |
+| `+sheet/log [<name>]` | all | The latest 30 changes to XP: how much, the total after, why, and who |
 | `+sheet/traits` | all | Every move, what it rolls with, and the stats |
 | `+sheet/move <move>` | all | One move's whole text |
 | `+check[/private] <move>[/<stat>][+<n>\|-<n>][=<difficulty>]` | all | Make a move: `Alice rolls Defy Danger (+Dex): 2d6[3, 5] + 1 = 9: a partial hit (roll 7)`, then what the move says for a partial hit |
@@ -82,6 +83,13 @@ move removes its entry; every other change is a new entry. A ledger holds at mos
 The sheet is the playbook's starting moves, every basic move (no `PLAYBOOK`), and the moves taken, with each
 stat's base plus its boosts.
 
+## The log
+
+Every change to XP is an entry in the character's log, `PBTA`LOG`<n>`, with the `wizard` attribute flag:
+`kind` (`xp`), `delta`, `total` after, `reason`, `by` and `at`. A keeper's `/xp` takes a reason after the
+number; an advance logs the XP it spends, and `API`AWARD` (a Duties reward) logs `Reward`. A log keeps the
+latest 500 entries.
+
 ## Encounters
 
 An encounter is a scene played from copies of the sheets. A room may hold several, and a character may be in
@@ -102,6 +110,7 @@ PBTA`FORWARD        forward, spent by the next roll
 PBTA`ONGOING        ongoing
 PBTA`HOLD           hold, MOVE=n pairs
 PBTA`XP             experience
+PBTA`LOG`<n>        a log entry
 PBTA`ENCOUNTERS     the encounters they are in, in the order they joined
 PBTA`USING          the encounter /use picked
 ```
@@ -132,7 +141,7 @@ A trait key is a stat's key (`str`) or `move-<key>` for a move (`move-defy-dange
 | `` API`TIER `` | total | `fail`, `partial`, `success` or `crit-success` |
 | `` API`MODIFIERS `` | character | their forward and ongoing together |
 | `` API`SPEND `` | character | spends their forward; returns what it was |
-| `` API`AWARD `` | character, XP | gives (or takes) XP, never below 0; returns the new total |
+| `` API`AWARD `` | character, XP, reason | gives (or takes) XP, never below 0, and logs it; returns the new total |
 | `` API`CHECK `` | named: `roller`, `trait`, `stat`, `modifier`, `target` | `{"tier","total","target","margin","label","text","roll","formula","move","stat","outcome"}`, the roll kept with `roll(...,record)`; margin is always empty, outcome is the move's text for the result |
 
 `API`SPEND` and `API`AWARD` are the two that write. `API`CHECK` adds nothing on its own beyond what it is

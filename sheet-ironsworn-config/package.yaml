@@ -1,9 +1,9 @@
 format: "1.16"
 package: sheet-ironsworn-config
 title: "Ironsworn sheet: +config settings"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
-description: "Puts the Ironsworn sheet settings and its stat table into +config: registers them with the +config registry, so staff see and change them with +config ironsworn."
+description: "Puts the Ironsworn sheet settings and its stat and asset tables into +config: registers them with the +config registry, so staff see and change them with +config ironsworn."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, ironsworn, config, bridge]
@@ -15,7 +15,7 @@ requires_server: ">=0.1"
 # installed. This package is the one leaf that tells the +config registry where they are.
 depends:
   - package: sheet-ironsworn
-    version: ">=1.0 <2.0"
+    version: ">=2.0 <3.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH.Packages
       path: sheet-ironsworn/

@@ -1,12 +1,12 @@
 format: "1.16"
 package: sheet-d20
 title: "D20 sheet"
-version: 1.0.1
+version: 2.0.0
 authors: [SharpMUSH]
-description: "A d20 character sheet: six ability scores, a skill list the game edits, training and level. +sheet shows it, +sheet/set fills it in, and +check rolls 1d20 plus a trait against a DC for the room."
+description: "A d20 character sheet built from a ledger: six ability scores, a skill list the game edits, training, level, hit points, coin and gear. Guided character creation, XP advances, +check rolls 1d20 plus a trait against a DC, and encounters that keep their own copy of each sheet."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
-keywords: [sheet, d20, dice, checks, skills]
+keywords: [sheet, d20, dice, checks, encounters]
 category: Characters
 requires_server: ">=0.1"
 
@@ -42,19 +42,25 @@ objects:
   # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook),
   # writes the sheet attributes on characters, and reads them for other packages.
   #
-  # A character's sheet is their own attributes under D20`: D20`<TRAIT> holds an ability's score or a
-  # skill's training (0 untrained, 1 trained, 2 expert), and D20`LEVEL the level. The D20 root is
-  # wizard-flagged, so only this object writes them.
+  # A character's sheet is built from their ledger, D20`LEDGER`<n>: one JSON entry for each step (a score, an
+  # advance, a skill's training, a level, a revoke, a clear), each with the wizard attribute flag, so only this
+  # object or a wizard writes one and an entry without the flag is never read. Before approval a player's change
+  # rewrites their own chargen entry for it; every other change is a new entry, so the ledger is the sheet's
+  # history. In play: D20`DAMAGE, D20`COIN, D20`GEAR`<KEY> (<count>|<name>), D20`XP, D20`ENCOUNTERS (the
+  # encounters they are in, in the order they joined) and D20`USING (the one /use picked). The D20 root is
+  # wizard-flagged, so only this object writes any of them.
   #
-  # +sheet and +check are added with /noparse/rsnoparse and hooked to CMD`<word>, so what a player types
-  # reaches the code exactly as typed and nothing a player wrote is ever evaluated.
+  # +sheet, +check and +encounter are added with /noparse/rsnoparse and hooked to CMD`<word>, so what a player
+  # types reaches the code exactly as typed and nothing a player wrote is ever evaluated.
   #
-  # Trees: CMD` the hooked commands, INC`COMMAND` the parse and dispatch, INC`SHEET` and INC`CHECK` one
-  # routine per switch, INC`NEED` the guards they share, INC`DO` the writes. FUN`TRAIT` the trait table,
-  # FUN`RATING` the numbers, FUN`PERM` who may do what, FUN`SCREEN` and FUN`DISPLAY` the screens.
-  # API` the functions other packages call (VISUAL), the same names in every sheet package.
-  # Bridges add HINT`<message> lines, GATE`EDIT (a reason a player may not change their own sheet now)
-  # and ALLOW`VIEW`<name> (who else may read a sheet).
+  # Trees: CMD` the hooked commands, INC`COMMAND` the parse and dispatch, INC`SHEET`, INC`CHECK` and
+  # INC`ENCOUNTER` one routine per switch, INC`NEED` the guards they share, INC`DO` the writes. FUN`LEDGER`
+  # and FUN`BUILD` read the ledger, FUN`VIEW` and FUN`V` the view a roll or screen reads (the sheet, or an
+  # encounter's copy), FUN`GEAR` items, FUN`ENC` encounters, FUN`CHARGEN` character creation, FUN`TRAIT` the
+  # trait table, FUN`RATING` the numbers, FUN`PERM` who may do what, FUN`SCREEN` and FUN`DISPLAY` the screens.
+  # API` the functions other packages call (VISUAL), the same names in every sheet package. Bridges add
+  # HINT`<message> lines, GATE`EDIT (a reason a player may not change their own sheet now) and
+  # ALLOW`VIEW`<name> (who else may read a sheet).
   - ref: sheet
     type: thing
     name: D20 Sheet
@@ -112,7 +118,7 @@ objects:
       DATA`CONFIG`SCORE-MAX`LABEL: |-
         Highest score
       DATA`CONFIG`SCORE-MAX`DESCRIPTION: |-
-        The highest ability score a player gives themselves. Sheet keepers may go to 30.
+        The highest score a player's advances take an ability to. Sheet keepers may go to 30.
       DATA`CONFIG`SCORE-MAX`EXAMPLE: |-
         18
       DATA`CONFIG`LEVEL-MAX: |-
@@ -205,6 +211,88 @@ objects:
         Whether +sheet <name> shows anyone's sheet to everyone. Otherwise only the character and sheet keepers see it.
       DATA`CONFIG`PUBLIC`EXAMPLE: |-
         yes
+      DATA`CONFIG`ARRAY: |-
+        15 14 13 12 10 8
+      DATA`CONFIG`ARRAY`TYPE: |-
+        list
+      DATA`CONFIG`ARRAY`DEFAULT: |-
+        15 14 13 12 10 8
+      DATA`CONFIG`ARRAY`MIN: |-
+        1
+      DATA`CONFIG`ARRAY`MAX: |-
+        12
+      DATA`CONFIG`ARRAY`CHECK: |-
+        CHECK`ARRAY
+      DATA`CONFIG`ARRAY`LABEL: |-
+        Starting scores
+      DATA`CONFIG`ARRAY`DESCRIPTION: |-
+        The scores a new character shares out among their abilities, one each.
+      DATA`CONFIG`ARRAY`EXAMPLE: |-
+        16 14 12 12 10 8
+      DATA`CONFIG`TRAINED: |-
+        4
+      DATA`CONFIG`TRAINED`TYPE: |-
+        integer
+      DATA`CONFIG`TRAINED`DEFAULT: |-
+        4
+      DATA`CONFIG`TRAINED`MIN: |-
+        0
+      DATA`CONFIG`TRAINED`MAX: |-
+        30
+      DATA`CONFIG`TRAINED`LABEL: |-
+        Skills a new character trains
+      DATA`CONFIG`TRAINED`DESCRIPTION: |-
+        How many skills a new character is trained in.
+      DATA`CONFIG`TRAINED`EXAMPLE: |-
+        3
+      DATA`CONFIG`HP-LEVEL: |-
+        8
+      DATA`CONFIG`HP-LEVEL`TYPE: |-
+        integer
+      DATA`CONFIG`HP-LEVEL`DEFAULT: |-
+        8
+      DATA`CONFIG`HP-LEVEL`MIN: |-
+        1
+      DATA`CONFIG`HP-LEVEL`MAX: |-
+        30
+      DATA`CONFIG`HP-LEVEL`LABEL: |-
+        Hit points a level
+      DATA`CONFIG`HP-LEVEL`DESCRIPTION: |-
+        The hit points a character has for each level, before the hit point ability's modifier.
+      DATA`CONFIG`HP-LEVEL`EXAMPLE: |-
+        6
+      DATA`CONFIG`HP-ABILITY: |-
+        con
+      DATA`CONFIG`HP-ABILITY`TYPE: |-
+        text
+      DATA`CONFIG`HP-ABILITY`DEFAULT: |-
+        con
+      DATA`CONFIG`HP-ABILITY`MAX: |-
+        20
+      DATA`CONFIG`HP-ABILITY`CHECK: |-
+        CHECK`ABILITY
+      DATA`CONFIG`HP-ABILITY`LABEL: |-
+        Hit point ability
+      DATA`CONFIG`HP-ABILITY`DESCRIPTION: |-
+        The key of the ability whose modifier adds to the hit points of every level. Empty adds none.
+      DATA`CONFIG`HP-ABILITY`EXAMPLE: |-
+        str
+      DATA`CONFIG`ADVANCE: |-
+        10
+      DATA`CONFIG`ADVANCE`TYPE: |-
+        integer
+      DATA`CONFIG`ADVANCE`DEFAULT: |-
+        10
+      DATA`CONFIG`ADVANCE`MIN: |-
+        1
+      DATA`CONFIG`ADVANCE`MAX: |-
+        999
+      DATA`CONFIG`ADVANCE`LABEL: |-
+        XP for an advance
+      DATA`CONFIG`ADVANCE`DESCRIPTION: |-
+        The XP an approved player spends to take an advance: a level, +1 to an ability, or a step of training in a skill.
+      DATA`CONFIG`ADVANCE`EXAMPLE: |-
+        20
       # The traits, a +config table: entries on the store under TRAIT`, each holding its label, with KIND
       # (ability or skill) and, for a skill, ABILITY (the ability it adds) beneath.
       DATA`CONFIG`TRAITS`TYPE: |-
@@ -268,14 +356,19 @@ objects:
       # +config's CHECK for DCS (%0 the list): five whole numbers, each above the one before.
       CHECK`DCS: |-
         if(cand(every(%!/FUN`IS`WHOLE,%0),eq(words(%0),5),not(comp(%0,sort(%0,n))),eq(words(setunion(%0,%0,,n)),5)),,Give five whole numbers from trivial to extreme%, each higher than the last.)
-      # +config's CHECK for a skill's ABILITY (%0 the key): an ability on the sheet, or nothing.
+      # +config's CHECK for an ability key (%0 the key): an ability on the sheet, or nothing.
       CHECK`ABILITY: |-
         if(cor(not(strlen(%0)),strmatch(get({{store}}/TRAIT`%0`KIND),ability)),,There is no ability with the key %0.)
+      # +config's CHECK for ARRAY (%0 the list): whole numbers from 1 to 30.
+      CHECK`ARRAY: |-
+        if(every(%!/FUN`IS`SCORE,%0),,Give whole numbers from 1 to 30%, one for each ability.)
       FUN`IS`WHOLE: |-
         cand(isint(%0),gte(%0,0))
+      FUN`IS`SCORE: |-
+        cand(isint(%0),gte(%0,1),lte(%0,30))
 
       # Which INC` routine each switch runs: DATA`ROUTE`<table>`<switch>. BARE is the command alone, ARG the
-      # command with something after it and no switch.
+      # command with something after it and no switch. +check's switches are all CHECK`ROLL's.
       DATA`ROUTE: |-
         Which routine each switch runs. One leaf per switch.
       DATA`ROUTE`SHEET`BARE: |-
@@ -284,15 +377,57 @@ objects:
         SHEET`SHOW
       DATA`ROUTE`SHEET`SET: |-
         SHEET`SET
-      DATA`ROUTE`SHEET`TRAITS: |-
-        SHEET`TRAITS
+      DATA`ROUTE`SHEET`CHARGEN: |-
+        SHEET`CHARGEN
+      DATA`ROUTE`SHEET`ADVANCE: |-
+        SHEET`ADVANCE
+      DATA`ROUTE`SHEET`LEDGER: |-
+        SHEET`LEDGER
+      DATA`ROUTE`SHEET`REVOKE: |-
+        SHEET`REVOKE
+      DATA`ROUTE`SHEET`CLEAR: |-
+        SHEET`CLEAR
+      DATA`ROUTE`SHEET`XP: |-
+        SHEET`XP
+      DATA`ROUTE`SHEET`DAMAGE: |-
+        SHEET`DAMAGE
+      DATA`ROUTE`SHEET`HEAL: |-
+        SHEET`HEAL
+      DATA`ROUTE`SHEET`COIN: |-
+        SHEET`COIN
       DATA`ROUTE`SHEET`GEAR: |-
         SHEET`GEAR
+      DATA`ROUTE`SHEET`USE: |-
+        SHEET`USE
+      DATA`ROUTE`SHEET`TRAITS: |-
+        SHEET`TRAITS
+      DATA`ROUTE`SHEET`LOG: |-
+        SHEET`LOG
       DATA`ROUTE`CHECK`BARE: |-
         CHECK`USAGE
       DATA`ROUTE`CHECK`ARG: |-
         CHECK`ROLL
-      # What each training value is called, and the words a player may type for it.
+      DATA`ROUTE`ENCOUNTER`BARE: |-
+        ENCOUNTER`SHOW
+      DATA`ROUTE`ENCOUNTER`ARG: |-
+        ENCOUNTER`SHOW
+      DATA`ROUTE`ENCOUNTER`START: |-
+        ENCOUNTER`START
+      DATA`ROUTE`ENCOUNTER`JOIN: |-
+        ENCOUNTER`JOIN
+      DATA`ROUTE`ENCOUNTER`USE: |-
+        ENCOUNTER`USE
+      DATA`ROUTE`ENCOUNTER`ADD: |-
+        ENCOUNTER`ADD
+      DATA`ROUTE`ENCOUNTER`REMOVE: |-
+        ENCOUNTER`REMOVE
+      DATA`ROUTE`ENCOUNTER`LEAVE: |-
+        ENCOUNTER`LEAVE
+      DATA`ROUTE`ENCOUNTER`KEEP: |-
+        ENCOUNTER`KEEP
+      DATA`ROUTE`ENCOUNTER`END: |-
+        ENCOUNTER`END
+      # What each training value is called.
       DATA`TRAINING`0: |-
         untrained
       DATA`TRAINING`1: |-
@@ -301,6 +436,12 @@ objects:
         expert
       DATA`DIFFICULTIES: |-
         trivial easy standard hard extreme
+      # The most entries a character's ledger holds; +sheet/clear starts it again.
+      DATA`LEDGER`MAX: |-
+        200
+      # The most entries a character's log keeps; past it the oldest goes.
+      DATA`LOG`MAX: |-
+        500
 
       # ---- commands ---------------------------------------------------------------
       # %1 the switches and %2 what follows, exactly as typed.
@@ -312,21 +453,25 @@ objects:
         value: |-
           $(?is)^\+check(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,check,table,CHECK,switches,%1,argument,%2
         flags: [regexp, cmdsyntax]
+      CMD`ENCOUNTER:
+        value: |-
+          $(?is)^\+encounter(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,encounter,table,ENCOUNTER,switches,%1,argument,%2
+        flags: [regexp, cmdsyntax]
       # A line a bridge adds to one of this object's messages: HINT`<message>, set here by a bridge such as
       # sheet-d20-help. %1 on are passed to it. Nothing when no bridge set one, so the message stands without it.
       FUN`HINT:
         value: |-
           if(hasattr(%!,HINT`%0),%b[u(%!/HINT`%0,%1,%2)])
         flags: [funsyntax]
-      # Parses the command, checks the switch, and runs its routine. +check takes its own switches (/private,
-      # /advantage, /disadvantage), so it goes to CHECK`ROLL with them.
+      # Parses the command, checks the switch, and runs its routine. +check takes several switches at once
+      # (/private, /advantage, /disadvantage); +sheet and +encounter one.
       INC`COMMAND`RUN:
         value: |-
-          think u(%!/FUN`COMMAND`PARSE,%<word>,%<table>,%<switches>,%<argument>); @assert strlen(%q<cmd_route>)=@pemit %#=notice(SHEET,+%q<cmd_word> has no /%q<cmd_switch> switch.[u(%!/FUN`HINT,SWITCHES,%q<cmd_word>)],warn); @include %!/INC`%q<cmd_route>
+          @assert hastype(%#,player)=@pemit %#=notice(SHEET,Only players have a sheet.,warn); think u(%!/FUN`COMMAND`PARSE,%<word>,%<table>,%<switches>,%<argument>); @assert cor(strmatch(%<table>,CHECK),lte(words(%q<cmd_switch_list>),1))=@pemit %#=notice(SHEET,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(SHEET,+%q<cmd_word> has no /%q<cmd_switch> switch.[u(%!/FUN`HINT,SWITCHES,%q<cmd_word>)],warn); @include %!/INC`%q<cmd_route>
         flags: [cmdsyntax]
       # %0 the word, %1 its route table, %2 the switches and %3 the argument, as typed. Sets cmd_word,
       # cmd_switch_list, cmd_switch (the first), cmd_argument, cmd_has_equals, cmd_left_side and
-      # cmd_right_side around the first =, cmd_route (the INC` routine to run) and viewer_objid.
+      # cmd_right_side around the first =, cmd_route (the INC` routine to run), viewer_objid and viewer_keeper.
       FUN`COMMAND`PARSE:
         value: |-
           setqm(cmd_word,lcstr(%0),
@@ -337,9 +482,10 @@ objects:
           cmd_left_side,trim(before(%3,=)),
           cmd_right_side,trim(after(%3,=)),
           cmd_route,u(%!/FUN`COMMAND`ROUTE,%1),
-          viewer_objid,objid(%#))
+          viewer_objid,objid(%#),
+          viewer_keeper,u(%!/FUN`PERM`KEEPER,%#))
         flags: [funsyntax]
-      # %0 the route table: the routine for the switch given. +check's switches are all CHECK`ROLL's.
+      # %0 the route table: the routine for the switch given.
       FUN`COMMAND`ROUTE:
         value: |-
           cond(cand(strmatch(%0,CHECK),strlen(%q<cmd_switch>)),if(every(%!/FUN`CHECK`SWITCH,%q<cmd_switch_list>),if(strlen(%q<cmd_argument>),CHECK`ROLL,CHECK`USAGE)),strlen(%q<cmd_switch>),get(%!/DATA`ROUTE`%0`[ucstr(%q<cmd_switch>)]),get(%!/DATA`ROUTE`%0`[if(strlen(%q<cmd_argument>),ARG,BARE)]))
@@ -355,44 +501,157 @@ objects:
         value: |-
           @assert strlen(setr(sheet_who,u(%!/FUN`PLAYER`MATCH,%<name>)))=@pemit %#=notice(SHEET,There is no player called '%<name>'.,warn)
         flags: [cmdsyntax]
-      # %<key> as typed: trait_key, the trait it names (or LEVEL or COIN), and trait_kind.
+      # The left of =, or the whole argument when there is no =: <name>/<what> names someone else, else <what>
+      # is on your own sheet. sheet_who and sheet_what. The routine then says who may change it.
+      INC`NEED`WHO:
+        value: |-
+          think setq(who_typed,if(%q<cmd_has_equals>,%q<cmd_left_side>,%q<cmd_argument>)); think setq(who_named,if(strmatch(%q<who_typed>,*/*),trim(before(%q<who_typed>,/)))); @include/args %!/INC`NEED`TARGET=name,firstof(%q<who_named>,%#); think setq(sheet_what,trim(if(strlen(%q<who_named>),after(%q<who_typed>,/),%q<who_typed>)))
+        flags: [cmdsyntax]
+      # <name>=<value> names someone else, else <value> is for your own sheet: sheet_who and sheet_value.
+      INC`NEED`WHOVALUE:
+        value: |-
+          @include/args %!/INC`NEED`TARGET=name,if(%q<cmd_has_equals>,%q<cmd_left_side>,%#); think setq(sheet_value,if(%q<cmd_has_equals>,%q<cmd_right_side>,%q<cmd_argument>))
+        flags: [cmdsyntax]
+      # Changes to the build: only a sheet keeper names someone else.
+      INC`NEED`OWNSHEET:
+        value: |-
+          @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error)
+        flags: [cmdsyntax]
+      # Changes in play (hit points, coin, gear): yourself, a sheet keeper, or the GM of the encounter whose copy
+      # the character plays from. play_runs is 1 for that GM.
+      INC`NEED`PLAY:
+        value: |-
+          think setq(play_runs,u(%!/FUN`PERM`RUNS,%#,%q<sheet_who>)); @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)),%q<play_runs>)=@pemit %#=notice(SHEET,Only sheet keepers%, and the GM of an encounter [name(%q<sheet_who>)] plays in%, change [poss(%q<sheet_who>)] sheet.,error)
+        flags: [cmdsyntax]
+      # Building the sheet: a keeper at any time (phase staff), a player on their own sheet until they are
+      # approved (phase chargen). sheet_phase, and sheet_rows, the ledger's entries in force.
+      INC`NEED`BUILD:
+        value: |-
+          @include %!/INC`NEED`OWNSHEET; @assert cor(%q<viewer_keeper>,not(isapproved(%#)))=@pemit %#=notice(SHEET,Your character is approved%, so staff change your sheet now. +sheet/advance spends XP on it.,error); @assert cor(%q<viewer_keeper>,not(strlen(setr(set_gate,u(%!/FUN`GATE`EDIT,%#)))))=@pemit %#=notice(SHEET,%q<set_gate>,warn); @include %!/INC`NEED`ROOM; think setqm(sheet_phase,if(%q<viewer_keeper>,staff,chargen),sheet_rows,u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%q<sheet_who>)))
+        flags: [cmdsyntax]
+      INC`NEED`ROOM:
+        value: |-
+          @assert lt(words(lattr(%q<sheet_who>/D20`LEDGER`*)),get(%!/DATA`LEDGER`MAX))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s ledger is full. A sheet keeper's +sheet/clear starts it again.,warn)
+        flags: [cmdsyntax]
+      INC`NEED`KEEPER:
+        value: |-
+          @assert %q<viewer_keeper>=@pemit %#=notice(SHEET,Only sheet keepers do that.,error)
+        flags: [cmdsyntax]
+      # %<key> as typed: trait_key, the trait it names, and trait_kind.
       INC`NEED`TRAIT:
         value: |-
-          @assert strlen(%<key>)=@pemit %#=notice(SHEET,Which trait? +sheet/traits lists them.,warn); @assert strlen(setr(trait_key,switch(lcstr(trim(%<key>)),level,LEVEL,coin,COIN,u(%!/FUN`TRAIT`FIND,%<key>))))=@pemit %#=notice(SHEET,There is no trait '%<key>'. +sheet/traits lists them.,warn); think setq(trait_kind,u(%!/FUN`TRAIT`KIND,%q<trait_key>))
+          @assert strlen(%<key>)=@pemit %#=notice(SHEET,Which trait? +sheet/traits lists them.,warn); @assert strlen(setr(trait_key,u(%!/FUN`TRAIT`FIND,%<key>)))=@pemit %#=notice(SHEET,There is no trait '%<key>'. +sheet/traits lists them.,warn); think setq(trait_kind,u(%!/FUN`TRAIT`KIND,%q<trait_key>))
         flags: [cmdsyntax]
 
-      # ---- +sheet -----------------------------------------------------------------
+      # ---- +sheet: the build ----------------------------------------------------------
       # +sheet shows your own; +sheet <name> another's, to them, sheet keepers, and whoever a bridge allows.
       INC`SHEET`SHOW:
         value: |-
-          @assert hastype(%#,player)=@pemit %#=notice(SHEET,Only players have a sheet.,warn); @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert strlen(%q<sheet_who>); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`SHEET,%q<sheet_who>,%#)
+          @include/args %!/INC`NEED`TARGET=name,firstof(%q<cmd_argument>,%#); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`SHEET,%q<sheet_who>,%#)
         flags: [cmdsyntax]
-      # +sheet/set <trait>=<value> for your own sheet; +sheet/set <name>/<trait>=<value> for a sheet keeper.
-      # An empty value clears the trait.
+      # +sheet/set [<name>/]<ability, skill or level>=<value>. A player gives each ability one of the starting
+      # scores and trains the skills a new character trains; a keeper sets anything. Empty clears it.
       INC`SHEET`SET:
         value: |-
-          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/set <trait>=<value>%, such as +sheet/set str=14 or +sheet/set athletics=trained.,warn); @include %!/INC`NEED`EDITOR; @include %!/INC`SHEET`SET`VALUE
+          @assert %q<cmd_has_equals>=@pemit %#=notice(SHEET,+sheet/set <ability or skill>=<value>%, such as +sheet/set str=15 or +sheet/set athletics=trained.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`BUILD; @break strmatch(%q<sheet_what>,level)={@include %!/INC`SHEET`SET`LEVEL}; @include/args %!/INC`NEED`TRAIT=key,%q<sheet_what>; @include %!/INC`SHEET`SET`[ucstr(%q<trait_kind>)]
         flags: [cmdsyntax]
-      # cmd_left_side as [<name>/]<what>: sheet_who, set_typed (<what>) and set_keeper, once they may change
-      # that sheet now.
-      INC`NEED`EDITOR:
+      INC`SHEET`SET`ABILITY:
         value: |-
-          @if strmatch(%q<cmd_left_side>,*/*)={@include/args %!/INC`NEED`TARGET=name,before(%q<cmd_left_side>,/); think setq(set_typed,after(%q<cmd_left_side>,/))},{think setqm(sheet_who,%q<viewer_objid>,set_typed,%q<cmd_left_side>)}; @assert strlen(%q<sheet_who>); think setq(set_keeper,u(%!/FUN`PERM`KEEPER,%#)); @assert cor(%q<set_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error); @assert cor(%q<set_keeper>,not(isapproved(%#)))=@pemit %#=notice(SHEET,Your character is approved%, so staff change your sheet now.,error); @assert cor(%q<set_keeper>,not(strlen(setr(set_gate,u(%!/FUN`GATE`EDIT,%#)))))=@pemit %#=notice(SHEET,%q<set_gate>,warn)
+          think setqm(set_value,%q<cmd_right_side>,set_left,u(%!/FUN`ARRAY`LEFT,%q<sheet_rows>,%q<trait_key>),set_top,if(%q<viewer_keeper>,30,get(%!/DATA`CONFIG`SCORE-MAX))); @assert cor(not(strlen(%q<set_value>)),cand(isint(%q<set_value>),gte(%q<set_value>,get(%!/DATA`CONFIG`SCORE-MIN)),lte(%q<set_value>,%q<set_top>)))=@pemit %#=notice(SHEET,A score is a whole number from [get(%!/DATA`CONFIG`SCORE-MIN)] to %q<set_top>.,warn); @assert cor(%q<viewer_keeper>,not(strlen(%q<set_value>)),match(%q<set_left>,%q<set_value>))=@pemit %#=notice(SHEET,if(words(%q<set_left>),[u(%!/FUN`TRAIT`LABEL,%q<trait_key>)] takes one of the starting scores left: [itemize(%q<set_left>,%b,or)].,Every starting score is given.) Set another ability empty to free its score.,warn); @include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,score,key,%q<trait_key>,value,%q<set_value>,phase,%q<sheet_phase>; @pemit %#=notice(SHEET,u(%!/FUN`TRAIT`LABEL,%q<trait_key>) is [firstof(%q<set_value>,unassigned)] on [name(%q<sheet_who>)]'s sheet.[u(%!/FUN`CHARGEN`AFTER,%q<sheet_who>)],ok)
         flags: [cmdsyntax]
-      # The trait and value: set_value, what is stored, after each kind's own check.
-      INC`SHEET`SET`VALUE:
+      INC`SHEET`SET`SKILL:
         value: |-
-          @include/args %!/INC`NEED`TRAIT=key,%q<set_typed>; @break not(strlen(%q<cmd_right_side>))={@include/args %!/INC`DO`SET=who,%q<sheet_who>,key,%q<trait_key>,value,; @pemit %#=notice(SHEET,u(%!/FUN`TRAIT`LABEL,%q<trait_key>) is cleared on [name(%q<sheet_who>)]'s sheet.,ok)}; think setq(set_value,u(%!/FUN`VALUE`[if(member(LEVEL COIN,%q<trait_key>),%q<trait_key>,ucstr(%q<trait_kind>))],%q<cmd_right_side>,%q<set_keeper>)); @assert not(strmatch(%q<set_value>,#-1 *))=@pemit %#=notice(SHEET,after(%q<set_value>,#-1%b),warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,key,%q<trait_key>,value,%q<set_value>; @pemit %#=notice(SHEET,u(%!/FUN`TRAIT`LABEL,%q<trait_key>) is [u(%!/FUN`DISPLAY`VALUE,%q<sheet_who>,%q<trait_key>)] on [name(%q<sheet_who>)]'s sheet.[if(not(comp(%q<sheet_who>,%q<viewer_objid>)),u(%!/FUN`HINT,SET))],ok)
+          think setqm(set_value,u(%!/FUN`VALUE`SKILL,firstof(%q<cmd_right_side>,0)),set_view,u(%!/FUN`VIEW`LIVE,%q<sheet_who>)); @assert not(strmatch(%q<set_value>,#-1 *))=@pemit %#=notice(SHEET,after(%q<set_value>,#-1%b),warn); @assert cor(%q<viewer_keeper>,lte(%q<set_value>,1))=@pemit %#=notice(SHEET,A new character is trained at most. +sheet/advance makes a skill expert after approval.,warn); @assert cor(%q<viewer_keeper>,not(%q<set_value>),u(%!/FUN`V`TRAIN,%q<set_view>,%q<trait_key>),lt(words(u(%!/FUN`V,%q<set_view>,training)),get(%!/DATA`CONFIG`TRAINED)))=@pemit %#=notice(SHEET,A new character trains [get(%!/DATA`CONFIG`TRAINED)] skill[if(neq(get(%!/DATA`CONFIG`TRAINED),1),s)]. Set one untrained to train another.,warn); @include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,train,key,%q<trait_key>,value,%q<set_value>,phase,%q<sheet_phase>; @pemit %#=notice(SHEET,u(%!/FUN`TRAIT`LABEL,%q<trait_key>) is [v(DATA`TRAINING`%q<set_value>)] on [name(%q<sheet_who>)]'s sheet.[u(%!/FUN`CHARGEN`AFTER,%q<sheet_who>)],ok)
+        flags: [cmdsyntax]
+      INC`SHEET`SET`LEVEL:
+        value: |-
+          @assert %q<viewer_keeper>=@pemit %#=notice(SHEET,A new character is level 1. Levels come from +sheet/advance after approval.,warn); think setq(set_value,u(%!/FUN`VALUE`LEVEL,firstof(%q<cmd_right_side>,1))); @assert not(strmatch(%q<set_value>,#-1 *))=@pemit %#=notice(SHEET,after(%q<set_value>,#-1%b),warn); @include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,level,key,,value,%q<set_value>,phase,%q<sheet_phase>; @pemit %#=notice(SHEET,[name(%q<sheet_who>)] is level %q<set_value>.,ok)
+        flags: [cmdsyntax]
+      # +sheet/chargen [<name>]: the steps of making a character and how far they are.
+      INC`SHEET`CHARGEN:
+        value: |-
+          @include/args %!/INC`NEED`TARGET=name,firstof(%q<cmd_argument>,%#); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`CHARGEN,%q<sheet_who>,%#)
+        flags: [cmdsyntax]
+      # +sheet/advance [<name>/]<level, ability or skill>: a level, +1 to an ability, or a step of training. An
+      # approved player spends the advance's XP; a keeper gives it free.
+      INC`SHEET`ADVANCE:
+        value: |-
+          @include %!/INC`NEED`WHO; @include %!/INC`NEED`OWNSHEET; @assert strlen(%q<sheet_what>)=@pemit %#=notice(SHEET,+sheet/advance <level%, ability or skill>%, such as +sheet/advance level or +sheet/advance athletics.,warn); @assert cor(%q<viewer_keeper>,isapproved(%#))=@pemit %#=notice(SHEET,Advances come after approval. +sheet/chargen shows what to set now.,warn); @include %!/INC`NEED`ROOM; think setqm(advance_view,u(%!/FUN`VIEW`LIVE,%q<sheet_who>),advance_cost,if(%q<viewer_keeper>,0,get(%!/DATA`CONFIG`ADVANCE)),advance_phase,if(%q<viewer_keeper>,staff,play)); @assert gte(default(%q<sheet_who>/D20`XP,0),%q<advance_cost>)=@pemit %#=notice(SHEET,An advance costs %q<advance_cost> XP%, and you have [default(%q<sheet_who>/D20`XP,0)].,warn); @include %!/INC`SHEET`ADVANCE`[if(strmatch(%q<sheet_what>,level),LEVEL,TRAIT)]; @if %q<advance_cost>={&D20`XP %q<sheet_who>=sub(get(%q<sheet_who>/D20`XP),%q<advance_cost>); think u(%!/FUN`LOG`ADD,%q<sheet_who>,xp,-%q<advance_cost>,get(%q<sheet_who>/D20`XP),Advance: %q<advance_text>,)}; @pemit %#=notice(SHEET,[name(%q<sheet_who>)] advances: %q<advance_text>[if(%q<advance_cost>,%b%(%q<advance_cost> XP spent%))].,ok)
+        flags: [cmdsyntax]
+      INC`SHEET`ADVANCE`LEVEL:
+        value: |-
+          think setq(advance_now,u(%!/FUN`V,%q<advance_view>,level)); @assert lt(%q<advance_now>,get(%!/DATA`CONFIG`LEVEL-MAX))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] is level %q<advance_now>%, the highest.,warn); @include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,level,key,,value,inc(%q<advance_now>),phase,%q<advance_phase>; think setq(advance_text,level [inc(%q<advance_now>)])
+        flags: [cmdsyntax]
+      INC`SHEET`ADVANCE`TRAIT:
+        value: |-
+          @include/args %!/INC`NEED`TRAIT=key,%q<sheet_what>; @include %!/INC`SHEET`ADVANCE`[ucstr(%q<trait_kind>)]
+        flags: [cmdsyntax]
+      INC`SHEET`ADVANCE`ABILITY:
+        value: |-
+          think setqm(advance_now,u(%!/FUN`V`SCORE,%q<advance_view>,%q<trait_key>),advance_top,if(%q<viewer_keeper>,30,get(%!/DATA`CONFIG`SCORE-MAX))); @assert lt(%q<advance_now>,%q<advance_top>)=@pemit %#=notice(SHEET,u(%!/FUN`TRAIT`LABEL,%q<trait_key>) is %q<advance_now>%, the highest an advance takes it.,warn); @include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,boost,key,%q<trait_key>,value,1,phase,%q<advance_phase>; think setq(advance_text,[u(%!/FUN`TRAIT`LABEL,%q<trait_key>)] [inc(%q<advance_now>)])
+        flags: [cmdsyntax]
+      INC`SHEET`ADVANCE`SKILL:
+        value: |-
+          think setq(advance_now,u(%!/FUN`V`TRAIN,%q<advance_view>,%q<trait_key>)); @assert lt(%q<advance_now>,2)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] is expert in [u(%!/FUN`TRAIT`LABEL,%q<trait_key>)] already.,warn); @include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,train,key,%q<trait_key>,value,inc(%q<advance_now>),phase,%q<advance_phase>; think setq(advance_text,[u(%!/FUN`TRAIT`LABEL,%q<trait_key>)] [v(DATA`TRAINING`[inc(%q<advance_now>)])])
+        flags: [cmdsyntax]
+      # +sheet/ledger [<name>]: every entry the sheet is built from, oldest first.
+      INC`SHEET`LEDGER:
+        value: |-
+          @include/args %!/INC`NEED`TARGET=name,firstof(%q<cmd_argument>,%#); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`LEDGER,%q<sheet_who>)
+        flags: [cmdsyntax]
+      # +sheet/revoke <name>/<n>: takes back one entry.
+      INC`SHEET`REVOKE:
+        value: |-
+          @include %!/INC`NEED`KEEPER; @include %!/INC`NEED`WHO; @include %!/INC`NEED`ROOM; think setq(revoke_row,grab(u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%q<sheet_who>)),%q<sheet_what>~*)); @assert cand(isint(%q<sheet_what>),strlen(%q<revoke_row>))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has no entry '%q<sheet_what>' in force. +sheet/ledger [name(%q<sheet_who>)] lists them.,warn); @include/args %!/INC`DO`REVOKE=who,%q<sheet_who>,n,%q<sheet_what>; @pemit %#=notice(SHEET,Revoked [name(%q<sheet_who>)]'s entry %q<sheet_what>: [u(%!/FUN`DISPLAY`ENTRY,%q<revoke_row>)].,ok)
+        flags: [cmdsyntax]
+      # +sheet/clear <name>: revokes the whole build; character creation starts again. XP, hit points, coin and
+      # gear stay.
+      INC`SHEET`CLEAR:
+        value: |-
+          @include %!/INC`NEED`KEEPER; @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/clear <name> revokes everything on their sheet's ledger.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>; @assert words(u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%q<sheet_who>)))=@pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s sheet has nothing to clear.,warn); @include/args %!/INC`DO`ENTRY=who,%q<sheet_who>,kind,clear,key,,value,,phase,staff; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s build is cleared %(entry %q<entry_n>%). +sheet/chargen [name(%q<sheet_who>)] shows the steps.,ok)
+        flags: [cmdsyntax]
+      # +sheet/xp <name>=<n> [<reason>] sets XP; +<n> or -<n> adds or takes. Each change goes in the log.
+      INC`SHEET`XP:
+        value: |-
+          @include %!/INC`NEED`KEEPER; @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>))=@pemit %#=notice(SHEET,+sheet/xp <name>=<xp> [<reason>] sets it%, =+<n> or =-<n> adds or takes: +sheet/xp Alice=+10 Ended the siege.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; think setqm(xp_typed,first(%q<cmd_right_side>),xp_reason,rest(%q<cmd_right_side>),xp_old,default(%q<sheet_who>/D20`XP,0)); think setq(set_value,if(member(+ -,left(%q<xp_typed>,1)),add(%q<xp_old>,edit(%q<xp_typed>,+,)),%q<xp_typed>)); @assert cand(isint(%q<set_value>),gte(%q<set_value>,0),lte(%q<set_value>,99999))=@pemit %#=notice(SHEET,XP is a whole number from 0 to 99999.,warn); @include/args %!/INC`DO`ROOT=who,%q<sheet_who>; &D20`XP %q<sheet_who>=%q<set_value>; think u(%!/FUN`LOG`ADD,%q<sheet_who>,xp,sub(%q<set_value>,%q<xp_old>),%q<set_value>,%q<xp_reason>,); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<set_value> XP.,ok); @pemit %q<sheet_who>=notice(SHEET,[name(%#)] [if(lt(%q<set_value>,%q<xp_old>),takes [sub(%q<xp_old>,%q<set_value>)] XP from you,gives you [sub(%q<set_value>,%q<xp_old>)] XP)][if(strlen(%q<xp_reason>),: %q<xp_reason>)]. You have %q<set_value>.)
+        flags: [cmdsyntax]
+      # +sheet/log [<name>]: the latest changes to XP, coin and gear, who made them and why.
+      INC`SHEET`LOG:
+        value: |-
+          @include/args %!/INC`NEED`TARGET=name,firstof(%q<cmd_argument>,%#); @assert u(%!/FUN`PERM`VIEW,%#,%q<sheet_who>)=@pemit %#=notice(SHEET,Only [name(%q<sheet_who>)] and staff can read [poss(%q<sheet_who>)] sheet.,error); @pemit %#=u(%!/FUN`SCREEN`LOG,%q<sheet_who>)
+        flags: [cmdsyntax]
+      INC`SHEET`TRAITS:
+        value: |-
+          @pemit %#=u(%!/FUN`SCREEN`TRAITS)
+        flags: [cmdsyntax]
+
+      # ---- +sheet: play ---------------------------------------------------------------
+      # Hit points, coin and gear change on the encounter's copy when the character plays from one, else on the
+      # sheet. A player changes their own coin and gear outright only until approved; spending is any time.
+      # +sheet/damage [<name>=]<n>: takes hit points, down to 0.
+      INC`SHEET`DAMAGE:
+        value: |-
+          @include %!/INC`NEED`WHOVALUE; @include %!/INC`NEED`PLAY; @assert cand(isint(%q<sheet_value>),gt(%q<sheet_value>,0),lte(%q<sheet_value>,9999))=@pemit %#=notice(SHEET,+sheet/damage <n> takes hit points%, such as +sheet/damage 5.,warn); think setq(hp_view,u(%!/FUN`VIEW`OF,%q<sheet_who>)); think setq(hp_damage,min(u(%!/FUN`V,%q<hp_view>,hp),add(u(%!/FUN`V,%q<hp_view>,damage),%q<sheet_value>))); @include/args %!/INC`DO`PLAY=who,%q<sheet_who>,field,DAMAGE,value,if(%q<hp_damage>,%q<hp_damage>); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] takes %q<sheet_value> damage: [u(%!/FUN`DISPLAY`HP,u(%!/FUN`V,%q<hp_view>,hp),%q<hp_damage>)] hit points[u(%!/FUN`DISPLAY`WHERE,%q<sheet_who>)].,ok)
+        flags: [cmdsyntax]
+      # +sheet/heal [<name>=]<n> or all: gives hit points back, up to the most.
+      INC`SHEET`HEAL:
+        value: |-
+          @include %!/INC`NEED`WHOVALUE; @include %!/INC`NEED`PLAY; @assert cor(strmatch(%q<sheet_value>,all),cand(isint(%q<sheet_value>),gt(%q<sheet_value>,0),lte(%q<sheet_value>,9999)))=@pemit %#=notice(SHEET,+sheet/heal <n> gives hit points back%, such as +sheet/heal 5. +sheet/heal all heals every one.,warn); think setq(hp_view,u(%!/FUN`VIEW`OF,%q<sheet_who>)); think setq(hp_damage,if(strmatch(%q<sheet_value>,all),0,max(0,sub(u(%!/FUN`V,%q<hp_view>,damage),%q<sheet_value>)))); @include/args %!/INC`DO`PLAY=who,%q<sheet_who>,field,DAMAGE,value,if(%q<hp_damage>,%q<hp_damage>); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has [u(%!/FUN`DISPLAY`HP,u(%!/FUN`V,%q<hp_view>,hp),%q<hp_damage>)] hit points[u(%!/FUN`DISPLAY`WHERE,%q<sheet_who>)].,ok)
+        flags: [cmdsyntax]
+      # +sheet/coin [<name>=]<n> sets coin; +<n> adds and -<n> spends.
+      INC`SHEET`COIN:
+        value: |-
+          @include %!/INC`NEED`WHOVALUE; @include %!/INC`NEED`PLAY; think setqm(coin_typed,first(%q<sheet_value>),coin_reason,rest(%q<sheet_value>)); @assert cand(strlen(%q<coin_typed>),isint(edit(%q<coin_typed>,+,)))=@pemit %#=notice(SHEET,+sheet/coin <n> [<reason>] sets your coin%, +<n> adds and -<n> spends: +sheet/coin -5 Rope.,warn); @assert cor(strmatch(%q<coin_typed>,-*),not(strlen(setr(setup_why,u(%!/FUN`PERM`SETUP,%#,%q<sheet_who>)))))=@pemit %#=notice(SHEET,%q<setup_why> +sheet/coin -<n> spends it.,warn); think setq(coin_now,u(%!/FUN`V,u(%!/FUN`VIEW`OF,%q<sheet_who>),coin)); think setq(coin_new,if(member(+ -,left(%q<coin_typed>,1)),add(%q<coin_now>,edit(%q<coin_typed>,+,)),%q<coin_typed>)); @assert gte(%q<coin_new>,0)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<coin_now> coin.,warn); @assert lte(%q<coin_new>,999999999)=@pemit %#=notice(SHEET,That is more coin than a sheet holds.,warn); @include/args %!/INC`DO`PLAY=who,%q<sheet_who>,field,COIN,value,if(%q<coin_new>,%q<coin_new>); @if not(strlen(u(%!/FUN`ENC`ACTIVE,%q<sheet_who>)))={think u(%!/FUN`LOG`ADD,%q<sheet_who>,coin,sub(%q<coin_new>,%q<coin_now>),%q<coin_new>,%q<coin_reason>,)}; @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<coin_new> coin[u(%!/FUN`DISPLAY`WHERE,%q<sheet_who>)].,ok)
         flags: [cmdsyntax]
       # +sheet/gear [<name>/]<item>=<count> sets how many of an item the sheet lists; 0 takes it off.
       INC`SHEET`GEAR:
         value: |-
-          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>))=@pemit %#=notice(SHEET,+sheet/gear <item>=<count>%, such as +sheet/gear Rope=1. A count of 0 takes it off.,warn); @include %!/INC`NEED`EDITOR; @assert strlen(setr(gear_key,u(%!/FUN`GEAR`KEY,%q<set_typed>)))=@pemit %#=notice(SHEET,An item's name needs a letter or a digit.,warn); @assert cand(isint(%q<cmd_right_side>),gte(%q<cmd_right_side>,0),lte(%q<cmd_right_side>,9999))=@pemit %#=notice(SHEET,A count is a whole number from 0 to 9999.,warn); @include/args %!/INC`DO`SET=who,%q<sheet_who>,key,GEAR`%q<gear_key>,value,if(%q<cmd_right_side>,%q<cmd_right_side>|[firstof(after(get(%q<sheet_who>/D20`GEAR`%q<gear_key>),|),trim(%q<set_typed>))]); @pemit %#=notice(SHEET,if(%q<cmd_right_side>,[name(%q<sheet_who>)]'s sheet lists %q<cmd_right_side> [after(get(%q<sheet_who>/D20`GEAR`%q<gear_key>),|)].,[trim(%q<set_typed>)] is off [name(%q<sheet_who>)]'s sheet.),ok)
+          @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>))=@pemit %#=notice(SHEET,+sheet/gear <item>=<count> [<reason>]%, such as +sheet/gear Rope=1. A count of 0 takes it off.,warn); @include %!/INC`NEED`WHO; @include %!/INC`NEED`PLAY; @assert not(strlen(setr(setup_why,u(%!/FUN`PERM`SETUP,%#,%q<sheet_who>))))=@pemit %#=notice(SHEET,%q<setup_why> +sheet/use <item> spends one.,warn); @assert strlen(setr(gear_key,u(%!/FUN`GEAR`KEY,%q<sheet_what>)))=@pemit %#=notice(SHEET,An item's name needs a letter or a digit.,warn); think setqm(gear_count,first(%q<cmd_right_side>),gear_reason,rest(%q<cmd_right_side>)); @assert cand(isint(%q<gear_count>),gte(%q<gear_count>,0),lte(%q<gear_count>,9999))=@pemit %#=notice(SHEET,A count is a whole number from 0 to 9999.,warn); think setq(gear_row,grab(u(%!/FUN`V,u(%!/FUN`VIEW`OF,%q<sheet_who>),gear),*~%q<gear_key>~*,|)); think setq(gear_label,firstof(elements(%q<gear_row>,3,~),u(%!/FUN`GEAR`LABEL,%q<sheet_what>))); @include/args %!/INC`DO`GEAR=who,%q<sheet_who>,key,%q<gear_key>,count,%q<gear_count>,label,%q<gear_label>,reason,%q<gear_reason>,had,firstof(first(%q<gear_row>,~),0); @pemit %#=notice(SHEET,if(%q<gear_count>,[name(%q<sheet_who>)]'s sheet lists %q<gear_count> %q<gear_label>,%q<gear_label> is off [name(%q<sheet_who>)]'s sheet)[u(%!/FUN`DISPLAY`WHERE,%q<sheet_who>)].,ok)
         flags: [cmdsyntax]
-      # +sheet/traits: every trait, and what a skill adds.
-      INC`SHEET`TRAITS:
+      # +sheet/use [<name>/]<item>: spends one.
+      INC`SHEET`USE:
         value: |-
-          @pemit %#=u(%!/FUN`SCREEN`TRAITS)
+          @include %!/INC`NEED`WHO; @include %!/INC`NEED`PLAY; @assert strlen(setr(gear_key,u(%!/FUN`GEAR`KEY,%q<sheet_what>)))=@pemit %#=notice(SHEET,+sheet/use <item> spends one%, such as +sheet/use healing potion.,warn); think setq(gear_row,u(%!/FUN`GEAR`ROW,u(%!/FUN`V,u(%!/FUN`VIEW`OF,%q<sheet_who>),gear),%q<gear_key>)); @assert strlen(%q<gear_row>)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has no [u(%!/FUN`GEAR`LABEL,%q<sheet_what>)][u(%!/FUN`DISPLAY`WHERE,%q<sheet_who>)].,warn); think setqm(gear_left,dec(first(%q<gear_row>,~)),gear_label,elements(%q<gear_row>,3,~),gear_key,elements(%q<gear_row>,2,~)); @include/args %!/INC`DO`GEAR=who,%q<sheet_who>,key,%q<gear_key>,count,%q<gear_left>,label,%q<gear_label>,reason,Used,had,inc(%q<gear_left>); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] uses one %q<gear_label>: %q<gear_left> left[u(%!/FUN`DISPLAY`WHERE,%q<sheet_who>)].,ok)
         flags: [cmdsyntax]
 
       # ---- +check -----------------------------------------------------------------
@@ -400,10 +659,11 @@ objects:
         value: |-
           @pemit %#=notice(SHEET,+check <trait>%[=<DC or difficulty>%]%, such as +check athletics=15 or +check stealth+2=hard. /private rolls where only you see it%, /advantage and /disadvantage roll two dice.,warn)
         flags: [cmdsyntax]
-      # +check[/private][/advantage|/disadvantage] <trait>[+<n>|-<n>][=<target>]: rolls for the room.
+      # +check[/private][/advantage|/disadvantage] <trait>[+<n>|-<n>][=<target>]: rolls for the room. In an
+      # encounter the copy rolls.
       INC`CHECK`ROLL:
         value: |-
-          @assert hastype(%#,player)=@pemit %#=notice(SHEET,Only players have a sheet.,warn); @assert not(cand(member(%q<cmd_switch_list>,advantage),member(%q<cmd_switch_list>,disadvantage)))=@pemit %#=notice(SHEET,Roll with advantage or disadvantage%, not both.,warn); think u(%!/FUN`CHECK`READ,%q<cmd_left_side>); @assert isint(%q<check_modifier>)=@pemit %#=notice(SHEET,'%q<cmd_left_side>' ends in something that is not a number to add.,warn); @include/args %!/INC`NEED`TRAIT=key,%q<check_typed>; think setq(check_dc,u(%!/API`TARGET,%q<cmd_right_side>)); @assert cor(not(%q<cmd_has_equals>),isint(%q<check_dc>))=@pemit %#=notice(SHEET,'%q<cmd_right_side>' is not a DC. Give a number or one of [itemize(v(DATA`DIFFICULTIES))].,warn); think setq(check_result,uargs(%!/API`CHECK,roller,%q<viewer_objid>,trait,%q<trait_key>,modifier,%q<check_modifier>,target,%q<check_dc>,dice,u(%!/FUN`CHECK`DICE,%q<cmd_switch_list>))); @assert not(strmatch(%q<check_result>,#-*))=@pemit %#=notice(SHEET,%q<check_result>,error); think setq(check_line,u(%!/FUN`DISPLAY`CHECK,%q<check_result>)); @break member(%q<cmd_switch_list>,private)=@pemit %#=notice(SHEET,You privately check %q<check_line>); @remit %l=notice(SHEET,tone(strong,name(%#)) checks %q<check_line>)
+          @assert not(cand(member(%q<cmd_switch_list>,advantage),member(%q<cmd_switch_list>,disadvantage)))=@pemit %#=notice(SHEET,Roll with advantage or disadvantage%, not both.,warn); think u(%!/FUN`CHECK`READ,%q<cmd_left_side>); @assert isint(%q<check_modifier>)=@pemit %#=notice(SHEET,'%q<cmd_left_side>' ends in something that is not a number to add.,warn); @include/args %!/INC`NEED`TRAIT=key,%q<check_typed>; think setq(check_dc,u(%!/API`TARGET,%q<cmd_right_side>)); @assert cor(not(%q<cmd_has_equals>),isint(%q<check_dc>))=@pemit %#=notice(SHEET,'%q<cmd_right_side>' is not a DC. Give a number or one of [itemize(v(DATA`DIFFICULTIES))].,warn); think setq(check_result,u(%!/FUN`CHECK`VIEW,u(%!/FUN`VIEW`OF,%q<viewer_objid>),%q<trait_key>,%q<check_modifier>,%q<check_dc>,u(%!/FUN`CHECK`DICE,%q<cmd_switch_list>))); @assert not(strmatch(%q<check_result>,#-*))=@pemit %#=notice(SHEET,after(%q<check_result>,#-1%b),error); think setq(check_line,u(%!/FUN`DISPLAY`CHECK,%q<check_result>)); @break member(%q<cmd_switch_list>,private)=@pemit %#=notice(SHEET,You privately check %q<check_line>); @remit %l=notice(SHEET,tone(strong,name(%#)) checks %q<check_line>)
         flags: [cmdsyntax]
       # %0 the trait as typed, with a modifier at its end: check_typed and check_modifier (0 when none).
       FUN`CHECK`READ:
@@ -419,26 +679,258 @@ objects:
           cond(member(%0,advantage),2d20kh,member(%0,disadvantage),2d20kl,1d20)
         flags: [funsyntax]
 
-      # ---- writes -----------------------------------------------------------------
-      # %<who> an objid, %<key> a trait (or LEVEL), %<value> what to store; empty clears it. The D20 root is
-      # wizard-flagged and no_command the first time, and its leaves take that from it.
-      INC`DO`SET:
+      # ---- +encounter ---------------------------------------------------------------
+      # A room holds any number of encounters, and a character may be in several. Whoever starts one runs it
+      # (its GM); sheet keepers run any. A member plays from a copy of their sheet taken when they joined. The
+      # copy in use is that of a joined encounter in the room the character is in: the one /use picked, else
+      # the last joined. Anywhere else the sheet itself applies. An encounter lasts until /end, over any number
+      # of days. /keep writes one character's damage, coin and gear from their copy back to their sheet.
+      # +encounter [<n>]: one encounter, or the ones here and yours.
+      INC`ENCOUNTER`SHOW:
         value: |-
-          @if not(hasattr(%<who>,D20))={&D20 %<who>=This character's d20 sheet. +sheet shows it.; @set %<who>/D20=wizard; @set %<who>/D20=no_command}; @if strlen(%<value>)={&D20`%<key> %<who>=%<value>},{&D20`%<key> %<who>}
+          think setqm(enc_here,u(%!/FUN`ENC`HERE,%#),enc_joined,u(%!/FUN`ENC`JOINED,%#)); @assert cor(strlen(%q<cmd_argument>),words(setunion(%q<enc_here>,%q<enc_joined>)))=@pemit %#=notice(ENCOUNTER,There is no encounter here%, and you are in none. +encounter/start begins one.,warn); @assert cor(strlen(%q<cmd_argument>),gt(words(setunion(%q<enc_here>,%q<enc_joined>)),1))=@pemit %#=u(%!/FUN`SCREEN`ENCOUNTER,setunion(%q<enc_here>,%q<enc_joined>),%#); @assert strlen(%q<cmd_argument>)=@pemit %#=u(%!/FUN`SCREEN`ENCOUNTERS,%q<enc_here>,%q<enc_joined>,%#); @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>,from,,verb,; @pemit %#=u(%!/FUN`SCREEN`ENCOUNTER,%q<enc_n>,%#)
+        flags: [cmdsyntax]
+      # +encounter/start [<title>]: a new encounter in the room you are in.
+      INC`ENCOUNTER`START:
+        value: |-
+          think setqm(enc_n,inc(lmax(0 [iter(lattr({{encounters}}/ENC`*),last(%i0,`))])),enc_title,firstof(left(%q<cmd_argument>,60),Encounter in [name(loc(%#))])); &ENC`%q<enc_n> {{encounters}}=%q<enc_title>; &ENC`%q<enc_n>`ROOM {{encounters}}=objid(loc(%#)); &ENC`%q<enc_n>`GM {{encounters}}=%q<viewer_objid>; &ENC`%q<enc_n>`STARTED {{encounters}}=secs(); @remit %l=notice(ENCOUNTER,tone(strong,name(%#)) starts encounter %q<enc_n>: %q<enc_title>. +encounter/join %q<enc_n> takes part with a copy of your sheet.)
+        flags: [cmdsyntax]
+      # +encounter/join [<n>]: takes part in an encounter here, with a copy of your sheet as it stands.
+      INC`ENCOUNTER`JOIN:
+        value: |-
+          @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>,from,u(%!/FUN`ENC`HERE,%#),verb,join; @assert member(u(%!/FUN`ENC`HERE,%#),%q<enc_n>)=@pemit %#=notice(ENCOUNTER,Encounter %q<enc_n> is not in this room.,warn); @assert not(u(%!/FUN`ENC`MEMBER,%q<viewer_objid>,%q<enc_n>))=@pemit %#=notice(ENCOUNTER,You are in [u(%!/FUN`ENC`NAME,%q<enc_n>)] already.,warn); @include/args %!/INC`DO`ENCJOIN=who,%q<viewer_objid>,n,%q<enc_n>; @remit %l=notice(ENCOUNTER,tone(strong,name(%#)) joins [u(%!/FUN`ENC`NAME,%q<enc_n>)].)
+        flags: [cmdsyntax]
+      # +encounter/use [<n>]: which of your encounters here your rolls use; nothing goes back to the last joined.
+      INC`ENCOUNTER`USE:
+        value: |-
+          @break not(strlen(%q<cmd_argument>))={@include/args %!/INC`DO`PLAY`SHEET=who,%q<viewer_objid>,field,USING,value,; @pemit %#=notice(ENCOUNTER,Your rolls use [firstof(u(%!/FUN`ENC`NAME,u(%!/FUN`ENC`ACTIVE,%q<viewer_objid>)),your sheet)].,ok)}; @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>,from,,verb,; @assert u(%!/FUN`ENC`MEMBER,%q<viewer_objid>,%q<enc_n>)=@pemit %#=notice(ENCOUNTER,You are not in [u(%!/FUN`ENC`NAME,%q<enc_n>)]. +encounter/join %q<enc_n> takes part.,warn); @include/args %!/INC`DO`PLAY`SHEET=who,%q<viewer_objid>,field,USING,value,%q<enc_n>; @pemit %#=notice(ENCOUNTER,Your rolls use your copy in [u(%!/FUN`ENC`NAME,%q<enc_n>)][if(member(u(%!/FUN`ENC`HERE,%#),%q<enc_n>),,%b when you are in its room)].,ok)
+        flags: [cmdsyntax]
+      # +encounter/add <name>[=<n>]: the GM brings someone in the encounter's room into it.
+      INC`ENCOUNTER`ADD:
+        value: |-
+          @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_right_side>,from,u(%!/FUN`ENC`HERE,%#),verb,add <name>=; @include %!/INC`NEED`GM; @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; @assert not(comp(objid(loc(%q<sheet_who>)),get({{encounters}}/ENC`%q<enc_n>`ROOM)))=@pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)] is not in the encounter's room.,warn); @assert not(u(%!/FUN`ENC`MEMBER,%q<sheet_who>,%q<enc_n>))=@pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)] is in [u(%!/FUN`ENC`NAME,%q<enc_n>)] already.,warn); @include/args %!/INC`DO`ENCJOIN=who,%q<sheet_who>,n,%q<enc_n>; @remit get({{encounters}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,tone(strong,name(%#)) brings [name(%q<sheet_who>)] into [u(%!/FUN`ENC`NAME,%q<enc_n>)].)
+        flags: [cmdsyntax]
+      # +encounter/remove <name>[=<n>]: the GM takes someone out; their copy goes.
+      INC`ENCOUNTER`REMOVE:
+        value: |-
+          @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_right_side>,from,u(%!/FUN`ENC`JOINED,%q<sheet_who>),verb,remove <name>=; @include %!/INC`NEED`GM; @include %!/INC`NEED`MEMBER; @include/args %!/INC`DO`ENCDROP=who,%q<sheet_who>,n,%q<enc_n>; @pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)] is out of [u(%!/FUN`ENC`NAME,%q<enc_n>)].,ok); @pemit %q<sheet_who>=notice(ENCOUNTER,[name(%#)] takes you out of [u(%!/FUN`ENC`NAME,%q<enc_n>)]. Its copy of your sheet is gone.)
+        flags: [cmdsyntax]
+      # +encounter/leave [<n>]: out of an encounter you are in; your copy goes.
+      INC`ENCOUNTER`LEAVE:
+        value: |-
+          @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>,from,firstof(u(%!/FUN`ENC`ACTIVE,%#),u(%!/FUN`ENC`JOINED,%#)),verb,leave; @assert u(%!/FUN`ENC`MEMBER,%q<viewer_objid>,%q<enc_n>)=@pemit %#=notice(ENCOUNTER,You are not in [u(%!/FUN`ENC`NAME,%q<enc_n>)].,warn); @include/args %!/INC`DO`ENCDROP=who,%q<viewer_objid>,n,%q<enc_n>; @pemit %#=notice(ENCOUNTER,You leave [u(%!/FUN`ENC`NAME,%q<enc_n>)]. Its copy of your sheet is gone.,ok)
+        flags: [cmdsyntax]
+      # +encounter/keep <name>[=<n>]: the GM writes a character's damage, coin and gear from the copy to their sheet.
+      # Gear names are set with attrib_set, so nothing a player named an item is ever evaluated.
+      INC`ENCOUNTER`KEEP:
+        value: |-
+          @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_right_side>,from,u(%!/FUN`ENC`JOINED,%q<sheet_who>),verb,keep <name>=; @include %!/INC`NEED`GM; @include %!/INC`NEED`MEMBER; think setq(keep_copy,get({{encounters}}/ENC`%q<enc_n>`COPY`[after(num(%q<sheet_who>),#)])); think u(%!/FUN`LOG`KEEP,%q<sheet_who>,%q<keep_copy>,Kept from encounter [u(%!/FUN`ENC`NAME,%q<enc_n>)]); @dolist/inline DAMAGE COIN={@include/args %!/INC`DO`PLAY`SHEET=who,%q<sheet_who>,field,##,value,if(u(%!/FUN`V,%q<keep_copy>,lcstr(##)),u(%!/FUN`V,%q<keep_copy>,lcstr(##)))}; think [iter(lattr(%q<sheet_who>/D20`GEAR`*),attrib_set(%q<sheet_who>/%i0))][iter(u(%!/FUN`V,%q<keep_copy>,gear),attrib_set(%q<sheet_who>/D20`GEAR`[elements(%i0,2,~)],[elements(%i0,1,~)]|[elements(%i0,3,~)]),|)]; @pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)]'s sheet keeps the damage%, coin and gear from [u(%!/FUN`ENC`NAME,%q<enc_n>)].,ok); @pemit %q<sheet_who>=notice(ENCOUNTER,[name(%#)] writes your damage%, coin and gear from [u(%!/FUN`ENC`NAME,%q<enc_n>)] to your sheet.)
+        flags: [cmdsyntax]
+      # +encounter/end [<n>]: the GM ends it; every copy goes.
+      INC`ENCOUNTER`END:
+        value: |-
+          @include/args %!/INC`NEED`ENCOUNTER=typed,%q<cmd_argument>,from,u(%!/FUN`ENC`HERE,%#),verb,end; @include %!/INC`NEED`GM; think setqm(end_title,u(%!/FUN`ENC`NAME,%q<enc_n>),end_room,get({{encounters}}/ENC`%q<enc_n>`ROOM)); @dolist/inline u(%!/FUN`ENC`MEMBERS,%q<enc_n>)={@include/args %!/INC`DO`ENCDROP=who,##,n,%q<enc_n>}; @dolist/inline COPY ROOM GM STARTED={&ENC`%q<enc_n>`## {{encounters}}}; &ENC`%q<enc_n> {{encounters}}; @remit %q<end_room>=notice(ENCOUNTER,tone(strong,name(%#)) ends %q<end_title>. Its copies are gone.); @if comp(objid(loc(%#)),%q<end_room>)={@pemit %#=notice(ENCOUNTER,%q<end_title> is ended.,ok)}
+        flags: [cmdsyntax]
+      # Which encounter a command means: enc_n. %<typed> a number, or nothing for the one in %<from>; several there,
+      # and the player is asked which, as +encounter/%<verb> <n>.
+      INC`NEED`ENCOUNTER:
+        value: |-
+          think setq(enc_n,if(strlen(%<typed>),%<typed>,if(eq(words(%<from>),1),%<from>))); @assert cor(strlen(%<typed>),words(%<from>))=@pemit %#=notice(ENCOUNTER,There is no encounter here[if(strlen(%<verb>),%b for that)]. +encounter lists them.,warn); @assert strlen(%q<enc_n>)=@pemit %#=notice(ENCOUNTER,Say which: [itemize(iter(%<from>,+encounter/[edit(%<verb> %i0,=%b,=)] for [get({{encounters}}/ENC`%i0)],%b,|),|,or)].,warn); @assert cand(isint(%q<enc_n>),hasattr({{encounters}},ENC`%q<enc_n>))=@pemit %#=notice(ENCOUNTER,There is no encounter %q<enc_n>.,warn)
+        flags: [cmdsyntax]
+      INC`NEED`GM:
+        value: |-
+          @assert u(%!/FUN`ENC`GM,%#,%q<enc_n>)=@pemit %#=notice(ENCOUNTER,Only [name(get({{encounters}}/ENC`%q<enc_n>`GM))]%, who runs [u(%!/FUN`ENC`NAME,%q<enc_n>)]%, and sheet keepers do that.,error)
+        flags: [cmdsyntax]
+      INC`NEED`MEMBER:
+        value: |-
+          @assert u(%!/FUN`ENC`MEMBER,%q<sheet_who>,%q<enc_n>)=@pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)] is not in [u(%!/FUN`ENC`NAME,%q<enc_n>)].,warn)
+        flags: [cmdsyntax]
+
+      # ---- writes -----------------------------------------------------------------
+      # %<who> an objid. The D20 root is wizard-flagged and no_command, and its leaves take that from it.
+      INC`DO`ROOT:
+        value: |-
+          @if not(hasattr(%<who>,D20))={&D20 %<who>=This character's d20 sheet. +sheet shows it.; @set %<who>/D20=wizard; @set %<who>/D20=no_command}
+        flags: [cmdsyntax]
+      # A ledger entry: %<who>, %<kind>, %<key>, %<value>, %<phase> (chargen, play or staff). A chargen entry
+      # rewrites the chargen entry in force of the same kind and key; every other entry is numbered after the
+      # last. entry_n is its number. Each has the wizard attribute flag, and an entry without it is never read.
+      INC`DO`ENTRY:
+        value: |-
+          @include/args %!/INC`DO`ROOT=who,%<who>; think setq(entry_n,if(strmatch(%<phase>,chargen),u(%!/FUN`LEDGER`CHARGENOF,%<who>,%<kind>,%<key>))); think setq(entry_n,firstof(%q<entry_n>,inc(lmax(0 [iter(lattr(%<who>/D20`LEDGER`*),last(%i0,`))])))); &D20`LEDGER`%q<entry_n> %<who>=[json(object,n,%q<entry_n>,kind,json(string,%<kind>),key,json(string,%<key>),value,json(string,%<value>),phase,json(string,%<phase>),by,json(string,objid(%#)),at,secs())]; @set %<who>/D20`LEDGER`%q<entry_n>=wizard
+        flags: [cmdsyntax]
+      # A revoke entry taking back entry %<n> on %<who>.
+      INC`DO`REVOKE:
+        value: |-
+          @include/args %!/INC`DO`ENTRY=who,%<who>,kind,revoke,key,,value,%<n>,phase,staff
+        flags: [cmdsyntax]
+      # Damage, coin or gear (%<field>) for %<who>: the copy in use when they are in an encounter here, else
+      # their sheet.
+      INC`DO`PLAY:
+        value: |-
+          think setq(play_n,u(%!/FUN`ENC`ACTIVE,%<who>)); @include/args %!/INC`DO`PLAY`[if(strlen(%q<play_n>),COPY,SHEET)]=who,%<who>,field,%<field>,value,%<value>,n,%q<play_n>
+        flags: [cmdsyntax]
+      INC`DO`PLAY`SHEET:
+        value: |-
+          @include/args %!/INC`DO`ROOT=who,%<who>; @if strlen(%<value>)={&D20`%<field> %<who>=%<value>},{&D20`%<field> %<who>}
+        flags: [cmdsyntax]
+      INC`DO`PLAY`COPY:
+        value: |-
+          think setq(play_attr,ENC`%<n>`COPY`[after(num(%<who>),#)]); &%q<play_attr> {{encounters}}=[json_mod(get({{encounters}}/%q<play_attr>),patch,json(object,lcstr(%<field>),if(strmatch(%<field>,GEAR),json(string,%<value>),firstof(%<value>,0))))]
+        flags: [cmdsyntax]
+      # %<count> of item %<key>, called %<label>, for %<who>: on the copy in use, else the sheet. 0 takes it off.
+      INC`DO`GEAR:
+        value: |-
+          think setq(play_n,u(%!/FUN`ENC`ACTIVE,%<who>)); @include/args %!/INC`DO`GEAR`[if(strlen(%q<play_n>),COPY,SHEET)]=who,%<who>,key,%<key>,count,%<count>,label,%<label>,n,%q<play_n>,reason,%<reason>,had,%<had>
+        flags: [cmdsyntax]
+      INC`DO`GEAR`COPY:
+        value: |-
+          @include/args %!/INC`DO`PLAY`COPY=who,%<who>,field,GEAR,value,u(%!/FUN`GEAR`SET,u(%!/FUN`V,u(%!/FUN`ENC`COPY,%<who>),gear),%<key>,%<count>,%<label>),n,%<n>
+        flags: [cmdsyntax]
+      INC`DO`GEAR`SHEET:
+        value: |-
+          @include/args %!/INC`DO`ROOT=who,%<who>; @if %<count>={&D20`GEAR`%<key> %<who>=%<count>|%<label>},{&D20`GEAR`%<key> %<who>}; think u(%!/FUN`LOG`ADD,%<who>,gear,sub(%<count>,%<had>),%<count>,%<reason>,%<label>)
+        flags: [cmdsyntax]
+      # %<who> joins encounter %<n> with a copy of their sheet; it goes last in their D20`ENCOUNTERS.
+      INC`DO`ENCJOIN:
+        value: |-
+          &ENC`%<n>`COPY`[after(num(%<who>),#)] {{encounters}}=[json_mod(u(%!/FUN`VIEW`LIVE,%<who>),patch,json(object,encounter,json(string,%<n>)))]; @include/args %!/INC`DO`PLAY`SHEET=who,%<who>,field,ENCOUNTERS,value,squish([setdiff(get(%<who>/D20`ENCOUNTERS),%<n>)] %<n>)
+        flags: [cmdsyntax]
+      # %<who> leaves encounter %<n>; the copy goes.
+      INC`DO`ENCDROP:
+        value: |-
+          &ENC`%<n>`COPY`[after(num(%<who>),#)] {{encounters}}; @include/args %!/INC`DO`PLAY`SHEET=who,%<who>,field,ENCOUNTERS,value,squish(iter(get(%<who>/D20`ENCOUNTERS),if(comp(%i0,%<n>),%i0))); @if not(comp(get(%<who>/D20`USING),%<n>))={&D20`USING %<who>}
+        flags: [cmdsyntax]
+
+      # ---- the ledger -------------------------------------------------------------------
+      # A character's build is the entries under D20`LEDGER`<n>, each a JSON object: n, kind, key, value, phase
+      # (chargen, play or staff), by (an objid) and at (secs). Kinds: score {key an ability, value its base,
+      # empty for unassigned}, boost {key an ability, value added to the base}, train {key a skill, value 0, 1 or
+      # 2}, level {value}, revoke {value: the entry it takes back}, clear (every entry before it). Rows are
+      # n~kind~key~value~phase~by.
+      FUN`LEDGER`NUMS:
+        value: |-
+          sort(iter(lattr(%0/D20`LEDGER`*),if(hasflag(%0/%i0,wizard),last(%i0,`))),n)
+        flags: [funsyntax]
+      FUN`LEDGER`ROWS:
+        value: |-
+          iter(u(%!/FUN`LEDGER`NUMS,%0),u(%!/FUN`LEDGER`ROW,get(%0/D20`LEDGER`%i0),%i0))
+        flags: [funsyntax]
+      FUN`LEDGER`ROW:
+        value: |-
+          %1~[json_query(%0,extract,$.kind)]~[json_query(%0,extract,$.key)]~[json_query(%0,extract,$.value)]~[json_query(%0,extract,$.phase)]~[json_query(%0,extract,$.by)]
+        flags: [funsyntax]
+      # %0 rows: the ones in force, after the last clear and not revoked; clears and revokes left out.
+      FUN`LEDGER`LIVE:
+        value: |-
+          setqm(live_clear,last(0 [iter(graball(%0,*~clear~*),first(%i0,~))]),live_revoked,iter(graball(%0,*~revoke~*),elements(%i0,4,~)))[squish(iter(%0,if(cor(lte(first(%i0,~),%q<live_clear>),member(%q<live_revoked>,first(%i0,~)),match(clear revoke,elements(%i0,2,~))),,%i0)))]
+        flags: [funsyntax]
+      # %0 a character, %1 a kind, %2 a key: the number of the chargen entry in force that matches.
+      FUN`LEDGER`CHARGENOF:
+        value: |-
+          first(iter(revwords(graball(u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%0)),*~%1~%2~*~chargen~*)),first(%i0,~)))
+        flags: [funsyntax]
+      # %0 rows in force: an ability's base (empty when unassigned), its score with boosts, a skill's training,
+      # the level.
+      FUN`BUILD`BASE:
+        value: |-
+          elements(last(graball(%0,*~score~%1~*)),4,~)
+        flags: [funsyntax]
+      FUN`BUILD`SCORE:
+        value: |-
+          add(firstof(u(%!/FUN`BUILD`BASE,%0,%1),get(%!/DATA`CONFIG`SCORE-DEFAULT)),ladd(0 [iter(graball(%0,*~boost~%1~*),elements(%i0,4,~))]))
+        flags: [funsyntax]
+      FUN`BUILD`TRAIN:
+        value: |-
+          firstof(elements(last(graball(%0,*~train~%1~*)),4,~),0)
+        flags: [funsyntax]
+      FUN`BUILD`LEVEL:
+        value: |-
+          firstof(elements(last(graball(%0,*~level~*)),4,~),1)
+        flags: [funsyntax]
+      # %0 rows, %1 an ability to leave out: the starting scores not yet given to another ability.
+      FUN`ARRAY`LEFT:
+        value: |-
+          fold(%!/FUN`ARRAY`TAKE,squish(iter(setdiff(u(%!/FUN`TRAIT`OFKIND,ability),%1),u(%!/FUN`BUILD`BASE,%0,%i0))),get(%!/DATA`CONFIG`ARRAY))
+        flags: [funsyntax]
+      FUN`ARRAY`TAKE:
+        value: |-
+          if(match(%0,%1),ldelete(%0,match(%0,%1)),%0)
+        flags: [funsyntax]
+
+      # ---- views --------------------------------------------------------------------
+      # A view is what a roll or a screen reads: a JSON object with level, scores (STR=15 DEX=14 ...), training
+      # (the trained skills, ATHLETICS=1 ...), hp (the most), damage, coin, gear (n~KEY~Label items between |) and
+      # encounter (its number, or empty for the sheet itself). FUN`VIEW`LIVE builds it from the ledger and the
+      # sheet; an encounter's copy is one.
+      FUN`VIEW`LIVE:
+        value: |-
+          setq(view_rows,u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%0)))[setq(view_level,u(%!/FUN`BUILD`LEVEL,%q<view_rows>))][json(object,level,%q<view_level>,scores,json(string,iter(u(%!/FUN`TRAIT`OFKIND,ability),%i0=[u(%!/FUN`BUILD`SCORE,%q<view_rows>,%i0)])),training,json(string,squish(iter(u(%!/FUN`TRAIT`OFKIND,skill),if(u(%!/FUN`BUILD`TRAIN,%q<view_rows>,%i0),%i0=[u(%!/FUN`BUILD`TRAIN,%q<view_rows>,%i0)])))),hp,u(%!/FUN`HP`MAX,%q<view_rows>,%q<view_level>),damage,default(%0/D20`DAMAGE,0),coin,default(%0/D20`COIN,0),gear,json(string,u(%!/FUN`GEAR`LIVE,%0)),encounter,json(string,))]
+        flags: [funsyntax]
+      # %0 rows, %1 the level: the most hit points, HP-LEVEL plus the hit point ability's modifier for each level,
+      # at least 1 a level.
+      FUN`HP`MAX:
+        value: |-
+          setq(hp_ability,ucstr(get(%!/DATA`CONFIG`HP-ABILITY)))[mul(%1,max(1,add(get(%!/DATA`CONFIG`HP-LEVEL),if(strmatch(u(%!/FUN`TRAIT`KIND,%q<hp_ability>),ability),u(%!/FUN`RATING`MODIFIER,u(%!/FUN`BUILD`SCORE,%0,%q<hp_ability>)),0))))]
+        flags: [funsyntax]
+      # %0 a character: their encounter's copy when they are in one, else their sheet.
+      FUN`VIEW`OF:
+        value: |-
+          setq(view_copy,u(%!/FUN`ENC`COPY,%0))[if(strlen(%q<view_copy>),%q<view_copy>,u(%!/FUN`VIEW`LIVE,%0))]
+        flags: [funsyntax]
+      FUN`V:
+        value: |-
+          json_query(%0,extract,$.%1)
+        flags: [funsyntax]
+      FUN`V`SCORE:
+        value: |-
+          firstof(after(grab(u(%!/FUN`V,%0,scores),%1=*),=),get(%!/DATA`CONFIG`SCORE-DEFAULT))
+        flags: [funsyntax]
+      FUN`V`TRAIN:
+        value: |-
+          firstof(after(grab(u(%!/FUN`V,%0,training),%1=*),=),0)
+        flags: [funsyntax]
+      # %0 a view, %1 a trait key: what it adds to a roll. An ability adds its modifier; a skill its ability's
+      # modifier plus training times the training bonus.
+      FUN`V`RATING:
+        value: |-
+          if(strmatch(u(%!/FUN`TRAIT`KIND,%1),ability),u(%!/FUN`RATING`MODIFIER,u(%!/FUN`V`SCORE,%0,%1)),[setq(rating_ability,ucstr(get({{store}}/TRAIT`%1`ABILITY)))][add(if(strlen(%q<rating_ability>),u(%!/FUN`RATING`MODIFIER,u(%!/FUN`V`SCORE,%0,%q<rating_ability>)),0),mul(u(%!/FUN`V`TRAIN,%0,%1),u(%!/FUN`RATING`BONUS,u(%!/FUN`V,%0,level))))])
+        flags: [funsyntax]
+
+      # ---- gear -----------------------------------------------------------------------
+      # On the sheet an item is D20`GEAR`<KEY>, holding <count>|<name>; in a view, n~KEY~Name items between |.
+      # %0 a character: their gear as a view holds it.
+      FUN`GEAR`LIVE:
+        value: |-
+          iter(lattr(%0/D20`GEAR`*),[before(get(%0/%i0),|)]~[last(%i0,`)]~[after(get(%0/%i0),|)],%b,|)
+        flags: [funsyntax]
+      # %0 gear as a view holds it, %1 a key, %2 a count, %3 the name: the gear with that item at that count, or
+      # off at 0.
+      FUN`GEAR`SET:
+        value: |-
+          trim(squish([iter(%0,if(strmatch(elements(%i0,2,~),%1),,%i0),|,|)][if(%2,|%2~%1~%3)],|),|)
+        flags: [funsyntax]
+      # %0 gear as a view holds it, %1 a key: that item's n~KEY~Name, or the one item whose key starts with it.
+      FUN`GEAR`ROW:
+        value: |-
+          setq(row_all,graball(%0,*~%1*~*,|,|))[firstof(grab(%0,*~%1~*,|),if(eq(words(%q<row_all>,|),1),%q<row_all>))]
+        flags: [funsyntax]
+      # %0 an item's name: the key it is kept under, its letters and digits in upper case with - between.
+      FUN`GEAR`KEY:
+        value: |-
+          left(trim(regeditall(ucstr(trim(%0)),\[^A-Z0-9\]+,-),-,b),40)
+        flags: [funsyntax]
+      # %0 an item's name as typed: the name the sheet shows, without | or ~.
+      FUN`GEAR`LABEL:
+        value: |-
+          left(trim(edit(%0,|,,~,)),40)
+        flags: [funsyntax]
 
       # ---- values -----------------------------------------------------------------
-      # Each kind's check of a typed value, %1 1 for a sheet keeper: what to store, or #-1 and why.
-      FUN`VALUE`ABILITY:
-        value: |-
-          setq(value_max,if(%1,30,get(%!/DATA`CONFIG`SCORE-MAX)))[if(cand(isint(%0),gte(%0,get(%!/DATA`CONFIG`SCORE-MIN)),lte(%0,%q<value_max>)),%0,#-1 A score is a whole number from [get(%!/DATA`CONFIG`SCORE-MIN)] to %q<value_max>.)]
-        flags: [funsyntax]
+      # Each kind's check of a typed value: what to store, or #-1 and why.
       FUN`VALUE`SKILL:
         value: |-
           switch(lcstr(%0),untrained,0,0,0,trained,1,1,1,expert,2,2,2,#-1 Training is untrained%, trained or expert.)
-        flags: [funsyntax]
-      FUN`VALUE`COIN:
-        value: |-
-          if(cand(isint(%0),gte(%0,0)),%0,#-1 Coin is a whole number%, 0 or more.)
         flags: [funsyntax]
       FUN`VALUE`LEVEL:
         value: |-
@@ -470,7 +962,7 @@ objects:
         flags: [funsyntax]
       FUN`TRAIT`LABEL:
         value: |-
-          switch(%0,LEVEL,Level,COIN,Coin,firstof(get({{store}}/TRAIT`%0),lcstr(%0)))
+          firstof(get({{store}}/TRAIT`%0),lcstr(%0))
         flags: [funsyntax]
       # %0 typed text: the key it names, by key, by label, or by the start of one, or nothing.
       FUN`TRAIT`FIND:
@@ -482,11 +974,6 @@ objects:
         flags: [funsyntax]
 
       # ---- the numbers --------------------------------------------------------------
-      # %0 a character, %1 a key: what is stored, or the default.
-      FUN`RATING`STORED:
-        value: |-
-          default(%0/D20`%1,switch(%1,LEVEL,1,COIN,0,if(strmatch(u(%!/FUN`TRAIT`KIND,%1),ability),get(%!/DATA`CONFIG`SCORE-DEFAULT),0)))
-        flags: [funsyntax]
       # %0 a score: what it adds, (score - 10) / 2 rounded down.
       FUN`RATING`MODIFIER:
         value: |-
@@ -497,10 +984,68 @@ objects:
         value: |-
           add(get(%!/DATA`CONFIG`BONUS-BASE),if(get(%!/DATA`CONFIG`BONUS-EVERY),div(sub(max(%0,1),1),get(%!/DATA`CONFIG`BONUS-EVERY)),0))
         flags: [funsyntax]
-      # %0 a character, %1 a skill key: its ability's modifier plus training times the bonus.
-      FUN`RATING`SKILL:
+
+      # ---- encounters ---------------------------------------------------------------
+      # On the encounter store: ENC`<n> the title, with ROOM, GM (objids), STARTED (secs) and COPY`<dbref number>
+      # one copy a member. A member's D20`ENCOUNTERS lists theirs in the order they joined; D20`USING is the one
+      # /use picked.
+      FUN`ENC`NAME:
         value: |-
-          setq(rating_ability,ucstr(get({{store}}/TRAIT`%1`ABILITY)))[add(if(strlen(%q<rating_ability>),u(%!/FUN`RATING`MODIFIER,u(%!/FUN`RATING`STORED,%0,%q<rating_ability>)),0),mul(u(%!/FUN`RATING`STORED,%0,%1),u(%!/FUN`RATING`BONUS,u(%!/FUN`RATING`STORED,%0,LEVEL))))]
+          %0 %([get({{encounters}}/ENC`%0)]%)
+        flags: [funsyntax]
+      # %0 someone: the encounters in their room, oldest first.
+      FUN`ENC`HERE:
+        value: |-
+          setq(here_room,objid(loc(%0)))[squish(iter(sort(iter(lattr({{encounters}}/ENC`*),last(%i0,`)),n),if(not(comp(get({{encounters}}/ENC`%i0`ROOM),%q<here_room>)),%i0)))]
+        flags: [funsyntax]
+      FUN`ENC`MEMBER:
+        value: |-
+          hasattr({{encounters}},ENC`%1`COPY`[after(num(%0),#)])
+        flags: [funsyntax]
+      # %0 a character: the encounters they are in, in the order they joined.
+      FUN`ENC`JOINED:
+        value: |-
+          squish(iter(get(%0/D20`ENCOUNTERS),if(u(%!/FUN`ENC`MEMBER,%0,%i0),%i0)))
+        flags: [funsyntax]
+      # %0 a character: the encounter whose copy they play from now: one they joined in the room they are in,
+      # the one /use picked when it is one of those, else the last joined. Nothing when none.
+      FUN`ENC`ACTIVE:
+        value: |-
+          setq(active_here,u(%!/FUN`ENC`HERE,%0))[setq(active_set,squish(iter(u(%!/FUN`ENC`JOINED,%0),if(member(%q<active_here>,%i0),%i0))))][if(member(%q<active_set>,get(%0/D20`USING)),get(%0/D20`USING),last(%q<active_set>))]
+        flags: [funsyntax]
+      FUN`ENC`COPY:
+        value: |-
+          setq(copy_n,u(%!/FUN`ENC`ACTIVE,%0))[if(strlen(%q<copy_n>),get({{encounters}}/ENC`%q<copy_n>`COPY`[after(num(%0),#)]))]
+        flags: [funsyntax]
+      # %0 an encounter: its members' objids.
+      FUN`ENC`MEMBERS:
+        value: |-
+          iter(lattr({{encounters}}/ENC`%0`COPY`*),objid(#[last(%i0,`)]))
+        flags: [funsyntax]
+      FUN`ENC`GM:
+        value: |-
+          cor(u(%!/FUN`PERM`KEEPER,%0),not(comp(objid(%0),get({{encounters}}/ENC`%1`GM))))
+        flags: [funsyntax]
+
+      # ---- character creation ---------------------------------------------------------
+      # %0 a character: the step they are on (abilities, skills), or nothing when done. chargen_rows and
+      # chargen_view are left set.
+      FUN`CHARGEN`STEP:
+        value: |-
+          setqm(chargen_rows,u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ROWS,%0)),chargen_view,u(%!/FUN`VIEW`LIVE,%0))[cond(cand(words(u(%!/FUN`ARRAY`LEFT,%q<chargen_rows>,)),words(u(%!/FUN`CHARGEN`UNSET,%q<chargen_rows>))),abilities,cand(lt(words(u(%!/FUN`V,%q<chargen_view>,training)),get(%!/DATA`CONFIG`TRAINED)),gt(words(u(%!/FUN`TRAIT`OFKIND,skill)),words(u(%!/FUN`V,%q<chargen_view>,training)))),skills)]
+        flags: [funsyntax]
+      FUN`CHARGEN`UNSET:
+        value: |-
+          iter(u(%!/FUN`TRAIT`OFKIND,ability),if(strlen(u(%!/FUN`BUILD`BASE,%0,%i0)),,%i0))
+        flags: [funsyntax]
+      # %0 a character: what to do next, after a step, for a player making their own character. Nothing otherwise.
+      FUN`CHARGEN`AFTER:
+        value: |-
+          if(cand(not(comp(%0,%q<viewer_objid>)),not(isapproved(%#))),%b[u(%!/FUN`CHARGEN`NEXT,%0)])
+        flags: [funsyntax]
+      FUN`CHARGEN`NEXT:
+        value: |-
+          switch(u(%!/FUN`CHARGEN`STEP,%0),abilities,Next: +sheet/set <ability>=<score>. [u(%!/FUN`DISPLAY`LEFT,u(%!/FUN`ARRAY`LEFT,%q<chargen_rows>,))],skills,Next: +sheet/set <skill>=trained. [u(%!/FUN`DISPLAY`TRAINED,%q<chargen_view>)],Your sheet is complete.[u(%!/FUN`HINT,CHARGEN)])
         flags: [funsyntax]
 
       # ---- who may do what ----------------------------------------------------------
@@ -518,10 +1063,25 @@ objects:
         value: |-
           u(%!/%0,%1,%2)
         flags: [funsyntax]
+      # %0 who asks, %1 a character: 1 when %0 runs the encounter whose copy %1 plays from, and is not %1.
+      FUN`PERM`RUNS:
+        value: |-
+          setq(runs_n,u(%!/FUN`ENC`ACTIVE,%1))[cand(comp(objid(%0),%1),strlen(%q<runs_n>),u(%!/FUN`ENC`GM,%0,%q<runs_n>))]
+        flags: [funsyntax]
+      # %0 who asks, %1 a character: why %0 may not set %1's coin or gear outright now, or nothing. Keepers and the
+      # encounter's GM may; a player may on their own sheet until approved.
+      FUN`PERM`SETUP:
+        value: |-
+          cond(cor(u(%!/FUN`PERM`KEEPER,%0),u(%!/FUN`PERM`RUNS,%0,%1)),,isapproved(%0),Your character is approved%, so staff change that now.,u(%!/FUN`GATE`EDIT,%0))
+        flags: [funsyntax]
       # %0 a player: why they may not change their own sheet now, from GATE`EDIT when a bridge adds one.
       FUN`GATE`EDIT:
         value: |-
           if(hasattr(%!,GATE`EDIT),u(%!/GATE`EDIT,%0))
+        flags: [funsyntax]
+      FUN`PLAYER`MATCH:
+        value: |-
+          if(isdbref(setr(found_player,pmatch(%0))),objid(%q<found_player>))
         flags: [funsyntax]
 
       # ---- screens ------------------------------------------------------------------
@@ -529,10 +1089,30 @@ objects:
         value: |-
           if(gte(%0,0),+%0,%0)
         flags: [funsyntax]
-      # %0 a character, %1 a key: the value as the sheet writes it.
-      FUN`DISPLAY`VALUE:
+      # %0 the most hit points, %1 the damage: "17/24".
+      FUN`DISPLAY`HP:
         value: |-
-          setq(display_stored,u(%!/FUN`RATING`STORED,%0,%1))[cond(member(LEVEL COIN,%1),%q<display_stored>,strmatch(u(%!/FUN`TRAIT`KIND,%1),ability),%q<display_stored>,v(DATA`TRAINING`%q<display_stored>))]
+          [sub(%0,%1)]/%0
+        flags: [funsyntax]
+      # %0 the starting scores left: "Left to give: 15, 14 and 8." or that none are.
+      FUN`DISPLAY`LEFT:
+        value: |-
+          if(words(%0),Left to give: [itemize(%0)].,Every starting score is given. Set an ability empty to give its score back.)
+        flags: [funsyntax]
+      # %0 a view: "2 of 4 skills trained: Athletics and Stealth."
+      FUN`DISPLAY`TRAINED:
+        value: |-
+          setq(trained_pairs,u(%!/FUN`V,%0,training))[words(%q<trained_pairs>)] of [get(%!/DATA`CONFIG`TRAINED)] skills trained[if(words(%q<trained_pairs>),: [itemize(iter(%q<trained_pairs>,u(%!/FUN`TRAIT`LABEL,before(%i0,=)),%b,|),|)])].
+        flags: [funsyntax]
+      # %0 a character: " in encounter <n> (<title>)" when a change went to an encounter's copy.
+      FUN`DISPLAY`WHERE:
+        value: |-
+          setq(where_n,u(%!/FUN`ENC`ACTIVE,%0))[if(strlen(%q<where_n>),%bin encounter [u(%!/FUN`ENC`NAME,%q<where_n>)])]
+        flags: [funsyntax]
+      # %0 gear as a view holds it: "2 Rope, 1 Healing potion and 3 Torches".
+      FUN`DISPLAY`GEAR:
+        value: |-
+          itemize(iter(%0,[elements(%i0,1,~)] [elements(%i0,3,~)],|,|),|)
         flags: [funsyntax]
       # %0 a check's JSON: "Athletics: 1d20[14] + 5 = 19 vs DC 15: success (roll 42)".
       FUN`DISPLAY`CHECK:
@@ -548,40 +1128,64 @@ objects:
         value: |-
           switch(%0,crit-success,success,success,success,crit-fail,error,warning)
         flags: [funsyntax]
-      # %0 the character, %1 who reads it.
+      # %0 the character, %1 who reads it. The sheet itself; +encounter shows the copies.
       FUN`SCREEN`SHEET:
         value: |-
-          setqm(screen_level,u(%!/FUN`RATING`STORED,%0,LEVEL),
-          screen_abilities,u(%!/FUN`TRAIT`OFKIND,ability),
-          screen_skills,u(%!/FUN`TRAIT`OFKIND,skill))[box(lfields(lit({"cols":2}),Level%*<|>Training bonus%*<|>Coin,%q<screen_level>%*<|>[u(%!/FUN`DISPLAY`SIGNED,u(%!/FUN`RATING`BONUS,%q<screen_level>))]%*<|>[u(%!/FUN`RATING`STORED,%0,COIN)],%*<|>)%r[rule(Abilities)]%r[ldatatable(lit({"nowrap":"1|2|3","rule":""}),Ability|>Score|>Adds,iter(%q<screen_abilities>,u(%!/FUN`TRAIT`LABEL,%i0)|[u(%!/FUN`RATING`STORED,%0,%i0)]|[u(%!/FUN`DISPLAY`SIGNED,u(%!/API`RATING,%0,%i0))],,%*<^>),%*<^>)]%r[rule(Skills)]%r[ldatatable(lit({"nowrap":"2|3|4","rule":""}),Skill|Ability|Training|>Adds,iter(%q<screen_skills>,u(%!/FUN`TRAIT`LABEL,%i0)|[lcstr(get({{store}}/TRAIT`%i0`ABILITY))]|[v(DATA`TRAINING`[u(%!/FUN`RATING`STORED,%0,%i0)])]|[u(%!/FUN`DISPLAY`SIGNED,u(%!/API`RATING,%0,%i0))],,%*<^>),%*<^>)][if(words(lattr(%0/D20`GEAR`*)),%r[rule(Gear)]%r[u(%!/FUN`GEAR`LIST,%0)])]%r[rule()]%r[tone(muted,u(%!/FUN`DISPLAY`FOOTER,%0,%1))],name(%0))]
+          setqm(screen_view,u(%!/FUN`VIEW`LIVE,%0),screen_abilities,u(%!/FUN`TRAIT`OFKIND,ability),screen_skills,u(%!/FUN`TRAIT`OFKIND,skill))[setqm(screen_level,u(%!/FUN`V,%q<screen_view>,level),screen_gear,u(%!/FUN`V,%q<screen_view>,gear))][box(lfields(lit({"cols":2}),Level%*<|>Training bonus%*<|>Hit points%*<|>Coin%*<|>XP,%q<screen_level>%*<|>[u(%!/FUN`DISPLAY`SIGNED,u(%!/FUN`RATING`BONUS,%q<screen_level>))]%*<|>[u(%!/FUN`DISPLAY`HP,u(%!/FUN`V,%q<screen_view>,hp),u(%!/FUN`V,%q<screen_view>,damage))]%*<|>[u(%!/FUN`V,%q<screen_view>,coin)]%*<|>[default(%0/D20`XP,0)],%*<|>)%r[rule(Abilities)]%r[ldatatable(lit({"nowrap":"1|2|3","rule":""}),Ability|>Score|>Adds,iter(%q<screen_abilities>,u(%!/FUN`TRAIT`LABEL,%i0)|[u(%!/FUN`V`SCORE,%q<screen_view>,%i0)]|[u(%!/FUN`DISPLAY`SIGNED,u(%!/FUN`V`RATING,%q<screen_view>,%i0))],,%*<^>),%*<^>)]%r[rule(Skills)]%r[ldatatable(lit({"nowrap":"2|3|4","rule":""}),Skill|Ability|Training|>Adds,iter(%q<screen_skills>,u(%!/FUN`TRAIT`LABEL,%i0)|[lcstr(get({{store}}/TRAIT`%i0`ABILITY))]|[v(DATA`TRAINING`[u(%!/FUN`V`TRAIN,%q<screen_view>,%i0)])]|[u(%!/FUN`DISPLAY`SIGNED,u(%!/FUN`V`RATING,%q<screen_view>,%i0))],,%*<^>),%*<^>)][if(strlen(%q<screen_gear>),%r[rule(Gear)]%r[u(%!/FUN`DISPLAY`GEAR,%q<screen_gear>)])]%r[rule()]%r[tone(muted,u(%!/FUN`DISPLAY`FOOTER,%0,%1))],name(%0))]
         flags: [funsyntax]
       # %0 the character, %1 who reads it: what they can do next.
       FUN`DISPLAY`FOOTER:
         value: |-
-          cond(cand(not(comp(objid(%1),%0)),not(isapproved(%1)),not(u(%!/FUN`PERM`KEEPER,%1))),+sheet/set <trait>=<value> fills it in. +check <trait> rolls.[u(%!/FUN`HINT,FOOTER)],u(%!/FUN`PERM`KEEPER,%1),+sheet/set [if(comp(objid(%1),%0),[name(%0)]/)]<trait>=<value> changes it. +check <trait> rolls.,+check <trait> rolls 1d20 plus what a trait adds.)
+          setq(footer_n,u(%!/FUN`ENC`JOINED,%0))[cond(cand(not(comp(objid(%1),%0)),not(isapproved(%1)),not(u(%!/FUN`PERM`KEEPER,%1))),u(%!/FUN`CHARGEN`NEXT,%0) +sheet/chargen shows every step.[u(%!/FUN`HINT,FOOTER)],not(comp(objid(%1),%0)),+check <trait> rolls. +sheet/advance spends XP.,+check <trait> rolls 1d20 plus what a trait adds.)][if(words(%q<footer_n>),%b[name(%0)] plays from a copy in encounter[if(gt(words(%q<footer_n>),1),s)] [itemize(%q<footer_n>)]: +encounter shows [if(gt(words(%q<footer_n>),1),them,it)].)]
+        flags: [funsyntax]
+      # %0 the character, %1 who reads it: the steps of making a character.
+      FUN`SCREEN`CHARGEN:
+        value: |-
+          setq(chargen_now,u(%!/FUN`CHARGEN`STEP,%0))[setq(chargen_left,u(%!/FUN`ARRAY`LEFT,%q<chargen_rows>,))][box([u(%!/FUN`DISPLAY`STEP,1,Abilities,not(cand(words(%q<chargen_left>),words(u(%!/FUN`CHARGEN`UNSET,%q<chargen_rows>)))),[itemize(iter(u(%!/FUN`TRAIT`OFKIND,ability),[u(%!/FUN`TRAIT`LABEL,%i0)] [firstof(u(%!/FUN`BUILD`BASE,%q<chargen_rows>,%i0),-)],%b,|),|)]. [u(%!/FUN`DISPLAY`LEFT,%q<chargen_left>)])]%r[u(%!/FUN`DISPLAY`STEP,2,Skills,not(cand(lt(words(u(%!/FUN`V,%q<chargen_view>,training)),get(%!/DATA`CONFIG`TRAINED)),gt(words(u(%!/FUN`TRAIT`OFKIND,skill)),words(u(%!/FUN`V,%q<chargen_view>,training))))),u(%!/FUN`DISPLAY`TRAINED,%q<chargen_view>))]%r[rule()]%r[tone(muted,if(strlen(%q<chargen_now>),u(%!/FUN`CHARGEN`NEXT,%0),Complete. Gear and coin come with +sheet/gear and +sheet/coin.[if(not(isapproved(%0)),u(%!/FUN`HINT,CHARGEN))]))],Making [name(%0)])]
+        flags: [funsyntax]
+      # %0 the number, %1 the step, %2 1 when done, %3 what it says.
+      FUN`DISPLAY`STEP:
+        value: |-
+          %0. [tone(strong,%1)] [if(%2,tone(success,done),tone(warning,to do))]: %3
+        flags: [funsyntax]
+      # %0 the character: their ledger, oldest first. Entries no longer in force are muted.
+      FUN`SCREEN`LEDGER:
+        value: |-
+          setq(ledger_rows,u(%!/FUN`LEDGER`ROWS,%0))[setq(ledger_live,u(%!/FUN`LEDGER`LIVE,%q<ledger_rows>))][box(if(words(%q<ledger_rows>),ldatatable(lit({"nowrap":"1|3|4","grow":"|1"}),#|Entry|Phase|By,iter(%q<ledger_rows>,u(%!/FUN`DISPLAY`LEDGERROW,%i0),%b,%*<^>),%*<^>),There are no entries yet.)%r[rule()]%r[tone(muted,Muted entries are revoked or cleared. +sheet/chargen shows the steps.)],Ledger: [name(%0)])]
+        flags: [funsyntax]
+      FUN`DISPLAY`LEDGERROW:
+        value: |-
+          setq(ledgerrow_on,cor(member(%q<ledger_live>,%0),match(clear revoke,elements(%0,2,~))))[iter(first(%0,~)|[u(%!/FUN`DISPLAY`ENTRY,%0)]|[elements(%0,5,~)]|[name(elements(%0,6,~))],if(%q<ledgerrow_on>,%i0,tone(muted,%i0)),|,|)]
+        flags: [funsyntax]
+      # %0 a row: what the entry does.
+      FUN`DISPLAY`ENTRY:
+        value: |-
+          setqm(entry_kind,elements(%0,2,~),entry_key,elements(%0,3,~),entry_value,elements(%0,4,~))[switch(%q<entry_kind>,score,[u(%!/FUN`TRAIT`LABEL,%q<entry_key>)] [firstof(%q<entry_value>,unassigned)],boost,[u(%!/FUN`TRAIT`LABEL,%q<entry_key>)] [u(%!/FUN`DISPLAY`SIGNED,%q<entry_value>)] %(advance%),train,[u(%!/FUN`TRAIT`LABEL,%q<entry_key>)] [v(DATA`TRAINING`[firstof(%q<entry_value>,0)])],level,Level %q<entry_value>,revoke,Revokes entry %q<entry_value>,clear,Clears everything before it,%q<entry_kind>)]
+        flags: [funsyntax]
+      # %0 an encounter, %1 who reads it.
+      FUN`SCREEN`ENCOUNTER:
+        value: |-
+          setq(enc_members,u(%!/FUN`ENC`MEMBERS,%0))[box(Run by [name(get({{encounters}}/ENC`%0`GM))] in [name(get({{encounters}}/ENC`%0`ROOM))].%r[rule()]%r[if(words(%q<enc_members>),ldatatable(lit({"nowrap":"1|2|3|4","grow":"||||1"}),Name|>Level|>HP|>Coin|Gear,iter(%q<enc_members>,u(%!/FUN`DISPLAY`ENCROW,%i0,%0),%b,%*<^>),%*<^>),Nobody has joined yet.)]%r[rule()]%r[tone(muted,if(u(%!/FUN`ENC`GM,%1,%0),/add%, /remove and /keep <name>=%0%, and /end %0 run it. +sheet/damage <name>=<n> hurts a member here.,if(u(%!/FUN`ENC`MEMBER,%1,%0),You roll from your copy while you are in its room. /leave %0 comes out.,+encounter/join %0 takes part with a copy of your sheet.)))],Encounter [u(%!/FUN`ENC`NAME,%0)])]
+        flags: [funsyntax]
+      # %0 the encounters here, %1 the ones %2 is in.
+      FUN`SCREEN`ENCOUNTERS:
+        value: |-
+          setqm(encs_all,setunion(%0,%1,,n),encs_active,u(%!/FUN`ENC`ACTIVE,%2))[box(ldatatable(lit({"nowrap":"1|3|4|5","grow":"|1"}),#|Title|Where|Members|You,iter(%q<encs_all>,%i0|[get({{encounters}}/ENC`%i0)]|[if(member(%0,%i0),here,name(get({{encounters}}/ENC`%i0`ROOM)))]|[words(lattr({{encounters}}/ENC`%i0`COPY`*))]|[cond(member(%q<encs_active>,%i0),rolling here,member(%1,%i0),joined,-)],%b,%*<^>),%*<^>)%r[rule()]%r[tone(muted,+encounter <n> shows one. /join <n> takes part and /use <n> picks which copy you roll from here.)],Encounters)]
+        flags: [funsyntax]
+      # %0 a member, %1 the encounter: their copy in it, one table row.
+      FUN`DISPLAY`ENCROW:
+        value: |-
+          setq(encrow_copy,get({{encounters}}/ENC`%1`COPY`[after(num(%0),#)]))[name(%0)]|[u(%!/FUN`V,%q<encrow_copy>,level)]|[u(%!/FUN`DISPLAY`HP,u(%!/FUN`V,%q<encrow_copy>,hp),u(%!/FUN`V,%q<encrow_copy>,damage))]|[u(%!/FUN`V,%q<encrow_copy>,coin)]|[firstof(u(%!/FUN`DISPLAY`GEAR,u(%!/FUN`V,%q<encrow_copy>,gear)),-)]
         flags: [funsyntax]
       FUN`SCREEN`TRAITS:
         value: |-
-          setq(screen_all,u(%!/FUN`TRAIT`ALL))[box(ldatatable(lit({"nowrap":"1|3"}),Key|Trait|Kind|Adds,iter(%q<screen_all>,lcstr(%i0)|[u(%!/FUN`TRAIT`LABEL,%i0)]|[u(%!/FUN`TRAIT`KIND,%i0)]|[if(strmatch(u(%!/FUN`TRAIT`KIND,%i0),ability),its score's modifier,lcstr(get({{store}}/TRAIT`%i0`ABILITY)) and training)],,%*<^>),%*<^>)%r[rule()]%r[tone(muted,Training is [itemize([v(DATA`TRAINING`0)] [v(DATA`TRAINING`1)] [v(DATA`TRAINING`2)],,or)]: a trained skill adds the training bonus%, an expert twice that.)],D20 traits)]
-        flags: [funsyntax]
-      # %0 a character: their gear, "2 Rope, 1 Healing potion and 3 Torches".
-      FUN`GEAR`LIST:
-        value: |-
-          itemize(iter(lattr(%0/D20`GEAR`*),[before(get(%0/%i0),|)] [after(get(%0/%i0),|)],%b,|),|)
-        flags: [funsyntax]
-      # %0 an item's name: the key it is kept under, its letters and digits in upper case with - between.
-      FUN`GEAR`KEY:
-        value: |-
-          left(trim(regeditall(ucstr(trim(%0)),\[^A-Z0-9\]+,-),-,b),40)
-        flags: [funsyntax]
-      FUN`PLAYER`MATCH:
-        value: |-
-          if(isdbref(setr(found_player,pmatch(%0))),objid(%q<found_player>))
+          setq(screen_all,u(%!/FUN`TRAIT`ALL))[box(ldatatable(lit({"nowrap":"1|3"}),Key|Trait|Kind|Adds,iter(%q<screen_all>,lcstr(%i0)|[u(%!/FUN`TRAIT`LABEL,%i0)]|[u(%!/FUN`TRAIT`KIND,%i0)]|[if(strmatch(u(%!/FUN`TRAIT`KIND,%i0),ability),its score's modifier,lcstr(get({{store}}/TRAIT`%i0`ABILITY)) and training)],,%*<^>),%*<^>)%r[rule()]%r[tone(muted,Training is [itemize([v(DATA`TRAINING`0)] [v(DATA`TRAINING`1)] [v(DATA`TRAINING`2)],%b,or)]: a trained skill adds the training bonus%, an expert twice that.)],D20 traits)]
         flags: [funsyntax]
 
       # ---- the sheet API ------------------------------------------------------------
       # What other packages call: u({{sheet-d20/sheet}}/API`<NAME>,...). Every sheet package has these names.
-      # They read and roll, and change nothing on the sheet, except API`COIN and API`GEAR, which add rewards.
+      # They read the character's sheet itself, never an encounter's copy. They read and roll, and change
+      # nothing on the sheet, except API`COIN and API`GEAR, which add rewards.
       API:
         value: |-
           The d20 sheet's functions for other packages. See the package README.
@@ -610,12 +1214,12 @@ objects:
       # %0 a character, %1 a key: what the trait adds to a roll.
       API`RATING:
         value: |-
-          if(strmatch(u(%!/FUN`TRAIT`KIND,ucstr(%1)),ability),u(%!/FUN`RATING`MODIFIER,u(%!/FUN`RATING`STORED,%0,ucstr(%1))),u(%!/FUN`RATING`SKILL,%0,ucstr(%1)))
+          u(%!/FUN`V`RATING,u(%!/FUN`VIEW`LIVE,%0),ucstr(%1))
         flags: [VISUAL]
       # %0 a character, %1 a key: 1 when they are trained in it. Every ability counts as trained.
       API`TRAINED:
         value: |-
-          if(strmatch(u(%!/FUN`TRAIT`KIND,ucstr(%1)),ability),1,t(u(%!/FUN`RATING`STORED,%0,ucstr(%1))))
+          if(strmatch(u(%!/FUN`TRAIT`KIND,ucstr(%1)),ability),1,t(u(%!/FUN`V`TRAIN,u(%!/FUN`VIEW`LIVE,%0),ucstr(%1))))
         flags: [VISUAL]
       # %0 a character: 1 when anything is set on their sheet.
       API`HAS:
@@ -633,31 +1237,64 @@ objects:
         value: |-
           cond(cand(get(%!/DATA`CONFIG`CRITS),eq(%1,20)),crit-success,cand(get(%!/DATA`CONFIG`CRITS),eq(%1,1)),crit-fail,not(strlen(%2)),,gte(%0,%2),success,fail)
         flags: [VISUAL]
-      # %0 a character, %1 coin to add (less than 0 takes it away): their coin after, never below 0.
+      # %0 a character, %1 coin to add (less than 0 takes it away), %2 why (Reward when empty): their coin after,
+      # never below 0. The change goes in the character's log.
       API`COIN:
         value: |-
-          setq(coin_new,max(0,add(u(%!/FUN`RATING`STORED,%0,COIN),%1)))[u(%!/FUN`API`ROOT,%0)][attrib_set(%0/D20`COIN,%q<coin_new>)]%q<coin_new>
+          setqm(coin_old,default(%0/D20`COIN,0),coin_new,max(0,add(default(%0/D20`COIN,0),%1)))[u(%!/FUN`API`ROOT,%0)][attrib_set(%0/D20`COIN,%q<coin_new>)][u(%!/FUN`LOG`ADD,%0,coin,sub(%q<coin_new>,%q<coin_old>),%q<coin_new>,firstof(%2,Reward),)]%q<coin_new>
         flags: [VISUAL]
-      # %0 a character, %1 an item's name, %2 how many to add (less than 0 takes some away): how many they
-      # have after. The item is off the sheet at 0.
+      # %0 a character, %1 an item's name, %2 how many to add (less than 0 takes some away), %3 why (Reward when
+      # empty): how many they have after. The item is off the sheet at 0. The change goes in the log.
       API`GEAR:
         value: |-
           setqm(gear_key,u(%!/FUN`GEAR`KEY,%1),
           gear_had,get(%0/D20`GEAR`%q<gear_key>),
-          gear_new,max(0,add(first(before(%q<gear_had>,|)),%2)))[if(strlen(%q<gear_key>),[u(%!/FUN`API`ROOT,%0)][if(%q<gear_new>,attrib_set(%0/D20`GEAR`%q<gear_key>,%q<gear_new>|[firstof(after(%q<gear_had>,|),trim(%1))]),if(strlen(%q<gear_had>),attrib_set(%0/D20`GEAR`%q<gear_key>)))]%q<gear_new>,#-1 An item's name needs a letter or a digit.)]
+          gear_new,max(0,add(first(before(%q<gear_had>,|)),%2)))[if(strlen(%q<gear_key>),[u(%!/FUN`API`ROOT,%0)][if(%q<gear_new>,attrib_set(%0/D20`GEAR`%q<gear_key>,%q<gear_new>|[firstof(after(%q<gear_had>,|),u(%!/FUN`GEAR`LABEL,%1))]),if(strlen(%q<gear_had>),attrib_set(%0/D20`GEAR`%q<gear_key>)))][u(%!/FUN`LOG`ADD,%0,gear,sub(%q<gear_new>,firstof(before(%q<gear_had>,|),0)),%q<gear_new>,firstof(%3,Reward),firstof(after(%q<gear_had>,|),u(%!/FUN`GEAR`LABEL,%1)))]%q<gear_new>,#-1 An item's name needs a letter or a digit.)]
         flags: [VISUAL]
+      # ---- the log -------------------------------------------------------------------
+      # Every change to XP, and to the coin and gear on the sheet itself, is D20`LOG`<n>: a JSON object with n,
+      # kind (xp, coin, gear), delta, total (after), item (gear's name), reason, by (an objid) and at (secs),
+      # with the wizard attribute flag. Changes to an encounter's copy are logged when /keep writes them back.
+      # %0 a character, %1 the kind, %2 the change, %3 the total after, %4 why, %5 the item. Nothing for no change.
+      FUN`LOG`ADD:
+        value: |-
+          if(%2,[setq(log_n,inc(lmax(0 [iter(lattr(%0/D20`LOG`*),last(%i0,`))])))][u(%!/FUN`API`ROOT,%0)][attrib_set(%0/D20`LOG`%q<log_n>,json(object,n,%q<log_n>,kind,json(string,%1),delta,%2,total,firstof(%3,0),item,json(string,%5),reason,json(string,left(%4,200)),by,json(string,objid(%#)),at,secs()))][set(%0/D20`LOG`%q<log_n>,wizard)][iter(lnum(max(0,sub(words(lattr(%0/D20`LOG`*)),get(%!/DATA`LOG`MAX)))),attrib_set(%0/D20`LOG`[first(sort(iter(lattr(%0/D20`LOG`*),last(%i0,`)),n))]))])
+        flags: [funsyntax]
+      # %0 a character, %1 their copy in an encounter, %2 why: logs how the copy's coin and gear differ from the sheet.
+      FUN`LOG`KEEP:
+        value: |-
+          setqm(lk_copygear,u(%!/FUN`V,%1,gear),lk_livegear,u(%!/FUN`GEAR`LIVE,%0))[u(%!/FUN`LOG`ADD,%0,coin,sub(u(%!/FUN`V,%1,coin),default(%0/D20`COIN,0)),u(%!/FUN`V,%1,coin),%2,)][iter(setunion(iter(%q<lk_copygear>,elements(%i0,2,~),|,%b),iter(%q<lk_livegear>,elements(%i0,2,~),|,%b)),u(%!/FUN`LOG`KEEPITEM,%0,%i0,%2))]
+        flags: [funsyntax]
+      FUN`LOG`KEEPITEM:
+        value: |-
+          setqm(lki_new,grab(%q<lk_copygear>,*~%1~*,|),lki_old,grab(%q<lk_livegear>,*~%1~*,|))[u(%!/FUN`LOG`ADD,%0,gear,sub(firstof(first(%q<lki_new>,~),0),firstof(first(%q<lki_old>,~),0)),firstof(first(%q<lki_new>,~),0),%2,firstof(elements(%q<lki_new>,3,~),elements(%q<lki_old>,3,~)))]
+        flags: [funsyntax]
+      # %0 the character: the latest 30 log entries, oldest first.
+      FUN`SCREEN`LOG:
+        value: |-
+          setq(log_nums,sort(iter(lattr(%0/D20`LOG`*),if(hasflag(%0/%i0,wizard),last(%i0,`))),n))[setq(log_nums,extract(%q<log_nums>,max(1,sub(words(%q<log_nums>),29)),30))][box(if(words(%q<log_nums>),ldatatable(lit({"nowrap":"1|2|3|4|6","grow":"||||1"}),#|When|Change|>Now|Why|By,iter(%q<log_nums>,u(%!/FUN`DISPLAY`LOGROW,get(%0/D20`LOG`%i0)),%b,%*<^>),%*<^>),Nothing is logged yet.)%r[rule()]%r[tone(muted,Every change to XP%, and to coin and gear on the sheet itself%, with who made it.)],Log: [name(%0)])]
+        flags: [funsyntax]
+      FUN`DISPLAY`LOGROW:
+        value: |-
+          setqm(lr_kind,json_query(%0,extract,$.kind),lr_delta,json_query(%0,extract,$.delta))[json_query(%0,extract,$.n)]|[timefmt($Y-$m-$d,json_query(%0,extract,$.at))]|[u(%!/FUN`DISPLAY`SIGNED,%q<lr_delta>)] [switch(%q<lr_kind>,xp,XP,coin,coin,json_query(%0,extract,$.item))]|[json_query(%0,extract,$.total)]|[firstof(json_query(%0,extract,$.reason),-)]|[name(json_query(%0,extract,$.by))]
+        flags: [funsyntax]
       FUN`API`ROOT:
         value: |-
           if(hasattr(%0,D20),,attrib_set(%0/D20,This character's d20 sheet. +sheet shows it.)[set(%0/D20,wizard)][set(%0/D20,no_command)])
         flags: [funsyntax]
       # Named: %<roller> an objid, %<trait> a key, %<modifier> a number to add, %<target> a DC or nothing,
-      # %<dice> 1d20, 2d20kh or 2d20kl. Rolls and keeps the roll (roll() record), and returns
+      # %<dice> 1d20, 2d20kh or 2d20kl. Rolls on the sheet itself and keeps the roll (roll() record), and returns
       # {"tier","total","natural","target","margin","label","text","roll","formula"}; tier and margin are empty
       # without a DC. #-1 and why when the trait or roller is wrong.
       API`CHECK:
         value: |-
-          cond(not(hastype(%<roller>,player)),#-1 There is no character to roll for.,not(strlen(u(%!/FUN`TRAIT`FIND,%<trait>))),#-1 There is no trait '%<trait>'.,u(%!/FUN`CHECK`ROLLED,ucstr(u(%!/FUN`TRAIT`FIND,%<trait>)),firstof(%<dice>,1d20),add(u(%!/API`RATING,%<roller>,u(%!/FUN`TRAIT`FIND,%<trait>)),firstof(%<modifier>,0)),%<target>))
+          cond(not(hastype(%<roller>,player)),#-1 There is no character to roll for.,not(strlen(u(%!/FUN`TRAIT`FIND,%<trait>))),#-1 There is no trait '%<trait>'.,u(%!/FUN`CHECK`VIEW,u(%!/FUN`VIEW`LIVE,%<roller>),u(%!/FUN`TRAIT`FIND,%<trait>),%<modifier>,%<target>,%<dice>))
         flags: [VISUAL]
+      # %0 a view, %1 a trait key, %2 a number to add, %3 the DC or nothing, %4 the die.
+      FUN`CHECK`VIEW:
+        value: |-
+          u(%!/FUN`CHECK`ROLLED,ucstr(%1),firstof(%4,1d20),add(u(%!/FUN`V`RATING,%0,ucstr(%1)),firstof(%2,0)),%3)
+        flags: [funsyntax]
       # %0 the key, %1 the die, %2 what is added, %3 the DC or nothing.
       FUN`CHECK`ROLLED:
         value: |-
@@ -672,7 +1309,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add/noparse/rsnoparse +sheet; @hook/override/inline +sheet=%!,CMD`SHEET; @command/add/noparse/rsnoparse +check; @hook/override/inline +check=%!,CMD`CHECK
+          @command/add/noparse/rsnoparse +sheet; @hook/override/inline +sheet=%!,CMD`SHEET; @command/add/noparse/rsnoparse +check; @hook/override/inline +check=%!,CMD`CHECK; @command/add/noparse/rsnoparse +encounter; @hook/override/inline +encounter=%!,CMD`ENCOUNTER
         flags: [cmdsyntax]
       AINSTALL:
         value: |-
@@ -821,6 +1458,17 @@ objects:
       TRAIT`PERFORMANCE`ABILITY: |-
         cha
 
+  # The encounters running now. Inside the D20 Sheet and no_command, like the store. ENC`<n> is one encounter,
+  # with ROOM, GM, STARTED and COPY`<dbref number> (one member's copy of their sheet, a view) beneath.
+  - ref: encounters
+    type: thing
+    name: D20 Encounters
+    location: "{{sheet}}"
+    flags: [no_command]
+    attributes:
+      ENC: |-
+        The encounters running now, one branch each.
+
   # The +help topics, on an object of their own. sheet-d20-help registers it with +help; without that bridge
   # nothing reads it. HELP`<TOPIC> is a topic, its subtopics the leaves beneath, LOCK`<TOPIC> who may read it.
   - ref: sheet_help
@@ -829,30 +1477,71 @@ objects:
     location: "{{sheet}}"
     attributes:
       HELP: |-
-        Your character's d20 sheet, and rolling against it: +sheet and +check.
+        Your character's d20 sheet, rolling against it, and encounters: +sheet, +check and +encounter.
       SEE: |-
         Cross-references. One leaf per topic; subtopics come from the tree, not from here.
       SEE`SHEET: |-
-        check
+        check encounter
       SEE`CHECK: |-
-        sheet
+        sheet encounter
+      SEE`ENCOUNTER: |-
+        sheet check
       HELP`SHEET: |-
-        `+sheet` shows your character's sheet: six ability scores, your level, and a list of skills, each untrained, trained or expert.
+        `+sheet` shows your character's sheet: level, hit points, coin, XP, six ability scores, your skills and your gear.
 
-        - `+sheet` shows your own; `+sheet <name>` shows another character's, when the game lets you read it.
-        - `+sheet/set <trait>=<value>` fills in your sheet until your character is approved: `+sheet/set str=14`, `+sheet/set athletics=trained`, `+sheet/set level=3`. Leave the value out to clear it.
-        - `+sheet/gear <item>=<count>` lists what you carry: `+sheet/gear Rope=1`. A count of 0 takes it off. `+sheet/set coin=<n>` sets your coin.
+        - `+sheet` shows your own; `+sheet <name>` another character's, when the game lets you read it.
+        - `+sheet/chargen` shows the steps of making your character and what to do next.
         - `+sheet/traits` lists every ability and skill, with the key you type for each.
+        - `+sheet/ledger` lists every entry your sheet is built from, oldest first.
 
         An ability adds its modifier to a roll: the score less 10, halved and rounded down, so 14 adds +2 and 9 adds -1. A skill adds its ability's modifier, plus the training bonus when you are trained, twice it when you are an expert. The bonus is +2 at level 1 and grows as you level.
 
-        For example, with Strength 14 at level 1:
+        Your sheet is built from its ledger: each score, training and advance is an entry. Once you are approved, `+sheet/advance` spends XP and staff make other changes.
 
-        `+sheet/set athletics=trained`
+        For example:
 
-        Output: `\[SHEET\] Done: Athletics is trained on Alice's sheet.` Athletics now adds +4.
+        `+sheet/chargen`
 
-        Once you are approved, staff change your sheet. See `+help check` for rolling.
+        Output: `1. Abilities done: Strength 15, Dexterity 14, ...`
+
+        See `+help sheet chargen` for making a character, `+help sheet play` for hit points, coin, gear and advances, and `+help check` for rolling.
+      HELP`SHEET`CHARGEN: |-
+        Making a character takes two steps. `+sheet/chargen` shows each and what comes next.
+
+        1. `+sheet/set <ability>=<score>` gives an ability one of the starting scores, 15, 14, 13, 12, 10 and 8 unless your game changed them. `+sheet/set <ability>=` frees its score again.
+        2. `+sheet/set <skill>=trained` trains a skill, four of them unless your game changed that. `+sheet/set <skill>=untrained` takes one back.
+
+        A new character is level 1. Expert training and higher levels come from advances after approval.
+
+        `+sheet/gear <item>=<count>` and `+sheet/coin <n>` set what you start with.
+
+        For example:
+
+        `+sheet/set str=15`
+
+        Output: `\[SHEET\] Done: Strength is 15 on Alice's sheet. Next: +sheet/set <ability>=<score>. Left to give: 14, 13, 12, 10, and 8.`
+
+        When both steps are done, your sheet is complete. Once you are approved, staff change it.
+      HELP`SHEET`PLAY: |-
+        In play you keep your own hit points, coin and gear:
+
+        - `+sheet/damage <n>` takes hit points, down to 0. `+sheet/heal <n>` gives them back; `+sheet/heal all` heals every one.
+        - `+sheet/use <item>` spends one of an item: `+sheet/use healing potion`.
+        - `+sheet/coin -<n> [<reason>]` spends coin: `+sheet/coin -5 Rope`.
+
+        Once you are approved, staff add coin and gear. `+sheet/log` lists every change to your XP, coin and gear, who made it and why. In an encounter these change your copy there, not your sheet. See `+help encounter`.
+
+        Staff give XP. Once you are approved, `+sheet/advance` spends 10 XP, unless your game changed that, on one of:
+
+        - `+sheet/advance level`: a level, so more hit points and in time a higher training bonus.
+        - `+sheet/advance <ability>`: +1 to its score, up to 20.
+        - `+sheet/advance <skill>`: untrained to trained, or trained to expert.
+
+        For example:
+
+        `+sheet/advance stealth`
+
+        Output: `\[SHEET\] Done: Alice advances: Stealth expert (10 XP spent).`
       HELP`CHECK: |-
         `+check <trait>` rolls 1d20 and adds what a trait adds, where the room sees it.
 
@@ -861,21 +1550,59 @@ objects:
         - `+check <trait>+<n>` or `-<n>` adds or takes away a number for this roll: `+check stealth+2=hard`.
         - `/private` rolls where only you see it. `/advantage` rolls two dice and keeps the higher, `/disadvantage` the lower.
 
-        Meeting the DC is a success. A natural 20 on the die is a critical success and a natural 1 a critical failure, whatever the total, unless your game turns that off. Every check is kept under a number that `rollinfo()` reads back.
+        Meeting the DC is a success. A natural 20 on the die is a critical success and a natural 1 a critical failure, whatever the total, unless your game turns that off. In an encounter you roll from your copy there. Every check is kept under a number that `rollinfo()` reads back.
 
         For example:
 
         `+check/advantage perception=15`
 
         Output: `\[SHEET\] Alice checks Perception: 2d20kh\[17, (4)\] + 2 = 19 vs DC 15: success (roll 42)`
+      HELP`ENCOUNTER: |-
+        An encounter is a scene played from copies of the sheets, so hit points lost, coin spent and gear used in it stay there. It lasts until its GM ends it, over as many days as it takes.
+
+        - `+encounter` lists the encounters here and yours; `+encounter <n>` shows one.
+        - `+encounter/start [<title>]` starts one in your room. You run it.
+        - `+encounter/join [<n>]` takes part with a copy of your sheet as it is now.
+        - `+encounter/leave [<n>]` comes out; your copy there is gone.
+        - `+encounter/use <n>` picks which copy you roll from, when you are in more than one here.
+
+        While you are in an encounter's room, `+check`, damage, healing, coin and gear use your copy in it. Anywhere else, your sheet.
+
+        For example:
+
+        `+encounter/join 1`
+
+        Output: `\[ENCOUNTER\] Alice joins 1 (Goblin ambush).`
+
+        See `+help encounter gm` for running one.
+      HELP`ENCOUNTER`GM: |-
+        Whoever starts an encounter runs it; sheet keepers run any. Give the number after `=` when the room has more than one.
+
+        - `+encounter/add <name>[=<n>]` brings someone in the room into it, with a copy of their sheet.
+        - `+encounter/remove <name>[=<n>]` takes them out; their copy goes.
+        - `+encounter/keep <name>[=<n>]` writes their damage, coin and gear from the copy to their sheet.
+        - `+encounter/end [<n>]` ends it. Every copy goes, and nothing is written back unless you kept it first.
+
+        While a member plays from your encounter's copy, you change it: `+sheet/damage <name>=<n>`, `/heal`, `/coin`, `/gear <name>/<item>=<count>` and `/use`.
+
+        For example:
+
+        `+encounter/keep Alice=1`
+
+        Output: `\[ENCOUNTER\] Done: Alice's sheet keeps the damage, coin and gear from 1 (Goblin ambush).`
       LOCK`SHEET`STAFF: |-
         perm^softcode.d20.admin
       HELP`SHEET`STAFF: |-
         Sheet keepers \(`softcode.d20.admin`, or the D20 Sheet Keeper role\) read every sheet and change any character's at any time:
 
-        - `+sheet <name>` shows a character's sheet.
-        - `+sheet/set <name>/<trait>=<value>` changes it: `+sheet/set Alice/level=4`, `+sheet/set Alice/coin=50`. A keeper may set a score up to 30.
-        - `+sheet/gear <name>/<item>=<count>` changes their gear: `+sheet/gear Alice/Healing potion=2`.
+        - `/set`, `/advance`, `/gear` and `/use` take `<name>/` first: `+sheet/set Alice/level=4`. A keeper may set any score up to 30, any training, and give an advance without XP.
+        - `/damage`, `/heal` and `/coin` take `<name>=` first: `+sheet/coin Alice=+50`.
+        - `+sheet/xp <name>=+<n> [<reason>]` gives XP, `-<n>` takes, `<n>` sets: `+sheet/xp Alice=+10 Ended the siege`. `/coin` and `/gear` take a reason after the number too.
+        - `+sheet/log <name>` lists every change to their XP, coin and gear, who made it and why.
+        - `+sheet/ledger <name>` lists their entries. `+sheet/revoke <name>/<n>` takes one back.
+        - `+sheet/clear <name>` revokes their whole build, so character creation starts again. XP, hit points, coin and gear stay.
+
+        Every keeper change to the build is a new ledger entry, so nothing is lost: a revoke or clear is an entry too.
 
         `@role/assign <player>=d20-sheet-keeper` makes someone a keeper.
       LOCK`SHEET`SETTINGS: |-
@@ -883,12 +1610,14 @@ objects:
       HELP`SHEET`SETTINGS: |-
         `+config d20` lists the settings and `+config d20/<setting>=<value>` changes one \(`config.admin`\):
 
-        - `score-default`, `score-min`, `score-max`: an ability score before it is set \(10\), the lowest \(1\) and the highest a player gives themselves \(20\).
-        - `level-max`: the highest level \(20\).
+        - `array`: the starting scores a new character gives their abilities \(`15 14 13 12 10 8`\). `trained`: how many skills they train \(4\).
+        - `score-default`, `score-min`, `score-max`: a score before it is set \(10\), the lowest \(1\), and the highest an advance takes it \(20\).
+        - `level-max`: the highest level \(20\). `advance`: the XP an advance costs \(10\).
+        - `hp-level`, `hp-ability`: hit points for each level \(8\), and the ability whose modifier adds to them \(con\).
         - `bonus-base`, `bonus-every`: the training bonus at level 1 \(2\), and how many levels it takes to grow by 1 \(4\).
         - `crits`: whether a natural 20 and a natural 1 decide a check \(yes\).
         - `dcs`: the DCs of trivial, easy, standard, hard and extreme \(`5 10 15 20 25`\).
         - `public`: whether anyone may read anyone's sheet \(no\).
-        - `traits`: the abilities and skills. `+config d20/traits` lists them; `+config/add d20/traits/climb=Climb` adds one, then `+config d20/traits/climb/ability=str` says what it adds.
+        - `traits`: the abilities and skills. `+config/add d20/traits/climb=Climb` adds one, then `+config d20/traits/climb/ability=str` says what it adds.
 
-        A skill's ability is the key of an ability. Removing a trait leaves what characters had stored, but the sheet stops showing it.
+        Removing a trait leaves the ledger as it is, but the sheet stops showing it.
