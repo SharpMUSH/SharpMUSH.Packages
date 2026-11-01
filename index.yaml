@@ -37,3 +37,45 @@ packages:
     package: pf2e-remaster
     version: 1.4.0
     description: Pathfinder Second Edition (Remaster) core rules as wiki pages (classes, ancestries, feats, spells, equipment, skills, conditions, DC tables; ORC License)
+  - path: sheet-d20/
+    name: D20 Sheet
+    package: sheet-d20
+    version: 1.0.0
+    description: d20 character sheet (abilities, skills, training, level) with +sheet and +check against a DC
+  - path: sheet-d20-help/
+    package: sheet-d20-help
+    version: 1.0.0
+    description: Puts the D20 sheet topics into +help
+  - path: sheet-d20-config/
+    package: sheet-d20-config
+    version: 1.0.0
+    description: Puts the D20 sheet settings and trait table into +config
+  - path: sheet-d20-chargen/
+    package: sheet-d20-chargen
+    version: 1.0.0
+    description: Joins the D20 sheet to +app character applications
+  - path: sheet-fate/
+    name: Fate Sheet
+    package: sheet-fate
+    version: 1.0.0
+    description: Fate character sheet (skills or approaches, aspects, stress, consequences, fate points) with +check on four Fate dice; Fate SRD text under CC BY 3.0
+  - path: sheet-fate-help/
+    package: sheet-fate-help
+    version: 1.0.0
+    description: Puts the Fate sheet topics into +help
+  - path: sheet-fate-config/
+    package: sheet-fate-config
+    version: 1.0.0
+    description: Puts the Fate sheet settings and its skill, approach, stress and consequence tables into +config
+  - path: sheet-fate-chargen/
+    package: sheet-fate-chargen
+    version: 1.0.0
+    description: Joins the Fate sheet to +app character applications
+  - path: duties-d20/
+    package: duties-d20
+    version: 1.0.0
+    description: Duties roll provider "d20" on the D20 sheet
+  - path: duties-fate/
+    package: duties-fate
+    version: 1.0.0
+    description: Duties roll provider "fate" on the Fate sheet
