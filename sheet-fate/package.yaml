@@ -569,7 +569,7 @@ objects:
         flags: [funsyntax]
       ADVANCE`SWAP`RUN:
         value: |-
-          setqm(r_one,u(%!/FUN`TRAIT`FIND,%1),r_two,u(%!/FUN`TRAIT`FIND,%2))[cond(not(strlen(%q<r_one>)),#-1 There is no [u(%!/FUN`TRAIT`NOUN)] '%1'.,not(strlen(%q<r_two>)),#-1 There is no [u(%!/FUN`TRAIT`NOUN)] '%2'.,not(comp(%q<r_one>,%q<r_two>)),#-1 Name two different [u(%!/FUN`TRAIT`NOUN)]s.,not(comp(setr(r_one_was,u(%!/API`RATING,%0,%q<r_one>)),u(%!/API`RATING,%0,%q<r_two>))),#-1 [u(%!/FUN`TRAIT`LABEL,%q<r_one>)] and [u(%!/FUN`TRAIT`LABEL,%q<r_two>)] are both [u(%!/FUN`LADDER`SHOW,%q<r_one_was>)]: switching them changes nothing.,1,[null(iter(lattr(%0/FATE`GRANT`*),[setqm(swap_one,get(%0/%i0`RATING`[ucstr(%q<r_one>)]),swap_two,get(%0/%i0`RATING`[ucstr(%q<r_two>)]))][u(%!/FUN`DO`WRITE,%0,after(%i0,FATE`)`RATING`[ucstr(%q<r_one>)],%q<swap_two>)][u(%!/FUN`DO`WRITE,%0,after(%i0,FATE`)`RATING`[ucstr(%q<r_two>)],%q<swap_one>)]))][u(%!/API`REBUILD,%0)][u(%!/FUN`TRAIT`LABEL,%q<r_one>)] is [u(%!/FUN`LADDER`SHOW,u(%!/API`RATING,%0,%q<r_one>))] and [u(%!/FUN`TRAIT`LABEL,%q<r_two>)] [u(%!/FUN`LADDER`SHOW,u(%!/API`RATING,%0,%q<r_two>))].)]
+          setqm(r_one,u(%!/FUN`TRAIT`FIND,%1),r_two,u(%!/FUN`TRAIT`FIND,%2))[cond(not(strlen(%q<r_one>)),#-1 There is no [u(%!/FUN`TRAIT`NOUN)] '%1'.,not(strlen(%q<r_two>)),#-1 There is no [u(%!/FUN`TRAIT`NOUN)] '%2'.,not(comp(%q<r_one>,%q<r_two>)),#-1 Name two different [u(%!/FUN`TRAIT`NOUNS)].,not(comp(setr(r_one_was,u(%!/API`RATING,%0,%q<r_one>)),u(%!/API`RATING,%0,%q<r_two>))),#-1 [u(%!/FUN`TRAIT`LABEL,%q<r_one>)] and [u(%!/FUN`TRAIT`LABEL,%q<r_two>)] are both [u(%!/FUN`LADDER`SHOW,%q<r_one_was>)]: switching them changes nothing.,1,[null(iter(lattr(%0/FATE`GRANT`*),[setqm(swap_one,get(%0/%i0`RATING`[ucstr(%q<r_one>)]),swap_two,get(%0/%i0`RATING`[ucstr(%q<r_two>)]))][u(%!/FUN`DO`WRITE,%0,after(%i0,FATE`)`RATING`[ucstr(%q<r_one>)],%q<swap_two>)][u(%!/FUN`DO`WRITE,%0,after(%i0,FATE`)`RATING`[ucstr(%q<r_two>)],%q<swap_one>)]))][u(%!/API`REBUILD,%0)][u(%!/FUN`TRAIT`LABEL,%q<r_one>)] is [u(%!/FUN`LADDER`SHOW,u(%!/API`RATING,%0,%q<r_one>))] and [u(%!/FUN`TRAIT`LABEL,%q<r_two>)] [u(%!/FUN`LADDER`SHOW,u(%!/API`RATING,%0,%q<r_two>))].)]
         flags: [funsyntax]
       ADVANCE`ASPECT: |-
         Rewrite one aspect; the high concept takes a new high concept from a breakthrough
@@ -1491,7 +1491,7 @@ objects:
       # with the separator), %5 a line at the foot.
       FUN`SCREEN`NPC:
         value: |-
-          setqm(sn_at,%0/%1,sn_aspects,sort(iter(lattr(%0/%1`ASPECT`*),last(%i0,`)),n),sn_stunts,sort(iter(lattr(%0/%1`STUNT`*),last(%i0,`)),n),sn_fields,squish(iter(u(%!/FUN`NPC`FIELDS),if(strlen(get(%0/%1`FIELD`%i0)),%i0))))[setq(sn_skills,u(%!/FUN`NPC`SKILLORDER,%q<sn_at>))][box(lfields(,Kind%3[if(words(%q<sn_aspects>),%*<|>[iter(%q<sn_aspects>,Aspect %i0,%b,%*<|>)])]%*<|>[capstr(u(%!/FUN`TRAIT`NOUN))]s[if(words(%q<sn_stunts>),%*<|>[iter(%q<sn_stunts>,Stunt %i0,%b,%*<|>)])]%*<|>Stress%*<|>Consequences[if(words(%q<sn_fields>),%*<|>[iter(%q<sn_fields>,capstr(lcstr(%i0)),%b,%*<|>)])],[get(%q<sn_at>`KIND)]%4[if(words(%q<sn_aspects>),%*<|>[iter(%q<sn_aspects>,get(%q<sn_at>`ASPECT`%i0),%b,%*<|>)])]%*<|>[if(words(%q<sn_skills>),itemize(iter(%q<sn_skills>,[u(%!/FUN`TRAIT`LABEL,%i0)] [u(%!/FUN`LADDER`SHOW,get(%q<sn_at>`SKILL`%i0))],%b,|),|),every one Mediocre %(+0%))][if(words(%q<sn_stunts>),%*<|>[iter(%q<sn_stunts>,get(%q<sn_at>`STUNT`%i0),%b,%*<|>)])]%*<|>[u(%!/FUN`NPC`STRESS,%q<sn_at>)]%*<|>[u(%!/FUN`NPC`SLOTS,%q<sn_at>)][if(words(%q<sn_fields>),%*<|>[iter(%q<sn_fields>,u(%!/FUN`NPC`FIELDSHOW,%i0,get(%q<sn_at>`FIELD`%i0)),%b,%*<|>)])],%*<|>)%r[rule()]%r[tone(muted,%5)],%2)]
+          setqm(sn_at,%0/%1,sn_aspects,sort(iter(lattr(%0/%1`ASPECT`*),last(%i0,`)),n),sn_stunts,sort(iter(lattr(%0/%1`STUNT`*),last(%i0,`)),n),sn_fields,squish(iter(u(%!/FUN`NPC`FIELDS),if(strlen(get(%0/%1`FIELD`%i0)),%i0))))[setq(sn_skills,u(%!/FUN`NPC`SKILLORDER,%q<sn_at>))][box(lfields(,Kind%3[if(words(%q<sn_aspects>),%*<|>[iter(%q<sn_aspects>,Aspect %i0,%b,%*<|>)])]%*<|>[capstr(u(%!/FUN`TRAIT`NOUNS))][if(words(%q<sn_stunts>),%*<|>[iter(%q<sn_stunts>,Stunt %i0,%b,%*<|>)])]%*<|>Stress%*<|>Consequences[if(words(%q<sn_fields>),%*<|>[iter(%q<sn_fields>,capstr(lcstr(%i0)),%b,%*<|>)])],[get(%q<sn_at>`KIND)]%4[if(words(%q<sn_aspects>),%*<|>[iter(%q<sn_aspects>,get(%q<sn_at>`ASPECT`%i0),%b,%*<|>)])]%*<|>[if(words(%q<sn_skills>),itemize(iter(%q<sn_skills>,[u(%!/FUN`TRAIT`LABEL,%i0)] [u(%!/FUN`LADDER`SHOW,get(%q<sn_at>`SKILL`%i0))],%b,|),|),every one Mediocre %(+0%))][if(words(%q<sn_stunts>),%*<|>[iter(%q<sn_stunts>,get(%q<sn_at>`STUNT`%i0),%b,%*<|>)])]%*<|>[u(%!/FUN`NPC`STRESS,%q<sn_at>)]%*<|>[u(%!/FUN`NPC`SLOTS,%q<sn_at>)][if(words(%q<sn_fields>),%*<|>[iter(%q<sn_fields>,u(%!/FUN`NPC`FIELDSHOW,%i0,get(%q<sn_at>`FIELD`%i0)),%b,%*<|>)])],%*<|>)%r[rule()]%r[tone(muted,%5)],%2)]
         flags: [funsyntax]
 
       # ---- +chargen -------------------------------------------------------------------
@@ -1665,6 +1665,10 @@ objects:
         value: |-
           if(strmatch(get(%!/DATA`CONFIG`MODE),approaches),approach,skill)
         flags: [funsyntax]
+      FUN`TRAIT`NOUNS:
+        value: |-
+          if(strmatch(get(%!/DATA`CONFIG`MODE),approaches),approaches,skills)
+        flags: [funsyntax]
       FUN`TRAIT`ALL:
         value: |-
           u(%!/FUN`LIST`ALL,u(%!/FUN`TRAIT`PATH))
@@ -1797,7 +1801,7 @@ objects:
           screen_aspects,u(%!/FUN`ASPECT`SLOTS),
           screen_tracks,u(%!/FUN`LIST`ALL,TRACK),
           screen_consequences,u(%!/FUN`LIST`ALL,CONSEQUENCE),
-          screen_problems,u(%!/FUN`SHEET`PROBLEMS,%0))[box(lfields(lit({"cols":2}),Fate points%*<|>Refresh,u(%!/FUN`PLAY`POINTS,%0)%*<|>[u(%!/FUN`POINTS`REFRESH,%0)],%*<|>)%r[rule(Aspects)]%r[lfields(,iter(%q<screen_aspects>,u(%!/FUN`ASPECT`LABEL,%i0),%b,%*<|>),iter(%q<screen_aspects>,firstof(get(%0/FATE`ASPECT`%i0),tone(muted,-)),%b,%*<|>),%*<|>)]%r[rule(capstr(u(%!/FUN`TRAIT`NOUN))s)]%r[u(%!/FUN`SCREEN`RATINGS,%0,%q<screen_traits>)][u(%!/FUN`SCREEN`STUNTS,%0)]%r[rule(Stress)]%r[lfields(,iter(%q<screen_tracks>,get({{store}}/TRACK`%i0),%b,%*<|>),iter(%q<screen_tracks>,u(%!/FUN`DISPLAY`BOXES,%0,%i0),%b,%*<|>),%*<|>)]%r[rule(Consequences)]%r[lfields(,iter(%q<screen_consequences>,get({{store}}/CONSEQUENCE`%i0) %([default({{store}}/CONSEQUENCE`%i0`SHIFTS,2)]%),%b,%*<|>),iter(%q<screen_consequences>,firstof(u(%!/FUN`PLAY`GET,%0,CONSEQUENCE`%i0),tone(muted,-)),%b,%*<|>),%*<|>)][u(%!/FUN`SCREEN`SECTIONS,%0,%1)]%r[rule()]%r[if(strlen(%q<screen_problems>),tone(warning,%q<screen_problems>)%r)][if(strlen(u(%!/FUN`PLAY`AT,%0)),tone(warning,In [u(%!/FUN`ENC`TITLE,u(%!/FUN`ENC`ACTIVE,%0))]: these fate points%, stress and consequences are the encounter's copy.)%r)][tone(muted,u(%!/FUN`DISPLAY`FOOTER,%0,%1))],name(%0))]
+          screen_problems,u(%!/FUN`SHEET`PROBLEMS,%0))[box(lfields(lit({"cols":2}),Fate points%*<|>Refresh,u(%!/FUN`PLAY`POINTS,%0)%*<|>[u(%!/FUN`POINTS`REFRESH,%0)],%*<|>)%r[rule(Aspects)]%r[lfields(,iter(%q<screen_aspects>,u(%!/FUN`ASPECT`LABEL,%i0),%b,%*<|>),iter(%q<screen_aspects>,firstof(get(%0/FATE`ASPECT`%i0),tone(muted,-)),%b,%*<|>),%*<|>)]%r[rule(capstr(u(%!/FUN`TRAIT`NOUNS)))]%r[u(%!/FUN`SCREEN`RATINGS,%0,%q<screen_traits>)][u(%!/FUN`SCREEN`STUNTS,%0)]%r[rule(Stress)]%r[lfields(,iter(%q<screen_tracks>,get({{store}}/TRACK`%i0),%b,%*<|>),iter(%q<screen_tracks>,u(%!/FUN`DISPLAY`BOXES,%0,%i0),%b,%*<|>),%*<|>)]%r[rule(Consequences)]%r[lfields(,iter(%q<screen_consequences>,get({{store}}/CONSEQUENCE`%i0) %([default({{store}}/CONSEQUENCE`%i0`SHIFTS,2)]%),%b,%*<|>),iter(%q<screen_consequences>,firstof(u(%!/FUN`PLAY`GET,%0,CONSEQUENCE`%i0),tone(muted,-)),%b,%*<|>),%*<|>)][u(%!/FUN`SCREEN`SECTIONS,%0,%1)]%r[rule()]%r[if(strlen(%q<screen_problems>),tone(warning,%q<screen_problems>)%r)][if(strlen(u(%!/FUN`PLAY`AT,%0)),tone(warning,In [u(%!/FUN`ENC`TITLE,u(%!/FUN`ENC`ACTIVE,%0))]: these fate points%, stress and consequences are the encounter's copy.)%r)][tone(muted,u(%!/FUN`DISPLAY`FOOTER,%0,%1))],name(%0))]
         flags: [funsyntax]
       # %0 the character: the stunt slots, a line each, after a rule. Nothing when the game has none.
       FUN`SCREEN`STUNTS:
@@ -1847,7 +1851,7 @@ objects:
         flags: [funsyntax]
       FUN`SCREEN`TRAITS:
         value: |-
-          setq(screen_all,u(%!/FUN`TRAIT`ALL))[box(ldatatable(lit({"nowrap":"1"}),Key|[capstr(u(%!/FUN`TRAIT`NOUN))],iter(%q<screen_all>,lcstr(%i0)|[u(%!/FUN`TRAIT`LABEL,%i0)],,%*<^>),%*<^>)%r[rule()]%r[tone(muted,The ladder: [iter(revwords(lnum(-2,8)),u(%!/FUN`LADDER`SHOW,%i0),%b,%,%b)].)],Fate [u(%!/FUN`TRAIT`NOUN)]s)]
+          setq(screen_all,u(%!/FUN`TRAIT`ALL))[box(ldatatable(lit({"nowrap":"1"}),Key|[capstr(u(%!/FUN`TRAIT`NOUN))],iter(%q<screen_all>,lcstr(%i0)|[u(%!/FUN`TRAIT`LABEL,%i0)],,%*<^>),%*<^>)%r[rule()]%r[tone(muted,The ladder: [iter(revwords(lnum(-2,8)),u(%!/FUN`LADDER`SHOW,%i0),%b,%,%b)].)],Fate [u(%!/FUN`TRAIT`NOUNS)])]
         flags: [funsyntax]
       # %0 the character: each grant with its source, what it is for and what it gives.
       FUN`SCREEN`LEDGER:
