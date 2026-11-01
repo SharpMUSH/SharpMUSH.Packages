@@ -1,0 +1,122 @@
+format: "1.16"
+package: duties-pf2e
+title: "Duties: Pathfinder 2e rolls"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Lets Duties roll on the Pathfinder 2e sheet: a roll provider called pf2e, so a duty's checks roll a skill, Perception or a save against a DC for the roller's level, with Pathfinder's four degrees of success. Pick it with +config duties/system=pf2e."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [duties, pf2e, pathfinder, dice, bridge]
+category: Characters
+requires_server: ">=1.0"
+
+# A bridge: it joins two packages that do not know about each other. Duties asks the game's one active roll
+# provider for every check, and pf2e keeps the sheet as a ledger and works out each statistic from it. This
+# package is a provider that answers Duties' questions with pf2e's own functions, and the one leaf that
+# registers it.
+depends:
+  - package: duties
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/duties/
+      branch: main
+  - package: pf2e
+    version: ">=0.3.1 <1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH.Packages
+      path: pf2e/
+      branch: main
+
+objects:
+  # The provider. Duties calls each FN`DUTIES` attribute with u() and named arguments, so it runs as this
+  # object; WIZARD because it reads the ledger on each character, which carries the wizard flag. Its only
+  # writes are rewards, as entries in the character's experience or money ledger.
+  - ref: provider
+    type: thing
+    name: Duties PF2e Provider
+    location: "{{pf2e/core}}"
+    flags: [WIZARD, no_command]
+    attributes:
+      # Every skill, Perception and the three saves. Anyone may roll any of them: untrained is a rank too.
+      FN`DUTIES`TRAITS:
+        value: |-
+          json_array(iter(get({{pf2e/core}}/DATA`STATISTICS),json(object,key,json(string,%i0),label,json(string,capstr(%i0)),group,json(string,switch(first(get({{pf2e/core}}/DATA`STATISTIC`[ucstr(%i0)])),skill,Skills,save,Saves,Perception)),always,true),%b,|),|)
+        flags: [funsyntax]
+      # Pathfinder's four degrees of success; there is no partial success.
+      FN`DUTIES`TIERS:
+        value: |-
+          crit-fail fail success crit-success
+        flags: [funsyntax]
+      # %<difficulty>, %<context>: the DC's name. The number depends on the roller's level, so it is named here
+      # and worked out in CHECK.
+      FN`DUTIES`DC:
+        value: |-
+          if(isint(u(%!/FUN`DC`ADJUST,%<difficulty>)),Level DC [u(%!/FUN`DC`ADJUSTTEXT,%<difficulty>)],#-1 NO SUCH DIFFICULTY)
+        flags: [funsyntax]
+      # %<roller>: the statistic this character improvises with, the one with the highest modifier (the first of
+      # equals, in the order the core lists them).
+      FN`DUTIES`FALLBACK:
+        value: |-
+          null(u(%!/FUN`PREPARE,%<roller>))[setq(fallback_pairs,iter(get({{pf2e/core}}/DATA`STATISTICS),%i0:[u(%!/FUN`STAT`TOTAL,%i0)]))][setq(fallback_best,lmax(iter(%q<fallback_pairs>,after(%i0,:))))][first(iter(%q<fallback_pairs>,if(eq(after(%i0,:),%q<fallback_best>),before(%i0,:))))]
+        flags: [funsyntax]
+      # %<roller>, %<trait>: 1 when the statistic is trained or better.
+      FN`DUTIES`TRAINED:
+        value: |-
+          null(u(%!/FUN`PREPARE,%<roller>))[gt(u({{pf2e/core}}/FUN`CHECK`RANK,%<trait>),0)]
+        flags: [funsyntax]
+      # %<roller>, %<trait>, %<difficulty>, %<mods>, %<context>. 1d20 plus the statistic's stacked modifiers
+      # against the level DC for the difficulty; a helper in %<mods> is Aid, +1 circumstance. The degree is
+      # pf2e's own: 10 over or under, and a natural 20 or 1 a step up or down. Returns {"tier","text","roll",
+      # "margin","system"}, system holding dc, total, natural, degree and helpers.
+      FN`DUTIES`CHECK:
+        value: |-
+          setqm(provider_adjust,u(%!/FUN`DC`ADJUST,%<difficulty>),provider_stat,grab(get({{pf2e/core}}/DATA`STATISTICS),lcstr(%<trait>)))[cond(not(isint(%q<provider_adjust>)),#-1 NO SUCH DIFFICULTY,not(strlen(%q<provider_stat>)),#-1 NO SUCH TRAIT,u(%!/FUN`CHECK`ROLL,%<roller>,%q<provider_stat>,%q<provider_adjust>,u(%!/FUN`MODS`HELPERS,%<mods>)))]
+        flags: [funsyntax]
+      # The rewards a duty may give: experience, and money in each coin.
+      FN`DUTIES`REWARDS:
+        value: |-
+          lit([{"kind":"xp","label":"Experience","fields":[{"key":"amount","type":"integer"}]},{"kind":"gp","label":"Gold pieces","fields":[{"key":"amount","type":"integer"}]},{"kind":"sp","label":"Silver pieces","fields":[{"key":"amount","type":"integer"}]},{"kind":"cp","label":"Copper pieces","fields":[{"key":"amount","type":"integer"}]}])
+        flags: [funsyntax]
+      # Queued once for each reward and member: %<roller>, %<reward> {"kind","amount"}, %<context> {"duty"}. pf2e
+      # writes the entry in the character's experience or money ledger and tells the player.
+      ON`DUTIES`GRANT:
+        value: |-
+          @assert hastype(%<roller>,player); think setqm(grant_kind,lcstr(json_query(%<reward>,extract,$.kind)),grant_amount,firstof(json_query(%<reward>,extract,$.amount),1)); @assert cand(match(xp gp sp cp,%q<grant_kind>),isint(%q<grant_amount>),gt(%q<grant_amount>,0)); @trigger/args {{pf2e/commands}}/TRIG`PURSE`PUT=target,%<roller>,kind,if(strmatch(%q<grant_kind>,xp),xp,money),amount,mul(%q<grant_amount>,switch(%q<grant_kind>,gp,100,sp,10,1)),reason,Duty [json_query(%<context>,extract,$.duty)],shown,%q<grant_amount> [if(strmatch(%q<grant_kind>,xp),XP,%q<grant_kind>)]
+        flags: [cmdsyntax]
+      # %0 a character: sets pf2e's check_ registers from their ledger.
+      FUN`PREPARE:
+        value: |-
+          u({{pf2e/core}}/FUN`CHECK`PREPARE,u({{pf2e/commands}}/FUN`LEDGER`OF,%0))
+        flags: [funsyntax]
+      # %0 a statistic, %1 1 when someone Aids: its total modifier, once FUN`PREPARE has run. Aid is a +1
+      # circumstance bonus, stacked with the statistic's own modifiers the way pf2e stacks them.
+      FUN`STAT`TOTAL:
+        value: |-
+          ladd(0 [iter(if(%1,u({{pf2e/core}}/FUN`MODIFIER`STACK,u({{pf2e/core}}/FUN`CHECK`CHOSEN,%0) circumstance~1~aid~0),u({{pf2e/core}}/FUN`CHECK`CHOSEN,%0)),elements(%i0,2,~))])
+        flags: [funsyntax]
+      # %0 the roller, %1 the statistic, %2 the DC adjustment, %3 how many helped.
+      FUN`CHECK`ROLL:
+        value: |-
+          null(u(%!/FUN`PREPARE,%0))[setqm(roll_total,u(%!/FUN`STAT`TOTAL,%1,gt(%3,0)),roll_dc,add(extract(get({{pf2e/core}}/DATA`DC`LEVEL),add(2,max(-1,min(25,%q<check_level>))),1),%2))][setq(roll_record,roll(1d20[if(gte(%q<roll_total>,0),+)]%q<roll_total>,,record))][setqm(roll_face,json_query(%q<roll_record>,extract,$.dice\[0\].results\[0\].result),roll_result,json_query(%q<roll_record>,extract,$.total))][setq(roll_degree,u({{pf2e/core}}/FUN`DEGREE`OF`CHECK,%q<roll_result>,%q<roll_dc>,%q<roll_face>))][json(object,tier,json(string,extract(crit-fail fail success crit-success,inc(%q<roll_degree>),1)),text,json(string,[capstr(%1)]: [json_query(%q<roll_record>,extract,$.text)] vs DC %q<roll_dc>[if(%3,%b%(+1 from Aid%))]),roll,json_query(%q<roll_record>,extract,$.id),margin,sub(%q<roll_result>,%q<roll_dc>),system,json(object,dc,%q<roll_dc>,total,%q<roll_result>,natural,%q<roll_face>,degree,%q<roll_degree>,helpers,%3))]
+        flags: [funsyntax]
+      # %0 a difficulty word: what it adds to the level DC (pf2e's own adjustments), else nothing.
+      FUN`DC`ADJUST:
+        value: |-
+          switch(lcstr(%0),trivial,-10,easy,-2,standard,0,hard,2,extreme,5,)
+        flags: [funsyntax]
+      FUN`DC`ADJUSTTEXT:
+        value: |-
+          switch(lcstr(%0),trivial,-10 %(incredibly easy%),easy,-2 %(easy%),standard,%(normal%),hard,+2 %(hard%),extreme,+5 %(very hard%))
+        flags: [funsyntax]
+      # %0 %<mods>, a JSON object: how many helpers it names.
+      FUN`MODS`HELPERS:
+        value: |-
+          if(cand(strlen(%0),strmatch(json_query(json_query(%0,get,helpers)),array)),json_query(json_query(%0,get,helpers),size),0)
+        flags: [funsyntax]
+
+  - ref: provider_registration
+    target: "{{duties/duties}}"
+    attributes:
+      PROVIDER`PF2E: |-
+        {{provider}}

@@ -1,7 +1,7 @@
 format: "1.16"
 package: sheet-brp
 title: "Percentile sheet (BRP)"
-version: 2.2.0
+version: 2.3.0
 authors: [SharpMUSH]
 description: "A percentile character sheet on the Basic Roleplaying rules: seven characteristics and a skill list with base chances the game edits, built from a ledger, with point-buy character creation, experience checks that raise skills, hit points, power points and coin, an audited coin ledger, and encounters that play from copies of the sheets, with creatures from a bestiary the game edits, hit locations and an order of play. +check rolls 1d100 under a skill or a characteristic roll, doubled or halved for difficulty, and reads critical, special, success, failure or fumble. The skill list is ORC Licensed Material from Basic Roleplaying: Universal Game Engine."
 license: MIT
@@ -1544,7 +1544,7 @@ objects:
       # %0 the character, %1 who reads it: what they can do next.
       FUN`DISPLAY`FOOTER:
         value: |-
-          setq(footer_n,u(%!/FUN`ENC`JOINED,%0))[cond(cand(not(comp(objid(%1),%0)),not(isapproved(%1)),not(u(%!/FUN`PERM`KEEPER,%1))),u(%!/FUN`CHARGEN`NEXT,%0) +sheet/chargen shows the steps.[u(%!/FUN`HINT,FOOTER)],not(comp(objid(%1),%0)),+check <skill>=<difficulty> rolls. A success marks an experience check%, and +sheet/improve rolls them.,+check <skill> rolls 1d100 under the percentage.)][if(words(%q<footer_n>),%b[name(%0)] plays from a copy in encounter[if(gt(words(%q<footer_n>),1),s)] [itemize(%q<footer_n>)]: +encounter shows [if(gt(words(%q<footer_n>),1),them,it)].)]
+          setq(footer_n,u(%!/FUN`ENC`JOINED,%0))[cond(cand(not(comp(objid(%1),%0)),not(isapproved(%1)),not(u(%!/FUN`PERM`KEEPER,%1))),u(%!/FUN`CHARGEN`NEXT,%0) +sheet/chargen shows the steps.,not(comp(objid(%1),%0)),+check <skill>=<difficulty> rolls. A success marks an experience check%, and +sheet/improve rolls them.,+check <skill> rolls 1d100 under the percentage.)][if(words(%q<footer_n>),%b[name(%0)] plays from a copy in encounter[if(gt(words(%q<footer_n>),1),s)] [itemize(%q<footer_n>)]: +encounter shows [if(gt(words(%q<footer_n>),1),them,it)].)]
         flags: [funsyntax]
       FUN`DISPLAY`SIGNED:
         value: |-
@@ -1665,6 +1665,16 @@ objects:
         value: |-
           null(u(%!/FUN`BUILD`OF,%0))[u(%!/FUN`RATE,%q<build_rows>,%q<build_chars>,ucstr(%1))]
         flags: [VISUAL]
+      # %0 a character, %1 keys, else every characteristic roll and skill: the key with the highest percentage,
+      # the first of equals. Reads the build once.
+      API`BEST:
+        value: |-
+          null(u(%!/FUN`BUILD`OF,%0))[lcstr(last(sortkey(%!/FUN`BEST`KEY,revwords(ucstr(if(strlen(%1),%1,u(%!/FUN`TRAIT`ROLLS) [u(%!/FUN`LIST`ALL,SKILL)]))),n)))]
+        flags: [VISUAL]
+      FUN`BEST`KEY:
+        value: |-
+          u(%!/FUN`RATE,%q<build_rows>,%q<build_chars>,%0)
+        flags: [funsyntax]
       # %0 a character, %1 a key: 1 when a skill stands above its base chance; a characteristic roll always.
       API`TRAINED:
         value: |-

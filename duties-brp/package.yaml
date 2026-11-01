@@ -1,7 +1,7 @@
 format: "1.16"
 package: duties-brp
 title: "Duties: percentile (BRP) rolls"
-version: 1.0.1
+version: 1.0.2
 authors: [SharpMUSH]
 description: "Lets Duties roll on the percentile (BRP) sheet: a roll provider called brp, so a duty's checks roll 1d100 under a skill or characteristic roll, doubled or halved for difficulty, with help making a roll one step easier, and skill gains or healing as rewards. Pick it with +config duties/system=brp."
 license: MIT
@@ -21,7 +21,7 @@ depends:
       path: examples/packages/duties/
       branch: main
   - package: sheet-brp
-    version: ">=2.0 <3.0"
+    version: ">=2.3 <3.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH.Packages
       path: sheet-brp/
@@ -55,7 +55,7 @@ objects:
       # %<roller>: the roll this character improvises with, their highest (the first of equals).
       FN`DUTIES`FALLBACK:
         value: |-
-          setq(provider_roller,%<roller>)[last(sortkey(%!/FUN`TRAIT`SORTKEY,revwords(u({{sheet-brp/sheet}}/API`ALWAYS)),n))]
+          u({{sheet-brp/sheet}}/API`BEST,%<roller>)
         flags: [funsyntax]
       # %<roller>, %<trait>: 1 when a skill stands above its base chance.
       FN`DUTIES`TRAINED:
@@ -109,11 +109,6 @@ objects:
       FUN`MODS`HELPERS:
         value: |-
           if(cand(strlen(%0),strmatch(json_query(json_query(%0,get,helpers)),array)),json_query(json_query(%0,get,helpers),size),0)
-        flags: [funsyntax]
-      # %0 a key: its percentage for provider_roller, for sorting.
-      FUN`TRAIT`SORTKEY:
-        value: |-
-          u({{sheet-brp/sheet}}/API`RATING,%q<provider_roller>,%0)
         flags: [funsyntax]
 
   - ref: provider_registration

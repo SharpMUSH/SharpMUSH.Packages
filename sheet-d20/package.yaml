@@ -1,7 +1,7 @@
 format: "1.16"
 package: sheet-d20
 title: "D20 sheet"
-version: 2.2.0
+version: 2.2.1
 authors: [SharpMUSH]
 description: "A d20 character sheet built from a ledger: six ability scores, a skill list the game edits, training, level, hit points, coin and gear, with separate audited ledgers for XP, coin and gear. Guided character creation, XP advances, +check rolls 1d20 plus a trait against a DC, and encounters that keep their own copy of each sheet, with foes from a bestiary the game edits, initiative, turns and conditions."
 license: MIT
@@ -1504,7 +1504,7 @@ objects:
       # %0 the character, %1 who reads it: what they can do next.
       FUN`DISPLAY`FOOTER:
         value: |-
-          setq(footer_n,u(%!/FUN`ENC`JOINED,%0))[cond(cand(not(comp(objid(%1),%0)),not(isapproved(%1)),not(u(%!/FUN`PERM`KEEPER,%1))),u(%!/FUN`CHARGEN`NEXT,%0) +sheet/chargen shows every step.[u(%!/FUN`HINT,FOOTER)],not(comp(objid(%1),%0)),+check <trait> rolls. +sheet/advance spends XP.,+check <trait> rolls 1d20 plus what a trait adds.)][if(words(%q<footer_n>),%b[name(%0)] plays from a copy in encounter[if(gt(words(%q<footer_n>),1),s)] [itemize(%q<footer_n>)]: +encounter shows [if(gt(words(%q<footer_n>),1),them,it)].)]
+          setq(footer_n,u(%!/FUN`ENC`JOINED,%0))[cond(cand(not(comp(objid(%1),%0)),not(isapproved(%1)),not(u(%!/FUN`PERM`KEEPER,%1))),u(%!/FUN`CHARGEN`NEXT,%0) +sheet/chargen shows every step.,not(comp(objid(%1),%0)),+check <trait> rolls. +sheet/advance spends XP.,+check <trait> rolls 1d20 plus what a trait adds.)][if(words(%q<footer_n>),%b[name(%0)] plays from a copy in encounter[if(gt(words(%q<footer_n>),1),s)] [itemize(%q<footer_n>)]: +encounter shows [if(gt(words(%q<footer_n>),1),them,it)].)]
         flags: [funsyntax]
       # %0 the character, %1 who reads it: the steps of making a character.
       FUN`SCREEN`CHARGEN:
