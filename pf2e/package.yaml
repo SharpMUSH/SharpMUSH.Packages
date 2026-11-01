@@ -1949,7 +1949,7 @@ objects:
       FUN`BUILD`TODO`LEFT:
         value: |-
           @@(the labels of what is left)[
-          iter(u(%!/FUN`BUILD`TODO),if(strmatch(first(%i0,~),open),elements(%i0,2,~)),|,|)]
+          trim(squish(iter(u(%!/FUN`BUILD`TODO),if(strmatch(first(%i0,~),open),elements(%i0,2,~)),|,|),|),|)]
         flags: [funsyntax]
       # +build's page: what has been chosen and what is left, with what to type next.
       FUN`BUILD`SHOW:
@@ -1997,7 +1997,7 @@ objects:
           switch(1,
             strmatch(%q<list_rows>,#-1), notice(PF2E,+build/list ancestries%, heritages%, backgrounds%, classes%, feats <slot>%, choice <number>%, languages%, skills or gear <text>.,warn),
             not(words(%q<list_rows>,|)), notice(PF2E,Nothing to list[if(strlen(%1),%bfor %1)].,warn),
-            box([table(trim(%q<list_rows>,|),if(gt(lmax(iter(%q<list_rows>,strlen(%i0),|)),35),73,36),73,|)]%r[tone(muted,[words(%q<list_rows>,|)] in all. +build/info <name> describes one.)],capstr(%0)))]
+            box([table(trim(%q<list_rows>,|),if(gt(lmax(iter(%q<list_rows>,strlen(%i0),|,%b)),35),73,36),73,|)]%r[tone(muted,[words(%q<list_rows>,|)] in all. +build/info <name> describes one.)],capstr(%0)))]
         flags: [funsyntax]
       FUN`BUILD`LIST`PACK:
         value: |-
@@ -2109,34 +2109,38 @@ objects:
           @@(the sheet: who the character is, attributes, defenses, statistics, Strikes, what they carry and know, and the rules not applied)[
           u({{core}}/FUN`CHECK`PREPARE,%q<sheet_ledger>)][
           setq(show_spellcaster,gt(u({{core}}/FUN`CHECK`RANK,spellcasting),0))][
+          setq(show_spells,u(%!/FUN`SHOW`GRANTS,spells))][
+          setq(show_conditions,u(%!/FUN`SHOW`GRANTS,conditions))][
+          setq(show_actions,u(%!/FUN`SHOW`GRANTS,actions))][
+          setq(show_feats,setunion(trim(squish(iter(%q<check_grants>,if(match(spells conditions actions,elements(%i0,2,~)),,u(%!/FUN`SHOW`ITEM,elements(%i0,2,~),elements(%i0,3,~),elements(%i0,4,~))),%b,|),|),|),,|))][
           box(
             [fields(,
               Level,%q<check_level>,
-              Ancestry,firstof(squish([u(%!/FUN`SHOW`GRANTED,%q<check_heritage>)] [u(%!/FUN`SHOW`GRANTED,%q<check_ancestry>)]),tone(muted,none)),
+              Ancestry,firstof([u(%!/FUN`SHOW`GRANTED,%q<check_ancestry>)][if(strlen(%q<check_heritage>),%b%([u(%!/FUN`SHOW`GRANTED,%q<check_heritage>)]%))],tone(muted,none)),
               Background,firstof(u(%!/FUN`SHOW`GRANTED,%q<check_background>),tone(muted,none)),
               Class,firstof(u(%!/FUN`SHOW`GRANTED,%q<check_class>),tone(muted,none)),
               Attributes,iter(str dex con int wis cha,[capstr(%i0)] [u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`CHECK`ABILITY,%i0))],%b,%b%b))]%r[
             rule()]%r[
-            fields(,
-              Hit points,u({{core}}/FUN`CHECK`HP),
-              AC,add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`AC))),
-              Speed,[u({{core}}/FUN`CHECK`SPEED)] feet,
-              Class DC,add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`CLASSDC))),
-              if(%q<show_spellcaster>,Spells),if(%q<show_spellcaster>,attack [u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,attack)))]%, DC [add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,dc)))]))]%r[
+            lfields(,
+              Hit points|AC|Speed|Class DC[if(%q<show_spellcaster>,|Spells)],
+              [u({{core}}/FUN`CHECK`HP)]|[add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`AC)))]|[u({{core}}/FUN`CHECK`SPEED)] feet|[add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`CLASSDC)))][if(%q<show_spellcaster>,|attack [u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,attack)))]%, DC [add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,dc)))])],
+              |)]%r[
             rule()]%r[
             ldatatable(,Statistic|Rank|>Modifier,iter(setunion(get({{core}}/DATA`STATISTICS) [iter(%q<check_stats>,if(strmatch(%i0,*-lore),%i0))],),u(%!/FUN`SHOW`STATISTIC,%i0),%b,%r),%r)]%r[
             rule()]%r[
             ldatatable(,Strike|>Attack|>MAP|Damage|Traits,iter(u({{core}}/FUN`CHECK`STRIKES),u(%!/FUN`SHOW`STRIKE,u({{core}}/FUN`STRIKE`LINE,%i0)),|,%r),%r)]%r[
             rule()]%r[
-            fields(,
-              Languages,firstof(itemize(iter(u(%!/FUN`SHOW`LANGUAGES),capstr(%i0))),tone(muted,none)),
-              Money,u(%!/FUN`SHOW`MONEY,u({{core}}/FUN`SHEET`MONEY,%q<check_entries>)),
-              Gear,firstof(itemize(iter(%q<check_gear>,[u(%!/FUN`SHOW`ITEM,equipment,first(%i0,~),)][if(gt(elements(%i0,2,~),1),%bx[elements(%i0,2,~)])][if(strlen(elements(%i0,3,~)),%b%([elements(%i0,3,~)]%))],%b,|),|),tone(muted,none)),
-              if(words(setr(show_spells,iter(%q<check_grants>,if(strmatch(elements(%i0,2,~),spells),u(%!/FUN`SHOW`ITEM,spells,elements(%i0,3,~),)),%b,|))),Spells known),itemize(%q<show_spells>,|),
-              Feats and features,firstof(itemize(iter(%q<check_grants>,if(match(spells conditions,elements(%i0,2,~)),,u(%!/FUN`SHOW`ITEM,elements(%i0,2,~),elements(%i0,3,~),elements(%i0,4,~))),%b,|),|),tone(muted,Nothing yet.)),
-              if(words(setr(show_conditions,iter(%q<check_grants>,if(strmatch(elements(%i0,2,~),conditions),u(%!/FUN`SHOW`ITEM,conditions,elements(%i0,3,~),elements(%i0,4,~))),%b,|))),Conditions),itemize(%q<show_conditions>,|))][
+            lfields(,
+              Languages|Money|Gear[if(words(%q<show_spells>,|),|Spells known)]|Feats and features[if(words(%q<show_actions>,|),|Actions)][if(words(%q<show_conditions>,|),|Conditions)],
+              [firstof(itemize(iter(u(%!/FUN`SHOW`LANGUAGES),capstr(%i0))),none)]|[u(%!/FUN`SHOW`MONEY,u({{core}}/FUN`SHEET`MONEY,%q<check_entries>))]|[firstof(itemize(iter(%q<check_gear>,[u(%!/FUN`SHOW`ITEM,equipment,first(%i0,~),)][if(gt(elements(%i0,2,~),1),%bx[elements(%i0,2,~)])][if(strlen(elements(%i0,3,~)),%b%([elements(%i0,3,~)]%))],%b,|),|),none)][if(words(%q<show_spells>,|),|[itemize(%q<show_spells>,|)])]|[firstof(itemize(%q<show_feats>,|),Nothing yet.)][if(words(%q<show_actions>,|),|[itemize(%q<show_actions>,|)])][if(words(%q<show_conditions>,|),|[itemize(%q<show_conditions>,|)])],
+              |)][
             u(%!/FUN`SHOW`UNAPPLIED)],
             name(%q<sheet_target>))]
+        flags: [funsyntax]
+      FUN`SHOW`GRANTS:
+        value: |-
+          @@(%0 a pack: the names of the items granted from it, each once, separated by |)[
+          setunion(trim(squish(iter(%q<check_grants>,if(strmatch(elements(%i0,2,~),%0),u(%!/FUN`SHOW`ITEM,%0,elements(%i0,3,~),elements(%i0,4,~))),%b,|),|),|),,|)]
         flags: [funsyntax]
       FUN`SHOW`GRANTED:
         value: |-
