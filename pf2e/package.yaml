@@ -1972,7 +1972,7 @@ objects:
             feat*, u(%!/FUN`BUILD`LIST`FEATS,lcstr(first(%1)),rest(%1)),
             choice*, iter(u(%!/FUN`BUILD`CHOICE`OPTIONS,extract(u(%!/FUN`BUILD`CHOICES`OPEN,0),first(%1),1,|)),#@. [after(%i0,^)],|,|),
             lang*, iter(u(%!/FUN`BUILD`LANGUAGES`OFFER),capstr(%i0),%b,|),
-            skill*, iter(u({{core}}/DATA`STATISTICS),if(strmatch(u({{core}}/FUN`STAT`KIND,%i0),skill),u(%!/FUN`SHOW`STAT,%i0)),%b,|),
+            skill*, iter(u({{core}}/DATA`STATISTICS),if(strmatch(u({{core}}/FUN`STAT`KIND,%i0),skill),[u(%!/FUN`SHOW`STAT,%i0)][if(setr(list_rank,u({{core}}/FUN`CHECK`RANK,%i0)),%b%([lcstr(u(%!/FUN`SHOW`RANK,%q<list_rank>))]%))]),%b,|),
             gear, u(%!/FUN`BUILD`LIST`GEAR,%1),
             #-1))][
           setq(list_rows,trim(squish(%q<list_rows>,|),|))][
