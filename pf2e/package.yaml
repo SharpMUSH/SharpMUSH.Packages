@@ -1813,7 +1813,7 @@ objects:
             null(iter(%q<open_sets>,
               [setq(open_rule,json_query(%q<open_item>,extract,$.system.rules\[%i0\]))][
               setq(open_flag,u({{core}}/FUN`RULE`CHOICE`FLAG,%q<open_rule>,%i0))][
-              if(cand(not(strlen(json_query(%q<open_choices>,extract,$.%q<open_flag>))),u({{core}}/FUN`PREDICATE`TEST,firstof(json_query(%q<open_rule>,get,predicate),json(array)),%q<check_options>),cor(not(%1),strlen(u(%!/FUN`BUILD`CHOICE`KIND,%q<open_rule>)))),
+              if(cand(not(strlen(json_query(%q<open_choices>,extract,$.%q<open_flag>))),u({{core}}/FUN`PREDICATE`TEST,firstof(json_query(%q<open_rule>,get,predicate),json(array)),%q<check_options>),cor(not(%1),not(strmatch(u(%!/FUN`BUILD`CHOICE`KIND,%q<open_rule>),none)))),
                 setq(open_found,%q<open_found>|[first(%0,~)]~%q<open_flag>~%i0~[json_query(%q<open_prep>,extract,$.name)]: [u(%!/FUN`BUILD`CAMEL`WORDS,%q<open_flag>)]))]))])]
         flags: [funsyntax]
       FUN`BUILD`CAMEL`WORDS:
@@ -1825,13 +1825,11 @@ objects:
         value: |-
           @@(%0 the ChoiceSet)[
           setq(kind_choices,json_query(%0,get,choices))][
-          switch(json_query(%0,extract,$.choices.type),
-            *,
-            [switch(1,
-              strmatch(left(%q<kind_choices>,1),\[),list,
-              strlen(json_query(%0,extract,$.choices.filter)),items,
-              strlen(u({{core}}/DATA`CHOICES`[ucstr(firstof(json_query(%0,extract,$.choices.config),json_query(%0,extract,$.choices)))])),config,
-              )])]
+          switch(1,
+            strmatch(left(%q<kind_choices>,1),\[),list,
+            strlen(json_query(%0,extract,$.choices.filter)),items,
+            strlen(u({{core}}/DATA`CHOICES`[ucstr(firstof(json_query(%0,extract,$.choices.config),json_query(%0,extract,$.choices)))])),config,
+            none)]
         flags: [funsyntax]
       # The options of an open choice, each value^label, separated by |: value the JSON stored as the selection.
       FUN`BUILD`CHOICE`OPTIONS:
@@ -1856,7 +1854,7 @@ objects:
           @@(%0 a ChoiceSet naming a list: each option with its predicate tested, {choice|value} as the option)[
           setq(config_predicate,firstof(json_query(%0,get,choices.predicate),json(array)))][
           iter(u({{core}}/DATA`CHOICES`[ucstr(firstof(json_query(%0,extract,$.choices.config),json_query(%0,extract,$.choices)))]),
-            if(u({{core}}/FUN`PREDICATE`TEST,edit(%q<config_predicate>,{choice|value},%i0),%q<check_options> [iter(%q<check_stats>,skill:%i0:rank:[u({{core}}/FUN`CHECK`RANK,%i0)])]),"%i0"^[u(%!/FUN`SHOW`STAT,%i0)]),%b,|)]
+            if(u({{core}}/FUN`PREDICATE`TEST,edit(%q<config_predicate>,\{choice|value\},%i0),%q<check_options> [iter(%q<check_stats>,skill:%i0:rank:[u({{core}}/FUN`CHECK`RANK,%i0)])]),"%i0"^[u(%!/FUN`SHOW`STAT,%i0)]),%b,|)]
         flags: [funsyntax]
       # A filter's options: the items of the packs the ChoiceSet names (feats and class features unless
       # it names spells) that pass its filter, from books the game uses; narrowed first by the indexed
