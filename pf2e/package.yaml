@@ -2401,7 +2401,7 @@ objects:
       FUN`ENC`PATCH:
         value: |-
           @@(%0 a combatant's index, %1 a merge patch for it: sets enc)[
-          setq(enc,json_mod(%q<enc>,set,$.c\[%0\],json_mod(json_query(%q<enc>,extract,$.c\[%0\]),patch,%1)))]
+          setq(enc,json_mod(%q<enc>,replace,$.c\[%0\],json_mod(json_query(%q<enc>,extract,$.c\[%0\]),patch,%1)))]
         flags: [funsyntax]
       FUN`ENC`INDEXES:
         value: |-
