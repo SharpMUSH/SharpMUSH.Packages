@@ -1576,7 +1576,7 @@ objects:
           u({{core}}/FUN`CHECK`PREPARE,%q<sheet_ledger>,1)][
           setq(build_locked,words(graball(%q<check_entries>,lock~*)))][
           setqm(build_class_item,u({{core}}/FUN`CHECK`ITEM,%q<check_class>),build_ancestry_item,u({{core}}/FUN`CHECK`ITEM,%q<check_ancestry>),build_background_item,u({{core}}/FUN`CHECK`ITEM,%q<check_background>),build_heritage_item,u({{core}}/FUN`CHECK`ITEM,%q<check_heritage>))][
-          setqm(build_class_slug,u({{core}}/FUN`ITEM`SLUG,%q<build_class_item>),build_feat_store,u({{core}}/DATA`PACK`FEATS),build_books,u({{core}}/DATA`CONFIG`BOOKS))]
+          setqm(build_class_slug,u({{core}}/FUN`ITEM`SLUG,%q<build_class_item>),build_feat_store,u({{core}}/DATA`PACK`FEATS),build_books,u({{core}}/DATA`CONFIG`BOOKS),prereq_keys,,prereq_vals,)]
         flags: [funsyntax]
       FUN`BUILD`WHO:
         value: |-
@@ -1865,7 +1865,8 @@ objects:
         value: |-
           @@(%1 one prerequisite {value}, %3 1 to give it when it is read and not met, 0 when it cannot be read)[
           setq(prereq_text,trim(json_query(%1,extract,$.value)))][
-          setq(prereq_state,u(%!/FUN`BUILD`PREREQ`MET,lcstr(%q<prereq_text>)))][
+          setq(prereq_at,member(%q<prereq_keys>,setr(prereq_key,lcstr(%q<prereq_text>)),|))][
+          setq(prereq_state,if(%q<prereq_at>,extract(%q<prereq_vals>,%q<prereq_at>,1,|),[setr(prereq_new,u(%!/FUN`BUILD`PREREQ`MET,%q<prereq_key>))][setqm(prereq_keys,%q<prereq_keys>|%q<prereq_key>,prereq_vals,%q<prereq_vals>|%q<prereq_new>)]))][
           if(switch(%3,1,strmatch(%q<prereq_state>,0),not(comp(%q<prereq_state>,?))),%q<prereq_text>)]
         flags: [funsyntax]
       FUN`BUILD`PREREQ`MET:
