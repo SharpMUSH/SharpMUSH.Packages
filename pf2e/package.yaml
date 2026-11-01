@@ -2355,7 +2355,7 @@ objects:
     attributes:
       CMD`ENC:
         value: |-
-          $(?is)^\+enc(/\S*)?(?\: +(.*))?$:think setqm(cmd_switch,firstof(lcstr(after(%1,/)),show),cmd_args,trim(%2)); @assert match(show start add join init next strike check damage heal cond persist delay undo redo end,%q<cmd_switch>)=@pemit %#=notice(PF2E,There is no +enc/%q<cmd_switch>. +help +enc lists the switches.,warn); think u(%!/FUN`ENC`LOAD,%l); @include %!/INC`ENC`%q<cmd_switch>
+          $(?is)^\+enc(/\S*)?(?\: +(.*))?$:think setqm(cmd_switch,firstof(lcstr(after(%1,/)),show),cmd_args,trim(%2)); @assert match(show start add join init next strike check use damage heal cond persist delay undo redo end,%q<cmd_switch>)=@pemit %#=notice(PF2E,There is no +enc/%q<cmd_switch>. +help +enc lists the switches.,warn); think u(%!/FUN`ENC`LOAD,%l); @include %!/INC`ENC`%q<cmd_switch>
         flags: [regexp, cmdsyntax]
       CMD`EXPLORE:
         value: |-
@@ -2420,7 +2420,7 @@ objects:
       FUN`ENC`MINE:
         value: |-
           @@(the index of the enactor's own combatant, or nothing)[
-          iter(u(FUN`ENC`INDEXES),if(strmatch(u(FUN`ENC`C,%i0,who),objid(%#)),%i0))]
+          trim(squish(iter(u(FUN`ENC`INDEXES),if(strmatch(u(FUN`ENC`C,%i0,who),objid(%#)),%i0))))]
         flags: [funsyntax]
       FUN`ENC`ACTING:
         value: |-
@@ -2520,7 +2520,8 @@ objects:
             [if(strmatch(u(FUN`ENC`C,%0,kind),pc),
               json_map(%!/FUN`ENC`LEDGER`KEEP,u({{commands}}/FUN`LEDGER`OF,u(FUN`ENC`C,%0,who)),\,),
               json(object,kind,"level",level,firstof(json_query(u(FUN`ENC`ITEM,%0),extract,$.system.details.level.value),0),n,1))],[
-            iter(json_map(%!/FUN`JSON`KEY,%q<enc_conds>,%b),if(strlen(setr(enc_cid,u({{core}}/FUN`ITEM`FIND,conditions,%i0))),json(object,kind,"grant",pack,"conditions",id,json(string,%q<enc_cid>),badge,if(setr(enc_badge,json_query(%q<enc_conds>,extract,$.%i0)),%q<enc_badge>,null),n,add(100000,inum(0)))),%b,\,)],\,),\,)]\]]
+            iter(json_map(%!/FUN`JSON`KEY,%q<enc_conds>,%b),if(strlen(setr(enc_cid,u({{core}}/FUN`ITEM`FIND,conditions,%i0))),json(object,kind,"grant",pack,"conditions",id,json(string,%q<enc_cid>),badge,if(setr(enc_badge,json_query(%q<enc_conds>,extract,$.%i0)),%q<enc_badge>,null),n,add(100000,inum(0)))),%b,\,)],[
+            iter(json_map(%!/FUN`JSON`KEY,setr(enc_used,firstof(u(FUN`ENC`C,%0,used),json(object))),%b),json(object,kind,"gear",id,json(string,%i0),qty,first(json_query(%q<enc_used>,extract,$.%i0),|),where,json(string,rest(json_query(%q<enc_used>,extract,$.%i0),|)),n,add(200000,inum(0))),%b,\,)],\,),\,)]\]]
         flags: [funsyntax]
       FUN`ENC`ITEM:
         value: |-
@@ -2695,6 +2696,18 @@ objects:
         value: |-
           @include %!/INC`ENC`NEEDGM; think setqm(dmg_who,trim(before(%q<cmd_args>,=)),dmg_what,trim(after(%q<cmd_args>,=))); @assert strlen(setr(act_at,u(%!/FUN`ENC`FIND,%q<dmg_who>)))=@pemit %#=notice(PF2E,No one in the encounter is called %q<dmg_who>.,warn); @assert strlen(%q<dmg_what>)=@pemit %#=notice(PF2E,+enc/damage <who>=<amount or formula>%, such as +enc/damage 3=2d6 fire.,warn); think if(isint(%q<dmg_what>),setqm(dmg_total,%q<dmg_what>,dmg_text,%q<dmg_what>),u(%!/FUN`ACT`DAMAGE,%q<dmg_what>,0)); @assert cand(isint(%q<dmg_total>),gte(%q<dmg_total>,0))=@pemit %#=notice(PF2E,%q<dmg_what> is not damage. Give a number or a formula such as 2d6 fire.,warn); think u(%!/FUN`ACT`HARM,%q<act_at>,%q<dmg_total>,0); @include %!/INC`ENC`SAVE; @remit %l=notice(PF2E,%q<harm_text>[if(not(isint(%q<dmg_what>)),%b%(%q<dmg_text>%))].)
         flags: [cmdsyntax]
+      # +enc/use [<who>=]<item>: a consumable from the combatant's gear, used up in the encounter's copy only; a healing item heals.
+      INC`ENC`USE:
+        value: |-
+          @include %!/INC`ENC`NEED; think setqm(use_who,if(strmatch(%q<cmd_args>,*=*),trim(before(%q<cmd_args>,=))),use_text,trim(if(strmatch(%q<cmd_args>,*=*),after(%q<cmd_args>,=),%q<cmd_args>))); think setq(act_at,if(strlen(%q<use_who>),u(%!/FUN`ENC`FIND,%q<use_who>),u(%!/FUN`ENC`MINE))); @assert strlen(%q<act_at>)=@pemit %#=notice(PF2E,if(strlen(%q<use_who>),No one in the encounter is called %q<use_who>.,You are not in the encounter. +enc/use <who>=<item> names who uses it.),warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,You use only your own things.,warn); @assert strmatch(u(%!/FUN`ENC`C,%q<act_at>,kind),pc)=@pemit %#=notice(PF2E,A creature uses what its statistics give it.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think setq(use_id,u({{commands}}/FUN`BUILD`GEAR`FIND,%q<use_text>)); @assert strlen(%q<use_id>)=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] has no %q<use_text> left.,warn); @assert strmatch(json_query(get(u({{core}}/DATA`PACK`EQUIPMENT)/ITEM`%q<use_id>`PREP),extract,$.kind),consumable)=@pemit %#=notice(PF2E,[u({{commands}}/FUN`SHOW`ITEM,equipment,%q<use_id>,)] is not used up. Only consumables are.,warn); think setqm(use_state,u({{core}}/FUN`SHEET`VALUE,%q<check_entries>,gear,%q<use_id>),use_name,u({{commands}}/FUN`SHOW`ITEM,equipment,%q<use_id>,),use_heal,u(%!/FUN`ACT`USE`HEAL,get(u({{core}}/DATA`PACK`EQUIPMENT)/ITEM`%q<use_id>`TEXT)),heal_text,,dmg_text,); think u(%!/FUN`ENC`PATCH,%q<act_at>,json(object,used,json(object,%q<use_id>,json(string,[dec(first(%q<use_state>,|))]|[rest(%q<use_state>,|)])))); think if(strlen(%q<use_heal>),[u(%!/FUN`ACT`DAMAGE,%q<use_heal>,0)][u(%!/FUN`ACT`HEAL,%q<act_at>,%q<dmg_total>)]); @include %!/INC`ENC`SAVE; @remit %l=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] uses [art(%q<use_name>)] %q<use_name>[if(strlen(%q<heal_text>),. %q<heal_text> %(%q<dmg_text>%))]. [dec(first(%q<use_state>,|))] left.)
+        flags: [cmdsyntax]
+      FUN`ACT`USE`HEAL:
+        value: |-
+          @@(%0 an item's description: the formula of the healing it gives, or nothing)[
+          if(strmatch(%0,*@Damage\[*\[healing\]*),
+            [setq(use_formula,before(after(%0,@Damage\[),\[healing\]))][
+            if(cand(strmatch(left(%q<use_formula>,1),%(),strmatch(right(%q<use_formula>,1),%))),mid(%q<use_formula>,1,sub(strlen(%q<use_formula>),2)),%q<use_formula>)])]
+        flags: [funsyntax]
       INC`ENC`HEAL:
         value: |-
           @include %!/INC`ENC`NEEDGM; think setqm(heal_who,trim(before(%q<cmd_args>,=)),heal_what,trim(after(%q<cmd_args>,=))); @assert strlen(setr(act_at,u(%!/FUN`ENC`FIND,%q<heal_who>)))=@pemit %#=notice(PF2E,No one in the encounter is called %q<heal_who>.,warn); think if(isint(%q<heal_what>),setqm(dmg_total,%q<heal_what>,dmg_text,),u(%!/FUN`ACT`DAMAGE,%q<heal_what>,0)); @assert cand(isint(%q<dmg_total>),gt(%q<dmg_total>,0))=@pemit %#=notice(PF2E,+enc/heal <who>=<amount or formula>%, such as +enc/heal 2=1d8+4.,warn); think u(%!/FUN`ACT`HEAL,%q<act_at>,%q<dmg_total>); @include %!/INC`ENC`SAVE; @remit %l=notice(PF2E,%q<heal_text>[if(strlen(%q<dmg_text>),%b%(%q<dmg_text>%))].)
