@@ -50,7 +50,7 @@ constraints checked before anything is planned.
 | [`sheet-d20-help/`](sheet-d20-help/) | 1.0.1 | Bridge: the D20 sheet's topics in `+help` |
 | [`sheet-d20-config/`](sheet-d20-config/) | 1.0.1 | Bridge: the D20 sheet's settings and trait table in `+config` |
 | [`sheet-d20-chargen/`](sheet-d20-chargen/) | 1.1.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |
-| [`sheet-fate/`](sheet-fate/) | 1.1.0 | Fate character sheet: skills or approaches on the ladder, aspects, stunts, stress, consequences and fate points; `+check` on four Fate dice; a grant ledger, guided `+chargen`, encounters that keep their own sheet copies, and milestones and breakthroughs from staff that players spend with `+sheet/advance`. Fate SRD text under CC BY 3.0 (see its NOTICE) |
+| [`sheet-fate/`](sheet-fate/) | 1.2.0 | Fate character sheet: skills or approaches on the ladder, aspects, stunts, stress, consequences and fate points; `+check` on four Fate dice; a grant ledger, guided `+chargen`, encounters that keep their own sheet copies, and milestones and breakthroughs from staff on an award ledger of their own, which players spend with `+sheet/advance`. Fate SRD text under CC BY 3.0 (see its NOTICE) |
 | [`sheet-fate-help/`](sheet-fate-help/) | 1.0.0 | Bridge: the Fate sheet's topics in `+help` |
 | [`sheet-fate-config/`](sheet-fate-config/) | 1.0.0 | Bridge: the Fate sheet's settings and tables in `+config` |
 | [`sheet-fate-chargen/`](sheet-fate-chargen/) | 1.1.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |

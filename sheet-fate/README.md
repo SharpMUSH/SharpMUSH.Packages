@@ -86,20 +86,24 @@ source, `+sheet/boxes` and `+sheet/refresh` the `STAFF` source, and each `+sheet
 
 ## Advancement
 
-An award is `` FATE`ADV`<n> `` on the character, holding its kind (`milestone`, `breakthrough`,
-`refresh` or `skill`), with `BY` (the keeper's objid), `AT` (`secs()`), `WHY`, `GAVE` (its letters) and
-`OPEN` (the letters not spent) beneath. The letters are `M` (milestone), `S` (skill step), `H` (new
-high concept) and `R` (point of refresh). Each spend adds `` USED`<m> ``: its letter and the advance as
-typed. `+sheet/void` writes `VOID` (who, when, why) and empties `OPEN`. Nothing is deleted, so the log
-is the record of every award.
+Awards have a ledger of their own, apart from the build ledger, and it is only ever added to. An award
+is `` FATE`ADV`<n> `` on the character, holding its kind (`milestone`, `breakthrough`, `refresh` or
+`skill`), with `BY` (the keeper's objid), `AT` (`secs()`), `WHY` and `GAVE` (its letters) beneath. The
+letters are `M` (milestone), `S` (skill step), `H` (new high concept) and `R` (point of refresh). Each
+spend adds `` USED`<m> `` (its letter and the advance as typed) with `BY` and `AT`. `+sheet/clear` adds
+`BACK` (who, when) to each spend it gives back, and `+sheet/void` adds `VOID` (who, when, why).
+
+What is left to spend is a cache: `` FATE`UNSPENT `` holds every letter not spent and
+`` FATE`UNSPENT`<n> `` award `<n>`'s. It is worked out again from the ledger after every award, spend,
+void and clear: an award's letters, less those of its spends not given back, and none once void. What
+a spend buys goes into the build ledger as grants from the `ADVANCE` source.
 
 Each option is `` ADVANCE`<KEY> `` on the **Fate Sheet** object, holding its description, with
 `TOKEN` (the letter it costs; `%0` the character, `%1` what was typed after the option, `%2` the value
 after `=`), `USAGE`, `SKIP` (`%0`: 1 when it is not offered) and `RUN` (`%0`, `%1`, `%2`: makes the
 change and returns what happened, or `#-1` and why, before it changes anything). A package adds its
 own the same way. An option with `KEEPS` set buys something `+sheet/clear` does not take away; the
-clear gives every other spent letter back. Raised skills and refresh are grants from the `ADVANCE`
-source; `swap` exchanges the two skills' grants from every source.
+clear gives every other spend back. `swap` exchanges the two skills' grants from every source.
 
 ## The numbers
 
@@ -125,7 +129,8 @@ FATE`POINTS                 fate points; unset is the refresh
 FATE`REFRESH                a refresh from the ledger; unset is the game's
 FATE`ENCOUNTERS             the encounters they are in, in the order they joined
 FATE`USING                  the one +encounter/use picked
-FATE`ADV`<n>                an award, with BY, AT, WHY, GAVE, OPEN, USED`<m> and VOID beneath
+FATE`ADV`<n>                an award, with BY, AT, WHY, GAVE, USED`<m> (BY, AT, BACK) and VOID beneath
+FATE`UNSPENT`<n>            the cache of what each award has left; FATE`UNSPENT all of it
 ```
 
 Encounters live on **Fate Encounters**:

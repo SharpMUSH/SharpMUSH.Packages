@@ -1,7 +1,7 @@
 format: "1.16"
 package: sheet-fate
 title: "Fate sheet"
-version: 1.1.0
+version: 1.2.0
 authors: [SharpMUSH]
 description: "A Fate character sheet: skills or the six approaches on the ladder, aspects, stunts, stress tracks, consequences and fate points. +sheet shows and fills it in, +chargen walks a player through it, and +check rolls four Fate dice plus a rating against an opposition for the room. The build is a ledger of grants; staff give milestones and breakthroughs that stay on a log, and players spend them with +sheet/advance. +encounter gives each encounter its own copy of fate points, stress and consequences. Fate Core and Fate Accelerated SRD material under CC BY 3.0."
 license: MIT
@@ -772,13 +772,15 @@ objects:
       # BUILD`<name> hook names, so character creation starts again. Play (stress, consequences, fate points) stays.
       INC`SHEET`CLEAR:
         value: |-
-          @include %!/INC`NEED`KEEPER; @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/clear <name> takes away their whole build so they make the character again.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>; @assert strlen(%q<sheet_who>); @dolist/inline squish(GRANT ASPECT STUNT [iter(lattr(%!/BUILD`*),get(%!/%i0))])={@include/args %!/INC`DO`WIPE=who,%q<sheet_who>,leaf,##}; think u(%!/FUN`ADV`REOPEN,%q<sheet_who>)[u(%!/API`REBUILD,%q<sheet_who>)]; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s build is cleared: +chargen starts it again.,ok); @pemit %q<sheet_who>=notice(SHEET,[name(%#)] cleared your character's build. +chargen walks you through making it again.)
+          @include %!/INC`NEED`KEEPER; @assert strlen(%q<cmd_argument>)=@pemit %#=notice(SHEET,+sheet/clear <name> takes away their whole build so they make the character again.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>; @assert strlen(%q<sheet_who>); @dolist/inline squish(GRANT ASPECT STUNT [iter(lattr(%!/BUILD`*),get(%!/%i0))])={@include/args %!/INC`DO`WIPE=who,%q<sheet_who>,leaf,##}; think u(%!/FUN`ADV`REOPEN,%q<sheet_who>,%q<viewer_objid>)[u(%!/API`REBUILD,%q<sheet_who>)]; @pemit %#=notice(SHEET,[name(%q<sheet_who>)]'s build is cleared: +chargen starts it again.,ok); @pemit %q<sheet_who>=notice(SHEET,[name(%#)] cleared your character's build. +chargen walks you through making it again.)
         flags: [cmdsyntax]
       # ---- advancement ---------------------------------------------------------------
-      # Every award stays on the character as FATE`ADV`<n> (milestone, breakthrough, refresh or skill), with BY (the
-      # keeper's objid), AT (secs()), WHY, GAVE (its letters) and OPEN (those not spent yet) beneath, and USED`<m>
-      # for each one spent: its letter and the advance as typed. A keeper voids an award with VOID (who, when, why);
-      # nothing is ever deleted, so the log is the audit trail.
+      # The award ledger is apart from the build ledger (FATE`GRANT) and is only ever added to. Each award is
+      # FATE`ADV`<n> (milestone, breakthrough, refresh or skill), with BY (the keeper's objid), AT (secs()), WHY and
+      # GAVE (its letters) beneath. Each spend adds USED`<m> (its letter and the advance as typed) with BY and AT;
+      # +sheet/clear adds BACK (who, when) to a spend it gives back; a keeper voids an award with VOID (who, when,
+      # why). What is left to spend is a cache, FATE`UNSPENT (every letter) and FATE`UNSPENT`<n> (award <n>'s),
+      # that FUN`ADV`REBUILD works out again from the ledger after every change.
       # +sheet/milestone <name>[=<reason>]: one milestone, usually at the end of a session.
       INC`SHEET`MILESTONE:
         value: |-
@@ -797,17 +799,17 @@ objects:
       # %<kind>, %<usage>: the award, to the character named left of =, the reason right of it.
       INC`ADV`GIVE:
         value: |-
-          @include %!/INC`NEED`KEEPER; @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(SHEET,%<usage>.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; @assert strlen(%q<sheet_who>); @assert lte(strlen(%q<cmd_right_side>),200)=@pemit %#=notice(SHEET,Keep a reason to 200 characters.,warn); think setqm(adv_n,inc(words(lattr(%q<sheet_who>/FATE`ADV`*))),adv_gave,get(%!/DATA`ADV`KIND`[ucstr(%<kind>)]))[u(%!/FUN`DO`WRITE,%q<sheet_who>,ADV`%q<adv_n>,lcstr(%<kind>))][u(%!/FUN`DO`WRITE,%q<sheet_who>,ADV`%q<adv_n>`BY,%q<viewer_objid>)][u(%!/FUN`DO`WRITE,%q<sheet_who>,ADV`%q<adv_n>`AT,secs())][u(%!/FUN`DO`WRITE,%q<sheet_who>,ADV`%q<adv_n>`WHY,%q<cmd_right_side>)][u(%!/FUN`DO`WRITE,%q<sheet_who>,ADV`%q<adv_n>`GAVE,%q<adv_gave>)][u(%!/FUN`DO`WRITE,%q<sheet_who>,ADV`%q<adv_n>`OPEN,%q<adv_gave>)]; @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has award %q<adv_n>%, [u(%!/FUN`ADV`KINDNAME,%<kind>)]: [u(%!/FUN`ADV`TOKENS,%q<adv_gave>)].,ok); @pemit %q<sheet_who>=notice(SHEET,tone(strong,name(%#)) gives you [u(%!/FUN`ADV`KINDNAME,%<kind>)][if(strlen(%q<cmd_right_side>),%b%(%q<cmd_right_side>%))]: [u(%!/FUN`ADV`TOKENS,%q<adv_gave>)]. +sheet/advance shows what to spend it on.)
+          @include %!/INC`NEED`KEEPER; @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(SHEET,%<usage>.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; @assert strlen(%q<sheet_who>); @assert lte(strlen(%q<cmd_right_side>),200)=@pemit %#=notice(SHEET,Keep a reason to 200 characters.,warn); think setqm(adv_n,inc(words(lattr(%q<sheet_who>/FATE`ADV`*))),adv_gave,get(%!/DATA`ADV`KIND`[ucstr(%<kind>)]))[u(%!/FUN`DO`WRITE,%q<sheet_who>,ADV`%q<adv_n>,lcstr(%<kind>))][u(%!/FUN`DO`WRITE,%q<sheet_who>,ADV`%q<adv_n>`BY,%q<viewer_objid>)][u(%!/FUN`DO`WRITE,%q<sheet_who>,ADV`%q<adv_n>`AT,secs())][u(%!/FUN`DO`WRITE,%q<sheet_who>,ADV`%q<adv_n>`WHY,%q<cmd_right_side>)][u(%!/FUN`DO`WRITE,%q<sheet_who>,ADV`%q<adv_n>`GAVE,%q<adv_gave>)][u(%!/FUN`ADV`REBUILD,%q<sheet_who>)]; @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has award %q<adv_n>%, [u(%!/FUN`ADV`KINDNAME,%<kind>)]: [u(%!/FUN`ADV`TOKENS,%q<adv_gave>)].,ok); @pemit %q<sheet_who>=notice(SHEET,tone(strong,name(%#)) gives you [u(%!/FUN`ADV`KINDNAME,%<kind>)][if(strlen(%q<cmd_right_side>),%b%(%q<cmd_right_side>%))]: [u(%!/FUN`ADV`TOKENS,%q<adv_gave>)]. +sheet/advance shows what to spend it on.)
         flags: [cmdsyntax]
       # +sheet/void <name>/<n>=<reason>: a keeper takes back what award <n> has not spent; the award stays on the log.
       INC`SHEET`VOID:
         value: |-
-          @include %!/INC`NEED`KEEPER; @assert cand(strmatch(%q<cmd_left_side>,*/*),isint(setr(adv_n,trim(after(%q<cmd_left_side>,/)))),strlen(%q<cmd_right_side>))=@pemit %#=notice(SHEET,+sheet/void <name>/<award>=<reason>%, an award from +sheet/advances <name>.,warn); @include/args %!/INC`NEED`TARGET=name,trim(before(%q<cmd_left_side>,/)); @assert strlen(%q<sheet_who>); @assert hasattr(%q<sheet_who>,FATE`ADV`%q<adv_n>)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has no award %q<adv_n>.,warn); @assert not(hasattr(%q<sheet_who>,FATE`ADV`%q<adv_n>`VOID))=@pemit %#=notice(SHEET,Award %q<adv_n> is void already.,warn); @assert lte(strlen(%q<cmd_right_side>),200)=@pemit %#=notice(SHEET,Keep a reason to 200 characters.,warn); think setq(adv_took,get(%q<sheet_who>/FATE`ADV`%q<adv_n>`OPEN))[u(%!/FUN`DO`WRITE,%q<sheet_who>,ADV`%q<adv_n>`VOID,%q<viewer_objid> [secs()] %q<cmd_right_side>)][u(%!/FUN`DO`WRITE,%q<sheet_who>,ADV`%q<adv_n>`OPEN,)]; @pemit %#=notice(SHEET,Award %q<adv_n> on [name(%q<sheet_who>)]'s sheet is void[if(words(%q<adv_took>),: [u(%!/FUN`ADV`TOKENS,%q<adv_took>)] taken back,%, with nothing left to take back)]. What it bought stays.,ok); @pemit %q<sheet_who>=notice(SHEET,tone(strong,name(%#)) voids your award %q<adv_n>: %q<cmd_right_side>)
+          @include %!/INC`NEED`KEEPER; @assert cand(strmatch(%q<cmd_left_side>,*/*),isint(setr(adv_n,trim(after(%q<cmd_left_side>,/)))),strlen(%q<cmd_right_side>))=@pemit %#=notice(SHEET,+sheet/void <name>/<award>=<reason>%, an award from +sheet/advances <name>.,warn); @include/args %!/INC`NEED`TARGET=name,trim(before(%q<cmd_left_side>,/)); @assert strlen(%q<sheet_who>); @assert hasattr(%q<sheet_who>,FATE`ADV`%q<adv_n>)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has no award %q<adv_n>.,warn); @assert not(hasattr(%q<sheet_who>,FATE`ADV`%q<adv_n>`VOID))=@pemit %#=notice(SHEET,Award %q<adv_n> is void already.,warn); @assert lte(strlen(%q<cmd_right_side>),200)=@pemit %#=notice(SHEET,Keep a reason to 200 characters.,warn); think setq(adv_took,u(%!/FUN`ADV`OPEN,%q<sheet_who>,%q<adv_n>))[u(%!/FUN`DO`WRITE,%q<sheet_who>,ADV`%q<adv_n>`VOID,%q<viewer_objid> [secs()] %q<cmd_right_side>)][u(%!/FUN`ADV`REBUILD,%q<sheet_who>)]; @pemit %#=notice(SHEET,Award %q<adv_n> on [name(%q<sheet_who>)]'s sheet is void[if(words(%q<adv_took>),: [u(%!/FUN`ADV`TOKENS,%q<adv_took>)] taken back,%, with nothing left to take back)]. What it bought stays.,ok); @pemit %q<sheet_who>=notice(SHEET,tone(strong,name(%#)) voids your award %q<adv_n>: %q<cmd_right_side>)
         flags: [cmdsyntax]
       # +sheet/advance: what you can spend and on what. +sheet/advance [<name>/]<option> <what>[=<value>] spends one.
       INC`SHEET`ADVANCE:
         value: |-
-          @break not(strlen(%q<cmd_argument>))={@pemit %#=u(%!/FUN`SCREEN`ADVANCE,%q<viewer_objid>)}; @include %!/INC`NEED`WHO; think setqm(adv_word,first(%q<sheet_what>),adv_rest,rest(%q<sheet_what>),adv_value,if(%q<cmd_has_equals>,%q<cmd_right_side>),adv_key,u(%!/FUN`ADV`FIND,%q<sheet_who>,first(%q<sheet_what>))); @assert strlen(%q<adv_key>)=@pemit %#=notice(SHEET,There is no advance '%q<adv_word>'. +sheet/advance lists them.,warn); think setqm(adv_token,u(%!/ADVANCE`%q<adv_key>`TOKEN,%q<sheet_who>,%q<adv_rest>,%q<adv_value>),adv_n,u(%!/FUN`ADV`WITH,%q<sheet_who>,u(%!/ADVANCE`%q<adv_key>`TOKEN,%q<sheet_who>,%q<adv_rest>,%q<adv_value>))); @assert strlen(%q<adv_n>)=@pemit %#=notice(SHEET,[if(comp(%q<sheet_who>,%q<viewer_objid>),[name(%q<sheet_who>)] has,You have)] no [get(%!/DATA`ADV`TOKEN`%q<adv_token>)] to spend. +sheet/advances shows the awards.,warn); think setq(adv_result,u(%!/ADVANCE`%q<adv_key>`RUN,%q<sheet_who>,%q<adv_rest>,%q<adv_value>)); @assert not(strmatch(%q<adv_result>,#-*))=@pemit %#=notice(SHEET,after(%q<adv_result>,#-1%b),warn); think [u(%!/FUN`DO`WRITE,%q<sheet_who>,ADV`%q<adv_n>`OPEN,ldelete(setr(adv_open,get(%q<sheet_who>/FATE`ADV`%q<adv_n>`OPEN)),member(%q<adv_open>,%q<adv_token>)))][u(%!/FUN`DO`WRITE,%q<sheet_who>,ADV`%q<adv_n>`USED`[inc(last(sort(0 [iter(lattr(%q<sheet_who>/FATE`ADV`%q<adv_n>`USED`*),last(%i0,`))],n)))],%q<adv_token> %q<sheet_what>[if(%q<cmd_has_equals>,=%q<adv_value>)])]; @pemit %#=notice(SHEET,[name(%q<sheet_who>)] spends a [get(%!/DATA`ADV`TOKEN`%q<adv_token>)] from award %q<adv_n>: %q<adv_result>,ok); @if comp(%q<sheet_who>,%q<viewer_objid>)={@pemit %q<sheet_who>=notice(SHEET,tone(strong,name(%#)) spends a [get(%!/DATA`ADV`TOKEN`%q<adv_token>)] from your award %q<adv_n>: %q<adv_result>)}
+          @break not(strlen(%q<cmd_argument>))={@pemit %#=u(%!/FUN`SCREEN`ADVANCE,%q<viewer_objid>)}; @include %!/INC`NEED`WHO; think setqm(adv_word,first(%q<sheet_what>),adv_rest,rest(%q<sheet_what>),adv_value,if(%q<cmd_has_equals>,%q<cmd_right_side>),adv_key,u(%!/FUN`ADV`FIND,%q<sheet_who>,first(%q<sheet_what>))); @assert strlen(%q<adv_key>)=@pemit %#=notice(SHEET,There is no advance '%q<adv_word>'. +sheet/advance lists them.,warn); think setqm(adv_token,u(%!/ADVANCE`%q<adv_key>`TOKEN,%q<sheet_who>,%q<adv_rest>,%q<adv_value>),adv_n,u(%!/FUN`ADV`WITH,%q<sheet_who>,u(%!/ADVANCE`%q<adv_key>`TOKEN,%q<sheet_who>,%q<adv_rest>,%q<adv_value>))); @assert strlen(%q<adv_n>)=@pemit %#=notice(SHEET,[if(comp(%q<sheet_who>,%q<viewer_objid>),[name(%q<sheet_who>)] has,You have)] no [get(%!/DATA`ADV`TOKEN`%q<adv_token>)] to spend. +sheet/advances shows the awards.,warn); think setq(adv_result,u(%!/ADVANCE`%q<adv_key>`RUN,%q<sheet_who>,%q<adv_rest>,%q<adv_value>)); @assert not(strmatch(%q<adv_result>,#-*))=@pemit %#=notice(SHEET,after(%q<adv_result>,#-1%b),warn); think setq(adv_m,inc(words(lattr(%q<sheet_who>/FATE`ADV`%q<adv_n>`USED`*))))[u(%!/FUN`DO`WRITE,%q<sheet_who>,ADV`%q<adv_n>`USED`%q<adv_m>,%q<adv_token> %q<sheet_what>[if(%q<cmd_has_equals>,=%q<adv_value>)])][u(%!/FUN`DO`WRITE,%q<sheet_who>,ADV`%q<adv_n>`USED`%q<adv_m>`BY,%q<viewer_objid>)][u(%!/FUN`DO`WRITE,%q<sheet_who>,ADV`%q<adv_n>`USED`%q<adv_m>`AT,secs())][u(%!/FUN`ADV`REBUILD,%q<sheet_who>)]; @pemit %#=notice(SHEET,[name(%q<sheet_who>)] spends a [get(%!/DATA`ADV`TOKEN`%q<adv_token>)] from award %q<adv_n>: %q<adv_result>,ok); @if comp(%q<sheet_who>,%q<viewer_objid>)={@pemit %q<sheet_who>=notice(SHEET,tone(strong,name(%#)) spends a [get(%!/DATA`ADV`TOKEN`%q<adv_token>)] from your award %q<adv_n>: %q<adv_result>)}
         flags: [cmdsyntax]
       # +sheet/advances [<name>]: every award, who gave it and why, and what it bought.
       INC`SHEET`ADVANCES:
@@ -822,18 +824,28 @@ objects:
       # %0 a character, %1 a letter: their oldest award that still has it.
       FUN`ADV`WITH:
         value: |-
-          first(iter(sort(iter(lattr(%0/FATE`ADV`*),after(%i0,FATE`ADV`)),n),if(cand(not(hasattr(%0,FATE`ADV`%i0`VOID)),member(get(%0/FATE`ADV`%i0`OPEN),%1)),%i0)))
+          first(iter(sort(iter(lattr(%0/FATE`ADV`*),after(%i0,FATE`ADV`)),n),if(member(get(%0/FATE`UNSPENT`%i0),%1),%i0)))
         flags: [funsyntax]
       # %0 a character, %1 a target, %2 a key, %3 a number: adds it to their ADVANCE grant there, and rebuilds.
       FUN`ADV`ADD:
         value: |-
           setq(adv_add_to,add(firstof(last(get(%0/FATE`GRANT`ADVANCE`%1`[ucstr(%2)])),0),%3))[null(uargs(%!/API`GRANT,who,%0,source,ADVANCE,target,%1,key,%2,kind,add,value,if(%q<adv_add_to>,%q<adv_add_to>)))][u(%!/API`REBUILD,%0)]
         flags: [funsyntax]
-      # %0 a character: for +sheet/clear, every award's letters back to what it gave, except those spent on an
-      # advance with KEEPS set (one that +sheet/clear does not take away, such as a machine's upgrade).
+      # %0 a character: for +sheet/clear, gives back every spend not yet given back, except one on an advance with
+      # KEEPS set (one that +sheet/clear does not take away, such as a machine's upgrade). %1 the keeper's objid.
       FUN`ADV`REOPEN:
         value: |-
-          null(iter(lattr(%0/FATE`ADV`*),[setq(reopen_open,get(%0/%i0`GAVE))][null(iter(lattr(%0/%i0`USED`*),if(u(%!/ADVANCE`[u(%!/FUN`ADV`FIND,%0,first(rest(get(%0/%i0))))]`KEEPS),setq(reopen_open,ldelete(%q<reopen_open>,member(%q<reopen_open>,first(get(%0/%i0))))),attrib_set(%0/%i0))))][if(cand(hasattr(%0,%i0`USED),not(words(lattr(%0/%i0`USED`*)))),attrib_set(%0/%i0`USED))][if(hasattr(%0,%i0`VOID),,u(%!/FUN`DO`WRITE,%0,after(%i0,FATE`)`OPEN,%q<reopen_open>))]))
+          null(iter(lattr(%0/FATE`ADV`*`USED`*),if(cor(hasattr(%0,%i0`BACK),u(%!/ADVANCE`[u(%!/FUN`ADV`FIND,%0,first(rest(get(%0/%i0))))]`KEEPS)),,attrib_set(%0/%i0`BACK,%1 [secs()]))))[u(%!/FUN`ADV`REBUILD,%0)]
+        flags: [funsyntax]
+      # %0 a character, %1 an award: its letters not spent, worked out from the ledger. A void award has none.
+      FUN`ADV`OPEN:
+        value: |-
+          if(hasattr(%0,FATE`ADV`%1`VOID),,[setq(open_left,get(%0/FATE`ADV`%1`GAVE))][null(iter(lattr(%0/FATE`ADV`%1`USED`*),if(hasattr(%0,%i0`BACK),,setq(open_left,ldelete(%q<open_left>,member(%q<open_left>,first(get(%0/%i0))))))))]%q<open_left>)
+        flags: [funsyntax]
+      # %0 a character: writes the cache of what is left to spend, FATE`UNSPENT and FATE`UNSPENT`<n>, from the ledger.
+      FUN`ADV`REBUILD:
+        value: |-
+          setq(rebuild_awards,sort(iter(lattr(%0/FATE`ADV`*),after(%i0,FATE`ADV`)),n))[null(iter(%q<rebuild_awards>,setq(rebuild_open_%i0,u(%!/FUN`ADV`OPEN,%0,%i0))))][u(%!/FUN`DO`WRITE,%0,UNSPENT,squish(iter(%q<rebuild_awards>,r(rebuild_open_%i0))))][null(iter(%q<rebuild_awards>,u(%!/FUN`DO`WRITE,%0,UNSPENT`%i0,r(rebuild_open_%i0))))]
         flags: [funsyntax]
       # %0 an ADVANCE`<KEY> attribute, %1 a character: 1 when it applies to them.
       FUN`ADV`APPLIES:
@@ -856,12 +868,12 @@ objects:
       # %0 a character: what they can spend, and the options.
       FUN`SCREEN`ADVANCE:
         value: |-
-          setq(adv_have,squish(iter(lattr(%0/FATE`ADV`*),if(not(hasattr(%0,%i0`VOID)),get(%0/%i0`OPEN)))))[box([if(words(%q<adv_have>),To spend: [itemize(iter(squish(iter(M S H R,if(member(%q<adv_have>,%i0),%i0))),[words(setr(adv_count,matchall(%q<adv_have>,%i0)))] [get(%!/DATA`ADV`TOKEN`%i0)][if(gt(words(%q<adv_count>),1),s)],%b,|),|)].,tone(muted,Nothing to spend. Staff give milestones and breakthroughs.))]%r[rule()]%r[ldatatable(,Advance|Costs|Option,iter(filterbool(%!/FUN`ADV`APPLIES,lattr(%!/ADVANCE`*),,,%0),+sheet/advance [get(%!/%i0`USAGE)]|[firstof(get(%!/DATA`ADV`TOKEN`[get(%!/%i0`TOKEN)]),milestone or new high concept)]|[get(%!/%i0)],%b,%*<^>),%*<^>)]%r[rule()]%r[tone(muted,+sheet/advances lists every award%, who gave it%, why%, and what it bought.)],Advancing [name(%0)])]
+          setq(adv_have,get(%0/FATE`UNSPENT))[box([if(words(%q<adv_have>),To spend: [itemize(iter(squish(iter(M S H R,if(member(%q<adv_have>,%i0),%i0))),[words(setr(adv_count,matchall(%q<adv_have>,%i0)))] [get(%!/DATA`ADV`TOKEN`%i0)][if(gt(words(%q<adv_count>),1),s)],%b,|),|)].,tone(muted,Nothing to spend. Staff give milestones and breakthroughs.))]%r[rule()]%r[ldatatable(,Advance|Costs|Option,iter(filterbool(%!/FUN`ADV`APPLIES,lattr(%!/ADVANCE`*),,,%0),+sheet/advance [get(%!/%i0`USAGE)]|[firstof(get(%!/DATA`ADV`TOKEN`[get(%!/%i0`TOKEN)]),milestone or new high concept)]|[get(%!/%i0)],%b,%*<^>),%*<^>)]%r[rule()]%r[tone(muted,+sheet/advances lists every award%, who gave it%, why%, and what it bought.)],Advancing [name(%0)])]
         flags: [funsyntax]
       # %0 a character: the award log.
       FUN`SCREEN`ADVANCES:
         value: |-
-          setq(adv_all,sort(iter(lattr(%0/FATE`ADV`*),after(%i0,FATE`ADV`)),n))[box(if(words(%q<adv_all>),ldatatable(,#|Award|Given by|Why|Left|Spent on,iter(%q<adv_all>,%i0|[u(%!/FUN`ADV`KINDLABEL,get(%0/FATE`ADV`%i0))][if(hasattr(%0,FATE`ADV`%i0`VOID),%b[tone(warning,void)])]|[name(get(%0/FATE`ADV`%i0`BY))]%, [timefmt($Y-$m-$d,get(%0/FATE`ADV`%i0`AT))]|[firstof(get(%0/FATE`ADV`%i0`WHY),-)][if(hasattr(%0,FATE`ADV`%i0`VOID),%b%(void by [name(first(get(%0/FATE`ADV`%i0`VOID)))]: [rest(rest(get(%0/FATE`ADV`%i0`VOID)))]%))]|[firstof(itemize(iter(get(%0/FATE`ADV`%i0`OPEN),get(%!/DATA`ADV`TOKEN`%i0),%b,|),|),-)]|[firstof(itemize(iter(sort(iter(lattr(%0/FATE`ADV`%i0`USED`*),last(%i0,`)),n),edit(rest(get(%0/FATE`ADV`%i1`USED`%i0)),|,/),%b,|),|),-)],%b,%*<^>),%*<^>),tone(muted,No awards yet.))%r[rule()]%r[tone(muted,Staff give awards with +sheet/milestone%, /breakthrough and /powerup%, and void one with +sheet/void. Nothing is taken off this log.)],Awards: [name(%0)])]
+          setq(adv_all,sort(iter(lattr(%0/FATE`ADV`*),after(%i0,FATE`ADV`)),n))[box(if(words(%q<adv_all>),ldatatable(,#|Award|Given by|Why|Left|Spent on,iter(%q<adv_all>,%i0|[u(%!/FUN`ADV`KINDLABEL,get(%0/FATE`ADV`%i0))][if(hasattr(%0,FATE`ADV`%i0`VOID),%b[tone(warning,void)])]|[name(get(%0/FATE`ADV`%i0`BY))]%, [timefmt($Y-$m-$d,get(%0/FATE`ADV`%i0`AT))]|[firstof(get(%0/FATE`ADV`%i0`WHY),-)][if(hasattr(%0,FATE`ADV`%i0`VOID),%b%(void by [name(first(get(%0/FATE`ADV`%i0`VOID)))]: [rest(rest(get(%0/FATE`ADV`%i0`VOID)))]%))]|[firstof(itemize(iter(get(%0/FATE`UNSPENT`%i0),get(%!/DATA`ADV`TOKEN`%i0),%b,|),|),-)]|[firstof(itemize(iter(sort(iter(lattr(%0/FATE`ADV`%i0`USED`*),last(%i0,`)),n),[edit(rest(get(%0/FATE`ADV`%i1`USED`%i0)),|,/)][if(hasattr(%0,FATE`ADV`%i1`USED`%i0`BACK),%b%(given back%))],%b,|),|),-)],%b,%*<^>),%*<^>),tone(muted,No awards yet.))%r[rule()]%r[tone(muted,Staff give awards with +sheet/milestone%, /breakthrough and /powerup%, and void one with +sheet/void. Nothing is taken off this log.)],Awards: [name(%0)])]
         flags: [funsyntax]
 
       # %<who>, %<leaf>: removes FATE`<leaf> and everything beneath it.
@@ -1764,7 +1776,7 @@ objects:
         - `+sheet/refresh <name>` brings their fate points up to their refresh. `+sheet/refresh <name>=<n>` gives them a refresh of their own, `=default` the game's again.
         - `+sheet/grant <name>/<what>=<n>` adds a grant to their ledger for a skill, a stress track or `refresh`: a plain number sets the value, `+<n>` or `-<n>` adds to it. `+sheet/grant Alice/fight=+1`.
         - `+sheet/revoke <name>/<n>` takes away grant `<n>` of `+sheet/ledger <name>`.
-        - `+sheet/clear <name>` takes away their whole build: every grant, aspect and stunt, and what packages build, such as modes. They make the character again with `+chargen`, and their awards can be spent again, except on what the clear left alone.
+        - `+sheet/clear <name>` takes away their whole build: every grant, aspect and stunt, and what packages build, such as modes. They make the character again with `+chargen`, and what their awards bought is given back to spend again, except what the clear left alone. The award log keeps each spend, marked given back.
         - `+sheet/milestone <name>\[=<reason>\]` and `+sheet/breakthrough <name>\[=<reason>\]` give an award. `+sheet/powerup <name>/refresh\[=<reason>\]` or `<name>/skill` gives a power-up.
         - `+sheet/void <name>/<n>=<reason>` takes back what award `<n>` has not spent. The award stays on `+sheet/advances <name>`, marked void with your name and reason.
         - `+sheet/advance <name>/<option> <what>\[=<value>\]` spends one of their awards for them.
