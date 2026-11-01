@@ -1277,11 +1277,11 @@ objects:
         flags: [funsyntax]
       INC`TARGET`VIEW:
         value: |-
-          think setq(sheet_target,if(strlen(%q<cmd_target>),pmatch(%q<cmd_target>),%#)); @assert hastype(%q<sheet_target>,player)=@pemit %#=notice(PF2E,There is no player called %q<cmd_target>.,warn); @assert cor(strmatch(%q<sheet_target>,%#),permission(%#,softcode.pf2e.staff))=@pemit %#=notice(PF2E,Only staff see another character's sheet.,error); think setq(sheet_ledger,u(%!/FUN`LEDGER`OF,%q<sheet_target>))
+          think setq(sheet_target,if(strlen(%q<cmd_target>),pmatch(%q<cmd_target>),%#)); @assert hastype(%q<sheet_target>,player)=@pemit %#=notice(PF2E,There is no player called %q<cmd_target>.,warn); @assert cor(strmatch(num(%q<sheet_target>),num(%#)),permission(%#,softcode.pf2e.staff))=@pemit %#=notice(PF2E,Only staff see another character's sheet.,error); think setq(sheet_ledger,u(%!/FUN`LEDGER`OF,%q<sheet_target>))
         flags: [cmdsyntax]
       INC`TARGET`EDIT:
         value: |-
-          think setq(sheet_target,if(strlen(%q<cmd_target>),pmatch(%q<cmd_target>),%#)); @assert cor(strmatch(%q<sheet_target>,%#),permission(%#,softcode.pf2e.staff))=@pemit %#=notice(PF2E,Only staff change another character's sheet.,error); think setq(sheet_ledger,u(%!/FUN`LEDGER`OF,%q<sheet_target>))
+          think setq(sheet_target,if(strlen(%q<cmd_target>),pmatch(%q<cmd_target>),%#)); @assert cor(strmatch(num(%q<sheet_target>),num(%#)),permission(%#,softcode.pf2e.staff))=@pemit %#=notice(PF2E,Only staff change another character's sheet.,error); think setq(sheet_ledger,u(%!/FUN`LEDGER`OF,%q<sheet_target>))
         flags: [cmdsyntax]
       INC`PF2E`LEVEL:
         value: |-
@@ -1314,7 +1314,7 @@ objects:
       # entry_json the entry, entry_text how it reads: numbered after the last entry, stamped with who made it.
       INC`ENTRY`WRITE:
         value: |-
-          think setq(entry_n,inc(lmax(0 [iter(lattr(%q<sheet_target>/PF2E`LEDGER`*),last(%i0,`))]))); &PF2E`LEDGER`%q<entry_n> %q<sheet_target>=[json_mod(%q<entry_json>,patch,json(object,n,%q<entry_n>,by,json(string,objid(%#))))]; @set %q<sheet_target>/PF2E`LEDGER`%q<entry_n>=wizard; @pemit %#=notice(PF2E,[if(strmatch(%q<sheet_target>,%#),,[name(%q<sheet_target>)]:%b)]%q<entry_text> %(entry %q<entry_n>%).,ok)
+          think setq(entry_n,inc(lmax(0 [iter(lattr(%q<sheet_target>/PF2E`LEDGER`*),last(%i0,`))]))); &PF2E`LEDGER`%q<entry_n> %q<sheet_target>=[json_mod(%q<entry_json>,patch,json(object,n,%q<entry_n>,by,json(string,objid(%#))))]; @set %q<sheet_target>/PF2E`LEDGER`%q<entry_n>=wizard; @pemit %#=notice(PF2E,[if(strmatch(num(%q<sheet_target>),num(%#)),,[name(%q<sheet_target>)]:%b)]%q<entry_text> %(entry %q<entry_n>%).,ok)
         flags: [cmdsyntax]
       # A check: the statistic's modifiers stacked, a d20 rolled and kept, and against a DC its degree.
       INC`CHECK`ROLL:
@@ -1338,7 +1338,7 @@ objects:
         flags: [regexp, cmdsyntax]
       INC`BUILD`TARGET:
         value: |-
-          think setq(sheet_target,if(strlen(%q<cmd_target>),pmatch(%q<cmd_target>),%#)); @assert hastype(%q<sheet_target>,player)=@pemit %#=notice(PF2E,There is no player called %q<cmd_target>.,warn); think setq(build_staff,permission(%#,softcode.pf2e.staff)); @assert cor(strmatch(%q<sheet_target>,%#),%q<build_staff>)=@pemit %#=notice(PF2E,Only staff build another character's sheet.,error); think u(%!/FUN`BUILD`LOAD)
+          think setq(sheet_target,if(strlen(%q<cmd_target>),pmatch(%q<cmd_target>),%#)); @assert hastype(%q<sheet_target>,player)=@pemit %#=notice(PF2E,There is no player called %q<cmd_target>.,warn); think setq(build_staff,permission(%#,softcode.pf2e.staff)); @assert cor(strmatch(num(%q<sheet_target>),num(%#)),%q<build_staff>)=@pemit %#=notice(PF2E,Only staff build another character's sheet.,error); think u(%!/FUN`BUILD`LOAD)
         flags: [cmdsyntax]
       # A step already chosen on a finished sheet is staff's to change.
       INC`BUILD`GUARD:
@@ -1483,7 +1483,7 @@ objects:
         flags: [funsyntax]
       FUN`BUILD`WHO:
         value: |-
-          if(strmatch(%q<sheet_target>,%#),,[name(%q<sheet_target>)]:%b)
+          if(strmatch(num(%q<sheet_target>),num(%#)),,[name(%q<sheet_target>)]:%b)
         flags: [funsyntax]
       FUN`BUILD`STEP:
         value: |-
@@ -1953,7 +1953,7 @@ objects:
           switch(1,
             strmatch(%q<list_rows>,#-1), notice(PF2E,+build/list ancestries%, heritages%, backgrounds%, classes%, feats <slot>%, choice <number>%, languages%, skills or gear <text>.,warn),
             not(words(%q<list_rows>,|)), notice(PF2E,Nothing to list[if(strlen(%1),%bfor %1)].,warn),
-            box([table(trim(%q<list_rows>,|),37,75,|)]%r[tone(muted,[words(%q<list_rows>,|)] in all. +build/info <name> describes one.)],capstr(%0)))]
+            box([table(trim(%q<list_rows>,|),36,73,|)]%r[tone(muted,[words(%q<list_rows>,|)] in all. +build/info <name> describes one.)],capstr(%0)))]
         flags: [funsyntax]
       FUN`BUILD`LIST`PACK:
         value: |-
