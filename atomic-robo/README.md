@@ -1,19 +1,19 @@
-# fate-action-science
+# atomic-robo
 
-Pulp action science and giant robots on the [Fate sheet](../sheet-fate/). Characters pick three
+An unofficial Atomic Robo pack: pulp action science and giant robots on the [Fate sheet](../sheet-fate/). Characters pick three
 modes that rate their skills, take mega-stunts, invent gadgets with catches and flaws, brainstorm a
 hypothesis together, and pilot machines whose scale counts in a fight.
 
 Based on the Atomic Robo RPG SRD and the Fate System Toolkit, both under CC BY 3.0: see
 [NOTICE.md](NOTICE.md). The help and messages are this package's own wording, and the in-game
-`+help mode credits` topic carries the attribution. It uses none of the comic's characters or art.
+`+help mode credits` topic carries the attribution. It is an unofficial fan package, not affiliated with or endorsed by Evil Hat Productions or the creators of Atomic Robo, and uses none of the comic's characters or art.
 
 Depends on [`sheet-fate`](../sheet-fate/) 1.1 or later. Bridges add the rest:
 
 | Bridge | Adds |
 |---|---|
-| [`fate-action-science-help`](../fate-action-science-help/) | the `+help mode`, `+help machine`, `+help invent` and `+help brainstorm` topics |
-| [`fate-action-science-config`](../fate-action-science-config/) | the settings and the `modes` and `scales` tables in `+config fate-science` |
+| [`atomic-robo-help`](../atomic-robo-help/) | the `+help mode`, `+help machine`, `+help invent` and `+help brainstorm` topics |
+| [`atomic-robo-config`](../atomic-robo-config/) | the settings and the `modes` and `scales` tables in `+config atomic-robo` |
 
 The Fate sheet's own bridges keep working: [`sheet-fate-chargen`](../sheet-fate-chargen/) ties mode,
 focus and mega-stunt changes to the player's `+app` application, and [`duties-fate`](../duties-fate/)
@@ -91,6 +91,6 @@ It writes `` FATE`RATING`<SKILL> `` and `` FATE`BOXES`<TRACK> `` from the modes,
 `+check` and Duties read the right numbers. The sheet's `` GATE`SET `` turns `+sheet/set` off, and
 four `` SECTION` `` hooks draw the modes, mega-stunts, machine and inventions on `+sheet`.
 
-The modes and scales are `+config` tables on **Fate Action Science Store**: `MODE` (with `SKILLS`,
+The modes and scales are `+config` tables on **Atomic Robo Store**: `MODE` (with `SKILLS`,
 `WEIRD`, `ORDER`) and `SCALE` (with `STEP`). It adds Combat, Vehicles and the sciences to the Fate
 sheet's skill list. Live brainstorms are on **Fate Brainstorms**, one branch per room.

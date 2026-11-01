@@ -80,7 +80,7 @@ Bridges may set `` HINT`<message> ``, `` GATE`EDIT `` and `` ALLOW`VIEW`<name> `
 Sheet** object, as on the d20 sheet, and two more:
 
 - `` GATE`SET `` (`%0` the player): a reason nobody, keepers included, sets ratings with `+sheet/set`,
-  for a package that works them out itself, such as [`fate-action-science`](../fate-action-science/)'s modes.
+  for a package that works them out itself, such as [`atomic-robo`](../atomic-robo/)'s modes.
   While it is set the sheet gives no `pyramid` warning, since its ratings are not the player's to arrange.
 - `` SECTION`<name> `` (`%0` the character, `%1` the reader): a part of the `+sheet` screen, drawn after
   the consequences under a rule titled by its `` SECTION`<name>`TITLE `` leaf, in the order of its

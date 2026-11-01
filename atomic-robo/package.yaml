@@ -1,9 +1,9 @@
 format: "1.16"
-package: fate-action-science
-title: "Fate: action science and giant robots"
+package: atomic-robo
+title: "Atomic Robo (unofficial)"
 version: 1.0.0
 authors: [SharpMUSH]
-description: "Pulp action science and super robots on the Fate sheet: characters pick three modes (Action, Banter, Intrigue, Science, or weird ones such as Robot and Pilot) that rate their skills, take mega-stunts, invent gadgets with catches and flaws, brainstorm a hypothesis together, and pilot giant machines whose scale counts in a fight. Based on the Atomic Robo RPG SRD and the Fate System Toolkit, both under CC BY 3.0."
+description: "Pulp action science and super robots on the Fate sheet: characters pick three modes (Action, Banter, Intrigue, Science, or weird ones such as Robot and Pilot) that rate their skills, take mega-stunts, invent gadgets with catches and flaws, brainstorm a hypothesis together, and pilot giant machines whose scale counts in a fight. Based on the Atomic Robo RPG SRD and the Fate System Toolkit, both under CC BY 3.0. An unofficial fan package, not affiliated with or endorsed by Evil Hat Productions or the creators of Atomic Robo."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, fate, invention, robots, mecha]
@@ -41,16 +41,16 @@ objects:
   # FUN`STRESS` and FUN`POINTS` work the ratings out, FUN`SECTION` the parts of +sheet, FUN`SCREEN` the screens.
   - ref: science
     type: thing
-    name: Fate Action Science
+    name: Atomic Robo
     location: "{{$master_room}}"
     flags: [WIZARD]
     attributes:
       # ---- settings ---------------------------------------------------------------
-      # +config fate-science shows and changes them (fate-action-science-config).
+      # +config atomic-robo shows and changes them (atomic-robo-config).
       DATA`CONFIG: |-
         Settings for modes, mega-stunts, machines and brainstorms on the Fate sheet. One leaf per setting.
       DATA`CONFIG`LABEL: |-
-        Fate action science
+        Atomic Robo
       DATA`CONFIG`RATINGS: |-
         3 2 1
       DATA`CONFIG`RATINGS`TYPE: |-
@@ -294,7 +294,7 @@ objects:
       CHECK`RATINGS: |-
         if(every(%!/FUN`IS`RATING,%0),,Give each rating as a number from 1 to 5.)
       CHECK`SCALE: |-
-        if(strlen(u(%!/FUN`SCALE`FIND,%0)),,There is no scale '%0'. +config fate-science/scales lists them.)
+        if(strlen(u(%!/FUN`SCALE`FIND,%0)),,There is no scale '%0'. +config atomic-robo/scales lists them.)
       FUN`IS`RATING: |-
         cand(isint(%0),gte(%0,1),lte(%0,5))
 
@@ -975,7 +975,7 @@ objects:
   # beneath). Inside the command object, so no player can reach it; no_command, so nothing on it is a command.
   - ref: store
     type: thing
-    name: Fate Action Science Store
+    name: Atomic Robo Store
     location: "{{science}}"
     flags: [no_command]
     attributes:
@@ -1070,11 +1070,11 @@ objects:
       BS: |-
         The brainstorms going on now, one branch per room. +brainstorm/stop ends one.
 
-  # The +help topics, on an object of their own. fate-action-science-help registers it with +help; without that
+  # The +help topics, on an object of their own. atomic-robo-help registers it with +help; without that
   # bridge nothing reads it. HELP`<TOPIC> is a topic, its subtopics the leaves beneath, LOCK`<TOPIC> who may read it.
   - ref: science_help
     type: thing
-    name: Fate Action Science Help
+    name: Atomic Robo Help
     location: "{{science}}"
     attributes:
       HELP: |-
@@ -1138,14 +1138,14 @@ objects:
       LOCK`MODE`SETTINGS: |-
         perm^config.admin
       HELP`MODE`SETTINGS: |-
-        `+config fate-science` lists the settings and `+config fate-science/<setting>=<value>` changes one \(`config.admin`\):
+        `+config atomic-robo` lists the settings and `+config atomic-robo/<setting>=<value>` changes one \(`config.admin`\):
 
         - `ratings`: the modes' ratings, one per mode \(`3 2 1`\). `points`: skill points each \(3\).
         - `stress`: physical and mental boxes before the modes add theirs \(2\). `physical`, `mental`: the skills that add them.
         - `scale_effect`: what each step of scale does: `roll` \(+1 to the larger\), `harm` \(2 shifts\) or `both`.
         - `machine_scale`: the scale a new machine starts at \(giant\). `machine_boxes`: a machine's stress boxes \(3\).
         - `brainstorm_difficulty`: the first fact's difficulty \(3\). `brainstorm_point`: whether joining a brainstorm pays a fate point \(yes\).
-        - `modes`: the modes, each with its skills and whether it is weird. `+config/add fate-science/modes/spy=Spy` adds one.
+        - `modes`: the modes, each with its skills and whether it is weird. `+config/add atomic-robo/modes/spy=Spy` adds one.
         - `scales`: the scales and their steps.
 
         A new science is a skill: `+config/add fate/skills/<key>=<label>`, then add its key to the Science mode's skills.
@@ -1154,7 +1154,7 @@ objects:
 
         Scale is based on the Fate System Toolkit. This work is based on the Fate System Toolkit \(found at http://www.faterpg.com/\), a product of Evil Hat Productions, LLC, developed, authored, and edited by Robert Donoghue, Brian Engard, Brennan Taylor, Mike Olson, Mark Diaz Truman, Fred Hicks, and Matthew Gandy, and licensed for our use under the Creative Commons Attribution 3.0 Unported license \(http://creativecommons.org/licenses/by/3.0/\).
 
-        Fate is a trademark of Evil Hat Productions, LLC. This game is not affiliated with or endorsed by Evil Hat Productions.
+        Fate is a trademark of Evil Hat Productions, LLC, and Atomic Robo a trademark of Brian Clevinger and Scott Wegener. This is an unofficial package: this game is not affiliated with or endorsed by Evil Hat Productions or the creators of Atomic Robo.
       HELP`MACHINE: |-
         `+machine` shows your machine: a giant robot, a tank, a starship. Machines are built at a scale, and scale counts when they meet something bigger or smaller.
 
