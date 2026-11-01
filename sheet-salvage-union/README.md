@@ -47,6 +47,8 @@ Every sheet package answers `+sheet` and `+check`. Install one per game.
 | `+mech/chassis <chassis>`, `/install`, `/remove <part>` | unapproved player, keeper | Builds it; a new pilot uses Tech 1 parts within 20 scrap, chassis included |
 | `+mech/craft <part>[=<scrap tech>]` | approved player | A new chassis, system or module from the crawler, for its Salvage Value in scrap from the hold |
 | `+mech/name`, `/quirk <text>` | player | Its pattern name and quirk |
+| `+mech/install`, `/chassis <salvage>` | approved player | Fits salvage the Mech Bay has repaired |
+| `+mech/breakdown <salvage>` | player | Breaks a salvaged part into its Salvage Value in scrap, for the crawler's hold |
 | `+mech/sp`, `/ep`, `/heat`, `/vent`, `/use <part>` | player | Play |
 | `+mech/scrap <tech>=+<n>\|-<n>` | player | Scrap in the cargo |
 | `+mech/part <name>`, `/list <chassis\|systems\|modules> [<tech>]` | all | The parts |
@@ -60,6 +62,13 @@ Every sheet package answers `+sheet` and `+check`. Install one per game.
 | `+crawler/scrap <tech>=+<n> [<reason>]`, `/name`, `/type`, `/weapon`, `/tech`, `/sp`, `/pool`, `/upkeep`, `/upgrade` | keeper | Runs it |
 | `+encounter [<n>]`, `/start [<title>]`, `/join [<n>]`, `/leave [<n>]`, `/use <n>` | all | Encounters |
 | `+encounter/add`, `/remove`, `/keep <name>[=<n>]`, `/end [<n>]` | GM or keeper | Runs one |
+| `+encounter/bestiary [<group or npc>]`, `/stat <npc>` | all | The Core Book's NPCs; one in your encounter |
+| `+encounter/npc [<count>] <npc or chassis>[=<n>]`, `/fit <npc>=<part>` | GM or keeper | Adds NPCs, or an enemy mech on a chassis, and arms it |
+| `+encounter/act <npc>[/<action>][=<target>[/pilot]]`, `/heal <npc>=<n>` | GM or keeper | Rolls an NPC's action on the NPC Action table, with its damage on a hit |
+| `+encounter/initiative`, `/turn [<who>]` | member or GM | Group Initiative: starts a round; marks a turn taken |
+| `+encounter/hit <npc>=<n> [HP\|SP]` | member or GM | Damages an NPC |
+| `+encounter/salvage <npc>[=<part>]` | member | Salvages a wrecked mech (the Mech Salvage table) or vehicle (its scrap) |
+| `+encounter/spoils <name>=<n> <tech>\|<part>` | GM or keeper | Gives what a Bio-Titan or a ruin yields |
 
 Keepers (`softcode.salvage.admin`, the **Salvage Union Sheet Keeper** role) put `<name>/` before
 the argument of a build switch to change anyone's sheet at any time, without spending TP.
@@ -120,8 +129,28 @@ ENC`<n>`C`<dbref>`<leaf>       a member's copy
 on the Salvage Union Store, and on the character `SALVAGE`ENCOUNTERS` (joined, in order) and
 `SALVAGE`USING` (the `/use` pick). The active copy is a joined encounter running in the
 character's room: the pick when it is one, else the last joined. Anywhere else the sheet itself
-applies. `/keep` writes a copy onto the sheet; `/end` drops the copies. Duties and `API`CHECK`
+applies. `/keep` writes a copy onto the sheet, and the member's salvage with it; `/end` drops the copies. Duties and `API`CHECK`
 with `live` 1 always use the sheet.
+
+An encounter's NPCs are on the store too:
+
+```
+ENC`<n>`NPCS, `NNEXT            their numbers; the last used
+ENC`<n>`N`<id>                  its name
+ENC`<n>`N`<id>`FROM             NPC:<key> (Salvage Union Data's NPC`<key>) or CHASSIS:<key>
+ENC`<n>`N`<id>`KIND, `HEALTH    npc, vehicle, bio-titan or mech; hp or sp
+ENC`<n>`N`<id>`MAX, `NOW        its most; now (unset is the most)
+ENC`<n>`N`<id>`TECH, `VALUE     what salvaging it gives
+ENC`<n>`N`<id>`PARTS            an enemy mech's SYSTEM:<key> and MODULE:<key>
+ENC`<n>`N`<id>`SBY, `SROLL, `PICKS  who salvaged it, the Mech Salvage roll, what it still allows
+ENC`<n>`ROUND, `ACTED, `FIRST   the round, who has acted (objids and N<id>), the Group Initiative die
+ENC`<n>`S`<dbref>               a member's salvage waiting to be kept: scrap:<tech>:<n>, part:<KIND>:<key>
+```
+
+Kept scrap goes into the crawler's hold as a ledger entry for the member. Kept parts are `grant`
+entries on the `MECH`SALVAGE` list (damaged), keyed `<KIND>:<key>`. Downtime moves each one of the
+crawler's Tech Level or lower to `MECH`SPARES` (repaired), where `+mech/install` and `/chassis`
+take it, and `+mech/breakdown` takes either for scrap.
 
 ## Where the data lives
 
@@ -136,6 +165,7 @@ SALVAGE`USED`<BACKGROUND|...>  a re-roll spent until downtime
 SALVAGE`SPENT`<kind>`<key>     uses spent until downtime
 SALVAGE`MECH`SP, `EP, `HEAT    the mech's meters
 SALVAGE`MECH`SCRAP`T<n>        scrap in its cargo
+SALVAGE`MECH`SALVAGE, `SPARES  salvaged parts, damaged and repaired
 SALVAGE`LAST                   the last check, for re-rolls
 ```
 

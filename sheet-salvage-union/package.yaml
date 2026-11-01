@@ -1,9 +1,9 @@
 format: "1.16"
 package: sheet-salvage-union
 title: "Salvage Union sheet (unofficial)"
-version: 1.2.0
+version: 1.3.0
 authors: [SharpMUSH]
-description: "An unofficial Salvage Union pilot and mech sheet: a class, abilities bought down their trees with training points, HP, AP and pilot equipment; a mech built from a chassis, systems and modules, with SP, EP and heat; and the Union Crawler the pilots share. +check rolls the one d20 against the core mechanic table, spends the AP, EP and heat it costs, and lets a mech Push for a re-roll and a heat check. The Core Book's abilities, chassis, systems, modules, equipment and tables come from the Salvage Union (Unofficial) Foundry VTT system, under the Salvage Union Open Game Licence 1.0b."
+description: "An unofficial Salvage Union pilot and mech sheet: a class, abilities bought down their trees with training points, HP, AP and pilot equipment; a mech built from a chassis, systems and modules, with SP, EP and heat; and the Union Crawler the pilots share. Encounters bring in the Core Book's NPCs, vehicles, drones, Bio-Titans and enemy mechs, with Group Initiative, NPC attacks and salvage. +check rolls the one d20 against the core mechanic table, spends the AP, EP and heat it costs, and lets a mech Push for a re-roll and a heat check. The Core Book's abilities, chassis, systems, modules, equipment and tables come from the Salvage Union (Unofficial) Foundry VTT system, under the Salvage Union Open Game Licence 1.0b."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, salvage-union, mech, d20, dice]
@@ -270,6 +270,8 @@ objects:
         MECH`SCRAP
       DATA`ROUTE`MECH`PART: |-
         MECH`PART
+      DATA`ROUTE`MECH`BREAKDOWN: |-
+        MECH`BREAKDOWN
       DATA`ROUTE`MECH`LIST: |-
         MECH`LIST
       DATA`ROUTE`CHECK`BARE: |-
@@ -340,6 +342,28 @@ objects:
         ENCOUNTER`KEEP
       DATA`ROUTE`ENCOUNTER`END: |-
         ENCOUNTER`END
+      DATA`ROUTE`ENCOUNTER`NPC: |-
+        ENCOUNTER`NPC
+      DATA`ROUTE`ENCOUNTER`FIT: |-
+        ENCOUNTER`FIT
+      DATA`ROUTE`ENCOUNTER`STAT: |-
+        ENCOUNTER`STAT
+      DATA`ROUTE`ENCOUNTER`BESTIARY: |-
+        ENCOUNTER`BESTIARY
+      DATA`ROUTE`ENCOUNTER`INITIATIVE: |-
+        ENCOUNTER`INITIATIVE
+      DATA`ROUTE`ENCOUNTER`TURN: |-
+        ENCOUNTER`TURN
+      DATA`ROUTE`ENCOUNTER`ACT: |-
+        ENCOUNTER`ACT
+      DATA`ROUTE`ENCOUNTER`HIT: |-
+        ENCOUNTER`HIT
+      DATA`ROUTE`ENCOUNTER`HEAL: |-
+        ENCOUNTER`HEAL
+      DATA`ROUTE`ENCOUNTER`SALVAGE: |-
+        ENCOUNTER`SALVAGE
+      DATA`ROUTE`ENCOUNTER`SPOILS: |-
+        ENCOUNTER`SPOILS
       # What an encounter copies from a sheet when a character joins, and keeps apart until the GM keeps it or
       # the encounter ends: the meters, the re-rolls, the last check, and every SPENT`<kind>`<key> (the uses
       # spent of a piece of gear, system or module; FUN`COPIED). The build (class, abilities, mech) and Training
@@ -603,7 +627,7 @@ objects:
         flags: [cmdsyntax]
       INC`SHEET`DOWNTIME:
         value: |-
-          @assert %q<viewer_keeper>=@pemit %#=notice(SHEET,Staff run downtime: it brings back the Armoury's pick as well as HP%, AP%, uses and re-rolls. +sheet/hp reset and +sheet/ap reset fill the meters.,warn); @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert strlen(%q<sheet_who>); @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error); @assert not(strlen(setr(down_enc,u(%!/FUN`ENC`OF,%q<sheet_who>))))=@pemit %#=notice(SHEET,Downtime comes after [u(%!/FUN`ENC`TITLE,%q<down_enc>)]. +encounter/leave first%, or ask its GM to keep what happened.,warn); @dolist/inline HP AP USED`BACKGROUND USED`MOTTO USED`KEEPSAKE USED`ARMOURY MECH`SP MECH`EP MECH`HEAT [iter(lattr(%q<sheet_who>/SALVAGE`SPENT`**),after(%i0,SALVAGE`))]={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,##,value,}; @pemit %#=notice(SHEET,[name(%q<sheet_who>)] rests through downtime: HP [u(%!/API`METER,%q<sheet_who>,HP)]%, AP [u(%!/API`METER,%q<sheet_who>,AP)]%, re-rolls and uses back[if(hasattr(%q<sheet_who>,SALVAGE`MECH`CHASSIS),%, and the mech repaired%, recharged and cool)].,ok)
+          @assert %q<viewer_keeper>=@pemit %#=notice(SHEET,Staff run downtime: it brings back the Armoury's pick as well as HP%, AP%, uses and re-rolls. +sheet/hp reset and +sheet/ap reset fill the meters.,warn); @if strlen(%q<cmd_argument>)={@include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>},{think setq(sheet_who,%q<viewer_objid>)}; @assert strlen(%q<sheet_who>); @assert cor(%q<viewer_keeper>,not(comp(%q<sheet_who>,%q<viewer_objid>)))=@pemit %#=notice(SHEET,Only sheet keepers change another character's sheet.,error); @assert not(strlen(setr(down_enc,u(%!/FUN`ENC`OF,%q<sheet_who>))))=@pemit %#=notice(SHEET,Downtime comes after [u(%!/FUN`ENC`TITLE,%q<down_enc>)]. +encounter/leave first%, or ask its GM to keep what happened.,warn); @dolist/inline HP AP USED`BACKGROUND USED`MOTTO USED`KEEPSAKE USED`ARMOURY MECH`SP MECH`EP MECH`HEAT [iter(lattr(%q<sheet_who>/SALVAGE`SPENT`**),after(%i0,SALVAGE`))]={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,##,value,}; think setq(down_repaired,u(%!/FUN`SALVAGE`REPAIR,%q<sheet_who>)); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] rests through downtime: HP [u(%!/API`METER,%q<sheet_who>,HP)]%, AP [u(%!/API`METER,%q<sheet_who>,AP)]%, re-rolls and uses back[if(hasattr(%q<sheet_who>,SALVAGE`MECH`CHASSIS),%, and the mech repaired%, recharged and cool)].[if(words(%q<down_repaired>),%bThe Mech Bay repairs [itemize(iter(%q<down_repaired>,u(%!/FUN`SALVAGE`NAME,%i0),%b,|),|)]: +mech/install fits a part%, +mech/chassis builds on a chassis.)],ok)
         flags: [cmdsyntax]
 
       # ---- +mech ------------------------------------------------------------------
@@ -615,13 +639,19 @@ objects:
       # stay when they fit. Before approval, Tech 1 within the starting scrap.
       INC`MECH`CHASSIS:
         value: |-
-          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(MECH,+mech/chassis <chassis>%, such as +mech/chassis mule. +mech/list chassis 1 shows the Tech 1 ones.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_argument>; @include %!/INC`NEED`GATE; @assert cor(%q<viewer_keeper>,%q<chargen>)=@pemit %#=notice(MECH,Once approved%, a pilot gets new parts with +mech/craft%, paid for in scrap from the Union Crawler. Staff install salvage found in the wastes.,warn); @assert cor(not(%q<chargen>),not(strlen(u(%!/FUN`GATE`EDIT,%#)))); @include/args %!/INC`NEED`FOUND=kind,CHASSIS,typed,%q<sheet_what>,among,; @assert strlen(%q<found_key>); think setq(build_why,u(%!/FUN`MECH`FITS,%q<sheet_who>,%q<found_key>,get(%q<sheet_who>/SALVAGE`MECH`SYSTEMS),get(%q<sheet_who>/SALVAGE`MECH`MODULES),%q<chargen>)); @assert not(strlen(%q<build_why>))=@pemit %#=notice(MECH,%q<build_why>,warn); think u(%!/FUN`LEDGER`SET,%q<sheet_who>,MECH`CHASSIS,%q<found_key>); @dolist/inline MECH`SP MECH`EP MECH`HEAT={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,##,value,}; @pemit %#=notice(MECH,[name(%q<sheet_who>)]'s mech is a [get({{data}}/CHASSIS`%q<found_key>)]: [u(%!/FUN`DISPLAY`MECHLINE,%q<sheet_who>)].,ok)
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(MECH,+mech/chassis <chassis>%, such as +mech/chassis mule. +mech/list chassis 1 shows the Tech 1 ones.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_argument>; @include %!/INC`NEED`GATE; @assert cor(not(%q<chargen>),not(strlen(u(%!/FUN`GATE`EDIT,%#)))); @include/args %!/INC`NEED`FOUND=kind,CHASSIS,typed,%q<sheet_what>,among,; @assert strlen(%q<found_key>); think setq(build_spare,cand(not(%q<viewer_keeper>),not(%q<chargen>))); @assert cor(not(%q<build_spare>),member(get(%q<sheet_who>/SALVAGE`MECH`SPARES),CHASSIS:%q<found_key>))=@pemit %#=notice(MECH,Once approved%, a pilot gets new parts with +mech/craft%, paid for in scrap from the Union Crawler%, or rebuilds on a salvaged chassis the Mech Bay has repaired.,warn); think setq(build_why,u(%!/FUN`MECH`FITS,%q<sheet_who>,%q<found_key>,get(%q<sheet_who>/SALVAGE`MECH`SYSTEMS),get(%q<sheet_who>/SALVAGE`MECH`MODULES),%q<chargen>)); @assert not(strlen(%q<build_why>))=@pemit %#=notice(MECH,%q<build_why>,warn); think if(%q<build_spare>,u(%!/FUN`LEDGER`REVOKE,%q<sheet_who>,u(%!/FUN`LEDGER`LATEST,%q<sheet_who>,MECH`SPARES,CHASSIS:%q<found_key>),rebuilt on)); think u(%!/FUN`LEDGER`SET,%q<sheet_who>,MECH`CHASSIS,%q<found_key>,if(%q<build_spare>,from salvage)); @dolist/inline MECH`SP MECH`EP MECH`HEAT={@include/args %!/INC`DO`SET=who,%q<sheet_who>,leaf,##,value,}; @pemit %#=notice(MECH,[name(%q<sheet_who>)]'s mech is a [get({{data}}/CHASSIS`%q<found_key>)]: [u(%!/FUN`DISPLAY`MECHLINE,%q<sheet_who>)].,ok)
         flags: [cmdsyntax]
       # +mech/install [<name>/]<system or module>: within the chassis's slots; before approval, Tech 1 within the
       # starting scrap.
       INC`MECH`INSTALL:
         value: |-
-          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(MECH,+mech/install <system or module>%, such as +mech/install red laser.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_argument>; @include %!/INC`NEED`GATE; @assert cor(%q<viewer_keeper>,%q<chargen>)=@pemit %#=notice(MECH,Once approved%, a pilot gets new parts with +mech/craft%, paid for in scrap from the Union Crawler. Staff install salvage found in the wastes.,warn); @assert cor(not(%q<chargen>),not(strlen(u(%!/FUN`GATE`EDIT,%#)))); @include %!/INC`NEED`MECH; @assert strlen(%q<mech_chassis>); think setqm(install_system,u(%!/FUN`FIND,SYSTEM,%q<sheet_what>,get({{data}}/LIST`SYSTEM)),install_module,u(%!/FUN`FIND,MODULE,%q<sheet_what>,get({{data}}/LIST`MODULE)),install_kind,if(strlen(%q<install_system>),SYSTEM,if(strlen(%q<install_module>),MODULE)),install_key,firstof(%q<install_system>,%q<install_module>)); @assert strlen(%q<install_key>)=@pemit %#=notice(MECH,There is no system or module '%q<sheet_what>'.[u(%!/FUN`FIND`HINT,SYSTEM,%q<sheet_what>,get({{data}}/LIST`SYSTEM))][u(%!/FUN`FIND`HINT,MODULE,%q<sheet_what>,get({{data}}/LIST`MODULE))] +mech/list systems and +mech/list modules show them.,warn); think setqm(install_systems,trim(get(%q<sheet_who>/SALVAGE`MECH`SYSTEMS)[if(strmatch(%q<install_kind>,SYSTEM),%b%q<install_key>)]),install_modules,trim(get(%q<sheet_who>/SALVAGE`MECH`MODULES)[if(strmatch(%q<install_kind>,MODULE),%b%q<install_key>)])); think setq(build_why,u(%!/FUN`MECH`FITS,%q<sheet_who>,%q<mech_chassis>,%q<install_systems>,%q<install_modules>,%q<chargen>)); @assert not(strlen(%q<build_why>))=@pemit %#=notice(MECH,%q<build_why>,warn); think u(%!/FUN`LEDGER`GRANT,%q<sheet_who>,MECH`%q<install_kind>S,%q<install_key>); @pemit %#=notice(MECH,[name(%q<sheet_who>)] installs [get({{data}}/%q<install_kind>`%q<install_key>)]: [u(%!/FUN`DISPLAY`SLOTS,%q<sheet_who>)].,ok)
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(MECH,+mech/install <system or module>%, such as +mech/install red laser.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_argument>; @include %!/INC`NEED`GATE; @assert cor(not(%q<chargen>),not(strlen(u(%!/FUN`GATE`EDIT,%#)))); @include %!/INC`NEED`MECH; @assert strlen(%q<mech_chassis>); think setqm(install_system,u(%!/FUN`FIND,SYSTEM,%q<sheet_what>,get({{data}}/LIST`SYSTEM)),install_module,u(%!/FUN`FIND,MODULE,%q<sheet_what>,get({{data}}/LIST`MODULE)),install_kind,if(strlen(%q<install_system>),SYSTEM,if(strlen(%q<install_module>),MODULE)),install_key,firstof(%q<install_system>,%q<install_module>)); @assert strlen(%q<install_key>)=@pemit %#=notice(MECH,There is no system or module '%q<sheet_what>'.[u(%!/FUN`FIND`HINT,SYSTEM,%q<sheet_what>,get({{data}}/LIST`SYSTEM))][u(%!/FUN`FIND`HINT,MODULE,%q<sheet_what>,get({{data}}/LIST`MODULE))] +mech/list systems and +mech/list modules show them.,warn); think setq(install_spare,cand(not(%q<viewer_keeper>),not(%q<chargen>))); @assert cor(not(%q<install_spare>),member(get(%q<sheet_who>/SALVAGE`MECH`SPARES),%q<install_kind>:%q<install_key>))=@pemit %#=notice(MECH,Once approved%, a pilot gets new parts with +mech/craft%, paid for in scrap from the Union Crawler%, or installs salvage the Mech Bay has repaired. [if(member(get(%q<sheet_who>/SALVAGE`MECH`SALVAGE),%q<install_kind>:%q<install_key>),That [get({{data}}/%q<install_kind>`%q<install_key>)] is still damaged: downtime repairs it.,+mech shows your salvage.)],warn); think setqm(install_systems,trim(get(%q<sheet_who>/SALVAGE`MECH`SYSTEMS)[if(strmatch(%q<install_kind>,SYSTEM),%b%q<install_key>)]),install_modules,trim(get(%q<sheet_who>/SALVAGE`MECH`MODULES)[if(strmatch(%q<install_kind>,MODULE),%b%q<install_key>)])); think setq(build_why,u(%!/FUN`MECH`FITS,%q<sheet_who>,%q<mech_chassis>,%q<install_systems>,%q<install_modules>,%q<chargen>)); @assert not(strlen(%q<build_why>))=@pemit %#=notice(MECH,%q<build_why>,warn); think if(%q<install_spare>,u(%!/FUN`LEDGER`REVOKE,%q<sheet_who>,u(%!/FUN`LEDGER`LATEST,%q<sheet_who>,MECH`SPARES,%q<install_kind>:%q<install_key>),installed)); think u(%!/FUN`LEDGER`GRANT,%q<sheet_who>,MECH`%q<install_kind>S,%q<install_key>,if(%q<install_spare>,from salvage)); @pemit %#=notice(MECH,[name(%q<sheet_who>)] installs [get({{data}}/%q<install_kind>`%q<install_key>)][if(%q<install_spare>,%bfrom salvage)]: [u(%!/FUN`DISPLAY`SLOTS,%q<sheet_who>)].,ok)
+        flags: [cmdsyntax]
+      # +mech/breakdown [<name>/]<salvage>: the Scrap ability on a salvaged part, damaged or repaired: its Salvage Value
+      # in scrap of its Tech Level, into the Union Crawler's hold.
+      INC`MECH`BREAKDOWN:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(MECH,+mech/breakdown <salvage> breaks a salvaged part down into its Salvage Value in scrap.,warn); @include/args %!/INC`NEED`WHO=text,%q<cmd_argument>; @assert strlen(%q<sheet_who>); think setq(bd_ref,u(%!/FUN`SALVAGE`FIND,get(%q<sheet_who>/SALVAGE`MECH`SALVAGE),%q<sheet_what>)); think setq(bd_list,if(strlen(%q<bd_ref>),MECH`SALVAGE,MECH`SPARES)); think if(not(strlen(%q<bd_ref>)),setq(bd_ref,u(%!/FUN`SALVAGE`FIND,get(%q<sheet_who>/SALVAGE`MECH`SPARES),%q<sheet_what>))); @assert strlen(%q<bd_ref>)=@pemit %#=notice(MECH,[name(%q<sheet_who>)] has no salvage called '%q<sheet_what>'.[if(strlen(setr(bd_line,u(%!/FUN`SALVAGE`LINE,%q<sheet_who>))),%b%q<bd_line>)],warn); think setqm(bd_name,u(%!/FUN`SALVAGE`NAME,%q<bd_ref>),bd_tech,get({{data}}/[before(%q<bd_ref>,:)]`[after(%q<bd_ref>,:)]`TECH),bd_value,get({{data}}/[before(%q<bd_ref>,:)]`[after(%q<bd_ref>,:)]`VALUE)); think u(%!/FUN`LEDGER`REVOKE,%q<sheet_who>,u(%!/FUN`LEDGER`LATEST,%q<sheet_who>,%q<bd_list>,%q<bd_ref>),broken down); think u(%!/FUN`CRAWLER`ADDSCRAP,%q<bd_tech>,%q<bd_value>,breaks down %q<bd_name>,%q<sheet_who>); @pemit %#=notice(MECH,[name(%q<sheet_who>)] breaks down %q<bd_name> into %q<bd_value> Tech %q<bd_tech> scrap for the Union Crawler's hold.,ok)
         flags: [cmdsyntax]
       INC`MECH`REMOVE:
         value: |-
@@ -828,7 +858,7 @@ objects:
         flags: [funsyntax]
       FUN`KIND`LABEL:
         value: |-
-          switch(%0,ABILITY,Ability,CHASSIS,Chassis,SYSTEM,System,MODULE,Module,EQUIPMENT,Equipment,TABLE,Table,BAY,Bay,CLASS,Class,%0)
+          switch(%0,ABILITY,Ability,CHASSIS,Chassis,SYSTEM,System,MODULE,Module,EQUIPMENT,Equipment,TABLE,Table,BAY,Bay,CLASS,Class,NPC,NPC,%0)
         flags: [funsyntax]
       # %0 a space list, %1 one word: the list with its first %1 taken out (the others stay).
       FUN`LIST`LESS:
@@ -921,6 +951,26 @@ objects:
       FUN`MECH`TITLE:
         value: |-
           trim([get(%0/SALVAGE`MECH`NAME)] [get({{data}}/CHASSIS`[get(%0/SALVAGE`MECH`CHASSIS)])])
+        flags: [funsyntax]
+      # %0 a salvaged part, KIND:<key>: its name.
+      FUN`SALVAGE`NAME:
+        value: |-
+          get({{data}}/[before(%0,:)]`[after(%0,:)])
+        flags: [funsyntax]
+      # %0 salvaged parts, %1 typed: the one it names.
+      FUN`SALVAGE`FIND:
+        value: |-
+          setq(sf_typed,trim(%1))[firstof(first(iter(%0,if(strmatch(u(%!/FUN`SALVAGE`NAME,%i0),%q<sf_typed>),%i0))),first(iter(%0,if(strmatch(u(%!/FUN`SALVAGE`NAME,%i0),%q<sf_typed>*),%i0))))]
+        flags: [funsyntax]
+      # %0 a character: repairs the damaged salvage at the Union Crawler's Tech Level or lower, and returns it.
+      FUN`SALVAGE`REPAIR:
+        value: |-
+          setq(sr_tech,u(%!/FUN`CRAWLER`TECH))[squish(iter(get(%0/SALVAGE`MECH`SALVAGE),if(lte(get({{data}}/[before(%i0,:)]`[after(%i0,:)]`TECH),%q<sr_tech>),[null(u(%!/FUN`LEDGER`REVOKE,%0,u(%!/FUN`LEDGER`LATEST,%0,MECH`SALVAGE,%i0),repaired))][null(u(%!/FUN`LEDGER`GRANT,%0,MECH`SPARES,%i0,repaired in downtime))]%i0)))]
+        flags: [funsyntax]
+      # %0 a character: "Damaged: Red Laser. Repaired: Armour Plating." or nothing.
+      FUN`SALVAGE`LINE:
+        value: |-
+          trim([if(words(get(%0/SALVAGE`MECH`SALVAGE)),Damaged: [itemize(iter(get(%0/SALVAGE`MECH`SALVAGE),u(%!/FUN`SALVAGE`NAME,%i0),%b,|),|)].)] [if(words(get(%0/SALVAGE`MECH`SPARES)),Repaired: [itemize(iter(get(%0/SALVAGE`MECH`SPARES),u(%!/FUN`SALVAGE`NAME,%i0),%b,|),|)].)])
         flags: [funsyntax]
       FUN`MECH`CARGO:
         value: |-
@@ -1026,12 +1076,148 @@ objects:
       # %0 a character, %1 an encounter: takes them out of it, and their copy with them.
       FUN`ENC`EXIT:
         value: |-
-          [null(wipe({{store}}/ENC`%1`C`[u(%!/FUN`ENC`NUM,%0)]))][null(attrib_set({{store}}/ENC`%1`MEMBERS,remove(get({{store}}/ENC`%1`MEMBERS),objid(%0))))][null(u(%!/FUN`DO`SET,%0,ENCOUNTERS,remove(get(%0/SALVAGE`ENCOUNTERS),%1)))][null(if(strmatch(get(%0/SALVAGE`USING),%1),u(%!/FUN`DO`SET,%0,USING,)))]
+          [null(wipe({{store}}/ENC`%1`C`[u(%!/FUN`ENC`NUM,%0)]))][null(attrib_set({{store}}/ENC`%1`S`[u(%!/FUN`ENC`NUM,%0)]))][null(attrib_set({{store}}/ENC`%1`MEMBERS,remove(get({{store}}/ENC`%1`MEMBERS),objid(%0))))][null(u(%!/FUN`DO`SET,%0,ENCOUNTERS,remove(get(%0/SALVAGE`ENCOUNTERS),%1)))][null(if(strmatch(get(%0/SALVAGE`USING),%1),u(%!/FUN`DO`SET,%0,USING,)))]
         flags: [funsyntax]
       # %0 a character, %1 an encounter: writes their copy onto their sheet.
       FUN`ENC`KEEP:
         value: |-
           setq(keep_copy,ENC`%1`C`[u(%!/FUN`ENC`NUM,%0)])[setq(sheet_live,1)][null(iter(setunion(u(%!/FUN`COPY`LEAVES,%0),iter(lattr({{store}}/%q<keep_copy>`SPENT`**),after(%i0,%q<keep_copy>`))),u(%!/FUN`DO`SET,%0,%i0,get({{store}}/%q<keep_copy>`%i0))))][setq(sheet_live,0)]
+        flags: [funsyntax]
+
+      # ---- encounter NPCs -------------------------------------------------------------
+      # An encounter's NPCs, on the store: ENC`<n>`NPCS their numbers, ENC`<n>`NNEXT the last used, and for each
+      # ENC`<n>`N`<id> its name, with FROM (NPC:<key> from the Core Book's NPCs, or CHASSIS:<key> for an enemy mech
+      # built on a chassis), KIND (npc, vehicle, bio-titan or mech), HEALTH (hp or sp), MAX, NOW (unset is MAX),
+      # TECH and VALUE (what salvaging it gives), PARTS (an enemy mech's SYSTEM:<key> and MODULE:<key>), and once
+      # salvaged SBY (who), SROLL (the Mech Salvage roll) and PICKS (what that roll still lets them take). The
+      # round: ENC`<n>`ROUND, ACTED (objids and N<id>s that took their turn) and FIRST (the Group Initiative die).
+      # Spoils a member salvaged wait in ENC`<n>`S`<character number> (scrap:<tech>:<n>, part:<KIND>:<key>) until
+      # the GM keeps them.
+      # %0 an encounter, %1 an NPC, %2 a field.
+      FUN`NPC`KINDLABEL:
+        value: |-
+          switch(%0,npc,NPC,vehicle,Vehicle,bio-titan,Bio-Titan,mech,Mech,%0)
+        flags: [funsyntax]
+      FUN`NPC`GET:
+        value: |-
+          get({{store}}/ENC`%0`N`%1[if(strlen(%2),`%2)])
+        flags: [funsyntax]
+      # %0 an encounter, %1 an NPC: its HP or SP now.
+      FUN`NPC`NOW:
+        value: |-
+          default({{store}}/ENC`%0`N`%1`NOW,get({{store}}/ENC`%0`N`%1`MAX))
+        flags: [funsyntax]
+      # %0 an encounter, %1 an NPC: "#2 Raider".
+      FUN`NPC`NAME:
+        value: |-
+          #%1 [get({{store}}/ENC`%0`N`%1)]
+        flags: [funsyntax]
+      # %0 an encounter, %1 typed: the NPC it names, by number (2 or #2), by name, or by the start of a name.
+      FUN`NPC`FIND:
+        value: |-
+          setq(nf_typed,trim(edit(%1,#,)))[if(cand(isint(%q<nf_typed>),member(get({{store}}/ENC`%0`NPCS),%q<nf_typed>)),%q<nf_typed>,if(strlen(%q<nf_typed>),firstof(first(iter(get({{store}}/ENC`%0`NPCS),if(strmatch(get({{store}}/ENC`%0`N`%i0),%q<nf_typed>),%i0))),first(iter(get({{store}}/ENC`%0`NPCS),if(strmatch(get({{store}}/ENC`%0`N`%i0),%q<nf_typed>*),%i0))))))]
+        flags: [funsyntax]
+      # %0 an encounter, %1 NPC:<key> or CHASSIS:<key>, %2 how many: adds them at full HP or SP, and returns their
+      # numbers.
+      FUN`NPC`ADD:
+        value: |-
+          iter(lnum(1,%2),[setq(na_id,inc(default({{store}}/ENC`%0`NNEXT,0)))][setq(na_key,after(%1,:))][setq(na_npc,strmatch(%1,NPC:*))][null(attrib_set({{store}}/ENC`%0`NNEXT,%q<na_id>))][null(attrib_set({{store}}/ENC`%0`N`%q<na_id>,if(%q<na_npc>,get({{data}}/NPC`%q<na_key>),[get({{data}}/CHASSIS`%q<na_key>)] Mech)))][null(attrib_set({{store}}/ENC`%0`N`%q<na_id>`FROM,%1))][null(attrib_set({{store}}/ENC`%0`N`%q<na_id>`KIND,if(%q<na_npc>,get({{data}}/NPC`%q<na_key>`KIND),mech)))][null(attrib_set({{store}}/ENC`%0`N`%q<na_id>`HEALTH,if(%q<na_npc>,get({{data}}/NPC`%q<na_key>`HEALTH),sp)))][null(attrib_set({{store}}/ENC`%0`N`%q<na_id>`MAX,if(%q<na_npc>,get({{data}}/NPC`%q<na_key>`MAX),get({{data}}/CHASSIS`%q<na_key>`SP))))][null(attrib_set({{store}}/ENC`%0`N`%q<na_id>`TECH,if(%q<na_npc>,get({{data}}/NPC`%q<na_key>`TECH),get({{data}}/CHASSIS`%q<na_key>`TECH))))][null(attrib_set({{store}}/ENC`%0`N`%q<na_id>`VALUE,if(%q<na_npc>,get({{data}}/NPC`%q<na_key>`VALUE),get({{data}}/CHASSIS`%q<na_key>`VALUE))))][null(attrib_set({{store}}/ENC`%0`NPCS,trim(get({{store}}/ENC`%0`NPCS) %q<na_id>)))]%q<na_id>)
+        flags: [funsyntax]
+      # %0 FROM, %1 PARTS: what it can do, A:<n> for a Core Book NPC's actions, an enemy mech's parts.
+      FUN`NPC`REFS:
+        value: |-
+          if(strmatch(%0,NPC:*),iter(get({{data}}/NPC`[after(%0,:)]`ACTIONS),A:%i0),%1)
+        flags: [funsyntax]
+      # %0 FROM, %1 an action ref, %2 a field (nothing for its name): DAMAGE, RANGE, TRAITS, ACTION, KIND or TEXT.
+      FUN`NPC`AF:
+        value: |-
+          if(strmatch(%1,A:*),get({{data}}/NPC`[after(%0,:)]`A`[after(%1,:)][if(strlen(%2),`%2)]),if(strmatch(%2,KIND),lcstr(before(%1,:)),get({{data}}/[before(%1,:)]`[after(%1,:)][if(strlen(%2),`%2)])))
+        flags: [funsyntax]
+      # %0 FROM, %1 its refs, %2 typed: the action it names, or with nothing typed its first attack (else its first
+      # action).
+      FUN`NPC`ACTION:
+        value: |-
+          if(strlen(trim(%2)),firstof(first(iter(%1,if(strmatch(u(%!/FUN`NPC`AF,%0,%i0,),trim(%2)),%i0))),first(iter(%1,if(strmatch(u(%!/FUN`NPC`AF,%0,%i0,),trim(%2)*),%i0)))),firstof(first(iter(%1,if(strlen(u(%!/FUN`NPC`AF,%0,%i0,DAMAGE)),%i0))),first(%1)))
+        flags: [funsyntax]
+      # %0 FROM, %1 PARTS: the systems and modules a mech or vehicle carries, as SYSTEM:<key> and MODULE:<key>.
+      FUN`NPC`PARTS:
+        value: |-
+          if(strmatch(%0,CHASSIS:*),%1,squish(iter(get({{data}}/NPC`[after(%0,:)]`ACTIONS),switch(get({{data}}/NPC`[after(%0,:)]`A`%i0`KIND),system,if(strlen(setr(np_key,u(%!/FUN`FIND,SYSTEM,get({{data}}/NPC`[after(%0,:)]`A`%i0),get({{data}}/LIST`SYSTEM)))),SYSTEM:%q<np_key>),module,if(strlen(setr(np_key,u(%!/FUN`FIND,MODULE,get({{data}}/NPC`[after(%0,:)]`A`%i0),get({{data}}/LIST`MODULE)))),MODULE:%q<np_key>)))))
+        flags: [funsyntax]
+      # %0 traits (| between): how many attacks an action makes, the n of Multi-Attack (n), else 1.
+      FUN`NPC`ATTACKS:
+        value: |-
+          setq(attacks_trait,grab(%0,multi*attack*,|))[firstof(first(squish(regeditall(%q<attacks_trait>,\[^0-9\],%b))),1)]
+        flags: [funsyntax]
+      # %0 FROM, %1 an action ref: "Rifles (Medium, 6 HP) Ballistic, Multiattack (2): text".
+      FUN`NPC`LINE:
+        value: |-
+          [tone(strong,u(%!/FUN`NPC`AF,%0,%1,))][setq(nl_bits,squish(iter(ACTION RANGE DAMAGE,if(strlen(setr(nl_v,u(%!/FUN`NPC`AF,%0,%1,%i0))),capstr(%q<nl_v>)),%b,|),|))][if(strlen(%q<nl_bits>),%b%([edit(%q<nl_bits>,|,%,%b)]%))][if(strlen(u(%!/FUN`NPC`AF,%0,%1,TRAITS)),%b[tone(muted,edit(u(%!/FUN`NPC`AF,%0,%1,TRAITS),|,%,%b))])]: [u(%!/FUN`NPC`AF,%0,%1,TEXT)]
+        flags: [funsyntax]
+      # %0 FROM, %1 PARTS, %2 a line of its numbers, %3 the title, %4 a hint: an NPC's stat block.
+      FUN`SCREEN`NPC:
+        value: |-
+          setq(sn_key,after(%0,:))[setq(sn_npc,strmatch(%0,NPC:*))][box([if(%q<sn_npc>,[get({{data}}/NPC`%q<sn_key>`TEXT)][if(strlen(get({{data}}/NPC`%q<sn_key>`TRAITS)),%rTraits: [edit(get({{data}}/NPC`%q<sn_key>`TRAITS),|,%,%b)])],[get({{data}}/CHASSIS`%q<sn_key>`TEXT)]%rAn enemy mech on a [get({{data}}/CHASSIS`%q<sn_key>)] chassis: SP [get({{data}}/CHASSIS`%q<sn_key>`SP)]%, EP [get({{data}}/CHASSIS`%q<sn_key>`EP)]%, Heat Capacity [get({{data}}/CHASSIS`%q<sn_key>`HEAT)].)]%r%2%r[rule(Actions)]%r[if(words(setr(sn_refs,u(%!/FUN`NPC`REFS,%0,%1))),iter(%q<sn_refs>,u(%!/FUN`NPC`LINE,%0,%i0),%b,%r),tone(muted,None. +encounter/fit <n>=<system> arms an enemy mech.))]%r[rule()]%r[tone(muted,%4)],%3)]
+        flags: [funsyntax]
+      # %0 an NPC key: "HP 3. Npc, People." and the like.
+      FUN`NPC`NUMBERS:
+        value: |-
+          [ucstr(get({{data}}/NPC`%0`HEALTH))] [get({{data}}/NPC`%0`MAX)][if(strlen(get({{data}}/NPC`%0`TECH)),%, Tech [get({{data}}/NPC`%0`TECH)])][if(strlen(get({{data}}/NPC`%0`VALUE)),%, Salvage Value [get({{data}}/NPC`%0`VALUE)])]. [u(%!/FUN`NPC`KINDLABEL,get({{data}}/NPC`%0`KIND))]%, [get({{data}}/NPC`%0`GROUP)].
+        flags: [funsyntax]
+      # %0 a group or nothing: the Core Book's NPCs, as a table.
+      FUN`SCREEN`BESTIARY:
+        value: |-
+          setq(bs_keys,iter(get({{data}}/LIST`NPC),if(cor(not(strlen(%0)),strmatch(get({{data}}/NPC`%i0`GROUP),%0)),%i0)))[box(ldatatable(lit({"nowrap":"2|3|4|5","rule":""}),NPC|Group|Kind|>Health|>Tech,iter(%q<bs_keys>,[get({{data}}/NPC`%i0)]|[get({{data}}/NPC`%i0`GROUP)]|[u(%!/FUN`NPC`KINDLABEL,get({{data}}/NPC`%i0`KIND))]|[get({{data}}/NPC`%i0`MAX)] [ucstr(get({{data}}/NPC`%i0`HEALTH))]|[firstof(get({{data}}/NPC`%i0`TECH),-)],,%*<^>),%*<^>)%r[rule()]%r[tone(muted,+encounter/bestiary <npc> reads one. +encounter/npc %[<count>%] <npc or chassis> adds them to your encounter.)],[if(strlen(%0),%0,The wasteland's NPCs)])]
+        flags: [funsyntax]
+      # %0 an encounter: the members and NPCs still up who have not acted this round.
+      FUN`ENC`WAITING:
+        value: |-
+          squish([iter(get({{store}}/ENC`%0`MEMBERS),if(member(get({{store}}/ENC`%0`ACTED),%i0),,%i0))] [iter(get({{store}}/ENC`%0`NPCS),if(cor(member(get({{store}}/ENC`%0`ACTED),N%i0),not(u(%!/FUN`NPC`NOW,%0,%i0))),,N%i0))])
+        flags: [funsyntax]
+      # %0 an encounter, %1 an objid or N<id>: its name.
+      FUN`ENC`WHO:
+        value: |-
+          if(strmatch(%1,N*),u(%!/FUN`NPC`NAME,%0,mid(%1,1,9)),name(%1))
+        flags: [funsyntax]
+      # %0 an encounter, %1 a member, %2 damage, %3 HP or SP, %4 1 to hit the pilot: takes it from their copy. A mech
+      # takes the hit unless the pilot is named, and half of HP damage (rounded down); a pilot takes double SP
+      # damage. Returns what happened.
+      FUN`ENC`HURT:
+        value: |-
+          setq(hurt_mech,cand(not(t(%4)),strlen(get(%1/SALVAGE`MECH`CHASSIS))))[setq(hurt_meter,if(%q<hurt_mech>,SP,HP))][setq(hurt_dmg,cond(cand(%q<hurt_mech>,strmatch(%3,HP)),div(%2,2),cand(not(%q<hurt_mech>),strmatch(%3,SP)),mul(%2,2),1,%2))][setq(hurt_new,max(0,sub(u(%!/FUN`ENC`METER,%1,%0,%q<hurt_meter>),%q<hurt_dmg>)))][null(attrib_set({{store}}/ENC`%0`C`[u(%!/FUN`ENC`NUM,%1)]`[v(DATA`METER`%q<hurt_meter>`LEAF)],%q<hurt_new>))][if(%q<hurt_mech>,[name(%1)]'s mech,name(%1))] takes %q<hurt_dmg> %q<hurt_meter>: %q<hurt_new>/[u(%!/FUN`METER`MAX,%1,%q<hurt_meter>)] %q<hurt_meter>.[if(not(%q<hurt_new>),%b[if(%q<hurt_mech>,The mech is at 0 SP: +check/table critical damage.,[name(%1)] is down: +check/table critical injury.)])]
+        flags: [funsyntax]
+      # %0 an encounter, %1 the target member or nothing, %2 damage, %3 HP or SP, %4 1 for the pilot: one roll on the
+      # NPC Action table, and on a hit (6 or more) the damage, doubled on a 20.
+      FUN`NPC`STRIKE:
+        value: |-
+          setq(strike_line,u(%!/FUN`ROLL`TABLE,NPC-ACTION,))[setq(strike_die,%q<table_n>)]%q<strike_line>[if(cand(strlen(%1),isint(%2),gte(%q<strike_die>,6)),%r[u(%!/FUN`ENC`HURT,%0,%1,if(eq(%q<strike_die>,20),mul(%2,2),%2),%3,%4)])]
+        flags: [funsyntax]
+      # %0 an encounter, %1 an NPC, %2 damage, %3 HP or SP: takes it. An HP NPC takes double SP damage, an SP one half of
+      # HP damage (rounded down). Returns what happened.
+      FUN`NPC`HIT:
+        value: |-
+          setq(nh_health,ucstr(u(%!/FUN`NPC`GET,%0,%1,HEALTH)))[setq(nh_dmg,cond(cand(strmatch(%q<nh_health>,HP),strmatch(%3,SP)),mul(%2,2),cand(strmatch(%q<nh_health>,SP),strmatch(%3,HP)),div(%2,2),1,%2))][setq(nh_new,max(0,sub(u(%!/FUN`NPC`NOW,%0,%1),%q<nh_dmg>)))][null(attrib_set({{store}}/ENC`%0`N`%1`NOW,%q<nh_new>))][u(%!/FUN`NPC`NAME,%0,%1)] takes %q<nh_dmg> %q<nh_health>: %q<nh_new>/[u(%!/FUN`NPC`GET,%0,%1,MAX)].[if(not(%q<nh_new>),%b[u(%!/FUN`NPC`NAME,%0,%1)] [if(strmatch(%q<nh_health>,HP),is down.,is wrecked.)][if(u(%!/FUN`NPC`SALVAGEABLE,%0,%1),%b+encounter/salvage %1 salvages it.)])]
+        flags: [funsyntax]
+      # %0 an encounter, %1 an NPC: 1 when salvaging it gives something, a mech or a thing with a Salvage Value.
+      FUN`NPC`SALVAGEABLE:
+        value: |-
+          cor(strmatch(u(%!/FUN`NPC`GET,%0,%1,KIND),mech),cand(strlen(u(%!/FUN`NPC`GET,%0,%1,VALUE)),strlen(u(%!/FUN`NPC`GET,%0,%1,TECH))))
+        flags: [funsyntax]
+      # %0 an encounter, %1 a member, %2 scrap:<tech>:<n> or part:<KIND>:<key>: adds it to what they salvaged.
+      FUN`SPOIL`ADD:
+        value: |-
+          attrib_set({{store}}/ENC`%0`S`[u(%!/FUN`ENC`NUM,%1)],trim(get({{store}}/ENC`%0`S`[u(%!/FUN`ENC`NUM,%1)]) %2))
+        flags: [funsyntax]
+      # %0 spoils: "3 Tech 1 scrap and Red Laser (damaged)".
+      FUN`SPOIL`TEXT:
+        value: |-
+          itemize(iter(%0,if(strmatch(%i0,scrap:*),[last(%i0,:)] Tech [extract(%i0,2,1,:)] scrap,[get({{data}}/[extract(%i0,2,1,:)]`[last(%i0,:)])] %(damaged%)),%b,|),|)
+        flags: [funsyntax]
+      # %0 a member, %1 an encounter: their spoils kept. Scrap goes into the Union Crawler's hold with a ledger entry
+      # for them; a part onto their sheet's salvage, damaged. Returns the spoils.
+      FUN`SPOIL`KEEP:
+        value: |-
+          setq(sk_list,get({{store}}/ENC`%1`S`[u(%!/FUN`ENC`NUM,%0)]))[null(iter(%q<sk_list>,if(strmatch(%i0,scrap:*),u(%!/FUN`CRAWLER`ADDSCRAP,extract(%i0,2,1,:),last(%i0,:),salvaged in [u(%!/FUN`ENC`TITLE,%1)],%0),u(%!/FUN`LEDGER`GRANT,%0,MECH`SALVAGE,[extract(%i0,2,1,:)]:[last(%i0,:)],salvaged in [u(%!/FUN`ENC`TITLE,%1)]))))][null(attrib_set({{store}}/ENC`%1`S`[u(%!/FUN`ENC`NUM,%0)]))]%q<sk_list>
         flags: [funsyntax]
 
       # ---- the ledger ---------------------------------------------------------------
@@ -1107,7 +1293,7 @@ objects:
         value: |-
           setqm(rebuild_ns,u(%!/FUN`LEDGER`NS,%0),
           rebuild_live,u(%!/FUN`LEDGER`LIVE,%0),
-          rebuild_leaves,setunion(iter(u(%!/FUN`LEDGER`NS,%0),if(strmatch(u(%!/FUN`LEDGER`FIELD,%0,%i0,kind),set),u(%!/FUN`LEDGER`FIELD,%0,%i0,leaf))),))[null(iter(ABILITIES GEAR MECH`SYSTEMS MECH`MODULES,u(%!/FUN`DO`SET,%0,%i0,squish(iter(%q<rebuild_live>,if(cand(strmatch(u(%!/FUN`LEDGER`FIELD,%0,%i0,kind),grant),strmatch(u(%!/FUN`LEDGER`FIELD,%0,%i0,list),%i1)),u(%!/FUN`LEDGER`FIELD,%0,%i0,key)))))))][null(iter(%q<rebuild_leaves>,u(%!/FUN`DO`SET,%0,%i0,u(%!/FUN`LEDGER`VALUE,%0,%q<rebuild_live>,%i0))))][null(u(%!/FUN`DO`SET,%0,PATH,first(iter(get(%0/SALVAGE`ABILITIES),if(member(advanced hybrid,get({{data}}/ABILITY`%i0`TIER)),get({{data}}/ABILITY`%i0`TREE))))))]
+          rebuild_leaves,setunion(iter(u(%!/FUN`LEDGER`NS,%0),if(strmatch(u(%!/FUN`LEDGER`FIELD,%0,%i0,kind),set),u(%!/FUN`LEDGER`FIELD,%0,%i0,leaf))),))[null(iter(ABILITIES GEAR MECH`SYSTEMS MECH`MODULES MECH`SALVAGE MECH`SPARES,u(%!/FUN`DO`SET,%0,%i0,squish(iter(%q<rebuild_live>,if(cand(strmatch(u(%!/FUN`LEDGER`FIELD,%0,%i0,kind),grant),strmatch(u(%!/FUN`LEDGER`FIELD,%0,%i0,list),%i1)),u(%!/FUN`LEDGER`FIELD,%0,%i0,key)))))))][null(iter(%q<rebuild_leaves>,u(%!/FUN`DO`SET,%0,%i0,u(%!/FUN`LEDGER`VALUE,%0,%q<rebuild_live>,%i0))))][null(u(%!/FUN`DO`SET,%0,PATH,first(iter(get(%0/SALVAGE`ABILITIES),if(member(advanced hybrid,get({{data}}/ABILITY`%i0`TIER)),get({{data}}/ABILITY`%i0`TREE))))))]
         flags: [funsyntax]
       # %0 a character, %1 the live entries, %2 a leaf: the value of its newest set entry among them.
       FUN`LEDGER`VALUE:
@@ -1121,7 +1307,7 @@ objects:
           text_note,u(%!/FUN`LEDGER`FIELD,%0,%1,note),
           text_leaf,u(%!/FUN`LEDGER`FIELD,%0,%1,leaf),
           text_value,u(%!/FUN`LEDGER`FIELD,%0,%1,value),
-          text_key,u(%!/FUN`LEDGER`FIELD,%0,%1,key))[switch(%q<text_kind>,set,[u(%!/FUN`LEDGER`LEAFLABEL,%q<text_leaf>)]: [if(strlen(%q<text_value>),switch(%q<text_leaf>,CLASS,get({{data}}/CLASS`%q<text_value>),MECH`CHASSIS,get({{data}}/CHASSIS`%q<text_value>),%q<text_value>),if(strmatch(%q<text_leaf>,MAX`*),the setting,none))],grant,[switch(u(%!/FUN`LEDGER`FIELD,%0,%1,list),ABILITIES,Learns [get({{data}}/ABILITY`%q<text_key>)],GEAR,Takes [get({{data}}/EQUIPMENT`%q<text_key>)],MECH`SYSTEMS,Installs [get({{data}}/SYSTEM`%q<text_key>)],Installs [get({{data}}/MODULE`%q<text_key>)])],revoke,Takes back #[u(%!/FUN`LEDGER`FIELD,%0,%1,entry)],clear,Clears the sheet,%q<text_kind>)][if(strlen(%q<text_note>),: %q<text_note>)]
+          text_key,u(%!/FUN`LEDGER`FIELD,%0,%1,key))[switch(%q<text_kind>,set,[u(%!/FUN`LEDGER`LEAFLABEL,%q<text_leaf>)]: [if(strlen(%q<text_value>),switch(%q<text_leaf>,CLASS,get({{data}}/CLASS`%q<text_value>),MECH`CHASSIS,get({{data}}/CHASSIS`%q<text_value>),%q<text_value>),if(strmatch(%q<text_leaf>,MAX`*),the setting,none))],grant,[switch(u(%!/FUN`LEDGER`FIELD,%0,%1,list),ABILITIES,Learns [get({{data}}/ABILITY`%q<text_key>)],GEAR,Takes [get({{data}}/EQUIPMENT`%q<text_key>)],MECH`SALVAGE,Salvages [get({{data}}/[before(%q<text_key>,:)]`[after(%q<text_key>,:)])] %(damaged%),MECH`SPARES,Repairs [get({{data}}/[before(%q<text_key>,:)]`[after(%q<text_key>,:)])],MECH`SYSTEMS,Installs [get({{data}}/SYSTEM`%q<text_key>)],Installs [get({{data}}/MODULE`%q<text_key>)])],revoke,Takes back #[u(%!/FUN`LEDGER`FIELD,%0,%1,entry)],clear,Clears the sheet,%q<text_kind>)][if(strlen(%q<text_note>),: %q<text_note>)]
         flags: [funsyntax]
       # %0 a set entry's leaf: its name in the ledger.
       FUN`LEDGER`LEAFLABEL:
@@ -1317,7 +1503,7 @@ objects:
       # %0 the character, %1 who reads it.
       FUN`SCREEN`MECH:
         value: |-
-          setqm(screen_chassis,get(%0/SALVAGE`MECH`CHASSIS),screen_systems,get(%0/SALVAGE`MECH`SYSTEMS),screen_modules,get(%0/SALVAGE`MECH`MODULES))[box(lfields(lit({"cols":3}),SP%*<|>EP%*<|>Heat%*<|>Tech%*<|>Cargo%*<|>Value,[u(%!/API`METER,%0,SP)]/[get({{data}}/CHASSIS`%q<screen_chassis>`SP)]%*<|>[u(%!/API`METER,%0,EP)]/[get({{data}}/CHASSIS`%q<screen_chassis>`EP)]%*<|>[u(%!/API`METER,%0,HEAT)]/[get({{data}}/CHASSIS`%q<screen_chassis>`HEAT)]%*<|>[get({{data}}/CHASSIS`%q<screen_chassis>`TECH)]%*<|>[u(%!/FUN`MECH`SCRAP,%0)]/[u(%!/FUN`MECH`CARGO,%0)]%*<|>[ladd(0 [get({{data}}/CHASSIS`%q<screen_chassis>`VALUE)] [iter(%q<screen_systems>,get({{data}}/SYSTEM`%i0`VALUE))] [iter(%q<screen_modules>,get({{data}}/MODULE`%i0`VALUE))])],%*<|>)%r[rule(Systems [ladd(0 [iter(%q<screen_systems>,get({{data}}/SYSTEM`%i0`SLOTS))])]/[get({{data}}/CHASSIS`%q<screen_chassis>`SYSTEMS)])]%r[u(%!/FUN`SCREEN`PARTS,%q<screen_systems>,SYSTEM,%0)]%r[rule(Modules [ladd(0 [iter(%q<screen_modules>,get({{data}}/MODULE`%i0`SLOTS))])]/[get({{data}}/CHASSIS`%q<screen_chassis>`MODULES)])]%r[u(%!/FUN`SCREEN`PARTS,%q<screen_modules>,MODULE,%0)]%r[rule(Chassis)]%r[get({{data}}/CHASSIS`%q<screen_chassis>`TEXT)][if(strlen(get(%0/SALVAGE`MECH`QUIRK)),%rQuirk: [get(%0/SALVAGE`MECH`QUIRK)])][if(u(%!/FUN`MECH`SCRAP,%0),%rCarrying [u(%!/FUN`DISPLAY`SCRAP,%0/SALVAGE`MECH`SCRAP)].)]%r[rule()]%r[tone(muted,+check <system> rolls with it. +check/push re-rolls for 2 heat. +mech/install adds a part.)],[name(%0)]'s [u(%!/FUN`MECH`TITLE,%0)])]
+          setqm(screen_chassis,get(%0/SALVAGE`MECH`CHASSIS),screen_systems,get(%0/SALVAGE`MECH`SYSTEMS),screen_modules,get(%0/SALVAGE`MECH`MODULES))[box(lfields(lit({"cols":3}),SP%*<|>EP%*<|>Heat%*<|>Tech%*<|>Cargo%*<|>Value,[u(%!/API`METER,%0,SP)]/[get({{data}}/CHASSIS`%q<screen_chassis>`SP)]%*<|>[u(%!/API`METER,%0,EP)]/[get({{data}}/CHASSIS`%q<screen_chassis>`EP)]%*<|>[u(%!/API`METER,%0,HEAT)]/[get({{data}}/CHASSIS`%q<screen_chassis>`HEAT)]%*<|>[get({{data}}/CHASSIS`%q<screen_chassis>`TECH)]%*<|>[u(%!/FUN`MECH`SCRAP,%0)]/[u(%!/FUN`MECH`CARGO,%0)]%*<|>[ladd(0 [get({{data}}/CHASSIS`%q<screen_chassis>`VALUE)] [iter(%q<screen_systems>,get({{data}}/SYSTEM`%i0`VALUE))] [iter(%q<screen_modules>,get({{data}}/MODULE`%i0`VALUE))])],%*<|>)%r[rule(Systems [ladd(0 [iter(%q<screen_systems>,get({{data}}/SYSTEM`%i0`SLOTS))])]/[get({{data}}/CHASSIS`%q<screen_chassis>`SYSTEMS)])]%r[u(%!/FUN`SCREEN`PARTS,%q<screen_systems>,SYSTEM,%0)]%r[rule(Modules [ladd(0 [iter(%q<screen_modules>,get({{data}}/MODULE`%i0`SLOTS))])]/[get({{data}}/CHASSIS`%q<screen_chassis>`MODULES)])]%r[u(%!/FUN`SCREEN`PARTS,%q<screen_modules>,MODULE,%0)]%r[rule(Chassis)]%r[get({{data}}/CHASSIS`%q<screen_chassis>`TEXT)][if(strlen(get(%0/SALVAGE`MECH`QUIRK)),%rQuirk: [get(%0/SALVAGE`MECH`QUIRK)])][if(u(%!/FUN`MECH`SCRAP,%0),%rCarrying [u(%!/FUN`DISPLAY`SCRAP,%0/SALVAGE`MECH`SCRAP)].)][if(strlen(setr(screen_salvage,u(%!/FUN`SALVAGE`LINE,%0))),%rSalvage: %q<screen_salvage>)]%r[rule()]%r[tone(muted,+check <system> rolls with it. +check/push re-rolls for 2 heat. +mech/install adds a part.)],[name(%0)]'s [u(%!/FUN`MECH`TITLE,%0)])]
         flags: [funsyntax]
       # %0 installed keys, %1 SYSTEM or MODULE, %2 the character: a table of them, or a line saying there are none.
       FUN`SCREEN`PARTS:
@@ -1365,7 +1551,12 @@ objects:
       # %0 an encounter: its members and their copies.
       FUN`SCREEN`ENCOUNTER:
         value: |-
-          setq(enc_members,get({{store}}/ENC`%0`MEMBERS))[box([if(gt(words(%2),1),[tone(muted,Running here: [itemize(iter(%2,u(%!/FUN`ENC`TITLE,%i0),%b,|),|)].)]%r)][if(words(%q<enc_members>),ldatatable(lit({"nowrap":"2|3|4|5|6","rule":""}),Character|>HP|>AP|>SP|>EP|>Heat,iter(%q<enc_members>,[name(%i0)]|[u(%!/FUN`ENC`METER,%i0,%0,HP)]/[u(%!/FUN`MAX`HP,%i0)]|[u(%!/FUN`ENC`METER,%i0,%0,AP)]/[u(%!/FUN`MAX`AP,%i0)]|[if(strlen(get(%i0/SALVAGE`MECH`CHASSIS)),[u(%!/FUN`ENC`METER,%i0,%0,SP)]/[u(%!/FUN`METER`MAX,%i0,SP)]|[u(%!/FUN`ENC`METER,%i0,%0,EP)]/[u(%!/FUN`METER`MAX,%i0,EP)]|[u(%!/FUN`ENC`METER,%i0,%0,HEAT)]/[u(%!/FUN`METER`MAX,%i0,HEAT)],-|-|-)],,%*<^>),%*<^>),tone(muted,Nobody has joined.))]%r[rule()]%r[tone(muted,GM: [name(get({{store}}/ENC`%0`GM))]. In [name(objid(#[get({{store}}/ENC`%0`ROOM)]))] since [timefmt($Y-$m-$d,get({{store}}/ENC`%0`START))]. These are the encounter's copies%; sheets change only when the GM keeps one with +encounter/keep <name>=%0.[if(member(%q<enc_members>,objid(%1)),,%b+encounter/join %0 takes part.)])],u(%!/FUN`ENC`TITLE,%0))]
+          setq(enc_members,get({{store}}/ENC`%0`MEMBERS))[box([if(gt(words(%2),1),[tone(muted,Running here: [itemize(iter(%2,u(%!/FUN`ENC`TITLE,%i0),%b,|),|)].)]%r)][if(words(%q<enc_members>),ldatatable(lit({"nowrap":"2|3|4|5|6","rule":""}),Character|>HP|>AP|>SP|>EP|>Heat,iter(%q<enc_members>,[name(%i0)]|[u(%!/FUN`ENC`METER,%i0,%0,HP)]/[u(%!/FUN`MAX`HP,%i0)]|[u(%!/FUN`ENC`METER,%i0,%0,AP)]/[u(%!/FUN`MAX`AP,%i0)]|[if(strlen(get(%i0/SALVAGE`MECH`CHASSIS)),[u(%!/FUN`ENC`METER,%i0,%0,SP)]/[u(%!/FUN`METER`MAX,%i0,SP)]|[u(%!/FUN`ENC`METER,%i0,%0,EP)]/[u(%!/FUN`METER`MAX,%i0,EP)]|[u(%!/FUN`ENC`METER,%i0,%0,HEAT)]/[u(%!/FUN`METER`MAX,%i0,HEAT)],-|-|-)],,%*<^>),%*<^>),tone(muted,Nobody has joined.))][u(%!/FUN`SCREEN`ENCNPCS,%0)]%r[rule()]%r[tone(muted,GM: [name(get({{store}}/ENC`%0`GM))]. In [name(objid(#[get({{store}}/ENC`%0`ROOM)]))] since [timefmt($Y-$m-$d,get({{store}}/ENC`%0`START))]. These are the encounter's copies%; sheets change only when the GM keeps one with +encounter/keep <name>=%0.[if(member(%q<enc_members>,objid(%1)),,%b+encounter/join %0 takes part.)])],u(%!/FUN`ENC`TITLE,%0))]
+        flags: [funsyntax]
+      # %0 an encounter: its NPCs, the round and who has still to act, and the salvage waiting to be kept.
+      FUN`SCREEN`ENCNPCS:
+        value: |-
+          setqm(en_npcs,get({{store}}/ENC`%0`NPCS),en_round,default({{store}}/ENC`%0`ROUND,0),en_acted,get({{store}}/ENC`%0`ACTED))[if(words(%q<en_npcs>),%r[rule(NPCs)]%r[ldatatable(lit({"nowrap":"1|3|4","rule":""}),>#|NPC|>Health|State,iter(%q<en_npcs>,%i0|[u(%!/FUN`NPC`GET,%0,%i0)]|[u(%!/FUN`NPC`NOW,%0,%i0)]/[u(%!/FUN`NPC`GET,%0,%i0,MAX)] [ucstr(u(%!/FUN`NPC`GET,%0,%i0,HEALTH))]|[cond(strlen(u(%!/FUN`NPC`GET,%0,%i0,SBY)),salvaged,not(u(%!/FUN`NPC`NOW,%0,%i0)),if(strmatch(u(%!/FUN`NPC`GET,%0,%i0,HEALTH),hp),down,wrecked),member(%q<en_acted>,N%i0),acted,1,-)],,%*<^>),%*<^>)])][if(%q<en_round>,%r[rule(Round %q<en_round>)]%r[setq(en_left,u(%!/FUN`ENC`WAITING,%0))][if(words(%q<en_left>),Still to act: [itemize(iter(%q<en_left>,u(%!/FUN`ENC`WHO,%0,%i0),%b,|),|)].,Everyone has acted. +encounter/initiative starts the next round.)])][setq(en_spoils,squish(iter(get({{store}}/ENC`%0`MEMBERS),if(strlen(get({{store}}/ENC`%0`S`[u(%!/FUN`ENC`NUM,%i0)])),[name(%i0)]: [u(%!/FUN`SPOIL`TEXT,get({{store}}/ENC`%0`S`[u(%!/FUN`ENC`NUM,%i0)]))]),%b,|),|))][if(strlen(%q<en_spoils>),%r[rule(Salvage waiting to be kept)]%r[edit(%q<en_spoils>,|,%r)])]
         flags: [funsyntax]
       # %0 a member, %1 an encounter, %2 a meter: its value in that encounter's copy.
       FUN`ENC`METER:
@@ -1628,12 +1819,108 @@ objects:
       # +encounter/keep <name>[=<n>]: the GM writes a member's copy onto their sheet.
       INC`ENCOUNTER`KEEP:
         value: |-
-          think setq(enc_name,if(%q<cmd_has_equals>,%q<cmd_left_side>,%q<cmd_argument>)); @include/args %!/INC`NEED`TARGET=name,%q<enc_name>; @assert strlen(%q<sheet_who>); think setq(enc_id,if(%q<cmd_has_equals>,%q<cmd_right_side>,firstof(u(%!/FUN`ENC`OF,%q<sheet_who>),last(u(%!/FUN`ENC`JOINED,%q<sheet_who>))))); @assert member(get({{store}}/ENC`%q<enc_id>`MEMBERS),objid(%q<sheet_who>))=@pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)] is not in [if(strlen(%q<enc_id>),encounter %q<enc_id>,an encounter)].,warn); @assert u(%!/FUN`ENC`GM,%#,%q<enc_id>)=@pemit %#=notice(ENCOUNTER,Only the encounter's GM and staff keep a copy.,error); think u(%!/FUN`ENC`KEEP,%q<sheet_who>,%q<enc_id>); @pemit/list [setunion(objid(%#) %q<sheet_who>,)]=notice(ENCOUNTER,[name(%#)] keeps what happened to [name(%q<sheet_who>)] in [u(%!/FUN`ENC`TITLE,%q<enc_id>)]: [poss(%q<sheet_who>)] sheet now has [u(%!/FUN`DISPLAY`COPYLINE,%q<sheet_who>,1)].,ok)
+          think setq(enc_name,if(%q<cmd_has_equals>,%q<cmd_left_side>,%q<cmd_argument>)); @include/args %!/INC`NEED`TARGET=name,%q<enc_name>; @assert strlen(%q<sheet_who>); think setq(enc_id,if(%q<cmd_has_equals>,%q<cmd_right_side>,firstof(u(%!/FUN`ENC`OF,%q<sheet_who>),last(u(%!/FUN`ENC`JOINED,%q<sheet_who>))))); @assert member(get({{store}}/ENC`%q<enc_id>`MEMBERS),objid(%q<sheet_who>))=@pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)] is not in [if(strlen(%q<enc_id>),encounter %q<enc_id>,an encounter)].,warn); @assert u(%!/FUN`ENC`GM,%#,%q<enc_id>)=@pemit %#=notice(ENCOUNTER,Only the encounter's GM and staff keep a copy.,error); think u(%!/FUN`ENC`KEEP,%q<sheet_who>,%q<enc_id>); think setq(keep_spoils,u(%!/FUN`SPOIL`KEEP,%q<sheet_who>,%q<enc_id>)); @pemit/list [setunion(objid(%#) %q<sheet_who>,)]=notice(ENCOUNTER,[name(%#)] keeps what happened to [name(%q<sheet_who>)] in [u(%!/FUN`ENC`TITLE,%q<enc_id>)]: [poss(%q<sheet_who>)] sheet now has [u(%!/FUN`DISPLAY`COPYLINE,%q<sheet_who>,1)].[if(words(%q<keep_spoils>),%bSalvage kept: [u(%!/FUN`SPOIL`TEXT,%q<keep_spoils>)]. Scrap goes into the Union Crawler's hold%, parts onto the mech's salvage.)],ok)
         flags: [cmdsyntax]
       # +encounter/end [<n>]: the GM ends an encounter; copies not kept are dropped.
       INC`ENCOUNTER`END:
         value: |-
           think setq(enc_id,u(%!/FUN`ENC`PICK,%#,%q<cmd_argument>)); @assert strlen(%q<enc_id>)=@pemit %#=notice(ENCOUNTER,[if(strlen(%q<cmd_argument>),There is no encounter %q<cmd_argument>.,There is no encounter here.)],warn); @assert u(%!/FUN`ENC`GM,%#,%q<enc_id>)=@pemit %#=notice(ENCOUNTER,Only the encounter's GM and staff end it.,error); think setqm(enc_title,u(%!/FUN`ENC`TITLE,%q<enc_id>),enc_members,get({{store}}/ENC`%q<enc_id>`MEMBERS)); think iter(%q<enc_members>,u(%!/FUN`ENC`EXIT,%i0,%q<enc_id>)); &ENC`LIST {{store}}=remove(get({{store}}/ENC`LIST),%q<enc_id>); @wipe {{store}}/ENC`%q<enc_id>; @pemit/list [setunion(objid(%#) %q<enc_members>,)]=notice(ENCOUNTER,[name(%#)] ends %q<enc_title>. Copies nobody kept are dropped.)
+        flags: [cmdsyntax]
+      # %<n> an encounter number as typed or nothing: enc_id, an encounter here that the one typing runs.
+      INC`NEED`ENCGM:
+        value: |-
+          think setq(enc_id,u(%!/FUN`ENC`PICK,%#,%<n>)); @assert strlen(%q<enc_id>)=@pemit %#=notice(ENCOUNTER,[if(strlen(%<n>),There is no encounter %<n>.,There is no encounter here. +encounter/start %[<title>%] begins one.)],warn); @assert u(%!/FUN`ENC`GM,%#,%q<enc_id>)=@pemit %#=notice(ENCOUNTER,Only the encounter's GM and staff run its NPCs.,error)
+        flags: [cmdsyntax]
+      # enc_id: the encounter here that the one typing plays in or runs.
+      INC`NEED`ENCIN:
+        value: |-
+          think setq(enc_id,u(%!/FUN`ENC`PICK,%#,)); @assert strlen(%q<enc_id>)=@pemit %#=notice(ENCOUNTER,There is no encounter here.,warn); @assert cor(u(%!/FUN`ENC`GM,%#,%q<enc_id>),member(get({{store}}/ENC`%q<enc_id>`MEMBERS),objid(%#)))=@pemit %#=notice(ENCOUNTER,You are not in [u(%!/FUN`ENC`TITLE,%q<enc_id>)]. +encounter/join %q<enc_id> takes part.,warn)
+        flags: [cmdsyntax]
+      # %<typed> an NPC as typed: npc_id in enc_id.
+      INC`NEED`NPC:
+        value: |-
+          @assert strlen(setr(npc_id,u(%!/FUN`NPC`FIND,%q<enc_id>,%<typed>)))=@pemit %#=notice(ENCOUNTER,[u(%!/FUN`ENC`TITLE,%q<enc_id>)] has no NPC '%<typed>'.[if(words(get({{store}}/ENC`%q<enc_id>`NPCS)),%bIts NPCs: [itemize(iter(get({{store}}/ENC`%q<enc_id>`NPCS),u(%!/FUN`NPC`NAME,%q<enc_id>,%i0),%b,|),|)].)],warn)
+        flags: [cmdsyntax]
+      # +encounter/npc [<count>] <npc or chassis>[=<n>]: the GM adds Core Book NPCs, or an enemy mech on a chassis.
+      INC`ENCOUNTER`NPC:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(ENCOUNTER,+encounter/npc %[<count>%] <npc or chassis>%[=<encounter>%] adds NPCs: +encounter/npc 3 raider. A chassis adds an enemy mech. +encounter/bestiary lists the NPCs.,warn); @include/args %!/INC`NEED`ENCGM=n,if(%q<cmd_has_equals>,%q<cmd_right_side>); @assert strlen(%q<enc_id>); @assert u(%!/FUN`ENC`GM,%#,%q<enc_id>); think setq(npc_what,trim(if(%q<cmd_has_equals>,%q<cmd_left_side>,%q<cmd_argument>))); think setq(npc_count,if(cand(isint(first(%q<npc_what>)),gt(words(%q<npc_what>),1)),first(%q<npc_what>),1))[if(gt(words(%q<npc_what>),1),if(isint(first(%q<npc_what>)),setq(npc_what,rest(%q<npc_what>))))]; @assert cand(gte(%q<npc_count>,1),lte(%q<npc_count>,12))=@pemit %#=notice(ENCOUNTER,Add 1 to 12 at a time.,warn); think setq(npc_key,u(%!/FUN`FIND,NPC,%q<npc_what>,get({{data}}/LIST`NPC))); think setq(npc_chassis,if(strlen(%q<npc_key>),,u(%!/FUN`FIND,CHASSIS,%q<npc_what>,get({{data}}/LIST`CHASSIS)))); @assert cor(strlen(%q<npc_key>),strlen(%q<npc_chassis>))=@pemit %#=notice(ENCOUNTER,There is no NPC or chassis '%q<npc_what>'.[u(%!/FUN`FIND`HINT,NPC,%q<npc_what>,get({{data}}/LIST`NPC))] +encounter/bestiary lists the NPCs%, +mech/list chassis the chassis.,warn); think setq(npc_added,u(%!/FUN`NPC`ADD,%q<enc_id>,if(strlen(%q<npc_key>),NPC:%q<npc_key>,CHASSIS:%q<npc_chassis>),%q<npc_count>)); @remit objid(#[get({{store}}/ENC`%q<enc_id>`ROOM)])=notice(ENCOUNTER,[name(%#)] adds [itemize(iter(%q<npc_added>,u(%!/FUN`NPC`NAME,%q<enc_id>,%i0),%b,|),|)] to [u(%!/FUN`ENC`TITLE,%q<enc_id>)].[if(strlen(%q<npc_chassis>),%b+encounter/fit [first(%q<npc_added>)]=<system> arms it.)])
+        flags: [cmdsyntax]
+      # +encounter/fit <npc>=<system or module>: the GM arms an enemy mech, within its chassis's slots.
+      INC`ENCOUNTER`FIT:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(ENCOUNTER,+encounter/fit <npc>=<system or module> arms an enemy mech.,warn); @include/args %!/INC`NEED`ENCGM=n,; @assert strlen(%q<enc_id>); @assert u(%!/FUN`ENC`GM,%#,%q<enc_id>); @include/args %!/INC`NEED`NPC=typed,%q<cmd_left_side>; @assert strlen(%q<npc_id>); think setq(fit_from,u(%!/FUN`NPC`GET,%q<enc_id>,%q<npc_id>,FROM)); @assert strmatch(%q<fit_from>,CHASSIS:*)=@pemit %#=notice(ENCOUNTER,[u(%!/FUN`NPC`NAME,%q<enc_id>,%q<npc_id>)] comes as the Core Book has it. +encounter/fit arms a mech added from a chassis.,warn); think setq(fit_system,u(%!/FUN`FIND,SYSTEM,%q<cmd_right_side>,get({{data}}/LIST`SYSTEM))); think setq(fit_module,if(strlen(%q<fit_system>),,u(%!/FUN`FIND,MODULE,%q<cmd_right_side>,get({{data}}/LIST`MODULE)))); @assert cor(strlen(%q<fit_system>),strlen(%q<fit_module>))=@pemit %#=notice(ENCOUNTER,There is no system or module '%q<cmd_right_side>'.[u(%!/FUN`FIND`HINT,SYSTEM,%q<cmd_right_side>,get({{data}}/LIST`SYSTEM))],warn); think setqm(fit_parts,trim([u(%!/FUN`NPC`GET,%q<enc_id>,%q<npc_id>,PARTS)] [if(strlen(%q<fit_system>),SYSTEM:%q<fit_system>,MODULE:%q<fit_module>)]),fit_chassis,after(%q<fit_from>,:)); think setq(fit_why,u(%!/FUN`MECH`FITS,,%q<fit_chassis>,iter(%q<fit_parts>,if(strmatch(%i0,SYSTEM:*),after(%i0,:))),iter(%q<fit_parts>,if(strmatch(%i0,MODULE:*),after(%i0,:))),0)); @assert not(strlen(%q<fit_why>))=@pemit %#=notice(ENCOUNTER,%q<fit_why>,warn); &ENC`%q<enc_id>`N`%q<npc_id>`PARTS {{store}}=%q<fit_parts>; @pemit %#=notice(ENCOUNTER,[u(%!/FUN`NPC`NAME,%q<enc_id>,%q<npc_id>)] now carries [itemize(iter(%q<fit_parts>,get({{data}}/[before(%i0,:)]`[after(%i0,:)]),%b,|),|)].,ok)
+        flags: [cmdsyntax]
+      # +encounter/stat <npc>: an NPC in your encounter, with its HP or SP now.
+      INC`ENCOUNTER`STAT:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(ENCOUNTER,+encounter/stat <npc> reads an NPC in your encounter. +encounter/bestiary <npc> reads any.,warn); @include %!/INC`NEED`ENCIN; @assert strlen(%q<enc_id>); @include/args %!/INC`NEED`NPC=typed,%q<cmd_argument>; @assert strlen(%q<npc_id>); think setq(stat_health,ucstr(u(%!/FUN`NPC`GET,%q<enc_id>,%q<npc_id>,HEALTH))); @pemit %#=u(%!/FUN`SCREEN`NPC,u(%!/FUN`NPC`GET,%q<enc_id>,%q<npc_id>,FROM),u(%!/FUN`NPC`GET,%q<enc_id>,%q<npc_id>,PARTS),%q<stat_health> [u(%!/FUN`NPC`NOW,%q<enc_id>,%q<npc_id>)]/[u(%!/FUN`NPC`GET,%q<enc_id>,%q<npc_id>,MAX)][if(strlen(u(%!/FUN`NPC`GET,%q<enc_id>,%q<npc_id>,TECH)),%, Tech [u(%!/FUN`NPC`GET,%q<enc_id>,%q<npc_id>,TECH)])][if(strlen(u(%!/FUN`NPC`GET,%q<enc_id>,%q<npc_id>,VALUE)),%, Salvage Value [u(%!/FUN`NPC`GET,%q<enc_id>,%q<npc_id>,VALUE)])].,u(%!/FUN`NPC`NAME,%q<enc_id>,%q<npc_id>),The GM attacks with +encounter/act %q<npc_id>/<action>=<target>. +encounter/hit %q<npc_id>=<damage> hits it.)
+        flags: [cmdsyntax]
+      # +encounter/bestiary [<group or npc>]: the Core Book's NPCs, a group of them, or one.
+      INC`ENCOUNTER`BESTIARY:
+        value: |-
+          think setq(bst_group,if(strlen(%q<cmd_argument>),first(iter(Meld Vehicles Bio-Titans Drones Creatures People Squads,if(strmatch(%i0,trim(%q<cmd_argument>)*),%i0))))); @assert cor(not(strlen(%q<cmd_argument>)),strlen(%q<bst_group>),strlen(setr(bst_key,u(%!/FUN`FIND,NPC,%q<cmd_argument>,get({{data}}/LIST`NPC)))))=@pemit %#=notice(ENCOUNTER,There is no NPC or group '%q<cmd_argument>'.[u(%!/FUN`FIND`HINT,NPC,%q<cmd_argument>,get({{data}}/LIST`NPC))] The groups are Meld%, Vehicles%, Bio-Titans%, Drones%, Creatures%, People and Squads.,warn); @if strlen(%q<bst_key>)={@pemit %#=u(%!/FUN`SCREEN`NPC,NPC:%q<bst_key>,,u(%!/FUN`NPC`NUMBERS,%q<bst_key>),get({{data}}/NPC`%q<bst_key>),+encounter/npc [lcstr(get({{data}}/NPC`%q<bst_key>))] adds one to your encounter.)},{@pemit %#=u(%!/FUN`SCREEN`BESTIARY,%q<bst_group>)}
+        flags: [cmdsyntax]
+      # +encounter/initiative: starts the next round, with a roll on the Group Initiative table for who acts first.
+      INC`ENCOUNTER`INITIATIVE:
+        value: |-
+          @include %!/INC`NEED`ENCIN; @assert strlen(%q<enc_id>); @assert cor(u(%!/FUN`ENC`GM,%#,%q<enc_id>),member(get({{store}}/ENC`%q<enc_id>`MEMBERS),objid(%#))); think setq(init_line,u(%!/FUN`ROLL`TABLE,GROUP-INITIATIVE,))[setq(init_die,%q<table_n>)]; &ENC`%q<enc_id>`ROUND {{store}}=inc(default({{store}}/ENC`%q<enc_id>`ROUND,0)); &ENC`%q<enc_id>`ACTED {{store}}=; &ENC`%q<enc_id>`FIRST {{store}}=%q<init_die>; @remit objid(#[get({{store}}/ENC`%q<enc_id>`ROOM)])=notice(ENCOUNTER,[name(%#)] starts round [get({{store}}/ENC`%q<enc_id>`ROUND)] of [u(%!/FUN`ENC`TITLE,%q<enc_id>)]: %q<init_line> +encounter/turn marks a turn taken.)
+        flags: [cmdsyntax]
+      # +encounter/turn [<who>]: marks a turn taken this round, your own or (for the GM) anyone's or an NPC's.
+      INC`ENCOUNTER`TURN:
+        value: |-
+          @include %!/INC`NEED`ENCIN; @assert strlen(%q<enc_id>); @assert cor(u(%!/FUN`ENC`GM,%#,%q<enc_id>),member(get({{store}}/ENC`%q<enc_id>`MEMBERS),objid(%#))); @assert default({{store}}/ENC`%q<enc_id>`ROUND,0)=@pemit %#=notice(ENCOUNTER,No round has started. +encounter/initiative rolls who acts first.,warn); think setq(turn_npc,if(strlen(%q<cmd_argument>),u(%!/FUN`NPC`FIND,%q<enc_id>,%q<cmd_argument>))); think setq(turn_who,cond(strlen(%q<turn_npc>),N%q<turn_npc>,strlen(%q<cmd_argument>),u(%!/FUN`PLAYER`MATCH,%q<cmd_argument>),1,objid(%#))); @assert cor(strmatch(%q<turn_who>,N*),member(get({{store}}/ENC`%q<enc_id>`MEMBERS),%q<turn_who>))=@pemit %#=notice(ENCOUNTER,[if(strlen(%q<cmd_argument>),'%q<cmd_argument>' is,You are)] not in [u(%!/FUN`ENC`TITLE,%q<enc_id>)].,warn); @assert cor(u(%!/FUN`ENC`GM,%#,%q<enc_id>),strmatch(%q<turn_who>,objid(%#)))=@pemit %#=notice(ENCOUNTER,You mark your own turn. The GM marks the others.,error); @assert not(member(get({{store}}/ENC`%q<enc_id>`ACTED),%q<turn_who>))=@pemit %#=notice(ENCOUNTER,[u(%!/FUN`ENC`WHO,%q<enc_id>,%q<turn_who>)] has acted this round.,warn); @assert cor(not(strlen(%q<turn_npc>)),u(%!/FUN`NPC`NOW,%q<enc_id>,%q<turn_npc>))=@pemit %#=notice(ENCOUNTER,[u(%!/FUN`NPC`NAME,%q<enc_id>,%q<turn_npc>)] is out of the fight.,warn); &ENC`%q<enc_id>`ACTED {{store}}=trim(get({{store}}/ENC`%q<enc_id>`ACTED) %q<turn_who>); think setq(turn_left,u(%!/FUN`ENC`WAITING,%q<enc_id>)); @remit objid(#[get({{store}}/ENC`%q<enc_id>`ROOM)])=notice(ENCOUNTER,[u(%!/FUN`ENC`WHO,%q<enc_id>,%q<turn_who>)] takes a turn. [if(words(%q<turn_left>),Still to act: [itemize(iter(%q<turn_left>,u(%!/FUN`ENC`WHO,%q<enc_id>,%i0),%b,|),|)].,Round [get({{store}}/ENC`%q<enc_id>`ROUND)] is over. +encounter/initiative starts the next.)])
+        flags: [cmdsyntax]
+      # +encounter/act <npc>[/<action>][=<target>[/pilot]]: the GM rolls an NPC's action on the NPC Action table. With
+      # damage it attacks, once for each Multi-Attack, and a hit takes the damage from the target's copy. A turn
+      # action marks its turn taken.
+      INC`ENCOUNTER`ACT:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(ENCOUNTER,+encounter/act <npc>%[/<action>%]%[=<target>%[/pilot%]%] rolls an NPC's action on the NPC Action table and deals its damage on a hit.,warn); @include/args %!/INC`NEED`ENCGM=n,; @assert strlen(%q<enc_id>); @assert u(%!/FUN`ENC`GM,%#,%q<enc_id>); think setq(act_left,if(%q<cmd_has_equals>,%q<cmd_left_side>,%q<cmd_argument>)); @include/args %!/INC`NEED`NPC=typed,before(%q<act_left>,/); @assert strlen(%q<npc_id>); @assert u(%!/FUN`NPC`NOW,%q<enc_id>,%q<npc_id>)=@pemit %#=notice(ENCOUNTER,[u(%!/FUN`NPC`NAME,%q<enc_id>,%q<npc_id>)] is out of the fight. +encounter/heal brings it back.,warn); think setqm(act_from,u(%!/FUN`NPC`GET,%q<enc_id>,%q<npc_id>,FROM),act_parts,u(%!/FUN`NPC`GET,%q<enc_id>,%q<npc_id>,PARTS)); think setq(act_ref,u(%!/FUN`NPC`ACTION,%q<act_from>,u(%!/FUN`NPC`REFS,%q<act_from>,%q<act_parts>),if(strmatch(%q<act_left>,*/*),after(%q<act_left>,/)))); @assert strlen(%q<act_ref>)=@pemit %#=notice(ENCOUNTER,[u(%!/FUN`NPC`NAME,%q<enc_id>,%q<npc_id>)] has no action [if(strmatch(%q<act_left>,*/*),'[after(%q<act_left>,/)]',to roll)]. +encounter/stat %q<npc_id> lists them.,warn); think setqm(act_pilot,strmatch(%q<cmd_right_side>,*/pilot),act_typed,trim(before(%q<cmd_right_side>,/))); think setq(act_target,if(cand(%q<cmd_has_equals>,strlen(%q<act_typed>)),u(%!/FUN`PLAYER`MATCH,%q<act_typed>))); @assert cor(not(strlen(%q<act_typed>)),member(get({{store}}/ENC`%q<enc_id>`MEMBERS),%q<act_target>))=@pemit %#=notice(ENCOUNTER,'%q<act_typed>' is not in [u(%!/FUN`ENC`TITLE,%q<enc_id>)].,warn); think setqm(act_damage,u(%!/FUN`NPC`AF,%q<act_from>,%q<act_ref>,DAMAGE),act_name,u(%!/FUN`NPC`AF,%q<act_from>,%q<act_ref>,),act_type,u(%!/FUN`NPC`AF,%q<act_from>,%q<act_ref>,ACTION)); think setq(act_times,if(strlen(%q<act_damage>),u(%!/FUN`NPC`ATTACKS,u(%!/FUN`NPC`AF,%q<act_from>,%q<act_ref>,TRAITS)),1)); think setq(act_lines,iter(lnum(1,%q<act_times>),u(%!/FUN`NPC`STRIKE,%q<enc_id>,%q<act_target>,first(%q<act_damage>),ucstr(last(%q<act_damage>)),%q<act_pilot>),%b,%r)); think if(cand(default({{store}}/ENC`%q<enc_id>`ROUND,0),member(turn x,firstof(%q<act_type>,x)),not(member(get({{store}}/ENC`%q<enc_id>`ACTED),N%q<npc_id>))),attrib_set({{store}}/ENC`%q<enc_id>`ACTED,trim(get({{store}}/ENC`%q<enc_id>`ACTED) N%q<npc_id>))); @remit objid(#[get({{store}}/ENC`%q<enc_id>`ROOM)])=notice(ENCOUNTER,[u(%!/FUN`NPC`NAME,%q<enc_id>,%q<npc_id>)] uses %q<act_name>[if(strlen(%q<act_damage>),%b%(%q<act_damage>[if(gt(%q<act_times>,1),%, %q<act_times> attacks)]%))][if(strlen(%q<act_target>),%bon [if(%q<act_pilot>,name(%q<act_target>),if(strlen(get(%q<act_target>/SALVAGE`MECH`CHASSIS)),[name(%q<act_target>)]'s mech,name(%q<act_target>)))])].%r%q<act_lines>)
+        flags: [cmdsyntax]
+      # +encounter/hit <npc>=<damage> [HP or SP]: a member or the GM deals damage to an NPC, in its own unit when none is
+      # given.
+      INC`ENCOUNTER`HIT:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(ENCOUNTER,+encounter/hit <npc>=<damage> %[HP or SP%] hits an NPC: +encounter/hit 2=3 SP.,warn); @include %!/INC`NEED`ENCIN; @assert strlen(%q<enc_id>); @assert cor(u(%!/FUN`ENC`GM,%#,%q<enc_id>),member(get({{store}}/ENC`%q<enc_id>`MEMBERS),objid(%#))); @include/args %!/INC`NEED`NPC=typed,%q<cmd_left_side>; @assert strlen(%q<npc_id>); think setqm(hit_n,first(%q<cmd_right_side>),hit_unit,ucstr(firstof(rest(%q<cmd_right_side>),u(%!/FUN`NPC`GET,%q<enc_id>,%q<npc_id>,HEALTH)))); @assert cand(isint(%q<hit_n>),gt(%q<hit_n>,0),member(HP SP,%q<hit_unit>))=@pemit %#=notice(ENCOUNTER,Give the damage as a number%, then HP or SP: +encounter/hit %q<npc_id>=3 SP.,warn); @assert u(%!/FUN`NPC`NOW,%q<enc_id>,%q<npc_id>)=@pemit %#=notice(ENCOUNTER,[u(%!/FUN`NPC`NAME,%q<enc_id>,%q<npc_id>)] is out of the fight already.,warn); @remit objid(#[get({{store}}/ENC`%q<enc_id>`ROOM)])=notice(ENCOUNTER,[name(%#)] hits [u(%!/FUN`NPC`NAME,%q<enc_id>,%q<npc_id>)] for %q<hit_n> %q<hit_unit>. [u(%!/FUN`NPC`HIT,%q<enc_id>,%q<npc_id>,%q<hit_n>,%q<hit_unit>)])
+        flags: [cmdsyntax]
+      # +encounter/heal <npc>=<n>: the GM gives an NPC back HP or SP, such as for a reaction that turns a hit away.
+      INC`ENCOUNTER`HEAL:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(ENCOUNTER,+encounter/heal <npc>=<n> gives an NPC back HP or SP.,warn); @include/args %!/INC`NEED`ENCGM=n,; @assert strlen(%q<enc_id>); @assert u(%!/FUN`ENC`GM,%#,%q<enc_id>); @include/args %!/INC`NEED`NPC=typed,%q<cmd_left_side>; @assert strlen(%q<npc_id>); @assert cand(isint(%q<cmd_right_side>),gt(%q<cmd_right_side>,0))=@pemit %#=notice(ENCOUNTER,Give a number.,warn); think setq(heal_new,min(u(%!/FUN`NPC`GET,%q<enc_id>,%q<npc_id>,MAX),add(u(%!/FUN`NPC`NOW,%q<enc_id>,%q<npc_id>),%q<cmd_right_side>))); &ENC`%q<enc_id>`N`%q<npc_id>`NOW {{store}}=%q<heal_new>; @remit objid(#[get({{store}}/ENC`%q<enc_id>`ROOM)])=notice(ENCOUNTER,[u(%!/FUN`NPC`NAME,%q<enc_id>,%q<npc_id>)] is back to %q<heal_new>/[u(%!/FUN`NPC`GET,%q<enc_id>,%q<npc_id>,MAX)] [ucstr(u(%!/FUN`NPC`GET,%q<enc_id>,%q<npc_id>,HEALTH))].)
+        flags: [cmdsyntax]
+      # +encounter/salvage <npc>[=<part>]: a member salvages a wrecked NPC. A mech rolls on the Mech Salvage table, and
+      # =<part> takes what the roll allows; anything else with a Salvage Value is broken down into its scrap (the
+      # Scrap ability). What is salvaged waits with the encounter until the GM keeps it.
+      INC`ENCOUNTER`SALVAGE:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(ENCOUNTER,+encounter/salvage <npc>%[=<part>%] salvages a wrecked mech%, vehicle or drone.,warn); think setq(enc_id,u(%!/FUN`ENC`OF,%#)); @assert member(get({{store}}/ENC`%q<enc_id>`MEMBERS),objid(%#))=@pemit %#=notice(ENCOUNTER,You salvage in an encounter you are in%, in its room.,warn); @include/args %!/INC`NEED`NPC=typed,if(%q<cmd_has_equals>,%q<cmd_left_side>,%q<cmd_argument>); @assert strlen(%q<npc_id>); think setqm(slv_name,u(%!/FUN`NPC`NAME,%q<enc_id>,%q<npc_id>),slv_kind,u(%!/FUN`NPC`GET,%q<enc_id>,%q<npc_id>,KIND)); @assert not(u(%!/FUN`NPC`NOW,%q<enc_id>,%q<npc_id>))=@pemit %#=notice(ENCOUNTER,%q<slv_name> is still in the fight.,warn); @assert u(%!/FUN`NPC`SALVAGEABLE,%q<enc_id>,%q<npc_id>)=@pemit %#=notice(ENCOUNTER,[if(strmatch(%q<slv_kind>,bio-titan),The GM decides what %q<slv_name> yields%, and gives it with +encounter/spoils.,There is nothing to salvage from %q<slv_name>.)],warn); @include %!/INC`ENCOUNTER`SALVAGE[if(strmatch(%q<slv_kind>,mech),MECH,SCRAP)]
+        flags: [cmdsyntax]
+      # The Scrap ability on a wrecked vehicle or drone: its Salvage Value in scrap of its Tech Level.
+      INC`ENCOUNTER`SALVAGESCRAP:
+        value: |-
+          @assert not(strlen(u(%!/FUN`NPC`GET,%q<enc_id>,%q<npc_id>,SBY)))=@pemit %#=notice(ENCOUNTER,[name(u(%!/FUN`NPC`GET,%q<enc_id>,%q<npc_id>,SBY))] has salvaged %q<slv_name> already.,warn); think setqm(slv_tech,u(%!/FUN`NPC`GET,%q<enc_id>,%q<npc_id>,TECH),slv_value,u(%!/FUN`NPC`GET,%q<enc_id>,%q<npc_id>,VALUE)); &ENC`%q<enc_id>`N`%q<npc_id>`SBY {{store}}=objid(%#); think u(%!/FUN`SPOIL`ADD,%q<enc_id>,%#,scrap:%q<slv_tech>:%q<slv_value>); @remit objid(#[get({{store}}/ENC`%q<enc_id>`ROOM)])=notice(ENCOUNTER,[name(%#)] breaks %q<slv_name> down into %q<slv_value> Tech %q<slv_tech> scrap. It is [name(%#)]'s once the GM keeps it.)
+        flags: [cmdsyntax]
+      # A wrecked mech: the Mech Salvage roll, then what it lets the salvager take.
+      INC`ENCOUNTER`SALVAGEMECH:
+        value: |-
+          think setqm(slv_by,u(%!/FUN`NPC`GET,%q<enc_id>,%q<npc_id>,SBY),slv_from,u(%!/FUN`NPC`GET,%q<enc_id>,%q<npc_id>,FROM)); @assert cor(not(strlen(%q<slv_by>)),strmatch(%q<slv_by>,objid(%#)))=@pemit %#=notice(ENCOUNTER,[name(%q<slv_by>)] has salvaged %q<slv_name> already.,warn); @break cand(not(strlen(%q<slv_by>)),%q<cmd_has_equals>)=@pemit %#=notice(ENCOUNTER,+encounter/salvage %q<npc_id> rolls on the Mech Salvage table first. Then name what you take.,warn); @if strlen(%q<slv_by>)={@include %!/INC`ENCOUNTER`SALVAGEPICK},{@include %!/INC`ENCOUNTER`SALVAGEROLL}
+        flags: [cmdsyntax]
+      # The Mech Salvage roll: 2-5 half the chassis's Salvage Value in scrap, 6-10 a system or module, 11-19 the
+      # chassis or one of them, 20 the chassis, a system and a module.
+      INC`ENCOUNTER`SALVAGEROLL:
+        value: |-
+          think setq(slv_line,u(%!/FUN`ROLL`TABLE,MECH-SALVAGE,))[setq(slv_die,%q<table_n>)]; think setqm(slv_chassis,strmatch(%q<slv_from>,CHASSIS:*),slv_tech,firstof(u(%!/FUN`NPC`GET,%q<enc_id>,%q<npc_id>,TECH),1),slv_value,firstof(u(%!/FUN`NPC`GET,%q<enc_id>,%q<npc_id>,VALUE),1)); think setq(slv_picks,cond(lte(%q<slv_die>,5),,lte(%q<slv_die>,10),part,lte(%q<slv_die>,19),any,1,system module)); &ENC`%q<enc_id>`N`%q<npc_id>`SBY {{store}}=objid(%#); &ENC`%q<enc_id>`N`%q<npc_id>`SROLL {{store}}=%q<slv_die>; &ENC`%q<enc_id>`N`%q<npc_id>`PICKS {{store}}=%q<slv_picks>; think if(cand(gte(%q<slv_die>,2),lte(%q<slv_die>,5)),u(%!/FUN`SPOIL`ADD,%q<enc_id>,%#,scrap:%q<slv_tech>:[max(1,div(%q<slv_value>,2))])); think if(cand(eq(%q<slv_die>,20),%q<slv_chassis>),u(%!/FUN`SPOIL`ADD,%q<enc_id>,%#,part:CHASSIS:[after(%q<slv_from>,:)])); @remit objid(#[get({{store}}/ENC`%q<enc_id>`ROOM)])=notice(ENCOUNTER,[name(%#)] salvages %q<slv_name>: %q<slv_line>[if(cand(gte(%q<slv_die>,2),lte(%q<slv_die>,5)),%b[name(%#)] gets [max(1,div(%q<slv_value>,2))] Tech %q<slv_tech> scrap.)][if(cand(eq(%q<slv_die>,20),%q<slv_chassis>),%b[name(%#)] gets the chassis.)][if(words(%q<slv_picks>),%b+encounter/salvage %q<npc_id>=<part> takes [switch(%q<slv_picks>,part,a system or module,any,the chassis or a system or module,a system and a module)]: [itemize(iter(trim([if(cand(strmatch(%q<slv_picks>,any),%q<slv_chassis>),CHASSIS:[after(%q<slv_from>,:)])] [u(%!/FUN`NPC`PARTS,%q<slv_from>,u(%!/FUN`NPC`GET,%q<enc_id>,%q<npc_id>,PARTS))]),get({{data}}/[before(%i0,:)]`[after(%i0,:)]),%b,|),|,or)].)])
+        flags: [cmdsyntax]
+      # +encounter/salvage <npc>=<part>: one of the parts the roll lets the salvager take.
+      INC`ENCOUNTER`SALVAGEPICK:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(ENCOUNTER,[if(words(u(%!/FUN`NPC`GET,%q<enc_id>,%q<npc_id>,PICKS)),Your roll lets you take more: +encounter/salvage %q<npc_id>=<part>.,You have taken all your roll allows from %q<slv_name>.)],warn); think setqm(pick_left,u(%!/FUN`NPC`GET,%q<enc_id>,%q<npc_id>,PICKS),pick_parts,trim([if(strmatch(%q<slv_from>,CHASSIS:*),CHASSIS:[after(%q<slv_from>,:)])] [u(%!/FUN`NPC`PARTS,%q<slv_from>,u(%!/FUN`NPC`GET,%q<enc_id>,%q<npc_id>,PARTS))])); @assert words(%q<pick_left>)=@pemit %#=notice(ENCOUNTER,You have taken all your roll allows from %q<slv_name>.,warn); think setq(pick_ref,firstof(first(iter(%q<pick_parts>,if(strmatch(get({{data}}/[before(%i0,:)]`[after(%i0,:)]),trim(%q<cmd_right_side>)),%i0))),first(iter(%q<pick_parts>,if(strmatch(get({{data}}/[before(%i0,:)]`[after(%i0,:)]),trim(%q<cmd_right_side>)*),%i0))))); @assert strlen(%q<pick_ref>)=@pemit %#=notice(ENCOUNTER,%q<slv_name> has no '%q<cmd_right_side>' to take.,warn); think setq(pick_slot,first(iter(%q<pick_left>,if(cor(strmatch(%i0,any),cand(strmatch(%i0,part),member(SYSTEM MODULE,before(%q<pick_ref>,:))),strmatch(%i0,before(%q<pick_ref>,:))),inum(0))))); @assert strlen(%q<pick_slot>)=@pemit %#=notice(ENCOUNTER,Your roll does not let you take a [lcstr(u(%!/FUN`KIND`LABEL,before(%q<pick_ref>,:)))]. It lets you take [itemize(iter(%q<pick_left>,switch(%i0,part,a system or module,any,the chassis or a system or module,a %i0),%b,|),|,or)].,warn); &ENC`%q<enc_id>`N`%q<npc_id>`PICKS {{store}}=ldelete(%q<pick_left>,%q<pick_slot>); think if(strmatch(%q<pick_ref>,CHASSIS:*),,attrib_set({{store}}/ENC`%q<enc_id>`N`%q<npc_id>`PARTS,remove(u(%!/FUN`NPC`GET,%q<enc_id>,%q<npc_id>,PARTS),%q<pick_ref>))); think u(%!/FUN`SPOIL`ADD,%q<enc_id>,%#,part:%q<pick_ref>); @remit objid(#[get({{store}}/ENC`%q<enc_id>`ROOM)])=notice(ENCOUNTER,[name(%#)] takes [get({{data}}/[before(%q<pick_ref>,:)]`[after(%q<pick_ref>,:)])] from %q<slv_name>%, damaged.)
+        flags: [cmdsyntax]
+      # +encounter/spoils <name>=<n> <tech> or =<part>: the GM gives a member what a Bio-Titan or a ruin yields.
+      INC`ENCOUNTER`SPOILS:
+        value: |-
+          @assert %q<cmd_has_equals>=@pemit %#=notice(ENCOUNTER,+encounter/spoils <name>=<n> <tech> gives a member scrap%, or =<part> a damaged chassis%, system or module.,warn); @include/args %!/INC`NEED`ENCGM=n,; @assert strlen(%q<enc_id>); @assert u(%!/FUN`ENC`GM,%#,%q<enc_id>); @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; @assert strlen(%q<sheet_who>); @assert member(get({{store}}/ENC`%q<enc_id>`MEMBERS),%q<sheet_who>)=@pemit %#=notice(ENCOUNTER,[name(%q<sheet_who>)] is not in [u(%!/FUN`ENC`TITLE,%q<enc_id>)].,warn); think setqm(spoil_n,first(%q<cmd_right_side>),spoil_tech,u(%!/FUN`TECH,rest(%q<cmd_right_side>))); think setq(spoil_ref,if(cand(isint(%q<spoil_n>),strlen(%q<spoil_tech>)),,firstof(if(strlen(setr(spoil_k,u(%!/FUN`FIND,SYSTEM,%q<cmd_right_side>,get({{data}}/LIST`SYSTEM)))),SYSTEM:%q<spoil_k>),if(strlen(setr(spoil_k,u(%!/FUN`FIND,MODULE,%q<cmd_right_side>,get({{data}}/LIST`MODULE)))),MODULE:%q<spoil_k>),if(strlen(setr(spoil_k,u(%!/FUN`FIND,CHASSIS,%q<cmd_right_side>,get({{data}}/LIST`CHASSIS)))),CHASSIS:%q<spoil_k>)))); @assert cor(strlen(%q<spoil_ref>),cand(isint(%q<spoil_n>),gt(%q<spoil_n>,0),strlen(%q<spoil_tech>)))=@pemit %#=notice(ENCOUNTER,Give scrap as <n> <tech>%, such as 10 3%, or name a chassis%, system or module.,warn); think u(%!/FUN`SPOIL`ADD,%q<enc_id>,%q<sheet_who>,if(strlen(%q<spoil_ref>),part:%q<spoil_ref>,scrap:%q<spoil_tech>:%q<spoil_n>)); @remit objid(#[get({{store}}/ENC`%q<enc_id>`ROOM)])=notice(ENCOUNTER,[name(%q<sheet_who>)] salvages [u(%!/FUN`SPOIL`TEXT,if(strlen(%q<spoil_ref>),part:%q<spoil_ref>,scrap:%q<spoil_tech>:%q<spoil_n>))]. It is [name(%q<sheet_who>)]'s once the GM keeps it.)
         flags: [cmdsyntax]
 
       # ---- lifecycle ----------------------------------------------------------------
@@ -1745,7 +2032,7 @@ objects:
 
         A new pilot builds from Tech 1 parts whose salvage values add up to 20 scrap or less.
 
-        Once approved, `+mech/craft <chassis, system or module>\[=<scrap tech>\]` gets a new part from the Union Crawler's Crafting or Trading Bay. It must be of the crawler's Tech Level or lower, and costs its Salvage Value in scrap of its Tech Level, or of the higher one given, from the crawler's hold. A new chassis replaces your mech's, and must hold its parts. Staff install salvage found in the wastes.
+        Once approved, `+mech/craft <chassis, system or module>\[=<scrap tech>\]` gets a new part from the Union Crawler's Crafting or Trading Bay. It must be of the crawler's Tech Level or lower, and costs its Salvage Value in scrap of its Tech Level, or of the higher one given, from the crawler's hold. A new chassis replaces your mech's, and must hold its parts. Salvage from an encounter is another way: see `+help mech salvage`.
 
         For example:
 
@@ -1753,7 +2040,21 @@ objects:
 
         Output: `\[MECH\] Done: Alice's mech is a Mule: SP 12/12, EP 4/4, Heat 0/6.`
 
-        See `+help mech play`.
+        See `+help mech play` and `+help mech salvage`.
+      HELP`MECH`SALVAGE: |-
+        Parts you salvage in an encounter (`+help encounter salvage`) arrive damaged once the GM keeps them. `+mech` lists them under Salvage.
+
+        - Downtime repairs every damaged part of the Union Crawler's Tech Level or lower in its Mech Bay.
+        - `+mech/install <part>` fits a repaired system or module; `+mech/chassis <chassis>` rebuilds your mech on a repaired chassis.
+        - `+mech/breakdown <part>` breaks a salvaged part down, damaged or repaired, into its Salvage Value in scrap of its Tech Level, for the crawler's hold.
+
+        Every step is a ledger entry: `+sheet/ledger` shows it.
+
+        For example:
+
+        `+mech/breakdown red laser`
+
+        Output: `\[MECH\] Done: Alice breaks down Red Laser into 3 Tech 1 scrap for the Union Crawler's hold.`
       HELP`MECH`PLAY: |-
         - `+mech/sp`, `/ep` and `/heat` take `+<n>`, `-<n>`, `<n>` or `reset`: `+mech/sp -3`. Reaching the Heat Capacity makes a heat check.
         - `+mech/vent` shuts the mech down for an hour and takes its heat to 0.
@@ -1845,11 +2146,58 @@ objects:
         - `+encounter/keep <name>\[=<n>\]` writes that member's copy onto their sheet.
         - `+encounter/end \[<n>\]` ends it. A copy nobody kept is dropped.
 
+        See `+help encounter npcs`, `+help encounter rounds` and `+help encounter salvage`.
+
         For example:
 
         `+encounter/start Scrap run`
 
         Output: `\[ENCOUNTER\] Alice starts encounter #1 Scrap run. +encounter/join 1 takes part with a copy of your sheet. What happens to it stays in the encounter unless the GM keeps it.`
+      HELP`ENCOUNTER`NPCS: |-
+        The Core Book's NPCs, vehicles, drones and Bio-Titans, with their actions:
+
+        - `+encounter/bestiary \[<group or npc>\]` lists them, a group (Meld, Vehicles, Bio-Titans, Drones, Creatures, People, Squads), or reads one.
+        - `+encounter/stat <npc>` reads one in your encounter, with its HP or SP now.
+
+        The GM runs them:
+
+        - `+encounter/npc \[<count>\] <npc>\[=<n>\]` adds them: `+encounter/npc 3 raider`. Each gets a number.
+        - `+encounter/npc <chassis>` adds an enemy mech on that chassis, and `+encounter/fit <npc>=<system or module>` arms it within its slots.
+        - `+encounter/act <npc>\[/<action>\]\[=<target>\[/pilot\]\]` rolls its action on the NPC Action table. An attack rolls once for each Multi-Attack and takes its damage from the target's copy on 6 or more, double on a 20. A mech takes the hit unless `/pilot` is given, and half of HP damage; a pilot takes double SP damage.
+        - `+encounter/heal <npc>=<n>` gives back HP or SP, such as for a reaction that turns a hit away.
+
+        For example:
+
+        `+encounter/npc 2 raider`
+
+        Output: `\[ENCOUNTER\] Alice adds #1 Raider and #2 Raider to #1 Scrap run.`
+      HELP`ENCOUNTER`ROUNDS: |-
+        Group Initiative runs a fight in rounds. Pilots and NPCs alternate, one at a time, until everyone has taken a turn.
+
+        - `+encounter/initiative` starts a round with a roll on the Group Initiative table, which says who acts first.
+        - `+encounter/turn` marks your turn taken; the GM marks anyone's, or an NPC's: `+encounter/turn 2`. An NPC's turn action marks its turn too.
+        - `+encounter` shows who has still to act. When everyone has, the next `+encounter/initiative` starts the next round.
+        - `+encounter/hit <npc>=<damage> \[HP or SP\]` hits an NPC. An HP NPC takes double SP damage, an SP one half of HP damage. At 0 it is down, or wrecked.
+
+        For example:
+
+        `+encounter/hit 2=3 SP`
+
+        Output: `\[ENCOUNTER\] Alice hits #2 Raider for 3 SP. #2 Raider takes 6 HP: 0/3. #2 Raider is down.`
+      HELP`ENCOUNTER`SALVAGE: |-
+        What you salvage waits with the encounter until the GM keeps your copy.
+
+        - `+encounter/salvage <npc>` salvages a wrecked mech, vehicle or drone. A vehicle or drone breaks down into its Salvage Value in scrap of its Tech Level.
+        - A mech rolls on the Mech Salvage table: 2 to 5 is half its chassis's Salvage Value in scrap, 6 to 10 a system or module, 11 to 19 the chassis or one of them, 20 the chassis, a system and a module. `+encounter/salvage <npc>=<part>` takes what the roll allows.
+        - The GM gives what a Bio-Titan or a ruin yields with `+encounter/spoils <name>=<n> <tech>` (scrap) or `=<part>`.
+
+        `+encounter/keep <name>` keeps it: scrap goes into the Union Crawler's hold, parts onto the mech's salvage, damaged (`+help mech salvage`). Salvage not kept is lost when the encounter ends.
+
+        For example:
+
+        `+encounter/salvage 3`
+
+        Output: `\[ENCOUNTER\] Alice breaks #3 Hover Drone down into 3 Tech 4 scrap. It is Alice's once the GM keeps it.`
       LOCK`SHEET`STAFF: |-
         perm^softcode.salvage.admin
       HELP`SHEET`STAFF: |-
@@ -7757,6 +8105,1969 @@ objects:
         Improved Trading Bay
       BAY`IMPROVED-TRADING-BAY`TEXT: |-
         When you roll to see what is available in the Trading Bay use this table instead. Trade available is always one Tech Level higher than your Union Crawler and can be purchased for its Salvage Value as per the normal trading rules. Chassis, Systems, and Modules available for trade are determined randomly or by the Mediator.
+      NPC`ACE: |-
+        Ace
+      NPC`ACE`KIND: |-
+        npc
+      NPC`ACE`GROUP: |-
+        People
+      NPC`ACE`HEALTH: |-
+        hp
+      NPC`ACE`MAX: |-
+        16
+      NPC`ACE`TEXT: |-
+        A veteran Mech Pilot, usually with Corpo training.
+      NPC`ACE`A`1: |-
+        Sniper Rifle
+      NPC`ACE`A`1`KIND: |-
+        equipment
+      NPC`ACE`A`1`DAMAGE: |-
+        6 HP
+      NPC`ACE`A`1`RANGE: |-
+        long
+      NPC`ACE`A`1`TRAITS: |-
+        Ballistic
+      NPC`ACE`A`1`TEXT: |-
+        This weapon covers a wide variety of scoped rifles designed for taking out targets at a distance.
+      NPC`ACE`A`2: |-
+        Portable Communications Unit
+      NPC`ACE`A`2`KIND: |-
+        equipment
+      NPC`ACE`A`2`RANGE: |-
+        medium
+      NPC`ACE`A`2`TRAITS: |-
+        Communicator
+      NPC`ACE`A`2`ACTION: |-
+        free
+      NPC`ACE`A`2`TEXT: |-
+        A handheld communications device that uses a radio frequency. This allows you to communi- cate with anything that has the Communicator Trait within Range.
+      NPC`ACE`ACTIONS: |-
+        1 2
+      NPC`ARMOURED-BOX-WHEEL: |-
+        Armoured Box Wheel
+      NPC`ARMOURED-BOX-WHEEL`KIND: |-
+        vehicle
+      NPC`ARMOURED-BOX-WHEEL`GROUP: |-
+        Vehicles
+      NPC`ARMOURED-BOX-WHEEL`HEALTH: |-
+        sp
+      NPC`ARMOURED-BOX-WHEEL`MAX: |-
+        4
+      NPC`ARMOURED-BOX-WHEEL`TECH: |-
+        2
+      NPC`ARMOURED-BOX-WHEEL`VALUE: |-
+        3
+      NPC`ARMOURED-BOX-WHEEL`TRAITS: |-
+        Personnel Capacity (18)|Wheeled
+      NPC`ARMOURED-BOX-WHEEL`TEXT: |-
+        An armoured, wheeled vehicle that carries personnel and provides fire support
+      NPC`ARMOURED-BOX-WHEEL`A`1: |-
+        30mm Autocannon
+      NPC`ARMOURED-BOX-WHEEL`A`1`KIND: |-
+        system
+      NPC`ARMOURED-BOX-WHEEL`A`1`DAMAGE: |-
+        4 SP
+      NPC`ARMOURED-BOX-WHEEL`A`1`RANGE: |-
+        medium
+      NPC`ARMOURED-BOX-WHEEL`A`1`TRAITS: |-
+        Ballistic|Jamming
+      NPC`ARMOURED-BOX-WHEEL`A`1`TEXT: |-
+        This automatic ballistic weapon fires high calibre slugs at a target.
+        Evantis are one of the main manufacturers of heavy duty ballistic weapons, and you can expect to find their designs on their standard mil-tech loadouts.
+      NPC`ARMOURED-BOX-WHEEL`A`2: |-
+        Locomotion System
+      NPC`ARMOURED-BOX-WHEEL`A`2`KIND: |-
+        system
+      NPC`ARMOURED-BOX-WHEEL`A`2`TEXT: |-
+        A sturdy and dependable Locomotion System allowing a Mech to traverse most standard terrain types and adaptable to fit on most Chassis. Locomotion Systems vary widely from bipedal to quadrupedal, and beyond. Some esoteric designs are known to have as many as eight legs!
+        A Locomotion System allows a Mech to move normally. If a Mech does not have a Locomotion System or it is damaged or destroyed the Mech cannot move.
+      NPC`ARMOURED-BOX-WHEEL`ACTIONS: |-
+        1 2
+      NPC`ARTL: |-
+        Artl
+      NPC`ARTL`KIND: |-
+        npc
+      NPC`ARTL`GROUP: |-
+        Creatures
+      NPC`ARTL`HEALTH: |-
+        hp
+      NPC`ARTL`MAX: |-
+        2
+      NPC`ARTL`TRAITS: |-
+        Burrower
+      NPC`ARTL`TEXT: |-
+        Burrowing, ambush predators that liquify their prey for easier digestion.
+      NPC`ARTL`A`1: |-
+        Acid Spit
+      NPC`ARTL`A`1`KIND: |-
+        ability
+      NPC`ARTL`A`1`DAMAGE: |-
+        2 HP
+      NPC`ARTL`A`1`RANGE: |-
+        medium
+      NPC`ARTL`A`1`TRAITS: |-
+        Burn (2)
+      NPC`ARTL`A`2: |-
+        Corrosive Skin Glands
+      NPC`ARTL`A`2`KIND: |-
+        ability
+      NPC`ARTL`A`2`TEXT: |-
+        When hit by a melee attack, the attacker takes 2 HP damage.
+      NPC`ARTL`ACTIONS: |-
+        1 2
+      NPC`BOX-WHEEL: |-
+        Box Wheel
+      NPC`BOX-WHEEL`KIND: |-
+        vehicle
+      NPC`BOX-WHEEL`GROUP: |-
+        Vehicles
+      NPC`BOX-WHEEL`HEALTH: |-
+        sp
+      NPC`BOX-WHEEL`MAX: |-
+        1
+      NPC`BOX-WHEEL`TECH: |-
+        1
+      NPC`BOX-WHEEL`VALUE: |-
+        1
+      NPC`BOX-WHEEL`TRAITS: |-
+        Personnel Capacity (4)|Wheeled
+      NPC`BOX-WHEEL`TEXT: |-
+        A four seater box wheel vehicle designed for recreational driving. Not a lot of these nowadays.
+      NPC`BOX-WHEEL`A`1: |-
+        Locomotion System
+      NPC`BOX-WHEEL`A`1`KIND: |-
+        system
+      NPC`BOX-WHEEL`A`1`TEXT: |-
+        A sturdy and dependable Locomotion System allowing a Mech to traverse most standard terrain types and adaptable to fit on most Chassis. Locomotion Systems vary widely from bipedal to quadrupedal, and beyond. Some esoteric designs are known to have as many as eight legs!
+        A Locomotion System allows a Mech to move normally. If a Mech does not have a Locomotion System or it is damaged or destroyed the Mech cannot move.
+      NPC`BOX-WHEEL`ACTIONS: |-
+        1
+      NPC`CARRION-BIRD: |-
+        Carrion Bird
+      NPC`CARRION-BIRD`KIND: |-
+        npc
+      NPC`CARRION-BIRD`GROUP: |-
+        Creatures
+      NPC`CARRION-BIRD`HEALTH: |-
+        hp
+      NPC`CARRION-BIRD`MAX: |-
+        3
+      NPC`CARRION-BIRD`TRAITS: |-
+        Fly
+      NPC`CARRION-BIRD`TEXT: |-
+        Large flying scavengers that feast on flesh and bone.
+      NPC`CARRION-BIRD`A`1: |-
+        Talons
+      NPC`CARRION-BIRD`A`1`KIND: |-
+        ability
+      NPC`CARRION-BIRD`A`1`DAMAGE: |-
+        3 HP
+      NPC`CARRION-BIRD`A`1`RANGE: |-
+        close
+      NPC`CARRION-BIRD`ACTIONS: |-
+        1
+      NPC`CHILD-OF-CHRYALIS: |-
+        Child of Chryalis
+      NPC`CHILD-OF-CHRYALIS`KIND: |-
+        npc
+      NPC`CHILD-OF-CHRYALIS`GROUP: |-
+        Bio-Titans
+      NPC`CHILD-OF-CHRYALIS`HEALTH: |-
+        sp
+      NPC`CHILD-OF-CHRYALIS`MAX: |-
+        5
+      NPC`CHILD-OF-CHRYALIS`TEXT: |-
+        See Chrysalis.
+      NPC`CHILD-OF-CHRYALIS`A`1: |-
+        Fly
+      NPC`CHILD-OF-CHRYALIS`A`1`KIND: |-
+        ability
+      NPC`CHILD-OF-CHRYALIS`A`1`ACTION: |-
+        passive
+      NPC`CHILD-OF-CHRYALIS`A`1`TEXT: |-
+        Cihld of Chrysalis can fly in the air, moving over all obstacles and terrain. All attacks against Child of Chrysalis when it is flying treat it as though it is in Long Range.
+      NPC`CHILD-OF-CHRYALIS`A`2: |-
+        Energy Bomb
+      NPC`CHILD-OF-CHRYALIS`A`2`KIND: |-
+        ability
+      NPC`CHILD-OF-CHRYALIS`A`2`DAMAGE: |-
+        3 SP
+      NPC`CHILD-OF-CHRYALIS`A`2`RANGE: |-
+        long
+      NPC`CHILD-OF-CHRYALIS`A`2`TRAITS: |-
+        Explosive (3)
+      NPC`CHILD-OF-CHRYALIS`A`2`ACTION: |-
+        turn
+      NPC`CHILD-OF-CHRYALIS`ACTIONS: |-
+        1 2
+      NPC`CHIMERIPEDE: |-
+        Chimeripede
+      NPC`CHIMERIPEDE`KIND: |-
+        npc
+      NPC`CHIMERIPEDE`GROUP: |-
+        Creatures
+      NPC`CHIMERIPEDE`HEALTH: |-
+        hp
+      NPC`CHIMERIPEDE`MAX: |-
+        10
+      NPC`CHIMERIPEDE`TEXT: |-
+        A mutated, radiation scarred amalgamation of flesh.
+      NPC`CHIMERIPEDE`A`1: |-
+        Barbed Tentacles
+      NPC`CHIMERIPEDE`A`1`KIND: |-
+        ability
+      NPC`CHIMERIPEDE`A`1`DAMAGE: |-
+        3 HP
+      NPC`CHIMERIPEDE`A`1`RANGE: |-
+        close
+      NPC`CHIMERIPEDE`A`1`TRAITS: |-
+        Melee|Pinning|Poison|Multiattack (3)
+      NPC`CHIMERIPEDE`ACTIONS: |-
+        1
+      NPC`CHRYSALIS: |-
+        Chrysalis
+      NPC`CHRYSALIS`KIND: |-
+        bio-titan
+      NPC`CHRYSALIS`GROUP: |-
+        Bio-Titans
+      NPC`CHRYSALIS`HEALTH: |-
+        sp
+      NPC`CHRYSALIS`MAX: |-
+        80
+      NPC`CHRYSALIS`TEXT: |-
+        A mammoth flying insect with a wingspan the size of a city and an entrancing song that captures the souls of mortals. Said to inhabit a cave in the Verdant Crescent, it is worshipped by the wastelanders who live there as a god.
+        Titanic Actions
+        Chrysalis can take three Titanic Actions, choosing from the options below. Only one Titanic Action may be chosen at a time and only at the end of another Pilot's or NPC's turn. Chrysalis regains spent Titanic Actions at the start of their turn.
+        - Chrysalis moves one Range Band.
+        - Chrysalis uses their Entrancing Song (Costs 2 Titanic Actions).
+        - Chrysalis attacks with Cluster Energy Bomb. This does not have the Multi-Attack Trait.
+        - Chrysalis uses its Cocoon Ability (Costs 2 Titanic Actions).
+      NPC`CHRYSALIS`A`1: |-
+        Cluster Energy Bombs
+      NPC`CHRYSALIS`A`1`KIND: |-
+        ability
+      NPC`CHRYSALIS`A`1`DAMAGE: |-
+        5 SP
+      NPC`CHRYSALIS`A`1`RANGE: |-
+        long
+      NPC`CHRYSALIS`A`1`TRAITS: |-
+        Energy|Explosive (5)|Multiattack (3)
+      NPC`CHRYSALIS`A`1`ACTION: |-
+        turn
+      NPC`CHRYSALIS`A`1`TEXT: |-
+        Chrysalis scatters a series of glowing cluster bombs upon its foes.
+      NPC`CHRYSALIS`A`2: |-
+        Flying
+      NPC`CHRYSALIS`A`2`KIND: |-
+        ability
+      NPC`CHRYSALIS`A`2`ACTION: |-
+        passive
+      NPC`CHRYSALIS`A`2`TEXT: |-
+        Chrysalis can fly in the air, moving over all obstacles and terrain. All attacks against Chrysalis when it is flying treat it as though it is in Long Range.
+      NPC`CHRYSALIS`A`3: |-
+        Birth Pods
+      NPC`CHRYSALIS`A`3`KIND: |-
+        ability
+      NPC`CHRYSALIS`A`3`ACTION: |-
+        turn
+      NPC`CHRYSALIS`A`3`TEXT: |-
+        Chrysalis Lays d20 Egg Sacs in an area within close Range. At the start of its next turn the are born as a Child of Chrysalis and join the combat.
+        Egg Sacs have 1 SP before they hatch.
+        See Child of Chryalis
+      NPC`CHRYSALIS`A`4: |-
+        Cocoon
+      NPC`CHRYSALIS`A`4`KIND: |-
+        ability
+      NPC`CHRYSALIS`A`4`ACTION: |-
+        turn
+      NPC`CHRYSALIS`A`4`TEXT: |-
+        Chrysalis forms itself into a Cocoon. Whilst in the Cocoon it cannot move or take any other actions, but regains 10 SP at the start of each round. The Cocoon has 50 SP; if it is destroyed Chrysalis cannot use this Ability again for 24 hours.
+      NPC`CHRYSALIS`A`5: |-
+        Entrancing Song
+      NPC`CHRYSALIS`A`5`KIND: |-
+        ability
+      NPC`CHRYSALIS`A`5`ACTION: |-
+        turn
+      NPC`CHRYSALIS`A`5`TEXT: |-
+        Chrysalis emits an entrancing song by vibrating its wings at a series of different frequencies.
+        This Ability affects all targets that can hear Chrysalis within Medium Range including those in a Mech unless it is somehow sound sealed.
+      NPC`CHRYSALIS`ACTIONS: |-
+        1 2 3 4 5
+      NPC`COMBAT-DRONE: |-
+        Combat Drone
+      NPC`COMBAT-DRONE`KIND: |-
+        vehicle
+      NPC`COMBAT-DRONE`GROUP: |-
+        Drones
+      NPC`COMBAT-DRONE`HEALTH: |-
+        sp
+      NPC`COMBAT-DRONE`MAX: |-
+        4
+      NPC`COMBAT-DRONE`TECH: |-
+        2
+      NPC`COMBAT-DRONE`VALUE: |-
+        2
+      NPC`COMBAT-DRONE`TEXT: |-
+        A laser armed drone used in a defensive capacity.
+      NPC`COMBAT-DRONE`A`1: |-
+        Hover Locomotion System
+      NPC`COMBAT-DRONE`A`1`KIND: |-
+        system
+      NPC`COMBAT-DRONE`A`1`TEXT: |-
+        A Hover Locomotion System allows a Mech to move by hovering over terrain, obstacles, and even bodies of water, entirely circumventing them through grav propulsion. Mechs with this System gain the Hover Trait. DronTek holds the main patent for this, which has helped them secure the market on hover Mechs and drones and protect the relatively small corpo from hostile takeover.
+      NPC`COMBAT-DRONE`A`2: |-
+        Red Laser
+      NPC`COMBAT-DRONE`A`2`KIND: |-
+        system
+      NPC`COMBAT-DRONE`A`2`DAMAGE: |-
+        3 SP
+      NPC`COMBAT-DRONE`A`2`RANGE: |-
+        close
+      NPC`COMBAT-DRONE`A`2`TRAITS: |-
+        Energy|Hot (1)
+      NPC`COMBAT-DRONE`A`2`TEXT: |-
+        Red lasers strike a target with a small, focussed beam of heat. Their blueprint has been made widely available by the Opus Institute and are commonly used by corpos as much as they are by salvagers and wastelanders.
+      NPC`COMBAT-DRONE`ACTIONS: |-
+        1 2
+      NPC`COMBAT-PILOT: |-
+        Combat Pilot
+      NPC`COMBAT-PILOT`KIND: |-
+        npc
+      NPC`COMBAT-PILOT`GROUP: |-
+        People
+      NPC`COMBAT-PILOT`HEALTH: |-
+        hp
+      NPC`COMBAT-PILOT`MAX: |-
+        10
+      NPC`COMBAT-PILOT`TEXT: |-
+        A combat trained Mech Pilot, such as a Union Salvager.
+      NPC`COMBAT-PILOT`A`1: |-
+        Pistol
+      NPC`COMBAT-PILOT`A`1`KIND: |-
+        equipment
+      NPC`COMBAT-PILOT`A`1`DAMAGE: |-
+        3 HP
+      NPC`COMBAT-PILOT`A`1`RANGE: |-
+        close
+      NPC`COMBAT-PILOT`A`1`TRAITS: |-
+        Ballistic
+      NPC`COMBAT-PILOT`A`1`TEXT: |-
+        This weapon covers a wide variety of standard issue pistols such as revolvers and semi-automatic pistols.
+      NPC`COMBAT-PILOT`A`2: |-
+        Portable Communications Unit
+      NPC`COMBAT-PILOT`A`2`KIND: |-
+        equipment
+      NPC`COMBAT-PILOT`A`2`RANGE: |-
+        medium
+      NPC`COMBAT-PILOT`A`2`TRAITS: |-
+        Communicator
+      NPC`COMBAT-PILOT`A`2`ACTION: |-
+        free
+      NPC`COMBAT-PILOT`A`2`TEXT: |-
+        A handheld communications device that uses a radio frequency. This allows you to communi- cate with anything that has the Communicator Trait within Range.
+      NPC`COMBAT-PILOT`ACTIONS: |-
+        1 2
+      NPC`DEFACER-DRONE: |-
+        Defacer Drone
+      NPC`DEFACER-DRONE`KIND: |-
+        vehicle
+      NPC`DEFACER-DRONE`GROUP: |-
+        Drones
+      NPC`DEFACER-DRONE`HEALTH: |-
+        sp
+      NPC`DEFACER-DRONE`MAX: |-
+        2
+      NPC`DEFACER-DRONE`TECH: |-
+        1
+      NPC`DEFACER-DRONE`VALUE: |-
+        1
+      NPC`DEFACER-DRONE`TEXT: |-
+        Used for salvaging and crowd control, their distinctive buzzsaw sound has struck fear into many protesters.
+      NPC`DEFACER-DRONE`A`1: |-
+        Hover Locomotion System
+      NPC`DEFACER-DRONE`A`1`KIND: |-
+        system
+      NPC`DEFACER-DRONE`A`1`TEXT: |-
+        A Hover Locomotion System allows a Mech to move by hovering over terrain, obstacles, and even bodies of water, entirely circumventing them through grav propulsion. Mechs with this System gain the Hover Trait. DronTek holds the main patent for this, which has helped them secure the market on hover Mechs and drones and protect the relatively small corpo from hostile takeover.
+      NPC`DEFACER-DRONE`A`2: |-
+        Chainsaw Arm
+      NPC`DEFACER-DRONE`A`2`KIND: |-
+        system
+      NPC`DEFACER-DRONE`A`2`DAMAGE: |-
+        2 SP
+      NPC`DEFACER-DRONE`A`2`RANGE: |-
+        close
+      NPC`DEFACER-DRONE`A`2`TRAITS: |-
+        Melee|Salvaging
+      NPC`DEFACER-DRONE`A`2`TEXT: |-
+        Originally developed as a tool for lumberjack mechs by Hodgson & Vasquez, an Evantis subsidiary, this saw arm has remained in use for its salvaging capabilities, utility, and stopping power even as the forests have been cut down across the world.
+      NPC`DEFACER-DRONE`ACTIONS: |-
+        1 2
+      NPC`DRONE-SQUADRON: |-
+        Drone Squadron
+      NPC`DRONE-SQUADRON`KIND: |-
+        mech
+      NPC`DRONE-SQUADRON`GROUP: |-
+        Squads
+      NPC`DRONE-SQUADRON`HEALTH: |-
+        sp
+      NPC`DRONE-SQUADRON`MAX: |-
+        8
+      NPC`DRONE-SQUADRON`TEXT: |-
+        A swarm of Combat Drones flying in sync.
+      NPC`DRONE-SQUADRON`A`1: |-
+        Hover Locomotion System
+      NPC`DRONE-SQUADRON`A`1`KIND: |-
+        system
+      NPC`DRONE-SQUADRON`A`1`TRAITS: |-
+        Passive
+      NPC`DRONE-SQUADRON`A`1`TEXT: |-
+        A Hover Locomotion System allows a Mech to move by hovering over terrain, obstacles, and even bodies of water, entirely circumventing them through grav propulsion. Mechs with this System gain the Hover Trait. DronTek holds the main patent for this, which has helped them secure the market on hover Mechs and drones and protect the relatively small corpo from hostile takeover.
+      NPC`DRONE-SQUADRON`A`2: |-
+        Red Laser
+      NPC`DRONE-SQUADRON`A`2`KIND: |-
+        system
+      NPC`DRONE-SQUADRON`A`2`DAMAGE: |-
+        4 SP
+      NPC`DRONE-SQUADRON`A`2`RANGE: |-
+        medium
+      NPC`DRONE-SQUADRON`A`2`TRAITS: |-
+        Energy|Hot (1)|Multiattack (2)
+      NPC`DRONE-SQUADRON`A`2`TEXT: |-
+        Red lasers strike a target with a small, focussed beam of heat. Their blueprint has been made widely available by the Opus Institute and are commonly used by corpos as much as they are by salvagers and wastelanders.
+      NPC`DRONE-SQUADRON`ACTIONS: |-
+        1 2
+      NPC`ELECTROPHORUS: |-
+        Electrophorus
+      NPC`ELECTROPHORUS`KIND: |-
+        bio-titan
+      NPC`ELECTROPHORUS`GROUP: |-
+        Bio-Titans
+      NPC`ELECTROPHORUS`HEALTH: |-
+        sp
+      NPC`ELECTROPHORUS`MAX: |-
+        96
+      NPC`ELECTROPHORUS`TEXT: |-
+        A vast, eel-like Bio-Titan able to harness bioelectric energy. Rumoured to dwell at the deepest point of the world's oceans within the Amara Trench in the Oceanic Rim.
+        Titanic Actions
+        Electrophorus can take three Titanic Actions, choosing from the options below. Only one Titanic Action may be chosen at a time and only at the end of another Pilot's or NPC's turn. Electrophorus regains spent Titanic Actions at the start of their turn.
+        - Electrophorus moves one Range Band.
+        - Electrophorus makes a Electrified Spines Attack.
+        - Electrophorus makes a Bio-Electric Arc Attack (Uses 2 Titanic Actions).
+      NPC`ELECTROPHORUS`A`1: |-
+        Bio-Electric Arc
+      NPC`ELECTROPHORUS`A`1`KIND: |-
+        ability
+      NPC`ELECTROPHORUS`A`1`RANGE: |-
+        medium
+      NPC`ELECTROPHORUS`A`1`TRAITS: |-
+        Energy
+      NPC`ELECTROPHORUS`A`1`ACTION: |-
+        turn
+      NPC`ELECTROPHORUS`A`1`TEXT: |-
+        Electrophorus fires an arc of bioelectricity. Choose up to three targets in Medium Range and make a single attack roll. On a successful hit the first target takes 10 SP damage, the second target takes 5 SP damage, and the third target takes 3 SP damage.
+      NPC`ELECTROPHORUS`A`2: |-
+        Bio-Electric Shield
+      NPC`ELECTROPHORUS`A`2`KIND: |-
+        ability
+      NPC`ELECTROPHORUS`A`2`TRAITS: |-
+        Shield
+      NPC`ELECTROPHORUS`A`2`ACTION: |-
+        reaction
+      NPC`ELECTROPHORUS`A`2`TEXT: |-
+        As a Reaction may when hit by an attack, Electrophorus may trigger its Bio-Electric Shield to deflect the blow.
+      NPC`ELECTROPHORUS`A`3: |-
+        Electrified Spines
+      NPC`ELECTROPHORUS`A`3`KIND: |-
+        ability
+      NPC`ELECTROPHORUS`A`3`DAMAGE: |-
+        8 SP
+      NPC`ELECTROPHORUS`A`3`RANGE: |-
+        close
+      NPC`ELECTROPHORUS`A`3`TRAITS: |-
+        Melee|Ion
+      NPC`ELECTROPHORUS`A`3`ACTION: |-
+        turn
+      NPC`ELECTROPHORUS`A`3`TEXT: |-
+        Electrophorus gouges a target with its spines.
+      NPC`ELECTROPHORUS`A`4: |-
+        Hover
+      NPC`ELECTROPHORUS`A`4`KIND: |-
+        ability
+      NPC`ELECTROPHORUS`A`4`ACTION: |-
+        passive
+      NPC`ELECTROPHORUS`A`4`TEXT: |-
+        Electrophorus is able to use its bioelectric energy to hover over obstacles, creatures, Mechs, and terrain as a Free Action.
+      NPC`ELECTROPHORUS`A`5: |-
+        Static Field
+      NPC`ELECTROPHORUS`A`5`KIND: |-
+        ability
+      NPC`ELECTROPHORUS`A`5`ACTION: |-
+        passive
+      NPC`ELECTROPHORUS`A`5`TEXT: |-
+        Anything that starts its turn or enters within Close Range of the Electrophorus will take 5 SP damage.
+      NPC`ELECTROPHORUS`ACTIONS: |-
+        1 2 3 4 5
+      NPC`ELITE-BEAM-SQUAD: |-
+        Elite Beam Squad
+      NPC`ELITE-BEAM-SQUAD`KIND: |-
+        npc
+      NPC`ELITE-BEAM-SQUAD`GROUP: |-
+        Squads
+      NPC`ELITE-BEAM-SQUAD`HEALTH: |-
+        hp
+      NPC`ELITE-BEAM-SQUAD`MAX: |-
+        20
+      NPC`ELITE-BEAM-SQUAD`TEXT: |-
+        Apex troops in heavy armour armed with a big ol' gun.
+      NPC`ELITE-BEAM-SQUAD`A`1: |-
+        Beta Fission Gun
+      NPC`ELITE-BEAM-SQUAD`A`1`KIND: |-
+        equipment
+      NPC`ELITE-BEAM-SQUAD`A`1`DAMAGE: |-
+        9 SP
+      NPC`ELITE-BEAM-SQUAD`A`1`RANGE: |-
+        long
+      NPC`ELITE-BEAM-SQUAD`A`1`TRAITS: |-
+        Energy|Burn (2)|Explosive (1)|Multiattack (2)
+      NPC`ELITE-BEAM-SQUAD`A`1`TEXT: |-
+        This frankly over-designed weapon fires a huge blast of supercharged fission which engulfs an entire area in superheated green flame.
+      NPC`ELITE-BEAM-SQUAD`A`2: |-
+        Night Vision Goggles
+      NPC`ELITE-BEAM-SQUAD`A`2`KIND: |-
+        equipment
+      NPC`ELITE-BEAM-SQUAD`A`2`RANGE: |-
+        long
+      NPC`ELITE-BEAM-SQUAD`A`2`TEXT: |-
+        An array of infravision optical mounts worn via a specialised helmet. When activated, your Pilot can see in darkness via a green tinted visor, in any area within Range. This effect lasts for 1 hour.
+      NPC`ELITE-BEAM-SQUAD`A`3: |-
+        Portable Communications Unit
+      NPC`ELITE-BEAM-SQUAD`A`3`KIND: |-
+        equipment
+      NPC`ELITE-BEAM-SQUAD`A`3`RANGE: |-
+        medium
+      NPC`ELITE-BEAM-SQUAD`A`3`TRAITS: |-
+        Communicator
+      NPC`ELITE-BEAM-SQUAD`A`3`ACTION: |-
+        free
+      NPC`ELITE-BEAM-SQUAD`A`3`TEXT: |-
+        A handheld communications device that uses a radio frequency. This allows you to communi- cate with anything that has the Communicator Trait within Range.
+      NPC`ELITE-BEAM-SQUAD`ACTIONS: |-
+        1 2 3
+      NPC`ELITE-BLADE-SQUAD: |-
+        Elite Blade Squad
+      NPC`ELITE-BLADE-SQUAD`KIND: |-
+        npc
+      NPC`ELITE-BLADE-SQUAD`GROUP: |-
+        Squads
+      NPC`ELITE-BLADE-SQUAD`HEALTH: |-
+        hp
+      NPC`ELITE-BLADE-SQUAD`MAX: |-
+        20
+      NPC`ELITE-BLADE-SQUAD`TEXT: |-
+        Heavy assault troops armed with energised blades.
+      NPC`ELITE-BLADE-SQUAD`A`1: |-
+        Electro Grappling Hook
+      NPC`ELITE-BLADE-SQUAD`A`1`KIND: |-
+        equipment
+      NPC`ELITE-BLADE-SQUAD`A`1`RANGE: |-
+        medium
+      NPC`ELITE-BLADE-SQUAD`A`1`TRAITS: |-
+        Climbing
+      NPC`ELITE-BLADE-SQUAD`A`1`TEXT: |-
+        This gravitonic beam allows the user to attach themselves to surfaces at Range, allowing them to swing or pull themselves towards it. You may use it to attach to any surface within Range.
+      NPC`ELITE-BLADE-SQUAD`A`2: |-
+        Monomolecular Sword
+      NPC`ELITE-BLADE-SQUAD`A`2`KIND: |-
+        equipment
+      NPC`ELITE-BLADE-SQUAD`A`2`DAMAGE: |-
+        6 SP
+      NPC`ELITE-BLADE-SQUAD`A`2`RANGE: |-
+        close
+      NPC`ELITE-BLADE-SQUAD`A`2`TRAITS: |-
+        Deadly|Melee|Silent|Multiattack (2)
+      NPC`ELITE-BLADE-SQUAD`A`2`TEXT: |-
+        This single-handed edged blade is made out of millions of folded monomolecular particles producing one of the deadliest melee weapons in the wastelands.
+      NPC`ELITE-BLADE-SQUAD`A`3: |-
+        Portable Communications Unit
+      NPC`ELITE-BLADE-SQUAD`A`3`KIND: |-
+        equipment
+      NPC`ELITE-BLADE-SQUAD`A`3`RANGE: |-
+        medium
+      NPC`ELITE-BLADE-SQUAD`A`3`TRAITS: |-
+        Communicator
+      NPC`ELITE-BLADE-SQUAD`A`3`ACTION: |-
+        free
+      NPC`ELITE-BLADE-SQUAD`A`3`TEXT: |-
+        A handheld communications device that uses a radio frequency. This allows you to communi- cate with anything that has the Communicator Trait within Range.
+      NPC`ELITE-BLADE-SQUAD`ACTIONS: |-
+        1 2 3
+      NPC`FIGHTING-BOX-WHEEL: |-
+        Fighting Box Wheel
+      NPC`FIGHTING-BOX-WHEEL`KIND: |-
+        vehicle
+      NPC`FIGHTING-BOX-WHEEL`GROUP: |-
+        Vehicles
+      NPC`FIGHTING-BOX-WHEEL`HEALTH: |-
+        sp
+      NPC`FIGHTING-BOX-WHEEL`MAX: |-
+        2
+      NPC`FIGHTING-BOX-WHEEL`TECH: |-
+        1
+      NPC`FIGHTING-BOX-WHEEL`VALUE: |-
+        2
+      NPC`FIGHTING-BOX-WHEEL`TRAITS: |-
+        Personnel Capacity (6)|Wheeled
+      NPC`FIGHTING-BOX-WHEEL`TEXT: |-
+        An improvised fighting vehicle, modified to carry heavy weaponry.
+      NPC`FIGHTING-BOX-WHEEL`A`1: |-
+        .50 Cal Machine Gun
+      NPC`FIGHTING-BOX-WHEEL`A`1`KIND: |-
+        system
+      NPC`FIGHTING-BOX-WHEEL`A`1`DAMAGE: |-
+        2 SP
+      NPC`FIGHTING-BOX-WHEEL`A`1`RANGE: |-
+        close
+      NPC`FIGHTING-BOX-WHEEL`A`1`TRAITS: |-
+        Ballistic|Jamming|Pinning
+      NPC`FIGHTING-BOX-WHEEL`A`1`TEXT: |-
+        This simple ballistic weapon of the Opus Institute design fires solid, high calibre rounds that can puncture a Mech hull and shred through infantry. It has been a mainstay of battlefields for as long as anyone remembers and remains ubiquitous today.
+      NPC`FIGHTING-BOX-WHEEL`A`2: |-
+        Locomotion System
+      NPC`FIGHTING-BOX-WHEEL`A`2`KIND: |-
+        system
+      NPC`FIGHTING-BOX-WHEEL`A`2`TEXT: |-
+        A sturdy and dependable Locomotion System allowing a Mech to traverse most standard terrain types and adaptable to fit on most Chassis. Locomotion Systems vary widely from bipedal to quadrupedal, and beyond. Some esoteric designs are known to have as many as eight legs!
+        A Locomotion System allows a Mech to move normally. If a Mech does not have a Locomotion System or it is damaged or destroyed the Mech cannot move.
+      NPC`FIGHTING-BOX-WHEEL`ACTIONS: |-
+        1 2
+      NPC`HEAVY-COMBAT-DRONE: |-
+        Heavy Combat Drone
+      NPC`HEAVY-COMBAT-DRONE`KIND: |-
+        vehicle
+      NPC`HEAVY-COMBAT-DRONE`GROUP: |-
+        Drones
+      NPC`HEAVY-COMBAT-DRONE`HEALTH: |-
+        sp
+      NPC`HEAVY-COMBAT-DRONE`MAX: |-
+        5
+      NPC`HEAVY-COMBAT-DRONE`TECH: |-
+        3
+      NPC`HEAVY-COMBAT-DRONE`VALUE: |-
+        2
+      NPC`HEAVY-COMBAT-DRONE`TEXT: |-
+        A heavily armoured drone designed for battlefield use.
+      NPC`HEAVY-COMBAT-DRONE`A`1: |-
+        30mm Autocannon
+      NPC`HEAVY-COMBAT-DRONE`A`1`KIND: |-
+        system
+      NPC`HEAVY-COMBAT-DRONE`A`1`DAMAGE: |-
+        4 SP
+      NPC`HEAVY-COMBAT-DRONE`A`1`RANGE: |-
+        medium
+      NPC`HEAVY-COMBAT-DRONE`A`1`TRAITS: |-
+        Ballistic|Jamming
+      NPC`HEAVY-COMBAT-DRONE`A`1`TEXT: |-
+        This automatic ballistic weapon fires high calibre slugs at a target.
+        Evantis are one of the main manufacturers of heavy duty ballistic weapons, and you can expect to find their designs on their standard mil-tech loadouts.
+      NPC`HEAVY-COMBAT-DRONE`A`2: |-
+        Hover Locomotion System
+      NPC`HEAVY-COMBAT-DRONE`A`2`KIND: |-
+        system
+      NPC`HEAVY-COMBAT-DRONE`A`2`TEXT: |-
+        A Hover Locomotion System allows a Mech to move by hovering over terrain, obstacles, and even bodies of water, entirely circumventing them through grav propulsion. Mechs with this System gain the Hover Trait. DronTek holds the main patent for this, which has helped them secure the market on hover Mechs and drones and protect the relatively small corpo from hostile takeover.
+      NPC`HEAVY-COMBAT-DRONE`ACTIONS: |-
+        1 2
+      NPC`HOVER-DRONE: |-
+        Hover Drone
+      NPC`HOVER-DRONE`KIND: |-
+        vehicle
+      NPC`HOVER-DRONE`GROUP: |-
+        Drones
+      NPC`HOVER-DRONE`HEALTH: |-
+        sp
+      NPC`HOVER-DRONE`MAX: |-
+        4
+      NPC`HOVER-DRONE`TECH: |-
+        4
+      NPC`HOVER-DRONE`VALUE: |-
+        3
+      NPC`HOVER-DRONE`TEXT: |-
+        A highly mobile missile platform used in offensive and defensive roles.
+      NPC`HOVER-DRONE`A`1: |-
+        Hover Locomotion System
+      NPC`HOVER-DRONE`A`1`KIND: |-
+        system
+      NPC`HOVER-DRONE`A`1`ACTION: |-
+        passive
+      NPC`HOVER-DRONE`A`1`TEXT: |-
+        A Hover Locomotion System allows a Mech to move by hovering over terrain, obstacles, and even bodies of water, entirely circumventing them through grav propulsion. Mechs with this System gain the Hover Trait. DronTek holds the main patent for this, which has helped them secure the market on hover Mechs and drones and protect the relatively small corpo from hostile takeover.
+      NPC`HOVER-DRONE`A`2: |-
+        Missile Pod
+      NPC`HOVER-DRONE`A`2`KIND: |-
+        system
+      NPC`HOVER-DRONE`A`2`DAMAGE: |-
+        8 SP
+      NPC`HOVER-DRONE`A`2`RANGE: |-
+        long
+      NPC`HOVER-DRONE`A`2`TRAITS: |-
+        Explosive (2)|Hot (1)|Missile
+      NPC`HOVER-DRONE`A`2`TEXT: |-
+        Missile Pods fire a heavy salvo of unguided, rocket propelled explosives over a wide area of terrain.
+        The Contour Aerospace execs were so proud of this design that when Aegean Dynamics surrendered to them they decided to shell their home arco to oblivion anyway and chalk the cost up as research and development.
+      NPC`HOVER-DRONE`ACTIONS: |-
+        1 2
+      NPC`IRRADIATED-SCORPION: |-
+        Irradiated Scorpion
+      NPC`IRRADIATED-SCORPION`KIND: |-
+        npc
+      NPC`IRRADIATED-SCORPION`GROUP: |-
+        Creatures
+      NPC`IRRADIATED-SCORPION`HEALTH: |-
+        hp
+      NPC`IRRADIATED-SCORPION`MAX: |-
+        4
+      NPC`IRRADIATED-SCORPION`TEXT: |-
+        Mutated beyond their usual size, they have been known to kill entire camps of wasters.
+      NPC`IRRADIATED-SCORPION`A`1: |-
+        Stinger
+      NPC`IRRADIATED-SCORPION`A`1`KIND: |-
+        ability
+      NPC`IRRADIATED-SCORPION`A`1`DAMAGE: |-
+        2 HP
+      NPC`IRRADIATED-SCORPION`A`1`RANGE: |-
+        close
+      NPC`IRRADIATED-SCORPION`A`1`TRAITS: |-
+        Melee|Poison|Deadly (Creatures Only)
+      NPC`IRRADIATED-SCORPION`ACTIONS: |-
+        1
+      NPC`MACHINE-GUN-SQUAD: |-
+        Machine Gun Squad
+      NPC`MACHINE-GUN-SQUAD`KIND: |-
+        npc
+      NPC`MACHINE-GUN-SQUAD`GROUP: |-
+        Squads
+      NPC`MACHINE-GUN-SQUAD`HEALTH: |-
+        hp
+      NPC`MACHINE-GUN-SQUAD`MAX: |-
+        10
+      NPC`MACHINE-GUN-SQUAD`TEXT: |-
+        Combat trained troops armed with a mobile heavy machine gun.
+      NPC`MACHINE-GUN-SQUAD`A`1: |-
+        .50 Cal Machine Gun
+      NPC`MACHINE-GUN-SQUAD`A`1`KIND: |-
+        equipment
+      NPC`MACHINE-GUN-SQUAD`A`1`DAMAGE: |-
+        3 SP
+      NPC`MACHINE-GUN-SQUAD`A`1`RANGE: |-
+        close
+      NPC`MACHINE-GUN-SQUAD`A`1`TRAITS: |-
+        Ballistic|Jamming|Pinning|Multiattack (2)
+      NPC`MACHINE-GUN-SQUAD`A`1`TEXT: |-
+        This simple ballistic weapon of the Opus Institute design fires solid, high calibre rounds that can puncture a Mech hull and shred through infantry. It has been a mainstay of battlefields for as long as anyone remembers and remains ubiquitous today.
+      NPC`MACHINE-GUN-SQUAD`A`2: |-
+        Portable Communications Unit
+      NPC`MACHINE-GUN-SQUAD`A`2`KIND: |-
+        equipment
+      NPC`MACHINE-GUN-SQUAD`A`2`RANGE: |-
+        medium
+      NPC`MACHINE-GUN-SQUAD`A`2`TRAITS: |-
+        Communicator
+      NPC`MACHINE-GUN-SQUAD`A`2`ACTION: |-
+        free
+      NPC`MACHINE-GUN-SQUAD`A`2`TEXT: |-
+        A handheld communications device that uses a radio frequency. This allows you to communi- cate with anything that has the Communicator Trait within Range.
+      NPC`MACHINE-GUN-SQUAD`A`3: |-
+        First Aid Kit
+      NPC`MACHINE-GUN-SQUAD`A`3`KIND: |-
+        equipment
+      NPC`MACHINE-GUN-SQUAD`A`3`RANGE: |-
+        close
+      NPC`MACHINE-GUN-SQUAD`A`3`TRAITS: |-
+        Uses (2)
+      NPC`MACHINE-GUN-SQUAD`A`3`ACTION: |-
+        turn
+      NPC`MACHINE-GUN-SQUAD`A`3`TEXT: |-
+        This set of bandages, plasters, gauze, painkillers, and antiseptics allows you to patch up wounds in the field.
+        A target creature of your choice in Range regains 3 Hit Points. If they were on 0 Hit Points this restores them to consciousness with 3 HP.
+        Got a piece of shrapnel the size of a fist stuck in me during my first salvage run. If it wasn't for one of these kits I'd be toast
+      NPC`MACHINE-GUN-SQUAD`ACTIONS: |-
+        1 2 3
+      NPC`MACHINE-GUN-TURRET: |-
+        Machine Gun Turret
+      NPC`MACHINE-GUN-TURRET`KIND: |-
+        vehicle
+      NPC`MACHINE-GUN-TURRET`GROUP: |-
+        Vehicles
+      NPC`MACHINE-GUN-TURRET`HEALTH: |-
+        sp
+      NPC`MACHINE-GUN-TURRET`MAX: |-
+        2
+      NPC`MACHINE-GUN-TURRET`TECH: |-
+        1
+      NPC`MACHINE-GUN-TURRET`VALUE: |-
+        1
+      NPC`MACHINE-GUN-TURRET`TRAITS: |-
+        Immobile
+      NPC`MACHINE-GUN-TURRET`TEXT: |-
+        A static gun emplacement.
+      NPC`MACHINE-GUN-TURRET`A`1: |-
+        .50 Cal Machine Gun
+      NPC`MACHINE-GUN-TURRET`A`1`KIND: |-
+        system
+      NPC`MACHINE-GUN-TURRET`A`1`DAMAGE: |-
+        2 SP
+      NPC`MACHINE-GUN-TURRET`A`1`RANGE: |-
+        close
+      NPC`MACHINE-GUN-TURRET`A`1`TRAITS: |-
+        Ballistic|Jamming|Pinning
+      NPC`MACHINE-GUN-TURRET`A`1`TEXT: |-
+        This simple ballistic weapon of the Opus Institute design fires solid, high calibre rounds that can puncture a Mech hull and shred through infantry. It has been a mainstay of battlefields for as long as anyone remembers and remains ubiquitous today.
+      NPC`MACHINE-GUN-TURRET`ACTIONS: |-
+        1
+      NPC`MELD-BEHEMOTH: |-
+        Meld Behemoth
+      NPC`MELD-BEHEMOTH`KIND: |-
+        bio-titan
+      NPC`MELD-BEHEMOTH`GROUP: |-
+        Meld
+      NPC`MELD-BEHEMOTH`HEALTH: |-
+        sp
+      NPC`MELD-BEHEMOTH`MAX: |-
+        60
+      NPC`MELD-BEHEMOTH`TEXT: |-
+        The apex Meld, the size of a high rise building. Having assimilated vast quantities of mechanical and biological entities, it becomes a force even the toughest of Mechs struggle to reckon with.
+        Titanic Actions
+        The Meld Behemoth can take three Titanic Actions, choosing from the options below. Only one Titanic Action may be chosen at a time and only at the end of another Pilot's or NPC's turn. Meld Behemoth regains spent Titanic Actions at the start of their turn.
+        - The Meld Behemoth moves one Range Band.
+        - The Meld Behemoth makes a single Behemoth Tendrils Attack. This does not have the Multi-Attack Trait.
+        - The Meld Behemoth uses the Behemoth Assimilation Ability.
+      NPC`MELD-BEHEMOTH`A`1: |-
+        Assimilation
+      NPC`MELD-BEHEMOTH`A`1`KIND: |-
+        ability
+      NPC`MELD-BEHEMOTH`A`1`ACTION: |-
+        turn
+      NPC`MELD-BEHEMOTH`A`1`TEXT: |-
+        A Meld Behemoth does not infect, instead it absorbs everything it destroys into its mammoth, ever expanding form.
+        When the Meld Behemoth uses this Ability a target Mech or Vehicle in Close Range that is damaged or on 0 SP becomes assimilated into its bulk.
+        The Meld Behemoth gains an amount of SP equal to the target's Max SP. If this would increase the Meld Behemoth's current SP beyond its Max SP, increase its Max SP by that amount as well. For example, if the Meld Behemoth has 60 SP and gained 10 SP it would now have 70 SP with a Max SP of 70.
+      NPC`MELD-BEHEMOTH`A`2: |-
+        Behemoth Tendrils
+      NPC`MELD-BEHEMOTH`A`2`KIND: |-
+        ability
+      NPC`MELD-BEHEMOTH`A`2`DAMAGE: |-
+        6 SP
+      NPC`MELD-BEHEMOTH`A`2`RANGE: |-
+        medium
+      NPC`MELD-BEHEMOTH`A`2`TRAITS: |-
+        Melee|Multiattack (2)
+      NPC`MELD-BEHEMOTH`A`2`ACTION: |-
+        turn
+      NPC`MELD-BEHEMOTH`A`2`TEXT: |-
+        Long reaching tendrils whip around to grab all within reach, either crushing them or drawing them nearer to be assimilated.
+      NPC`MELD-BEHEMOTH`ACTIONS: |-
+        1 2
+      NPC`MELD-DRONE: |-
+        Meld Drone
+      NPC`MELD-DRONE`KIND: |-
+        npc
+      NPC`MELD-DRONE`GROUP: |-
+        Meld
+      NPC`MELD-DRONE`HEALTH: |-
+        hp
+      NPC`MELD-DRONE`MAX: |-
+        3
+      NPC`MELD-DRONE`TRAITS: |-
+        N Salvage: 1
+      NPC`MELD-DRONE`TEXT: |-
+        Meld when they take over a biological organism, around the size of a human. The brain is sludged, only the stem remains, they become a peon of the swarm.
+      NPC`MELD-DRONE`A`1: |-
+        Bite
+      NPC`MELD-DRONE`A`1`KIND: |-
+        ability
+      NPC`MELD-DRONE`A`1`DAMAGE: |-
+        2 HP
+      NPC`MELD-DRONE`A`1`RANGE: |-
+        close
+      NPC`MELD-DRONE`A`1`TRAITS: |-
+        Melee|Meld Infection
+      NPC`MELD-DRONE`A`1`TEXT: |-
+        The Meld Drone mindlessly attacks the target with teeth and claw.
+      NPC`MELD-DRONE`ACTIONS: |-
+        1
+      NPC`MELD-DRONE-SWARM: |-
+        Meld Drone Swarm
+      NPC`MELD-DRONE-SWARM`KIND: |-
+        npc
+      NPC`MELD-DRONE-SWARM`GROUP: |-
+        Meld
+      NPC`MELD-DRONE-SWARM`HEALTH: |-
+        sp
+      NPC`MELD-DRONE-SWARM`MAX: |-
+        6
+      NPC`MELD-DRONE-SWARM`TRAITS: |-
+        N Salvage: 3
+      NPC`MELD-DRONE-SWARM`TEXT: |-
+        A swarm of multiple zombie-like Meld Drones.
+      NPC`MELD-DRONE-SWARM`A`1: |-
+        Devour
+      NPC`MELD-DRONE-SWARM`A`1`KIND: |-
+        ability
+      NPC`MELD-DRONE-SWARM`A`1`DAMAGE: |-
+        3 HP
+      NPC`MELD-DRONE-SWARM`A`1`RANGE: |-
+        close
+      NPC`MELD-DRONE-SWARM`A`1`TRAITS: |-
+        Meld Infection|Melee|Multiattack (3)
+      NPC`MELD-DRONE-SWARM`A`1`TEXT: |-
+        The Meld Drones bite and claw at a target with all their multitude limbs and maws.
+      NPC`MELD-DRONE-SWARM`ACTIONS: |-
+        1
+      NPC`MELD-NANOID: |-
+        Meld Nanoid
+      NPC`MELD-NANOID`KIND: |-
+        npc
+      NPC`MELD-NANOID`GROUP: |-
+        Meld
+      NPC`MELD-NANOID`HEALTH: |-
+        sp
+      NPC`MELD-NANOID`MAX: |-
+        5
+      NPC`MELD-NANOID`TRAITS: |-
+        N Salvage: 5|Fast
+      NPC`MELD-NANOID`TEXT: |-
+        Meld in a small, swift form, about the size of a large wolf with lashing tendrils.
+      NPC`MELD-NANOID`A`1: |-
+        Nanoid Tendrils
+      NPC`MELD-NANOID`A`1`KIND: |-
+        ability
+      NPC`MELD-NANOID`A`1`DAMAGE: |-
+        3 SP
+      NPC`MELD-NANOID`A`1`RANGE: |-
+        close
+      NPC`MELD-NANOID`A`1`TRAITS: |-
+        Melee|Meld Infection
+      NPC`MELD-NANOID`ACTIONS: |-
+        1
+      NPC`MELD-SPLITTER: |-
+        Meld Splitter
+      NPC`MELD-SPLITTER`KIND: |-
+        npc
+      NPC`MELD-SPLITTER`GROUP: |-
+        Meld
+      NPC`MELD-SPLITTER`HEALTH: |-
+        sp
+      NPC`MELD-SPLITTER`MAX: |-
+        10
+      NPC`MELD-SPLITTER`TRAITS: |-
+        N Salvage: 10
+      NPC`MELD-SPLITTER`TEXT: |-
+        Formless inky darkness, Meld Splitters are around the height of a Mech and made of boundless swarms of coagulated meld.
+      NPC`MELD-SPLITTER`A`1: |-
+        Split
+      NPC`MELD-SPLITTER`A`1`KIND: |-
+        ability
+      NPC`MELD-SPLITTER`A`1`TEXT: |-
+        When a Meld Splitter is reduced to 0 SP it turns into 2 Meld Nanoids. These act at the start of the next round.
+      NPC`MELD-SPLITTER`A`2: |-
+        Splitter Tendrils
+      NPC`MELD-SPLITTER`A`2`KIND: |-
+        ability
+      NPC`MELD-SPLITTER`A`2`DAMAGE: |-
+        4 SP
+      NPC`MELD-SPLITTER`A`2`RANGE: |-
+        medium
+      NPC`MELD-SPLITTER`A`2`TRAITS: |-
+        Meld Infection|Melee|Multiattack (2)
+      NPC`MELD-SPLITTER`A`2`TEXT: |-
+        Huge tendrils lash out at anything nearby.
+      NPC`MELD-SPLITTER`ACTIONS: |-
+        1 2
+      NPC`MISSILE-SQUAD: |-
+        Missile Squad
+      NPC`MISSILE-SQUAD`KIND: |-
+        npc
+      NPC`MISSILE-SQUAD`GROUP: |-
+        Squads
+      NPC`MISSILE-SQUAD`HEALTH: |-
+        hp
+      NPC`MISSILE-SQUAD`MAX: |-
+        10
+      NPC`MISSILE-SQUAD`TEXT: |-
+        Combat trained troops armed with a mobile missile launcher.
+      NPC`MISSILE-SQUAD`A`1: |-
+        First Aid Kit
+      NPC`MISSILE-SQUAD`A`1`KIND: |-
+        equipment
+      NPC`MISSILE-SQUAD`A`1`RANGE: |-
+        close
+      NPC`MISSILE-SQUAD`A`1`TRAITS: |-
+        Uses (2)
+      NPC`MISSILE-SQUAD`A`1`ACTION: |-
+        turn
+      NPC`MISSILE-SQUAD`A`1`TEXT: |-
+        This set of bandages, plasters, gauze, painkillers, and antiseptics allows you to patch up wounds in the field.
+        A target creature of your choice in Range regains 3 Hit Points. If they were on 0 Hit Points this restores them to consciousness with 3 HP.
+        Got a piece of shrapnel the size of a fist stuck in me during my first salvage run. If it wasn't for one of these kits I'd be toast
+      NPC`MISSILE-SQUAD`A`2: |-
+        Portable Communications Unit
+      NPC`MISSILE-SQUAD`A`2`KIND: |-
+        equipment
+      NPC`MISSILE-SQUAD`A`2`RANGE: |-
+        medium
+      NPC`MISSILE-SQUAD`A`2`TRAITS: |-
+        Communicator
+      NPC`MISSILE-SQUAD`A`2`ACTION: |-
+        free
+      NPC`MISSILE-SQUAD`A`2`TEXT: |-
+        A handheld communications device that uses a radio frequency. This allows you to communi- cate with anything that has the Communicator Trait within Range.
+      NPC`MISSILE-SQUAD`A`3: |-
+        Rocket Launcher
+      NPC`MISSILE-SQUAD`A`3`KIND: |-
+        equipment
+      NPC`MISSILE-SQUAD`A`3`DAMAGE: |-
+        5 SP
+      NPC`MISSILE-SQUAD`A`3`RANGE: |-
+        long
+      NPC`MISSILE-SQUAD`A`3`TRAITS: |-
+        Explosive (1)|Heavy|Missile|Multiattack (2)
+      NPC`MISSILE-SQUAD`A`3`TEXT: |-
+        This weapon fires unguided, explosive warheads at its targets and is a great way to make an entrance at your next hoedown.
+      NPC`MISSILE-SQUAD`ACTIONS: |-
+        1 2 3
+      NPC`MOLEBEAR: |-
+        Molebear
+      NPC`MOLEBEAR`KIND: |-
+        npc
+      NPC`MOLEBEAR`GROUP: |-
+        Creatures
+      NPC`MOLEBEAR`HEALTH: |-
+        hp
+      NPC`MOLEBEAR`MAX: |-
+        12
+      NPC`MOLEBEAR`TRAITS: |-
+        Burrower
+      NPC`MOLEBEAR`TEXT: |-
+        Terrifying, huge burrowing predators known to rend through metal.
+      NPC`MOLEBEAR`A`1: |-
+        Iron Claw
+      NPC`MOLEBEAR`A`1`KIND: |-
+        ability
+      NPC`MOLEBEAR`A`1`DAMAGE: |-
+        4 SP
+      NPC`MOLEBEAR`A`1`RANGE: |-
+        close
+      NPC`MOLEBEAR`A`1`TRAITS: |-
+        Melee
+      NPC`MOLEBEAR`ACTIONS: |-
+        1
+      NPC`NEEDLE-DRONE: |-
+        Needle Drone
+      NPC`NEEDLE-DRONE`KIND: |-
+        vehicle
+      NPC`NEEDLE-DRONE`GROUP: |-
+        Drones
+      NPC`NEEDLE-DRONE`HEALTH: |-
+        sp
+      NPC`NEEDLE-DRONE`MAX: |-
+        2
+      NPC`NEEDLE-DRONE`TECH: |-
+        4
+      NPC`NEEDLE-DRONE`VALUE: |-
+        3
+      NPC`NEEDLE-DRONE`TEXT: |-
+        A miniaturised corpo stealth drone developed for black ops and wetwork.
+        Polycarbonate Stealth Chassis
+        The Needle Drone cannot be targeted with anything that uses the Targeter Trait such as targeting Modules. It also cannot be seen by anything with the Optics Trait or Scanner Trait. It does not appear on sensors, radar systems, or scanners and needs direct visual confirmation to be spotted.
+      NPC`NEEDLE-DRONE`A`1: |-
+        Hover Locomotion System
+      NPC`NEEDLE-DRONE`A`1`KIND: |-
+        system
+      NPC`NEEDLE-DRONE`A`1`ACTION: |-
+        passive
+      NPC`NEEDLE-DRONE`A`1`TEXT: |-
+        A Hover Locomotion System allows a Mech to move by hovering over terrain, obstacles, and even bodies of water, entirely circumventing them through grav propulsion. Mechs with this System gain the Hover Trait. DronTek holds the main patent for this, which has helped them secure the market on hover Mechs and drones and protect the relatively small corpo from hostile takeover.
+      NPC`NEEDLE-DRONE`A`2: |-
+        Needler
+      NPC`NEEDLE-DRONE`A`2`KIND: |-
+        system
+      NPC`NEEDLE-DRONE`A`2`DAMAGE: |-
+        1 SP
+      NPC`NEEDLE-DRONE`A`2`RANGE: |-
+        close
+      NPC`NEEDLE-DRONE`A`2`TRAITS: |-
+        Poison|Deadly (Creatures Only)
+      NPC`NEEDLE-DRONE`A`3: |-
+        Polycarbonate Stealth Chassis
+      NPC`NEEDLE-DRONE`A`3`KIND: |-
+        ability
+      NPC`NEEDLE-DRONE`A`3`TEXT: |-
+        The Needle Drone cannot be targeted with anything that uses the Targeter Trait such as targeting Modules. It also cannot be seen by anything with the Optics Trait or Scanner Trait. It does not appear on sensors, radar systems, or scanners and needs direct visual confirmation to be spotted.
+      NPC`NEEDLE-DRONE`ACTIONS: |-
+        1 2 3
+      NPC`PEST-DRONE: |-
+        Pest Drone
+      NPC`PEST-DRONE`KIND: |-
+        vehicle
+      NPC`PEST-DRONE`GROUP: |-
+        Drones
+      NPC`PEST-DRONE`HEALTH: |-
+        sp
+      NPC`PEST-DRONE`MAX: |-
+        4
+      NPC`PEST-DRONE`TECH: |-
+        3
+      NPC`PEST-DRONE`VALUE: |-
+        3
+      NPC`PEST-DRONE`TEXT: |-
+        A versatile multi-legged drone armed with a flamethrower for 'industrial' use.
+      NPC`PEST-DRONE`A`1: |-
+        FM-3 Flamethrower
+      NPC`PEST-DRONE`A`1`KIND: |-
+        system
+      NPC`PEST-DRONE`A`1`DAMAGE: |-
+        2 SP
+      NPC`PEST-DRONE`A`1`RANGE: |-
+        close
+      NPC`PEST-DRONE`A`1`TRAITS: |-
+        Anti-Organic|Overheat
+      NPC`PEST-DRONE`A`1`TEXT: |-
+        Developed by the Opus Institute for use in forestry and demolition operations, or at least that is what they tell themselves. The FM-3 shoots a superheated stream of fire at a target. Most Mechs are armoured enough that this only licks them, but it can mess up internals enough to stop them firing anything hot back at you. Flesh bubbles and screams.
+      NPC`PEST-DRONE`A`2: |-
+        FM-3 Flamethrower
+      NPC`PEST-DRONE`A`2`KIND: |-
+        system
+      NPC`PEST-DRONE`A`2`DAMAGE: |-
+        2 SP
+      NPC`PEST-DRONE`A`2`RANGE: |-
+        close
+      NPC`PEST-DRONE`A`2`TRAITS: |-
+        Anti-Organic|Overheat
+      NPC`PEST-DRONE`A`2`TEXT: |-
+        Developed by the Opus Institute for use in forestry and demolition operations, or at least that is what they tell themselves. The FM-3 shoots a superheated stream of fire at a target. Most Mechs are armoured enough that this only licks them, but it can mess up internals enough to stop them firing anything hot back at you. Flesh bubbles and screams.
+      NPC`PEST-DRONE`A`3: |-
+        Spider Locomotion System
+      NPC`PEST-DRONE`A`3`KIND: |-
+        system
+      NPC`PEST-DRONE`A`3`ACTION: |-
+        passive
+      NPC`PEST-DRONE`A`3`TEXT: |-
+        A series of lightweight, spider-like legs that allow for easy traversal over terrain and vertical movement.
+        This Locomotion System, alongside allowing your Mech to move as normal, grants your Mech the Climbing Trait. This allows your Mech to easily traverse all forms of Difficult Terrain without penalty, and climb vertical and sheer surfaces with ease.
+      NPC`PEST-DRONE`ACTIONS: |-
+        1 2 3
+      NPC`PHANTOM: |-
+        Phantom
+      NPC`PHANTOM`KIND: |-
+        bio-titan
+      NPC`PHANTOM`GROUP: |-
+        Bio-Titans
+      NPC`PHANTOM`HEALTH: |-
+        sp
+      NPC`PHANTOM`MAX: |-
+        54
+      NPC`PHANTOM`TEXT: |-
+        A multi-scythed being that can bend itself through reality. Rumoured to have been crafted in the Opus Institute Research Lab in the Frozen Gulf before breaking free to wreak havoc.
+        Titanic Actions
+        Phantom can take three Titanic Actions, choosing from the options below. Only one Titanic Action may be chosen at a time and only at the end of another Pilot's or NPC's turn. Phantom regains spent Titanic Actions at the start of their turn.
+        - Phantom moves one Range Band.
+        - Phantom makes a single Morph Scythe Attack. This does not have the Multi-Attack Trait.
+        - Phantom uses its Nether Teleport Ability.
+      NPC`PHANTOM`A`1: |-
+        Morph Scythes
+      NPC`PHANTOM`A`1`KIND: |-
+        ability
+      NPC`PHANTOM`A`1`DAMAGE: |-
+        5 SP
+      NPC`PHANTOM`A`1`RANGE: |-
+        close
+      NPC`PHANTOM`A`1`TRAITS: |-
+        Melee|Multiattack (3)
+      NPC`PHANTOM`A`1`ACTION: |-
+        turn
+      NPC`PHANTOM`A`1`TEXT: |-
+        The molecular structure of a target hit by Phantom's Morph Scythes begins to unravel with bizarre results. When a target is hit by Morph Scythes, roll on this table to find out what additional effect they suffer.
+      NPC`PHANTOM`A`2: |-
+        Nether Teleport
+      NPC`PHANTOM`A`2`KIND: |-
+        ability
+      NPC`PHANTOM`A`2`ACTION: |-
+        passive
+      NPC`PHANTOM`A`2`TEXT: |-
+        Phantom teleports itself to the Nether Zone or teleports from the Nether Zone to the material world. After Phantom uses this Ability it may not act on its next turn.
+        Nether Zone
+        This alternate pocket dimension is the domain of Phantom. It is a bizarre non-euclidean realm where its most choice victims exist endlessly, floating in the void. Phantom is safe here and only beings that can Phase can enter the Nether Zone willingly.
+      NPC`PHANTOM`A`3: |-
+        Phasic Core
+      NPC`PHANTOM`A`3`KIND: |-
+        ability
+      NPC`PHANTOM`A`3`ACTION: |-
+        passive
+      NPC`PHANTOM`A`3`TEXT: |-
+        Phantom is permanently phased. It can move through walls and obstacles and is invisible except for a faint blue outline. Phantom can make attacks whilst phased.
+      NPC`PHANTOM`ACTIONS: |-
+        1 2 3
+      NPC`POWER-LOADER: |-
+        Power Loader
+      NPC`POWER-LOADER`KIND: |-
+        vehicle
+      NPC`POWER-LOADER`GROUP: |-
+        Vehicles
+      NPC`POWER-LOADER`HEALTH: |-
+        sp
+      NPC`POWER-LOADER`MAX: |-
+        1
+      NPC`POWER-LOADER`TECH: |-
+        1
+      NPC`POWER-LOADER`VALUE: |-
+        1
+      NPC`POWER-LOADER`TEXT: |-
+        A pneumatically powered heavy loader for moving cargo.
+      NPC`POWER-LOADER`A`1: |-
+        Locomotion System
+      NPC`POWER-LOADER`A`1`KIND: |-
+        system
+      NPC`POWER-LOADER`A`1`TEXT: |-
+        A sturdy and dependable Locomotion System allowing a Mech to traverse most standard terrain types and adaptable to fit on most Chassis. Locomotion Systems vary widely from bipedal to quadrupedal, and beyond. Some esoteric designs are known to have as many as eight legs!
+        A Locomotion System allows a Mech to move normally. If a Mech does not have a Locomotion System or it is damaged or destroyed the Mech cannot move.
+      NPC`POWER-LOADER`A`2: |-
+        Rigging Arm
+      NPC`POWER-LOADER`A`2`KIND: |-
+        system
+      NPC`POWER-LOADER`A`2`DAMAGE: |-
+        1 SP
+      NPC`POWER-LOADER`A`2`RANGE: |-
+        close
+      NPC`POWER-LOADER`A`2`TRAITS: |-
+        Melee|Load
+      NPC`POWER-LOADER`A`2`TEXT: |-
+        This standard rigging arm designed for industrial use allows a Mech to pick up and manipulate objects. To avoid embarrassment in the field it is worth reminding Pilots that many Mechs are not fitted with arms or hands as standard and therefore incapable of picking items up. If your Mech lacks arms and you do not mount a Rigging Arm or equivalent, your Mech cannot pick things up.
+      NPC`POWER-LOADER`A`3: |-
+        Rigging Arm
+      NPC`POWER-LOADER`A`3`KIND: |-
+        system
+      NPC`POWER-LOADER`A`3`DAMAGE: |-
+        1 SP
+      NPC`POWER-LOADER`A`3`RANGE: |-
+        close
+      NPC`POWER-LOADER`A`3`TRAITS: |-
+        Melee|Load
+      NPC`POWER-LOADER`A`3`TEXT: |-
+        This standard rigging arm designed for industrial use allows a Mech to pick up and manipulate objects. To avoid embarrassment in the field it is worth reminding Pilots that many Mechs are not fitted with arms or hands as standard and therefore incapable of picking items up. If your Mech lacks arms and you do not mount a Rigging Arm or equivalent, your Mech cannot pick things up.
+      NPC`POWER-LOADER`ACTIONS: |-
+        1 2 3
+      NPC`RAIDER: |-
+        Raider
+      NPC`RAIDER`KIND: |-
+        npc
+      NPC`RAIDER`GROUP: |-
+        People
+      NPC`RAIDER`HEALTH: |-
+        hp
+      NPC`RAIDER`MAX: |-
+        3
+      NPC`RAIDER`TEXT: |-
+        Wastelanders who take what they need by force.
+      NPC`RAIDER`A`1: |-
+        Improvised Firearm
+      NPC`RAIDER`A`1`KIND: |-
+        equipment
+      NPC`RAIDER`A`1`DAMAGE: |-
+        3 HP
+      NPC`RAIDER`A`1`RANGE: |-
+        close
+      NPC`RAIDER`A`1`TRAITS: |-
+        Ballistic|Unwieldy
+      NPC`RAIDER`A`1`TEXT: |-
+        This covers any number of improvised firearms such as pipe guns, zip guns, and slam guns. The humble boomstick has got many salvagers out of sticky situations.
+      NPC`RAIDER`ACTIONS: |-
+        1
+      NPC`RAIDER-BAND: |-
+        Raider Band
+      NPC`RAIDER-BAND`KIND: |-
+        npc
+      NPC`RAIDER-BAND`GROUP: |-
+        Squads
+      NPC`RAIDER-BAND`HEALTH: |-
+        hp
+      NPC`RAIDER-BAND`MAX: |-
+        6
+      NPC`RAIDER-BAND`TEXT: |-
+        A band of raiders hungry for scrap.
+      NPC`RAIDER-BAND`A`1: |-
+        Improvised Firearms
+      NPC`RAIDER-BAND`A`1`KIND: |-
+        equipment
+      NPC`RAIDER-BAND`A`1`DAMAGE: |-
+        4 HP
+      NPC`RAIDER-BAND`A`1`RANGE: |-
+        close
+      NPC`RAIDER-BAND`A`1`TRAITS: |-
+        Ballistic|Unwieldy|Multiattack (2)
+      NPC`RAIDER-BAND`A`1`TEXT: |-
+        This covers any number of improvised firearms such as pipe guns, zip guns, and slam guns. The humble boomstick has got many salvagers out of sticky situations.
+      NPC`RAIDER-BAND`A`2: |-
+        High Tensile Wire
+      NPC`RAIDER-BAND`A`2`KIND: |-
+        equipment
+      NPC`RAIDER-BAND`A`2`RANGE: |-
+        close
+      NPC`RAIDER-BAND`A`2`TRAITS: |-
+        Rigging
+      NPC`RAIDER-BAND`A`2`ACTION: |-
+        turn
+      NPC`RAIDER-BAND`A`2`TEXT: |-
+        Strong and durable wire, with multiple potential creative applications.This can be attached to anything within Range, allowing you to climb the wire. It can also be used to aid in the drag- ging of heavy objects
+      NPC`RAIDER-BAND`ACTIONS: |-
+        1 2
+      NPC`RIFLE-SQUAD: |-
+        Rifle Squad
+      NPC`RIFLE-SQUAD`KIND: |-
+        npc
+      NPC`RIFLE-SQUAD`GROUP: |-
+        Squads
+      NPC`RIFLE-SQUAD`HEALTH: |-
+        hp
+      NPC`RIFLE-SQUAD`MAX: |-
+        10
+      NPC`RIFLE-SQUAD`TEXT: |-
+        A group of grunts armed with rifles.
+      NPC`RIFLE-SQUAD`A`1: |-
+        Portable Communications Unit
+      NPC`RIFLE-SQUAD`A`1`KIND: |-
+        equipment
+      NPC`RIFLE-SQUAD`A`1`RANGE: |-
+        medium
+      NPC`RIFLE-SQUAD`A`1`TRAITS: |-
+        Communicator
+      NPC`RIFLE-SQUAD`A`1`ACTION: |-
+        free
+      NPC`RIFLE-SQUAD`A`1`TEXT: |-
+        A handheld communications device that uses a radio frequency. This allows you to communi- cate with anything that has the Communicator Trait within Range.
+      NPC`RIFLE-SQUAD`A`2: |-
+        Rifles
+      NPC`RIFLE-SQUAD`A`2`KIND: |-
+        equipment
+      NPC`RIFLE-SQUAD`A`2`DAMAGE: |-
+        6 HP
+      NPC`RIFLE-SQUAD`A`2`RANGE: |-
+        medium
+      NPC`RIFLE-SQUAD`A`2`TRAITS: |-
+        Ballistic|Jamming|Multiattack (2)
+      NPC`RIFLE-SQUAD`A`2`TEXT: |-
+        This weapon covers a wide variety of standard issue ballistic rifles, including assault rifles, semi-automatic rifles, and bolt-action rifles.
+      NPC`RIFLE-SQUAD`ACTIONS: |-
+        1 2
+      NPC`ROTORCRAFT: |-
+        Rotorcraft
+      NPC`ROTORCRAFT`KIND: |-
+        vehicle
+      NPC`ROTORCRAFT`GROUP: |-
+        Vehicles
+      NPC`ROTORCRAFT`HEALTH: |-
+        sp
+      NPC`ROTORCRAFT`MAX: |-
+        3
+      NPC`ROTORCRAFT`TECH: |-
+        4
+      NPC`ROTORCRAFT`VALUE: |-
+        3
+      NPC`ROTORCRAFT`TRAITS: |-
+        Personnel Capacity (6)|Hover
+      NPC`ROTORCRAFT`TEXT: |-
+        A flying vehicle that can hover over terrain.
+      NPC`ROTORCRAFT`A`1: |-
+        Hover Locomotion System
+      NPC`ROTORCRAFT`A`1`KIND: |-
+        system
+      NPC`ROTORCRAFT`A`1`TEXT: |-
+        A Hover Locomotion System allows a Mech to move by hovering over terrain, obstacles, and even bodies of water, entirely circumventing them through grav propulsion. Mechs with this System gain the Hover Trait. DronTek holds the main patent for this, which has helped them secure the market on hover Mechs and drones and protect the relatively small corpo from hostile takeover.
+      NPC`ROTORCRAFT`A`2: |-
+        Rotary Minigun
+      NPC`ROTORCRAFT`A`2`KIND: |-
+        system
+      NPC`ROTORCRAFT`A`2`DAMAGE: |-
+        4 SP
+      NPC`ROTORCRAFT`A`2`RANGE: |-
+        medium
+      NPC`ROTORCRAFT`A`2`TRAITS: |-
+        Ballistic|Hot (1)|Jamming|Multiattack (2)|Pinning
+      NPC`ROTORCRAFT`A`2`TEXT: |-
+        This Evantis-developed Mech-mountable rotary ballistic weapon fires a horrifying hail of firepower at a target. This was the favoured weapon of the legendary salvager Flash, who was said to have held off an entire Evantis lance whilst defending their Union Crawler #129 during the Reclamation.
+      NPC`ROTORCRAFT`ACTIONS: |-
+        1 2
+      NPC`SALVO-DRONE: |-
+        Salvo Drone
+      NPC`SALVO-DRONE`KIND: |-
+        vehicle
+      NPC`SALVO-DRONE`GROUP: |-
+        Drones
+      NPC`SALVO-DRONE`HEALTH: |-
+        sp
+      NPC`SALVO-DRONE`MAX: |-
+        3
+      NPC`SALVO-DRONE`TECH: |-
+        1
+      NPC`SALVO-DRONE`VALUE: |-
+        2
+      NPC`SALVO-DRONE`TEXT: |-
+        A simple machine gun drone often used to defend areas of strategic importance.
+      NPC`SALVO-DRONE`A`1: |-
+        .50 Cal Machine Gun
+      NPC`SALVO-DRONE`A`1`KIND: |-
+        system
+      NPC`SALVO-DRONE`A`1`DAMAGE: |-
+        2 SP
+      NPC`SALVO-DRONE`A`1`RANGE: |-
+        close
+      NPC`SALVO-DRONE`A`1`TRAITS: |-
+        Ballistic|Jamming|Pinning
+      NPC`SALVO-DRONE`A`1`TEXT: |-
+        This simple ballistic weapon of the Opus Institute design fires solid, high calibre rounds that can puncture a Mech hull and shred through infantry. It has been a mainstay of battlefields for as long as anyone remembers and remains ubiquitous today.
+      NPC`SALVO-DRONE`A`2: |-
+        Hover Locomotion System
+      NPC`SALVO-DRONE`A`2`KIND: |-
+        system
+      NPC`SALVO-DRONE`A`2`TEXT: |-
+        A Hover Locomotion System allows a Mech to move by hovering over terrain, obstacles, and even bodies of water, entirely circumventing them through grav propulsion. Mechs with this System gain the Hover Trait. DronTek holds the main patent for this, which has helped them secure the market on hover Mechs and drones and protect the relatively small corpo from hostile takeover.
+      NPC`SALVO-DRONE`ACTIONS: |-
+        1 2
+      NPC`SCYLLA: |-
+        Scylla
+      NPC`SCYLLA`KIND: |-
+        bio-titan
+      NPC`SCYLLA`GROUP: |-
+        Bio-Titans
+      NPC`SCYLLA`HEALTH: |-
+        sp
+      NPC`SCYLLA`MAX: |-
+        39
+      NPC`SCYLLA`TEXT: |-
+        A gigantic, armoured, arachnid-like predator beast. It has no concept that the war it was designed to fight ended aeons ago, and continues to tear apart anything that enters into its mountainous domain.
+        Titanic Actions
+        Scylla can take three Titanic Actions, choosing from the options below. Only one Titanic Action may be chosen at a time and only at the end of another Pilot's or NPC's turn. Scylla regains spent Titanic Actions at the start of their turn.
+        - Scylla moves one Range Band.
+        - Scylla makes a single Scythe Attack. This does not have the Multi-Attack Trait.
+        - Scylla makes a Tail Sweep Attack (Costs 2 Titanic Actions)
+      NPC`SCYLLA`A`1: |-
+        Ambush Predator
+      NPC`SCYLLA`A`1`KIND: |-
+        ability
+      NPC`SCYLLA`A`1`ACTION: |-
+        passive
+      NPC`SCYLLA`A`1`TEXT: |-
+        Unless detected, Scylla always acts first in combat.
+      NPC`SCYLLA`A`2: |-
+        Armour Plating (3)
+      NPC`SCYLLA`A`2`KIND: |-
+        ability
+      NPC`SCYLLA`A`2`ACTION: |-
+        reaction
+      NPC`SCYLLA`A`2`TEXT: |-
+        When Scylla takes damage they may remove a layer of Armour Plating as a Reaction and instead take no damage.
+      NPC`SCYLLA`A`3: |-
+        Climb
+      NPC`SCYLLA`A`3`KIND: |-
+        ability
+      NPC`SCYLLA`A`3`ACTION: |-
+        passive
+      NPC`SCYLLA`A`3`TEXT: |-
+        Scylla can effortlessly climb over difficult and vertical terrain, rocky surfaces, and other obstacles.
+      NPC`SCYLLA`A`4: |-
+        Scythe Attack
+      NPC`SCYLLA`A`4`KIND: |-
+        ability
+      NPC`SCYLLA`A`4`DAMAGE: |-
+        4 SP
+      NPC`SCYLLA`A`4`RANGE: |-
+        close
+      NPC`SCYLLA`A`4`TRAITS: |-
+        Melee|Multi-Attack (2)
+      NPC`SCYLLA`A`4`TEXT: |-
+        Scylla stabs with it's forearms attempting to pierce it's prey.
+      NPC`SCYLLA`A`5: |-
+        Tail Sweep
+      NPC`SCYLLA`A`5`KIND: |-
+        ability
+      NPC`SCYLLA`A`5`TRAITS: |-
+        Melee
+      NPC`SCYLLA`A`5`ACTION: |-
+        turn
+      NPC`SCYLLA`A`5`TEXT: |-
+        Scylla makes one giant sweeping attack with their tail. This hits every target within Medium Range, dealing 3 SP damage on a hit. Targets hit are knocked Prone and gain the Vulnerable Trait.
+      NPC`SCYLLA`ACTIONS: |-
+        1 2 3 4 5
+      NPC`SURVEY-DRONE: |-
+        Survey Drone
+      NPC`SURVEY-DRONE`KIND: |-
+        vehicle
+      NPC`SURVEY-DRONE`GROUP: |-
+        Drones
+      NPC`SURVEY-DRONE`HEALTH: |-
+        sp
+      NPC`SURVEY-DRONE`MAX: |-
+        1
+      NPC`SURVEY-DRONE`TECH: |-
+        1
+      NPC`SURVEY-DRONE`VALUE: |-
+        1
+      NPC`SURVEY-DRONE`TEXT: |-
+        An unarmed drone used as a reconnaissance tool.
+      NPC`SURVEY-DRONE`A`1: |-
+        Hover Locomotion System
+      NPC`SURVEY-DRONE`A`1`KIND: |-
+        system
+      NPC`SURVEY-DRONE`A`1`TEXT: |-
+        A Hover Locomotion System allows a Mech to move by hovering over terrain, obstacles, and even bodies of water, entirely circumventing them through grav propulsion. Mechs with this System gain the Hover Trait. DronTek holds the main patent for this, which has helped them secure the market on hover Mechs and drones and protect the relatively small corpo from hostile takeover.
+      NPC`SURVEY-DRONE`A`2: |-
+        Survey Scanner
+      NPC`SURVEY-DRONE`A`2`KIND: |-
+        module
+      NPC`SURVEY-DRONE`A`2`RANGE: |-
+        long
+      NPC`SURVEY-DRONE`A`2`ACTION: |-
+        short
+      NPC`SURVEY-DRONE`A`2`TEXT: |-
+        When activated, a Survey Scanner allows you to scan a specific point of interest within Range. This can be a single point on the Region Map or a specific feature in the world such as a ruin, unique area of terrain, settlement, or base. If a point is not worth scanning because it holds nothing of interest or you have all of the relevant information on it, the Mediator must tell you before you make your scan.
+      NPC`SURVEY-DRONE`ACTIONS: |-
+        1 2
+      NPC`TANK: |-
+        Tank
+      NPC`TANK`KIND: |-
+        vehicle
+      NPC`TANK`GROUP: |-
+        Vehicles
+      NPC`TANK`HEALTH: |-
+        sp
+      NPC`TANK`MAX: |-
+        6
+      NPC`TANK`TECH: |-
+        3
+      NPC`TANK`VALUE: |-
+        4
+      NPC`TANK`TEXT: |-
+        A conventional tracked, armoured battle vehicle.
+      NPC`TANK`A`1: |-
+        Locomotion System
+      NPC`TANK`A`1`KIND: |-
+        system
+      NPC`TANK`A`1`TEXT: |-
+        A sturdy and dependable Locomotion System allowing a Mech to traverse most standard terrain types and adaptable to fit on most Chassis. Locomotion Systems vary widely from bipedal to quadrupedal, and beyond. Some esoteric designs are known to have as many as eight legs!
+        A Locomotion System allows a Mech to move normally. If a Mech does not have a Locomotion System or it is damaged or destroyed the Mech cannot move.
+      NPC`TANK`A`2: |-
+        120mm Cannon
+      NPC`TANK`A`2`KIND: |-
+        system
+      NPC`TANK`A`2`DAMAGE: |-
+        6 SP
+      NPC`TANK`A`2`RANGE: |-
+        long
+      NPC`TANK`A`2`TRAITS: |-
+        Ballistic|Explosive (1)
+      NPC`TANK`A`2`TEXT: |-
+        This chunky Weapons System fires a huge ballistic charge that explodes on impact. These are said to be so old they were used by actual nations during the First Corporate War.
+        Despite their simplicity and weight, they're still undeniably effective when combined with modern targeting and tracking systems.
+      NPC`TANK`ACTIONS: |-
+        1 2
+      NPC`TROOPER: |-
+        Trooper
+      NPC`TROOPER`KIND: |-
+        npc
+      NPC`TROOPER`GROUP: |-
+        People
+      NPC`TROOPER`HEALTH: |-
+        hp
+      NPC`TROOPER`MAX: |-
+        5
+      NPC`TROOPER`TEXT: |-
+        Combat trained troops deployed in a wide range of roles.
+      NPC`TROOPER`A`1: |-
+        Portable Communications Unit
+      NPC`TROOPER`A`1`KIND: |-
+        equipment
+      NPC`TROOPER`A`1`RANGE: |-
+        medium
+      NPC`TROOPER`A`1`TRAITS: |-
+        Communicator
+      NPC`TROOPER`A`1`ACTION: |-
+        free
+      NPC`TROOPER`A`1`TEXT: |-
+        A handheld communications device that uses a radio frequency. This allows you to communi- cate with anything that has the Communicator Trait within Range.
+      NPC`TROOPER`A`2: |-
+        Rifle
+      NPC`TROOPER`A`2`KIND: |-
+        equipment
+      NPC`TROOPER`A`2`DAMAGE: |-
+        5 HP
+      NPC`TROOPER`A`2`RANGE: |-
+        medium
+      NPC`TROOPER`A`2`TRAITS: |-
+        Ballistic
+      NPC`TROOPER`A`2`TEXT: |-
+        This weapon covers a wide variety of standard issue ballistic rifles, including assault rifles, semi-automatic rifles, and bolt-action rifles.
+      NPC`TROOPER`ACTIONS: |-
+        1 2
+      NPC`TYPHON: |-
+        Typhon
+      NPC`TYPHON`KIND: |-
+        bio-titan
+      NPC`TYPHON`GROUP: |-
+        Bio-Titans
+      NPC`TYPHON`HEALTH: |-
+        sp
+      NPC`TYPHON`MAX: |-
+        67
+      NPC`TYPHON`TEXT: |-
+        Vengeance of the earth. This terrifying spiked worm can even swallow a Colossus whole. Some believe the spirits of miners in the Ferrous Range, who died in industrial accidents, summoned this being in vengeance.
+        Titanic Actions
+        Typhon can take three Titanic Actions, choosing from the options below. Only one Titanic Action may be chosen at a time and only at the end of another Pilot's or NPC's turn. Typhon regains spent Titanic Actions at the start of their turn.
+        - Typhon uses their Burrower Ability to either burrow or unburrow.
+        - Typhon moves one Range Band.
+        - Typhon makes a Swallow Whole Attack (Costs three Titanic Actions).
+      NPC`TYPHON`A`1: |-
+        Armour Plating (2)
+      NPC`TYPHON`A`1`KIND: |-
+        ability
+      NPC`TYPHON`A`1`ACTION: |-
+        passive
+      NPC`TYPHON`A`1`TEXT: |-
+        When Typhon takes damage they may remove a layer of Armour Plating as a Reaction and instead take no damage.
+      NPC`TYPHON`A`2: |-
+        Burrower
+      NPC`TYPHON`A`2`KIND: |-
+        ability
+      NPC`TYPHON`A`2`ACTION: |-
+        passive
+      NPC`TYPHON`A`2`TEXT: |-
+        Typhon can move freely on land and traverse underground through earth, even through the hardest of rock deposits.
+        It can burrow into the earth as a Turn Action and unburrow as a Free Action. Whilst burrowed, it cannot be seen or targeted by anything on the ground, but can be spotted via the huge amounts of earth it kicks up.
+      NPC`TYPHON`A`3: |-
+        Spiked Carapace
+      NPC`TYPHON`A`3`KIND: |-
+        ability
+      NPC`TYPHON`A`3`ACTION: |-
+        passive
+      NPC`TYPHON`A`3`TEXT: |-
+        When Typhon unborrows all targets within Close Range of the area it unburrows up to take 5 SP damage from its spiked carapace. In addition, any target that attacks Typhon with an attack that has the Melee Trait takes 3 SP damage on a hit.
+      NPC`TYPHON`A`4: |-
+        Swallow Whole
+      NPC`TYPHON`A`4`KIND: |-
+        ability
+      NPC`TYPHON`A`4`RANGE: |-
+        close
+      NPC`TYPHON`A`4`TRAITS: |-
+        Melee
+      NPC`TYPHON`A`4`ACTION: |-
+        turn
+      NPC`TYPHON`A`4`TEXT: |-
+        Typhon attempts to swallow a target into its humongous maw. Typhon may have multiple targets swallowed at once.
+      NPC`TYPHON`ACTIONS: |-
+        1 2 3 4
+      NPC`TYRANT: |-
+        Tyrant
+      NPC`TYRANT`KIND: |-
+        bio-titan
+      NPC`TYRANT`GROUP: |-
+        Bio-Titans
+      NPC`TYRANT`HEALTH: |-
+        sp
+      NPC`TYRANT`MAX: |-
+        215
+      NPC`TYRANT`TEXT: |-
+        A mammoth, amphibian lizard said to have been born in the aftermath of the first nuclear war. It dwells somewhere deep within The Great Cape and was responsible for the destruction of the Kombu Tech home arco, a coastal city of a million souls.
+        Titanic Actions
+        The Tyrant can take three Titanic Actions, choosing from the options below. Only one Titanic Action may be chosen at a time and only at the end of another Pilot's or NPC's turn. The Tyrant regains spent Titanic Actions at the start of their turn.
+        - Tyrant moves one Range Band.
+        - Tyrant regains 10 SP.
+        - Tyrant makes a single Claw Swipe Attack. This does not have the Multi-Attack Trait.
+      NPC`TYRANT`A`1: |-
+        Amphibious
+      NPC`TYRANT`A`1`KIND: |-
+        ability
+      NPC`TYRANT`A`1`ACTION: |-
+        passive
+      NPC`TYRANT`A`1`TEXT: |-
+        The Tyrant is able to move swiftly in all bodies of water at any depth as well as on land. It can breathe underwater as well as on land.
+      NPC`TYRANT`A`2: |-
+        Claw Swipes
+      NPC`TYRANT`A`2`KIND: |-
+        ability
+      NPC`TYRANT`A`2`DAMAGE: |-
+        10 SP
+      NPC`TYRANT`A`2`RANGE: |-
+        close
+      NPC`TYRANT`A`2`TRAITS: |-
+        Melee|Multiattack (2)
+      NPC`TYRANT`A`2`ACTION: |-
+        turn
+      NPC`TYRANT`A`2`TEXT: |-
+        The Tyrant makes a frenetic series of claw swipes.
+      NPC`TYRANT`A`3: |-
+        Destroyer of Worlds
+      NPC`TYRANT`A`3`KIND: |-
+        ability
+      NPC`TYRANT`A`3`ACTION: |-
+        passive
+      NPC`TYRANT`A`3`TEXT: |-
+        The destructive power of The Tyrant is unparalleled. It will destroy any arco, City, Settlement, or Crawler within a day of attacking it.
+      NPC`TYRANT`A`4: |-
+        Irradiated Beam
+      NPC`TYRANT`A`4`KIND: |-
+        ability
+      NPC`TYRANT`A`4`DAMAGE: |-
+        40 SP
+      NPC`TYRANT`A`4`RANGE: |-
+        long
+      NPC`TYRANT`A`4`TRAITS: |-
+        Burn (5)|Energy|Explosive (5)|Irradiated
+      NPC`TYRANT`A`4`ACTION: |-
+        turn
+      NPC`TYRANT`A`4`TEXT: |-
+        The Tyrant produces a humongous beam of Irradiated energy from its maw. This must recharge after being fired, and can only be made every other turn. Any target hit by the Irradiated Beam as well as the entire area within Close Range becomes Irradiated.
+      NPC`TYRANT`A`5: |-
+        Regeneration
+      NPC`TYRANT`A`5`KIND: |-
+        ability
+      NPC`TYRANT`A`5`ACTION: |-
+        passive
+      NPC`TYRANT`A`5`TEXT: |-
+        The Tyrant regains 10 SP at the start of its turn. This triggers even when reduced to 0 SP.
+      NPC`TYRANT`A`6: |-
+        Rending Bite
+      NPC`TYRANT`A`6`KIND: |-
+        ability
+      NPC`TYRANT`A`6`DAMAGE: |-
+        20 SP
+      NPC`TYRANT`A`6`RANGE: |-
+        close
+      NPC`TYRANT`A`6`TRAITS: |-
+        Deadly|Melee
+      NPC`TYRANT`A`6`ACTION: |-
+        turn
+      NPC`TYRANT`A`6`TEXT: |-
+        The Tyrant rips apart a target with a mammoth bite.
+      NPC`TYRANT`A`7: |-
+        Tail Swat
+      NPC`TYRANT`A`7`KIND: |-
+        ability
+      NPC`TYRANT`A`7`DAMAGE: |-
+        15 SP
+      NPC`TYRANT`A`7`RANGE: |-
+        medium
+      NPC`TYRANT`A`7`TRAITS: |-
+        Melee
+      NPC`TYRANT`A`7`ACTION: |-
+        reaction
+      NPC`TYRANT`A`7`TEXT: |-
+        The Tyrant swipes with its tail, casually knocking over skyscrapers and swatting away projectiles.
+        The Tyrant may make its Tail Swat attack as a Reaction to anything that moves within Close Range of it. On a successful hit the target is knocked Prone.
+        In addition, if The Tyrant is attacked by any weapons with the Missile or Melee Trait, it may attempt to deflect the attack with its Tail.
+      NPC`TYRANT`ACTIONS: |-
+        1 2 3 4 5 6 7
+      NPC`VETERAN: |-
+        Veteran
+      NPC`VETERAN`KIND: |-
+        npc
+      NPC`VETERAN`GROUP: |-
+        People
+      NPC`VETERAN`HEALTH: |-
+        hp
+      NPC`VETERAN`MAX: |-
+        9
+      NPC`VETERAN`TEXT: |-
+        A well trained and seasoned soldier deployed on difficult operations.
+      NPC`VETERAN`A`1: |-
+        Green Laser Rifle
+      NPC`VETERAN`A`1`KIND: |-
+        equipment
+      NPC`VETERAN`A`1`DAMAGE: |-
+        5 HP
+      NPC`VETERAN`A`1`RANGE: |-
+        medium
+      NPC`VETERAN`A`1`TRAITS: |-
+        Energy
+      NPC`VETERAN`A`1`TEXT: |-
+        This weapon covers a wide variety of standard issue shoulder-mounted energy laser rifles such as beam guns, pulse lasers, and ray rifles.
+      NPC`VETERAN`A`2: |-
+        Portable Communications Unit
+      NPC`VETERAN`A`2`KIND: |-
+        equipment
+      NPC`VETERAN`A`2`RANGE: |-
+        medium
+      NPC`VETERAN`A`2`TRAITS: |-
+        Communicator
+      NPC`VETERAN`A`2`ACTION: |-
+        free
+      NPC`VETERAN`A`2`TEXT: |-
+        A handheld communications device that uses a radio frequency. This allows you to communi- cate with anything that has the Communicator Trait within Range.
+      NPC`VETERAN`ACTIONS: |-
+        1 2
+      NPC`WALKER-DRONE: |-
+        Walker Drone
+      NPC`WALKER-DRONE`KIND: |-
+        vehicle
+      NPC`WALKER-DRONE`GROUP: |-
+        Drones
+      NPC`WALKER-DRONE`HEALTH: |-
+        sp
+      NPC`WALKER-DRONE`MAX: |-
+        6
+      NPC`WALKER-DRONE`TECH: |-
+        2
+      NPC`WALKER-DRONE`VALUE: |-
+        3
+      NPC`WALKER-DRONE`TEXT: |-
+        An anthropomorphic, Mech-like drone.
+      NPC`WALKER-DRONE`A`1: |-
+        Articulated Rigging Arm
+      NPC`WALKER-DRONE`A`1`KIND: |-
+        system
+      NPC`WALKER-DRONE`A`1`TRAITS: |-
+        Rigging|Salvaging
+      NPC`WALKER-DRONE`A`1`TEXT: |-
+        This advanced rigging arm has multiple interacting joints allowing for a much greater degree of movement and utility, allowing the user to dig through salvage and manipulate objects in their external environment.
+        The Mechs in the fighting pits of Osiris often have several articulated rigging arms to aid in grappling and ripping chunks off other Mechs.
+        If you have two or more Articulated Rigging Arms your Mech gains the Climbing Trait.
+      NPC`WALKER-DRONE`A`2: |-
+        Green Laser
+      NPC`WALKER-DRONE`A`2`KIND: |-
+        system
+      NPC`WALKER-DRONE`A`2`DAMAGE: |-
+        4 SP
+      NPC`WALKER-DRONE`A`2`RANGE: |-
+        medium
+      NPC`WALKER-DRONE`A`2`TRAITS: |-
+        Energy|Hot (2)
+      NPC`WALKER-DRONE`A`2`TEXT: |-
+        The Green Laser fires a solid beam of superheated energy at a target. This was one of the first lasers developed for military use and was used extensively on all sides of the First Corpo War. It remains ubiquitous to this day.
+      NPC`WALKER-DRONE`A`3: |-
+        Locomotion System
+      NPC`WALKER-DRONE`A`3`KIND: |-
+        system
+      NPC`WALKER-DRONE`A`3`TEXT: |-
+        A sturdy and dependable Locomotion System allowing a Mech to traverse most standard terrain types and adaptable to fit on most Chassis. Locomotion Systems vary widely from bipedal to quadrupedal, and beyond. Some esoteric designs are known to have as many as eight legs!
+        A Locomotion System allows a Mech to move normally. If a Mech does not have a Locomotion System or it is damaged or destroyed the Mech cannot move.
+      NPC`WALKER-DRONE`ACTIONS: |-
+        1 2 3
+      NPC`WASTELAND-BEAR: |-
+        Wasteland Bear
+      NPC`WASTELAND-BEAR`KIND: |-
+        npc
+      NPC`WASTELAND-BEAR`GROUP: |-
+        Creatures
+      NPC`WASTELAND-BEAR`HEALTH: |-
+        hp
+      NPC`WASTELAND-BEAR`MAX: |-
+        5
+      NPC`WASTELAND-BEAR`TEXT: |-
+        Large, hungry, and ferocious, these bears are not just after your picnic basket.
+      NPC`WASTELAND-BEAR`A`1: |-
+        Bear Carnage
+      NPC`WASTELAND-BEAR`A`1`KIND: |-
+        ability
+      NPC`WASTELAND-BEAR`A`1`DAMAGE: |-
+        4 HP
+      NPC`WASTELAND-BEAR`A`1`RANGE: |-
+        close
+      NPC`WASTELAND-BEAR`A`1`TRAITS: |-
+        Melee
+      NPC`WASTELAND-BEAR`ACTIONS: |-
+        1
+      NPC`WASTELAND-HERD: |-
+        Wasteland Herd
+      NPC`WASTELAND-HERD`KIND: |-
+        npc
+      NPC`WASTELAND-HERD`GROUP: |-
+        Squads
+      NPC`WASTELAND-HERD`HEALTH: |-
+        hp
+      NPC`WASTELAND-HERD`MAX: |-
+        4
+      NPC`WASTELAND-HERD`TEXT: |-
+        A herd of wasteland creatures.
+      NPC`WASTELAND-HERD`A`1: |-
+        Stampede
+      NPC`WASTELAND-HERD`A`1`KIND: |-
+        ability
+      NPC`WASTELAND-HERD`A`1`DAMAGE: |-
+        3 HP
+      NPC`WASTELAND-HERD`A`1`RANGE: |-
+        close
+      NPC`WASTELAND-HERD`A`1`TRAITS: |-
+        Melee|Multiattack (2)
+      NPC`WASTELAND-HERD`A`1`TEXT: |-
+        Creatures hit by this attack are knocked prone.
+      NPC`WASTELAND-HERD`ACTIONS: |-
+        1
+      NPC`WASTELANDER: |-
+        Wastelander
+      NPC`WASTELANDER`KIND: |-
+        npc
+      NPC`WASTELANDER`GROUP: |-
+        People
+      NPC`WASTELANDER`HEALTH: |-
+        hp
+      NPC`WASTELANDER`MAX: |-
+        2
+      NPC`WASTELANDER`TEXT: |-
+        Represents the myriad of common denizens of the wastelands.
+      NPC`WASTELANDER`A`1: |-
+        Improvised Melee Weapon
+      NPC`WASTELANDER`A`1`KIND: |-
+        equipment
+      NPC`WASTELANDER`A`1`DAMAGE: |-
+        2 HP
+      NPC`WASTELANDER`A`1`RANGE: |-
+        close
+      NPC`WASTELANDER`A`1`TRAITS: |-
+        Melee|Silent
+      NPC`WASTELANDER`A`1`TEXT: |-
+        This covers any number of melee weapons from wrenches and hammers to shards of metal and sharpened metal posts. There are a lot of things you can use to bludgeon, stab, or otherwise injure someone, to be found in the wastes.
+      NPC`WASTELANDER`A`2: |-
+        Salvaging Tools
+      NPC`WASTELANDER`A`2`KIND: |-
+        equipment
+      NPC`WASTELANDER`A`2`TRAITS: |-
+        Salvaging
+      NPC`WASTELANDER`A`2`TEXT: |-
+        This covers a wide array of tools, from jacks to hammers to angle grinders, that are used in salvaging. This allows your Pilot to salvage in the field, because sometimes you need to get your hands dirty.
+      NPC`WASTELANDER`ACTIONS: |-
+        1 2
+      NPC`WASTER-MOB: |-
+        Waster Mob
+      NPC`WASTER-MOB`KIND: |-
+        npc
+      NPC`WASTER-MOB`GROUP: |-
+        Squads
+      NPC`WASTER-MOB`HEALTH: |-
+        hp
+      NPC`WASTER-MOB`MAX: |-
+        4
+      NPC`WASTER-MOB`TEXT: |-
+        A mob of wastelanders with improvised weapons.
+      NPC`WASTER-MOB`A`1: |-
+        Improvised Weapons
+      NPC`WASTER-MOB`A`1`KIND: |-
+        equipment
+      NPC`WASTER-MOB`A`1`DAMAGE: |-
+        4 HP
+      NPC`WASTER-MOB`A`1`RANGE: |-
+        close
+      NPC`WASTER-MOB`A`1`TRAITS: |-
+        Melee|Silent|Multiattack (2)
+      NPC`WASTER-MOB`A`1`TEXT: |-
+        This covers any number of melee weapons from wrenches and hammers to shards of metal and sharpened metal posts. There are a lot of things you can use to bludgeon, stab, or otherwise injure someone, to be found in the wastes.
+      NPC`WASTER-MOB`A`2: |-
+        Salvaging Tools
+      NPC`WASTER-MOB`A`2`KIND: |-
+        equipment
+      NPC`WASTER-MOB`A`2`TRAITS: |-
+        Salvaging
+      NPC`WASTER-MOB`A`2`TEXT: |-
+        This covers a wide array of tools, from jacks to hammers to angle grinders, that are used in salvaging. This allows your Pilot to salvage in the field, because sometimes you need to get your hands dirty.
+      NPC`WASTER-MOB`ACTIONS: |-
+        1 2
       TABLE`A-I-PERSONALITY: |-
         A.I. Personality
       TABLE`A-I-PERSONALITY`TEXT: |-
@@ -9461,6 +11772,8 @@ objects:
         A-I-PERSONALITY AARDVARKS-TONGUE ADVANCED-REACTOR-SAFETY-PROTOC ANTI-MINE-MECH-LAYER AREA-SALVAGE ARMOURED-SHIELD BACKGROUND BEHEMOTH CALLSIGN CALLSIGNS-1-4 CALLSIGNS-13-16 CALLSIGNS-17-20 CALLSIGNS-5-8 CALLSIGNS-9-12 CHRYSALIS-ENTRANCING-SONG CORE-MECHANIC COUNTER-HACKING CRAWLER-DAMAGE CRAWLER-DESTRUCTION CRAWLER-DETERIORATION CRAWLER-NAME CRITICAL-DAMAGE CRITICAL-INJURY DENIAL-OF-SERVICE-ATTACK EGGS-MAYHEM EJECTION-SYSTEM EJECTOR-POD ELECTRO-MAGNETIC-SHIELD-PROJEC ELECTROPHORUS-BIO-ELECTRIC-SHI ESCAPE-HATCH EXPERIMENTAL-TELEPORTATION-HOL FIREWALL GLANDED-STIMS GROUP-INITIATIVE IMPROVED-TRADING-BAY JACKHAMMER KEEPSAKE KNIFE-MISSILE LET-S-MAKE-A-DEAL MATTER-PHASE-SHIELD MECH-APPEARANCE MECH-PATTERN-NAMES MECH-QUIRKS MECH-SALVAGE MECH-SCRAMBLER MECHAPULT MORALE MOTTO MULTI-PHASE-SHIELD NPC-ACTION PANDA-SNEEZE PHANTOM-MORPH-SCYTHES PILOT-APPEARANCE PORTABLE-MULTI-PHASE-SHIELD PRAWN-SIFTER REACTION-ROLL REACTOR-OVERLOAD REACTOR-SAFETY-PROTOCOLS REFLECTIVE-SHIELDING REFRACTIVE-SHIELD-PROJECTOR RETREAT SONIC-SCREECHER SURVEY-SCANNER SYSTEM-AND-SOFTWARE-HACKER TECH-1-SCRAP TECH-2-SCRAP TECH-3-SCRAP TECH-4-SCRAP TECH-5-SCRAP TECH-6-SCRAP TELEPORTATION-POD TRADING-BAY TYPHON-SWALLOW-WHOLE TYRANT-TAIL-SWIPE UNION-CALL WELL-ACTUALLY WHIRLWIND-STRIKE WORM
       LIST`BAY: |-
         ALL-TERRAIN-LOCOMOTION ARMAMENT-BAY ARMOURY CANTINA COMMAND-BAY CRAFTING-BAY CRAWLER-WIDE-AUGMENTS EXCEPTIONAL-ENGINEERING IMPROVED-ARMOUR-AND-ARMAMENTS IMPROVED-TRADING-BAY MECH-BAY MED-BAY PILOT-BAY STORAGE-BAY TRADING-BAY
+      LIST`NPC: |-
+        ACE ARMOURED-BOX-WHEEL ARTL BOX-WHEEL CARRION-BIRD CHILD-OF-CHRYALIS CHIMERIPEDE CHRYSALIS COMBAT-DRONE COMBAT-PILOT DEFACER-DRONE DRONE-SQUADRON ELECTROPHORUS ELITE-BEAM-SQUAD ELITE-BLADE-SQUAD FIGHTING-BOX-WHEEL HEAVY-COMBAT-DRONE HOVER-DRONE IRRADIATED-SCORPION MACHINE-GUN-SQUAD MACHINE-GUN-TURRET MELD-BEHEMOTH MELD-DRONE MELD-DRONE-SWARM MELD-NANOID MELD-SPLITTER MISSILE-SQUAD MOLEBEAR NEEDLE-DRONE PEST-DRONE PHANTOM POWER-LOADER RAIDER RAIDER-BAND RIFLE-SQUAD ROTORCRAFT SALVO-DRONE SCYLLA SURVEY-DRONE TANK TROOPER TYPHON TYRANT VETERAN WALKER-DRONE WASTELAND-BEAR WASTELAND-HERD WASTELANDER WASTER-MOB
       LIST`CLASS: |-
         ENGINEER HACKER HAULER SALVAGER SCOUT SOLDIER
       LIST`TREE: |-
