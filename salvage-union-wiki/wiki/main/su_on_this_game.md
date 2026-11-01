@@ -28,6 +28,10 @@ This game keeps your Salvage Union pilot, mech and Union Crawler for you. `+help
 
 A fight, a salvage run or another scene can be an encounter with its own copy of each member's sheet. `+encounter/start [<title>]` starts one and makes you its GM; `+encounter/join` takes a copy of your sheet into it. While you are in the room where it runs, your HP, AP, mech, re-rolls and uses are that copy, so an encounter that runs for days changes neither your sheet nor another scene. When it ends, only what the GM kept with `+encounter/keep` is on your sheet.
 
+The GM adds the Core Book's NPCs, vehicles, drones, Bio-Titans and enemy mechs with `+encounter/npc` (`+encounter/bestiary` lists them) and rolls their actions on the NPC Action table with `+encounter/act`, which takes a hit's damage from your copy. `+encounter/initiative` starts each round of Group Initiative and `+encounter/turn` marks your turn; `+encounter/hit` damages an NPC.
+
+`+encounter/salvage` salvages what you wreck: a vehicle or drone breaks down into scrap, a mech rolls on the Mech Salvage table. Kept salvage puts scrap in the crawler's hold and parts on your mech's salvage, damaged until downtime repairs them in the Mech Bay; `+mech/install` fits them and `+mech/breakdown` turns them into scrap.
+
 ## Duties
 
 Automated Duties roll on your own sheet, never on an encounter's copy.

@@ -288,6 +288,54 @@ for (const item of items(await pack('crawler'))) {
 	set(`BAY\`${k}\`TEXT`, plain(item.system.description));
 }
 
+// ---- NPCs ----------------------------------------------------------------------------------------------------
+// The Core Book's NPCs, vehicles, drones and Bio-Titans, for encounters: NPC`<key> the name, with KIND (npc,
+// vehicle, bio-titan or mech), GROUP (the compendium folder), HEALTH (hp or sp) and MAX, TECH and VALUE (the
+// Tech Level and Salvage Value of what can be salvaged), TRAITS, TEXT and ACTIONS (1 2 3 ...), each action
+// A`<n> with its KIND, DAMAGE, RANGE, TRAITS, ACTION and TEXT.
+const npcs = [];
+const npcRows = await pack('actors');
+const npcFolders = new Map(npcRows.filter(r => r.key.startsWith('!folders!')).map(r => [r._id, plain(r.name)]));
+const npcItems = new Map();
+for (const row of npcRows.filter(r => r.key.startsWith('!actors.items!'))) {
+	const owner = row.key.split('!')[2].split('.')[0];
+	if (!npcItems.has(owner)) npcItems.set(owner, []);
+	npcItems.get(owner).push(row);
+}
+const NPC_KINDS = { npc: 'npc', vehicle: 'vehicle', 'bio-titan': 'bio-titan', 'npc-mech': 'mech' };
+for (const actor of npcRows.filter(r => r.key.startsWith('!actors!')).sort((a, b) => plain(a.name).localeCompare(plain(b.name)))) {
+	const s = actor.system;
+	const k = key(actor.name);
+	if (npcs.includes(k)) throw new Error(`two NPCs called ${k}`);
+	npcs.push(k);
+	const kind = NPC_KINDS[actor.type];
+	if (!kind) throw new Error(`${actor.name} is a ${actor.type}`);
+	const health = actor.type === 'npc' ? (s.healthType === 'sp' ? 'sp' : 'hp') : 'sp';
+	const meter = actor.type === 'npc' ? s.hp : s.sp;
+	set(`NPC\`${k}`, plain(actor.name));
+	set(`NPC\`${k}\`KIND`, kind);
+	set(`NPC\`${k}\`GROUP`, npcFolders.get(actor.folder) ?? '');
+	set(`NPC\`${k}\`HEALTH`, health);
+	set(`NPC\`${k}\`MAX`, Math.max(Number(meter?.value) || 0, Number(meter?.max) || 0));
+	if (s.techLevel) set(`NPC\`${k}\`TECH`, TECH(s.techLevel));
+	set(`NPC\`${k}\`VALUE`, s.salvageValue ?? '');
+	set(`NPC\`${k}\`TRAITS`, (s.traits ?? []).join('|'));
+	set(`NPC\`${k}\`TEXT`, plain(s.description));
+	const actions = (npcItems.get(actor._id) ?? []).sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0) || plain(a.name).localeCompare(plain(b.name)));
+	actions.forEach((item, i) => {
+		const a = item.system;
+		const n = i + 1;
+		set(`NPC\`${k}\`A\`${n}`, plain(item.name));
+		set(`NPC\`${k}\`A\`${n}\`KIND`, item.type === 'npc-ability' ? 'ability' : item.type);
+		set(`NPC\`${k}\`A\`${n}\`DAMAGE`, a.damage);
+		set(`NPC\`${k}\`A\`${n}\`RANGE`, a.range);
+		set(`NPC\`${k}\`A\`${n}\`TRAITS`, (a.traits ?? []).join('|'));
+		set(`NPC\`${k}\`A\`${n}\`ACTION`, ACTIONS[a.action] ?? '');
+		set(`NPC\`${k}\`A\`${n}\`TEXT`, plain(a.description));
+	});
+	set(`NPC\`${k}\`ACTIONS`, words(actions.map((_, i) => String(i + 1))));
+}
+
 // ---- tables ---------------------------------------------------------------------------------------------------
 // ROW`<low>-<high> each result. A result that only names another table (the callsign table's five lists) is
 // stored as THEN, the table to roll next.
@@ -316,6 +364,7 @@ for (const [prefix, list] of Object.entries(lists)) set(`LIST\`${prefix}`, words
 set('LIST`ABILITY', words(abilities.map(a => a.key).sort()));
 set('LIST`TABLE', words(tableKeys));
 set('LIST`BAY', words(bays.sort()));
+set('LIST`NPC', words(npcs));
 set('LIST`CLASS', words(Object.keys(CLASSES)));
 set('LIST`TREE', words([...trees.keys()].sort()));
 
@@ -360,4 +409,4 @@ const end = yaml.indexOf(END);
 if (begin < 0 || end < begin) throw new Error(`${target} has no generated markers`);
 yaml.splice(begin, end - begin + 1, ...lines);
 fs.writeFileSync(target, yaml.join('\n'));
-console.log(`${attributes.length} attributes: ${abilities.length} abilities, ${trees.size} trees, ${lists.CHASSIS.length} chassis, ${lists.SYSTEM.length} systems, ${lists.MODULE.length} modules, ${lists.EQUIPMENT.length} equipment, ${tableKeys.length} tables, ${bays.length} bays.`);
+console.log(`${attributes.length} attributes: ${abilities.length} abilities, ${trees.size} trees, ${lists.CHASSIS.length} chassis, ${lists.SYSTEM.length} systems, ${lists.MODULE.length} modules, ${lists.EQUIPMENT.length} equipment, ${tableKeys.length} tables, ${bays.length} bays, ${npcs.length} NPCs.`);
