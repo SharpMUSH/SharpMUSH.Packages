@@ -1352,7 +1352,7 @@ objects:
       # entry_json written as the next entry; build_last its number.
       INC`BUILD`PUT:
         value: |-
-          think setq(build_last,inc(lmax(0 [iter(lattr(%q<sheet_target>/PF2E`LEDGER`*),last(%i0,`))]))); &PF2E`LEDGER`%q<build_last> %q<sheet_target>=[json_mod(%q<entry_json>,patch,json(object,n,%q<build_last>,by,json(string,objid(%#))))]; @set %q<sheet_target>/PF2E`LEDGER`%q<build_last>=wizard; think setq(build_next,inc(%q<build_last>))
+          @break not(strmatch(json_query(%q<entry_json>,type),object))=@pemit %#=notice(PF2E,The entry could not be written: %q<entry_json>,error); think setq(build_last,inc(lmax(0 [iter(lattr(%q<sheet_target>/PF2E`LEDGER`*),last(%i0,`))]))); &PF2E`LEDGER`%q<build_last> %q<sheet_target>=[json_mod(%q<entry_json>,patch,json(object,n,%q<build_last>,by,json(string,objid(%#))))]; @set %q<sheet_target>/PF2E`LEDGER`%q<build_last>=wizard; think setq(build_next,inc(%q<build_last>))
         flags: [cmdsyntax]
       # Revoke every entry of build_step; what came with them goes too.
       INC`BUILD`CLEAR:
@@ -1529,7 +1529,7 @@ objects:
       FUN`BUILD`GRANT`OF:
         value: |-
           @@(%0 ancestry, heritage, background or class: n~pack~id~badge~index of its grant)[
-          setq(grant_of,v(check_%0))][
+          setq(grant_of,r(check_%0))][
           if(strlen(%q<grant_of>),first(iter(%q<check_grants>,if(strmatch(elements(%i0,5,~),elements(%q<grant_of>,3,~)),%i0))))]
         flags: [funsyntax]
       FUN`BUILD`GRANT`N:
