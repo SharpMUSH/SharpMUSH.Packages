@@ -601,6 +601,13 @@ objects:
               squish([if(strlen(get(%q<item_store>/ITEM`[ucstr(%1)])),ucstr(%1))] [get(%q<item_store>/NAME`[u(FUN`ITEM`SLUGGIFY,%1)])]),
               if(member(v(DATA`CONFIG`BOOKS),get(%q<item_store>/ITEM`%i0`BOOK)),%i0))))]
         flags: [funsyntax]
+      FUN`ITEM`STARTS:
+        value: |-
+          @@(%0 a pack, %1 the start of a name: the ids of the items from books the game uses whose names start with it)[
+          setq(item_store,u(DATA`PACK`%0))][
+          if(cand(strlen(%q<item_store>),gte(strlen(%1),3)),
+            squish(iter(lattr(%q<item_store>/NAME`[u(FUN`ITEM`SLUGGIFY,%1)]*),if(member(v(DATA`CONFIG`BOOKS),get(%q<item_store>/ITEM`[setr(item_one,get(%q<item_store>/%i0))]`BOOK)),%q<item_one>))))]
+        flags: [funsyntax]
       # Foundry's item.slug, falling back to sluggify(name) as rule elements do.
       FUN`ITEM`SLUG:
         value: |-
@@ -1489,7 +1496,7 @@ objects:
       # +build/buy <item>[=<count>], +build/sell <item>[=<count>]: gear, paid for from the sheet's money.
       INC`BUILD`BUY:
         value: |-
-          @assert cor(%q<build_staff>,not(%q<build_locked>))=@pemit %#=notice(PF2E,The sheet is finished%, so staff change gear.,warn); think setqm(build_id,u({{core}}/FUN`ITEM`FIND,equipment,before(%q<cmd_rest>,=)),build_count,firstof(trim(after(%q<cmd_rest>,=)),1)); @assert strlen(%q<build_id>)=@pemit %#=notice(PF2E,There is no [trim(before(%q<cmd_rest>,=))] from a book the game uses. +build/list gear <text> searches.,warn); @assert cand(isint(%q<build_count>),gt(%q<build_count>,0))=@pemit %#=notice(PF2E,A count is a whole number above 0.,warn); think setqm(build_item,u({{core}}/FUN`ITEM`GET,equipment,%q<build_id>),build_cost,mul(%q<build_count>,u(%!/FUN`BUILD`PRICE,u({{core}}/FUN`ITEM`GET,equipment,%q<build_id>)))); @assert lte(json_query(%q<build_item>,extract,$.system.level.value),%q<check_level>)=@pemit %#=notice(PF2E,[json_query(%q<build_item>,extract,$.name)] is level [json_query(%q<build_item>,extract,$.system.level.value)]%, above yours.,warn); @assert lte(%q<build_cost>,u({{core}}/FUN`SHEET`MONEY,%q<check_entries>))=@pemit %#=notice(PF2E,That costs [u(%!/FUN`SHOW`MONEY,%q<build_cost>)]%, and the sheet has [u(%!/FUN`SHOW`MONEY,u({{core}}/FUN`SHEET`MONEY,%q<check_entries>))].,warn); @include %!/INC`BUILD`BEGIN; think setq(build_held,first(u({{core}}/FUN`SHEET`VALUE,%q<check_entries>,gear,%q<build_id>),|)); think setq(entry_json,json(object,kind,"gear",id,json(string,%q<build_id>),qty,add(firstof(%q<build_held>,0),%q<build_count>),where,json(string,firstof(rest(u({{core}}/FUN`SHEET`VALUE,%q<check_entries>,gear,%q<build_id>),|),carried)),step,"gear")); @include %!/INC`BUILD`PUT; think setq(entry_json,json(object,kind,"money",cp,-%q<build_cost>,step,"gear")); @include %!/INC`BUILD`PUT; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)]Bought [if(gt(%q<build_count>,1),%q<build_count>%b)][json_query(%q<build_item>,extract,$.name)] for [u(%!/FUN`SHOW`MONEY,%q<build_cost>)]. [u(%!/FUN`SHOW`MONEY,sub(u({{core}}/FUN`SHEET`MONEY,%q<check_entries>),%q<build_cost>))] left.,ok)
+          @assert cor(%q<build_staff>,not(%q<build_locked>))=@pemit %#=notice(PF2E,The sheet is finished%, so staff change gear.,warn); think setqm(build_id,u({{core}}/FUN`ITEM`FIND,equipment,before(%q<cmd_rest>,=)),build_count,firstof(trim(after(%q<cmd_rest>,=)),1)); think if(not(strlen(%q<build_id>)),if(eq(words(setr(build_starts,u({{core}}/FUN`ITEM`STARTS,equipment,trim(before(%q<cmd_rest>,=))))),1),setq(build_id,%q<build_starts>))); @assert strlen(%q<build_id>)=@pemit %#=notice(PF2E,[if(words(%q<build_starts>),Which one: [itemize(iter(extract(%q<build_starts>,1,8),json_query(get(u({{core}}/DATA`PACK`EQUIPMENT)/ITEM`%i0`PREP),extract,$.name),%b,|),|,or)][if(gt(words(%q<build_starts>),8),%, or [sub(words(%q<build_starts>),8)] more)]?,There is no [trim(before(%q<cmd_rest>,=))] from a book the game uses. +build/list gear <text> searches.)],warn); @assert cand(isint(%q<build_count>),gt(%q<build_count>,0))=@pemit %#=notice(PF2E,A count is a whole number above 0.,warn); think setqm(build_item,u({{core}}/FUN`ITEM`GET,equipment,%q<build_id>),build_cost,mul(%q<build_count>,u(%!/FUN`BUILD`PRICE,u({{core}}/FUN`ITEM`GET,equipment,%q<build_id>)))); @assert lte(json_query(%q<build_item>,extract,$.system.level.value),%q<check_level>)=@pemit %#=notice(PF2E,[json_query(%q<build_item>,extract,$.name)] is level [json_query(%q<build_item>,extract,$.system.level.value)]%, above yours.,warn); @assert lte(%q<build_cost>,u({{core}}/FUN`SHEET`MONEY,%q<check_entries>))=@pemit %#=notice(PF2E,That costs [u(%!/FUN`SHOW`MONEY,%q<build_cost>)]%, and the sheet has [u(%!/FUN`SHOW`MONEY,u({{core}}/FUN`SHEET`MONEY,%q<check_entries>))].,warn); @include %!/INC`BUILD`BEGIN; think setq(build_held,first(u({{core}}/FUN`SHEET`VALUE,%q<check_entries>,gear,%q<build_id>),|)); think setq(entry_json,json(object,kind,"gear",id,json(string,%q<build_id>),qty,add(firstof(%q<build_held>,0),%q<build_count>),where,json(string,firstof(rest(u({{core}}/FUN`SHEET`VALUE,%q<check_entries>,gear,%q<build_id>),|),carried)),step,"gear")); @include %!/INC`BUILD`PUT; think setq(entry_json,json(object,kind,"money",cp,-%q<build_cost>,step,"gear")); @include %!/INC`BUILD`PUT; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)]Bought [if(gt(%q<build_count>,1),%q<build_count>%b)][json_query(%q<build_item>,extract,$.name)] for [u(%!/FUN`SHOW`MONEY,%q<build_cost>)]. [u(%!/FUN`SHOW`MONEY,sub(u({{core}}/FUN`SHEET`MONEY,%q<check_entries>),%q<build_cost>))] left.,ok)
         flags: [cmdsyntax]
       INC`BUILD`SELL:
         value: |-
@@ -1990,7 +1997,7 @@ objects:
           switch(1,
             strmatch(%q<list_rows>,#-1), notice(PF2E,+build/list ancestries%, heritages%, backgrounds%, classes%, feats <slot>%, choice <number>%, languages%, skills or gear <text>.,warn),
             not(words(%q<list_rows>,|)), notice(PF2E,Nothing to list[if(strlen(%1),%bfor %1)].,warn),
-            box([table(trim(%q<list_rows>,|),36,73,|)]%r[tone(muted,[words(%q<list_rows>,|)] in all. +build/info <name> describes one.)],capstr(%0)))]
+            box([table(trim(%q<list_rows>,|),if(gt(lmax(iter(%q<list_rows>,strlen(%i0),|)),35),73,36),73,|)]%r[tone(muted,[words(%q<list_rows>,|)] in all. +build/info <name> describes one.)],capstr(%0)))]
         flags: [funsyntax]
       FUN`BUILD`LIST`PACK:
         value: |-
