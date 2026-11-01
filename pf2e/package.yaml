@@ -1852,7 +1852,7 @@ objects:
       FUN`BUILD`CHOICE`CONFIG:
         value: |-
           @@(%0 a ChoiceSet naming a list: each option with its predicate tested, {choice|value} as the option)[
-          setq(config_predicate,firstof(json_query(%0,get,choices.predicate),json(array)))][
+          setq(config_predicate,firstof(json_query(%0,extract,$.choices.predicate),json(array)))][
           iter(u({{core}}/DATA`CHOICES`[ucstr(firstof(json_query(%0,extract,$.choices.config),json_query(%0,extract,$.choices)))]),
             if(u({{core}}/FUN`PREDICATE`TEST,edit(%q<config_predicate>,\{choice|value\},%i0),%q<check_options> [iter(%q<check_stats>,skill:%i0:rank:[u({{core}}/FUN`CHECK`RANK,%i0)])]),"%i0"^[u(%!/FUN`SHOW`STAT,%i0)]),%b,|)]
         flags: [funsyntax]
@@ -1862,7 +1862,7 @@ objects:
       FUN`BUILD`CHOICE`ITEMS:
         value: |-
           @@(%0 the ChoiceSet)[
-          setqm(items_filter,json_query(%0,get,choices.filter),items_slugs,t(json_query(%0,extract,$.choices.slugsAsValues)))][
+          setqm(items_filter,json_query(%0,extract,$.choices.filter),items_slugs,t(json_query(%0,extract,$.choices.slugsAsValues)))][
           setq(items_packs,switch(json_query(%0,extract,$.choices.itemType),spell,spells,feats class-features))][
           setq(items_keys,u({{core}}/FUN`ITEM`INDEXED,json_map({{core}}/FUN`RULE`SELECTOR,%q<items_filter>,%b)))][
           trim(iter(%q<items_packs>,u(%!/FUN`BUILD`CHOICE`ITEMS`OF,%i0),%b,|),|)]
