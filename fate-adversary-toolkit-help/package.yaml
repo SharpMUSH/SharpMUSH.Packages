@@ -1,0 +1,43 @@
+format: "1.16"
+package: fate-adversary-toolkit-help
+title: "Fate Adversary Toolkit: +help topics"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Puts the Fate Adversary Toolkit topics (adversaries, building them, mobs, obstacles, constraints, countdowns) into +help: registers the fate-adversary-toolkit package's help with the +help librarian, and points its messages at +help."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [sheet, fate, help, bridge]
+category: Characters
+requires_server: ">=0.1"
+
+# A bridge: it joins two packages that do not know about each other. fate-adversary-toolkit keeps its topics
+# on its own help object, and plus-help reads any object registered with its librarian. This package is that
+# registration, and the line that points its messages at +help; uninstalling it takes the topics out of +help,
+# and neither package changes.
+depends:
+  - package: fate-adversary-toolkit
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH.Packages
+      path: fate-adversary-toolkit/
+      branch: main
+  - package: plus-help
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+
+objects:
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`FATE-ADVERSARY-TOOLKIT: |-
+        {{fate-adversary-toolkit/adversary_help}}
+
+  # Lines the command object's messages end with when +help is here, through its FUN`HINT: HINT`<message>.
+  - ref: message_hints
+    target: "{{fate-adversary-toolkit/adversary}}"
+    attributes:
+      HINT`SWITCHES: |-
+        +help %0 lists them.

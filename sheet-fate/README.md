@@ -207,6 +207,9 @@ to keep, or `#-1` and why), shown through `` NPCFIELD`<NAME>`SHOW ``. `` NPC`ROL
 object/attribute, %1 what followed ` vs `: what to add to the roll, or `#-1` and why), `` NPC`HIT `` (%0,
 %1, %2 the check: words after the roll) and `` NPC`HARM `` (%0, %1 the shifts: what gets through, then
 why) change how it rolls and takes harm. Atomic Robo uses them for scale, Weapon and Armor.
+Any number of `` AFTER`NPC`<NAME> `` hooks (%0 the copy's object/attribute) run after an NPC's
+stress changes in an encounter; what each returns is added to the message. The Adversary Toolkit
+pack uses one to thin a filler mob as its members go down.
 
 The lists are `+config` tables on **Fate Sheet Store**: `SKILL`, `APPROACH`, `TRACK` (with `BOXES`)
 and `CONSEQUENCE` (with `SHIFTS`).
