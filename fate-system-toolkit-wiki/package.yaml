@@ -1,14 +1,14 @@
 format: "1.16"
 package: fate-system-toolkit-wiki
 title: "Fate System Toolkit rules (unofficial)"
-version: 1.0.0
+version: 1.1.0
 wiki_landing_page: category:fate_system_toolkit_start_here
 wiki_collection_name: Fate System Toolkit (unofficial)
 authors: [SharpMUSH]
-description: "Rules reference for the Fate System Toolkit pack as wiki pages: conditions, Wealth and Stormcallers, with the commands that play them. Based on the Fate System Toolkit SRD under CC BY 3.0. An unofficial fan package, not affiliated with or endorsed by Evil Hat Productions."
+description: "Rules reference for the Fate System Toolkit pack as wiki pages: conditions, Wealth, Stormcallers, supers, gadgets and cyberware, with the commands that play them. Based on the Fate System Toolkit SRD under CC BY 3.0. An unofficial fan package, not affiliated with or endorsed by Evil Hat Productions."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
-keywords: [fate, rules, wiki, conditions, magic]
+keywords: [fate, rules, wiki, supers, cyberware]
 category: Characters
 requires_server: ">=0.1"
 
@@ -48,3 +48,18 @@ wiki:
     title: Stormcallers
     categories: [fate_system_toolkit_start_here]
     file: wiki/main/fate_stormcallers.md
+
+  - page: main:fate_supers
+    title: Supers
+    categories: [fate_system_toolkit_start_here]
+    file: wiki/main/fate_supers.md
+
+  - page: main:fate_gadgets
+    title: Gadgets
+    categories: [fate_system_toolkit_start_here]
+    file: wiki/main/fate_gadgets.md
+
+  - page: main:fate_cyberware
+    title: Cyberware
+    categories: [fate_system_toolkit_start_here]
+    file: wiki/main/fate_cyberware.md

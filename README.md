@@ -50,7 +50,7 @@ constraints checked before anything is planned.
 | [`sheet-d20-help/`](sheet-d20-help/) | 1.0.1 | Bridge: the D20 sheet's topics in `+help` |
 | [`sheet-d20-config/`](sheet-d20-config/) | 1.0.2 | Bridge: the D20 sheet's settings, trait table and bestiary in `+config` |
 | [`sheet-d20-chargen/`](sheet-d20-chargen/) | 1.1.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |
-| [`sheet-fate/`](sheet-fate/) | 1.5.0 | Fate character sheet: skills or approaches on the ladder, aspects, stunts, stress, consequences and fate points; `+check` on four Fate dice; a grant ledger, guided `+chargen`, encounters that keep their own sheet copies with NPCs from `+npc`, exchanges, harm, concessions, scene aspects and the GM's pool, and milestones and breakthroughs from staff on an award ledger of their own, which players spend with `+sheet/advance`. Fate SRD text under CC BY 3.0 (see its NOTICE) |
+| [`sheet-fate/`](sheet-fate/) | 1.6.0 | Fate character sheet: skills or approaches on the ladder, aspects, stunts, stress, consequences and fate points; `+check` on four Fate dice; a grant ledger, guided `+chargen`, encounters that keep their own sheet copies with NPCs from `+npc`, exchanges, harm, concessions, scene aspects and the GM's pool, and milestones and breakthroughs from staff on an award ledger of their own, which players spend with `+sheet/advance`. Fate SRD text under CC BY 3.0 (see its NOTICE) |
 | [`sheet-fate-help/`](sheet-fate-help/) | 1.0.0 | Bridge: the Fate sheet's topics in `+help` |
 | [`sheet-fate-config/`](sheet-fate-config/) | 1.0.0 | Bridge: the Fate sheet's settings and tables in `+config` |
 | [`sheet-fate-chargen/`](sheet-fate-chargen/) | 1.1.0 | Bridge: sheet edits follow the player's `+app` application; reviewers read the sheets they review |
@@ -63,10 +63,10 @@ constraints checked before anything is planned.
 | [`fate-adversary-toolkit-help/`](fate-adversary-toolkit-help/) | 1.0.0 | Bridge: the Fate Adversary Toolkit topics in `+help` |
 | [`fate-adversary-toolkit-config/`](fate-adversary-toolkit-config/) | 1.0.0 | Bridge: the Fate Adversary Toolkit settings and libraries in `+config` |
 | [`fate-adversary-toolkit-wiki/`](fate-adversary-toolkit-wiki/) | 1.0.0 | Unofficial Fate Adversary Toolkit rules reference as wiki pages: enemies, obstacles, constraints |
-| [`fate-system-toolkit/`](fate-system-toolkit/) | 1.0.0 | Unofficial Fate System Toolkit pack for the Fate sheet: conditions that soak stress, a Wealth track for money that staff refill with audited parcels, and Stormcallers, magic from five storms with barriers. Fate System Toolkit SRD under CC BY 3.0 (see its NOTICE) |
-| [`fate-system-toolkit-help/`](fate-system-toolkit-help/) | 1.0.0 | Bridge: the Fate System Toolkit topics in `+help` |
-| [`fate-system-toolkit-config/`](fate-system-toolkit-config/) | 1.0.0 | Bridge: the Fate System Toolkit settings, conditions and storms in `+config` |
-| [`fate-system-toolkit-wiki/`](fate-system-toolkit-wiki/) | 1.0.0 | Unofficial Fate System Toolkit rules reference as wiki pages: conditions, Wealth, Stormcallers |
+| [`fate-system-toolkit/`](fate-system-toolkit/) | 1.1.0 | Unofficial Fate System Toolkit pack for the Fate sheet: conditions that soak stress, a Wealth track for money that staff refill with audited parcels, Stormcallers, magic from five storms with barriers, super skills with fate-point bids between powers, gadgets and magic items, and cyberware on a cyber-heart with surgery in play. Fate System Toolkit SRD under CC BY 3.0 (see its NOTICE) |
+| [`fate-system-toolkit-help/`](fate-system-toolkit-help/) | 1.1.0 | Bridge: the Fate System Toolkit topics in `+help` |
+| [`fate-system-toolkit-config/`](fate-system-toolkit-config/) | 1.1.0 | Bridge: the Fate System Toolkit settings, conditions, storms and augs in `+config` |
+| [`fate-system-toolkit-wiki/`](fate-system-toolkit-wiki/) | 1.1.0 | Unofficial Fate System Toolkit rules reference as wiki pages: conditions, Wealth, Stormcallers, supers, gadgets, cyberware |
 | [`sheet-pbta/`](sheet-pbta/) | 2.3.0 | Powered by the Apocalypse character sheet built from a ledger: playbooks, stats and moves the game edits, guided character creation, advances, forward, ongoing, hold, harm and XP; `+check` on 2d6; `+encounter` plays scenes from copies of the sheets, with foes from a bestiary and GM moves. Dungeon World moves under CC BY 3.0 (see its NOTICE) |
 | [`sheet-pbta-help/`](sheet-pbta-help/) | 1.0.1 | Bridge: the PbtA sheet's topics in `+help` |
 | [`sheet-pbta-config/`](sheet-pbta-config/) | 1.0.2 | Bridge: the PbtA sheet's settings and tables, the bestiary and GM moves among them, in `+config` |
