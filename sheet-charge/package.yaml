@@ -489,10 +489,10 @@ objects:
         value: |-
           @include %!/INC`NEED`COUNTWHO; @assert lte(strlen(%q<count_typed>),100)=@pemit %#=notice(SHEET,Describe a condition in 100 characters or fewer.,warn); think u(%!/FUN`STATE`WRITE,%q<sheet_who>,CONDITION,%q<count_typed>); @pemit %#=notice(SHEET,[if(strlen(%q<count_typed>),[name(%q<sheet_who>)]'s condition: %q<count_typed>,[name(%q<sheet_who>)] has no condition now.)][u(%!/FUN`DISPLAY`WHERE,%q<sheet_who>)],ok)
         flags: [cmdsyntax]
-      # +sheet/milestone <name>=<n>: a keeper gives milestones (or takes them, below 0).
+      # +sheet/milestone <name>=<n>/<reason>: a keeper gives milestones (or takes them, below 0); the reason goes on the ledger.
       INC`SHEET`MILESTONE:
         value: |-
-          @include %!/INC`NEED`KEEPER; @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>))=@pemit %#=notice(SHEET,+sheet/milestone <name>=<n> gives milestones%, or takes unspent ones with a number below 0.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; think setq(milestone_by,edit(%q<cmd_right_side>,+,)); @assert cand(isint(%q<milestone_by>),neq(%q<milestone_by>,0))=@pemit %#=notice(SHEET,Give a whole number of milestones%, not 0.,warn); think setq(milestone_have,u(%!/API`MILESTONES,%q<sheet_who>)); @assert gte(add(%q<milestone_have>,%q<milestone_by>),0)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<milestone_have> unspent. To undo a spent one%, revoke the advance or talent: +sheet/ledger [name(%q<sheet_who>)].,warn); think u(%!/API`RECORD,%q<sheet_who>,json(object,kind,"milestone",count,%q<milestone_by>)); think setq(milestone_total,add(%q<milestone_have>,%q<milestone_by>)); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<milestone_total> [if(eq(%q<milestone_total>,1),milestone,milestones)] to spend.,ok); @if comp(%q<sheet_who>,%q<viewer_objid>)={@pemit %q<sheet_who>=notice(SHEET,[name(%#)] [if(gt(%q<milestone_by>,0),gives you %q<milestone_by>,takes [abs(%q<milestone_by>)] of your)] [if(eq(abs(%q<milestone_by>),1),milestone,milestones)]. You have %q<milestone_total> to spend: +sheet/advance <action> or +sheet/talent <talent>.)}
+          @include %!/INC`NEED`KEEPER; @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>))=@pemit %#=notice(SHEET,+sheet/milestone <name>=<n>/<reason> gives milestones%, or takes unspent ones with a number below 0.,warn); @include/args %!/INC`NEED`TARGET=name,%q<cmd_left_side>; think setqm(milestone_by,edit(before(%q<cmd_right_side>,/),+,),milestone_reason,trim(after(%q<cmd_right_side>,/))); @assert cand(isint(%q<milestone_by>),neq(%q<milestone_by>,0))=@pemit %#=notice(SHEET,Give a whole number of milestones%, not 0.,warn); @assert cand(strlen(%q<milestone_reason>),lte(strlen(%q<milestone_reason>),80),not(regmatch(%q<milestone_reason>,\[|~\])))=@pemit %#=notice(SHEET,Say why after a /%, in 80 characters or fewer without | or ~: +sheet/milestone [name(%q<sheet_who>)]=%q<milestone_by>/Finished the docks job.,warn); think setq(milestone_have,u(%!/API`MILESTONES,%q<sheet_who>)); @assert gte(add(%q<milestone_have>,%q<milestone_by>),0)=@pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<milestone_have> unspent. To undo a spent one%, revoke the advance or talent: +sheet/ledger [name(%q<sheet_who>)].,warn); think u(%!/API`MILESTONE,%q<sheet_who>,%q<milestone_by>,%q<milestone_reason>); think setq(milestone_total,add(%q<milestone_have>,%q<milestone_by>)); @pemit %#=notice(SHEET,[name(%q<sheet_who>)] has %q<milestone_total> [if(eq(%q<milestone_total>,1),milestone,milestones)] to spend.,ok); @if comp(%q<sheet_who>,%q<viewer_objid>)={@pemit %q<sheet_who>=notice(SHEET,[name(%#)] [if(gt(%q<milestone_by>,0),gives you %q<milestone_by>,takes [abs(%q<milestone_by>)] of your)] [if(eq(abs(%q<milestone_by>),1),milestone,milestones)]: %q<milestone_reason>. You have %q<milestone_total> to spend: +sheet/advance <action> or +sheet/talent <talent>.)}
         flags: [cmdsyntax]
       # +sheet/advance [<name>/]<action>: spends a milestone on one more dot, up to 4.
       INC`SHEET`ADVANCE:
@@ -637,7 +637,7 @@ objects:
         flags: [funsyntax]
       FUN`LEDGER`ROW:
         value: |-
-          %0~[json_query(%1,extract,$.kind)]~[ucstr(firstof(json_query(%1,extract,$.action),json_query(%1,extract,$.entry)))]~[firstof(json_query(%1,extract,$.dots),json_query(%1,extract,$.count),json_query(%1,extract,$.text))]~[json_query(%1,extract,$.phase)]~[json_query(%1,extract,$.by)]
+          %0~[json_query(%1,extract,$.kind)]~[ucstr(firstof(json_query(%1,extract,$.action),json_query(%1,extract,$.entry)))]~[firstof(json_query(%1,extract,$.dots),json_query(%1,extract,$.count),json_query(%1,extract,$.text))]~[json_query(%1,extract,$.phase)]~[json_query(%1,extract,$.by)]~[json_query(%1,extract,$.reason)]
         flags: [funsyntax]
       # %0 rows: the numbers of the entries revoked.
       FUN`LEDGER`REVOKED:
@@ -1023,7 +1023,7 @@ objects:
         value: |-
           setqm(entry_kind,elements(%0,2,~),
           entry_key,elements(%0,3,~),
-          entry_value,elements(%0,4,~))[switch(%q<entry_kind>,dots,[u(%!/FUN`LIST`LABEL,ACTION,%q<entry_key>)] at [firstof(%q<entry_value>,0)] [if(eq(firstof(%q<entry_value>,0),1),dot,dots)],advance,[u(%!/FUN`LIST`LABEL,ACTION,%q<entry_key>)] +1 dot for a milestone,milestone,[if(gt(%q<entry_value>,0),+)]%q<entry_value> [if(eq(abs(%q<entry_value>),1),milestone,milestones)],talent,Talent for a milestone: %q<entry_value>,revoke,Revokes entry %q<entry_key>,clear,Clears the sheet,%q<entry_kind>)]
+          entry_value,elements(%0,4,~))[switch(%q<entry_kind>,dots,[u(%!/FUN`LIST`LABEL,ACTION,%q<entry_key>)] at [firstof(%q<entry_value>,0)] [if(eq(firstof(%q<entry_value>,0),1),dot,dots)],advance,[u(%!/FUN`LIST`LABEL,ACTION,%q<entry_key>)] +1 dot for a milestone,milestone,[if(gt(%q<entry_value>,0),+)]%q<entry_value> [if(eq(abs(%q<entry_value>),1),milestone,milestones)][if(strlen(elements(%0,7,~)),: [elements(%0,7,~)])],talent,Talent for a milestone: %q<entry_value>,revoke,Revokes entry %q<entry_key>,clear,Clears the sheet,%q<entry_kind>)]
         flags: [funsyntax]
       FUN`SCREEN`TRAITS:
         value: |-
@@ -1116,10 +1116,11 @@ objects:
         value: |-
           [u(%!/FUN`BUILD`PREPARE,%0,1)]%q<build_milestones>
         flags: [VISUAL]
-      # %0 a character, %1 milestones to give (or take, below 0): records it on the ledger and returns the new count.
+      # %0 a character, %1 milestones to give (or take, below 0), %2 why (80 characters, no | or ~): records it on
+      # the ledger with the reason and returns the new count.
       API`MILESTONE:
         value: |-
-          [null(u(%!/API`RECORD,%0,json(object,kind,"milestone",count,%1)))][u(%!/API`MILESTONES,%0)]
+          [null(u(%!/API`RECORD,%0,json(object,kind,"milestone",count,%1,reason,json(string,left(edit(%2,|,,~,),80)))))][u(%!/API`MILESTONES,%0)]
         flags: [VISUAL]
       # Named: %<roller> an objid, %<trait> an action key, %<modifier> dice to add (or take), %<target> the risk,
       # %<effect> the effect (standard when empty), %<live> 1 to roll the sheet even in an encounter. Rolls the pool and keeps the roll (roll() record), and returns
@@ -1308,7 +1309,7 @@ objects:
 
         Output: `\[SHEET\] Done: Alice has 2 of 4 stress.`
       HELP`SHEET`GROWTH: |-
-        When a big event in the story ends, the GM may give a milestone. Spend each one on a talent:
+        When a big event in the story ends, the GM may give a milestone, with the reason on your ledger. Spend each one:
 
         - `+sheet/advance <action>` puts one more dot in an action, up to 4: `+sheet/advance shoot`.
         - `+sheet/talent <talent>` takes a situational talent, a boost in a situation you choose: `+sheet/talent +1d6 when I fight to protect my crew`.
@@ -1321,7 +1322,7 @@ objects:
 
         Output: `\[SHEET\] Done: Alice spends a milestone: Shoot has 3 dots. 0 left to spend.`
       HELP`SHEET`LEDGER: |-
-        Your dots, talents and milestones are not stored as totals. Each change is an entry on your sheet's ledger, and the sheet adds them up: the dots you gave out, each milestone given, each advance and talent it bought.
+        Your dots, talents and milestones are not stored as totals. Each change is an entry on your sheet's ledger, and the sheet adds them up: the dots you gave out, each milestone given and why, each advance and talent it bought.
 
         - `+sheet/ledger` lists the entries, oldest first, with the phase each was made in \(chargen, play or staff\) and who made it. `+sheet/ledger <name>` shows another character's, when you may read their sheet.
         - Changing an action's dots during chargen rewrites that action's chargen entry, so the ledger keeps one per action.
@@ -1433,7 +1434,7 @@ objects:
         - `+sheet <name>` shows a character's sheet.
         - `/set`, `/detail`, `/advance` and `/talent` take `<name>/` first: `+sheet/set Alice/muscle=3`. A keeper may put up to 4 dots in an action, past the starting dots.
         - `+sheet/momentum <name>=<n>`, `+sheet/stress <name>=<n>` and `+sheet/condition <name>=<condition>` change those.
-        - `+sheet/milestone <name>=<n>` gives milestones, or takes them with a number below 0.
+        - `+sheet/milestone <name>=<n>/<reason>` gives milestones, or takes them with a number below 0. The reason goes on the ledger: `+sheet/milestone Alice=1/Finished the docks job`.
         - `+sheet/talent <name>/<talent>=remove` takes a talent off and gives the milestone back.
         - `+sheet/revoke <name>/<entry>` undoes an entry on a character's ledger: `+sheet/revoke Alice/3`. `+sheet/ledger <name>` numbers them.
         - `+sheet/clear <name>=confirm` starts a sheet over: one ledger entry clears the build, and the details, momentum, stress and condition are wiped. It takes the character out of every encounter.

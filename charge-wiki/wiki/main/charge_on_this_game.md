@@ -7,7 +7,7 @@ This game keeps your Charge character sheet for you. `+help sheet`, `+help check
 - `+sheet/set <action>=<dots>` gives out your 7 starting dots, at most 2 in one action, until staff approve your character.
 - `+sheet/momentum`, `+sheet/stress` and `+sheet/condition` keep count in play.
 - `+sheet/advance <action>` and `+sheet/talent <talent>` spend a milestone.
-- `+sheet/ledger` lists every entry that built your sheet: the dots you gave out, each milestone, each advance and talent. Staff can undo one entry without touching the rest.
+- `+sheet/ledger` lists every entry that built your sheet: the dots you gave out, each milestone and why it was given, each advance and talent. Staff can undo one entry without touching the rest.
 
 ## Rolling
 

@@ -56,7 +56,7 @@ Every sheet package answers `+sheet` and `+check`. Install one sheet package per
 
 Keepers (`softcode.charge.admin`, the **Charge Sheet Keeper** role) start the argument of `/set`,
 `/detail`, `/advance` and `/talent` with `<name>/` (`+sheet/set <name>/<action>=<dots>`), use `<name>=<value>` with `/momentum`, `/stress` and
-`/condition`, give milestones with `+sheet/milestone <name>=<n>`, take talents off with
+`/condition`, give milestones with `+sheet/milestone <name>=<n>/<reason>` (the reason goes on the ledger), take talents off with
 `+sheet/talent <name>/<talent>=remove`, undo a ledger entry with `+sheet/revoke <name>/<entry>`, and
 start a sheet over with `+sheet/clear <name>=confirm`.
 
@@ -98,7 +98,7 @@ CHARGE`USING              the one picked with +encounter/use
 ```
 
 A ledger entry is `{"kind","n","by","phase",...}`: `dots` (`action`, `dots` before advances),
-`advance` (`action`), `milestone` (`count`, below 0 to take), `talent` (`text`), `revoke`
+`advance` (`action`), `milestone` (`count`, below 0 to take; `reason`), `talent` (`text`), `revoke`
 (`entry`) and `clear`. `phase` is `chargen` before approval, `staff` for a keeper, else `play`.
 Revoked entries and everything before the last `clear` do not count.
 
@@ -117,7 +117,7 @@ difficulty word: the risk), `TIER` (highest die, sixes) and `CHECK` (named `roll
 touches momentum; `live` 1 rolls the sheet even in an encounter). Charge adds `DOTS` (a character's dots in all), `GAIN` (the momentum a tier gains),
 `CHARGES` (momentum held), `MOMENTUM` (gives or spends momentum, never below 0, returning the new
 count), `STRESSED`, `STRESS` (takes or recovers stress and returns `{"stress","out"}`, out 1 when the
-clock filled), `MILESTONES` and `MILESTONE` (gives or takes milestones, returning the new count).
+clock filled), `MILESTONES` and `MILESTONE` (gives or takes milestones with a reason, returning the new count).
 `RECORD` (writes a ledger entry and returns its number). `RECORD`, `MOMENTUM`, `STRESS` and
 `MILESTONE` are the ones that write. `RATING`, `DOTS`, `CHARGES`, `MOMENTUM`, `STRESSED` and `STRESS`
 take a last argument, 1 for the character's sheet even when they are in an encounter; without it they
