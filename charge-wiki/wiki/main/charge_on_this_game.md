@@ -18,7 +18,7 @@ This game keeps your Charge character sheet for you. `+help sheet`, `+help check
 
 ## Encounters
 
-A fight, chase or other scene can be an encounter with its own copy of each member's sheet. `+encounter/start <title>` starts one and makes you its GM; `+encounter/join` takes a copy of your sheet into it. While you are in the room where it runs, your rolls, momentum, stress and condition use that copy, so an encounter that runs for days never changes your sheet, another scene or another encounter. When it ends, only the stress and condition the GM kept with `+encounter/keep` are on your sheet.
+A fight, chase or other scene can be an encounter with its own copy of each member's sheet. `+encounter/start <title>` starts one and makes you its GM; `+encounter/join` takes a copy of your sheet into it. While you are in the room where it runs, your rolls, momentum, stress and condition use that copy, so an encounter that runs for days never touches another scene or another encounter. Your sheet changes only when the GM or a keeper uses `+encounter/keep`, which writes your copy's stress and condition to it, at any time during the encounter. When it ends, its copies are dropped.
 
 ## Duties
 

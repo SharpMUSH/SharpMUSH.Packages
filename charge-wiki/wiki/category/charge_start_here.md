@@ -1,4 +1,4 @@
-Charge is a game about a group of characters facing obstacles and trying to overcome them. You decide how the characters meet those challenges, and how the world reacts. It uses a pool of six-sided dice and reads the single highest die.
+Charge is a game about a group of characters facing obstacles and trying to overcome them. You decide how the characters meet those challenges, and how the world reacts. It uses a pool of six-sided dice and reads the single highest die; with no dice, you roll two and read the lower.
 
 ## How to play
 

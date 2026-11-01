@@ -14,7 +14,7 @@ The only way to recover from stress is **in the fiction**. You can either **rest
 
 ## On this game
 
-`+sheet/stress +<n>` takes stress and `-<n>` recovers it; `+sheet/condition <text>` sets the condition. In an encounter they change your copy there, and the GM keeps them on your sheet with `+encounter/keep`.
+`+sheet/stress +<n>` takes stress and `-<n>` recovers it; `+sheet/condition <text>` sets the condition. In an encounter they change your copy there, and the GM or a keeper writes them to your sheet with `+encounter/keep`.
 
 ---
 

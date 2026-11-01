@@ -54,8 +54,8 @@ Every sheet package answers `+sheet` and `+check`. Install one sheet package per
 | `+clock/new <name>=<segments>` | all | 4, 6 or 8 segments |
 | `+clock/tick <name>[=<n>]`, `+clock/remove <name>` | who started it, keepers | Fill (or empty) segments; take it away |
 
-Keepers (`softcode.charge.admin`, the **Charge Sheet Keeper** role) put `<name>/` before `/set`,
-`/detail`, `/advance` and `/talent`, use `<name>=<value>` with `/momentum`, `/stress` and
+Keepers (`softcode.charge.admin`, the **Charge Sheet Keeper** role) start the argument of `/set`,
+`/detail`, `/advance` and `/talent` with `<name>/` (`+sheet/set <name>/<action>=<dots>`), use `<name>=<value>` with `/momentum`, `/stress` and
 `/condition`, give milestones with `+sheet/milestone <name>=<n>`, take talents off with
 `+sheet/talent <name>/<talent>=remove`, undo a ledger entry with `+sheet/revoke <name>/<entry>`, and
 start a sheet over with `+sheet/clear <name>=confirm`.
