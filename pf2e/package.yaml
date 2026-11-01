@@ -1841,7 +1841,7 @@ objects:
           @@(1 when the character can take a dedication feat; kept in build_dedication for the rest of the command)[
           if(not(strlen(%q<build_dedication>)),
             [setq(ded_opts,iter(graball(%q<check_grants>,*~feats~*),json_query(get(u({{core}}/DATA`PACK`FEATS)/ITEM`[elements(%i0,3,~)]`PREP),extract,$.opts),%b,|))][
-            setq(build_dedication,gte(words(iter(%q<ded_opts>,if(cand(member(%i0,item:trait:archetype),not(member(%i0,item:trait:dedication))),x),|)),mul(2,words(iter(%q<ded_opts>,if(member(%i0,item:trait:dedication),x),|)))))])][
+            setq(build_dedication,gte(words(iter(%q<ded_opts>,if(cand(member(%i0,item:trait:archetype),not(member(%i0,item:trait:dedication))),x),|,%b)),mul(2,words(iter(%q<ded_opts>,if(member(%i0,item:trait:dedication),x),|,%b)))))])][
           %q<build_dedication>]
         flags: [funsyntax]
       FUN`BUILD`ANCESTRY`TRAITS:
