@@ -1,7 +1,7 @@
 format: "1.16"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.6.0"
+version: "0.7.0"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -85,7 +85,7 @@ objects:
       DATA`CHECK`DOMAINS: acrobatics acrobatics-check all arcana arcana-check athletics athletics-check cha-based cha-skill-check check con-based crafting crafting-check deception deception-check dex-based dex-skill-check diplomacy diplomacy-check fortitude fortitude-check int-based int-skill-check intimidation intimidation-check medicine medicine-check nature nature-check occultism occultism-check perception perception-check performance performance-check reflex reflex-check religion religion-check saving-throw skill-check society society-check stealth stealth-check str-based str-skill-check survival survival-check thievery thievery-check will will-check wis-based wis-skill-check lore-skill-check ac hp hp-per-level land-speed all-speeds speed initiative class class-dc spell-attack spell-attack-roll spell-dc attack attack-roll strike-attack-roll melee-strike-attack-roll ranged-strike-attack-roll unarmed-attack-roll str-attack dex-attack mundane-attack damage strike-damage attack-damage melee-strike-damage melee-damage ranged-strike-damage unarmed-damage
       # Which shape of ITEM`<id>`PREP the core reads. The updater prepares an item again when its PREP
       # was made for another shape.
-      DATA`PREP`VERSION: 2
+      DATA`PREP`VERSION: 3
       # The proficiencies other than the statistics: weapon categories, armor categories, spellcasting and the class DC.
       DATA`PROFICIENCIES: simple martial advanced unarmed unarmored light medium heavy spellcasting classdc
       # GM Core's DC for each level, from level -1 to 25, and how much each difficulty moves it.
@@ -622,13 +622,13 @@ objects:
           @@(%1 a subfeature proficiency, %2 its statistic)[
           if(isint(setr(rank_value,json_query(%1,extract,$.rank))),[lcstr(%2)]~%q<rank_value>)]
         flags: [funsyntax]
-      # The item's own roll options as Foundry's filters read them: item:type, item:slug, item:level
+      # The item's own roll options as Foundry's filters read them: item:type (and item:type:feature for a class or ancestry feature), item:slug, item:level
       # (item:rank for a spell), item:category, item:rarity, and item:trait and item:tag for each.
       FUN`ITEM`OWN`OPTIONS:
         value: |-
           @@(%0 an item)[
           setq(own_level,firstof(json_query(%0,extract,$.system.level.value),0))][
-          squish(item:type:[json_query(%0,extract,$.type)] item:slug:[u(FUN`ITEM`SLUG,%0)] item:level:%q<own_level> [
+          squish(item:type:[json_query(%0,extract,$.type)] [if(cand(strmatch(json_query(%0,extract,$.type),feat),match(classfeature ancestryfeature calling curse deityboon pfsboon,json_query(%0,extract,$.system.category))),item:type:feature)] item:slug:[u(FUN`ITEM`SLUG,%0)] item:level:%q<own_level> [
             if(strmatch(json_query(%0,extract,$.type),spell),item:rank:%q<own_level>)] [
             if(strlen(setr(own_category,json_query(%0,extract,$.system.category))),item:category:%q<own_category>)] item:rarity:[
             firstof(json_query(%0,extract,$.system.traits.rarity),common)] [
@@ -860,11 +860,12 @@ objects:
           @@(%0 the rule)[
           cand(not(t(json_query(%0,extract,$.toggleable))),strmatch(firstof(json_query(%0,extract,$.domain),all),all),not(strlen(json_query(%0,extract,$.predicate))),not(regmatch(json_query(%0,extract,$.option),\\x7B)))]
         flags: [funsyntax]
-      # Foundry's ChoiceSet flag: the rule's own, else the item's slug in camel case.
+      # Foundry's ChoiceSet flag: the rule's own, else its slug in camel case, else the item's slug.
       FUN`RULE`CHOICE`FLAG:
         value: |-
           @@(%0 a ChoiceSet, %1 its index; synthetic_slug the item's slug)[
-          firstof(json_query(%0,extract,$.flag),[first(edit(%q<synthetic_slug>,-,%b))][iter(rest(edit(%q<synthetic_slug>,-,%b)),capstr(%i0),%b,)],choice%1)]
+          setq(flag_slug,firstof(json_query(%0,extract,$.slug),%q<synthetic_slug>))][
+          firstof(json_query(%0,extract,$.flag),[first(edit(%q<flag_slug>,-,%b))][iter(rest(edit(%q<flag_slug>,-,%b)),capstr(%i0),%b,)],choice%1)]
         flags: [funsyntax]
       # Foundry's label for a rule's modifier: the rule's own label, else the item's name. A label that is
       # a Foundry language key is not in the feed's items, so the item's name stands for it.
@@ -926,7 +927,7 @@ objects:
       # check_level, check_grants, check_options, check_upgrades (stat~rank from granted items),
       # check_stats (every statistic and proficiency), check_actor, check_synthetics, check_index,
       # check_flats (each synthetic's type~value~slug~force, - when its predicate fails), check_names,
-      # check_unapplied, check_strikes, check_gear, check_armor (the worn armor's item) and check_ancestry,
+      # check_unapplied, check_strikes, check_traits (the character's traits from ActorTraits rules), check_adjstrike, check_gear, check_armor (the worn armor's item) and check_ancestry,
       # check_heritage, check_background and check_class (pack~id~index of each, when granted).
       FUN`CHECK`PREPARE:
         value: |-
@@ -935,9 +936,11 @@ objects:
           setq(check_entries,u(FUN`SHEET`ENTRIES,%0))][
           setq(check_level,u(FUN`SHEET`LEVEL,%q<check_entries>))][
           setq(check_grants,u(FUN`SHEET`GRANTS,%q<check_entries>,%q<check_level>))][
-          setqm(check_options,self:level:%q<check_level>,check_conditions,,check_static,,check_dynamic,,check_names,,check_unapplied,,check_upgrades,,check_rankdyn,,check_strikes,,check_martial,,check_forms,,check_adjust,,check_resgrants,,check_craftgrants,,check_favoredrules,,check_ancestry,,check_heritage,,check_background,,check_class,)][
+          setqm(check_options,self:level:%q<check_level>,check_conditions,,check_static,,check_dynamic,,check_names,,check_unapplied,,check_upgrades,,check_rankdyn,,check_strikes,,check_martial,,check_forms,,check_adjust,,check_actortraits,,check_traits,,check_adjstrike,,check_resgrants,,check_craftgrants,,check_favoredrules,,check_ancestry,,check_heritage,,check_background,,check_class,)][
           null(iter(%q<check_grants>,u(FUN`CHECK`GRANT,%i0)))][
           u(FUN`CHECK`DEITY)][
+          null(iter(%q<check_actortraits>,u(FUN`CHECK`ACTORTRAITS,%i0)))][
+          setq(check_options,squish(%q<check_options> [iter(%q<check_traits>,self:trait:%i0)]))][
           null(iter(%q<check_rankdyn>,u(FUN`CHECK`RANKDYN,%i0)))][
           setq(check_upgrades,%q<check_upgrades> [u(FUN`CHECK`SPELLRANKS)])][
           setq(check_form,u(FUN`CHECK`FORM))][
@@ -979,6 +982,40 @@ objects:
             max(0,u(FUN`FORMULA`VALUE,firstof(json_query(%q<craft_rule>,get,maxSlots),0),json(object,actor,%q<check_actor>),0))]~[
             t(strmatch(json_query(%q<craft_rule>,extract,$.isDailyPrep),true))]~[
             edit(json_map(me/FUN`RULE`SELECTOR,firstof(json_query(%q<craft_rule>,extract,$.craftableItems),json(array)),%b),%b,.)])]
+        flags: [funsyntax]
+      # A grant's ActorTraits rules whose predicate holds: their traits added to check_traits, those they
+      # remove taken out. A trait whose selection is not made yet adds nothing.
+      FUN`CHECK`ACTORTRAITS:
+        value: |-
+          @@(%0 pack~id~badge~index of a grant with ActorTraits rules)[
+          setq(traits_item,u(FUN`ITEM`GET,first(%0,~),elements(%0,2,~)))][
+          setq(traits_data,json(object,item,u(FUN`ITEM`DATA,%q<traits_item>,elements(%0,3,~),u(FUN`CHECK`CHOICES,elements(%0,4,~)))))][
+          setq(traits_got,json_map(me/FUN`CHECK`ACTORTRAITS`RULE,firstof(json_query(%q<traits_item>,extract,$.system.rules),json(array)),%b))][
+          setq(check_traits,squish(%q<check_traits> [setdiff(iter(graball(%q<traits_got>,add:*),after(%i0,add:)),%q<check_traits>)]))][
+          null(iter(graball(%q<traits_got>,remove:*),setq(check_traits,remove(%q<check_traits>,after(%i0,remove:)))))]
+        flags: [funsyntax]
+      FUN`CHECK`ACTORTRAITS`RULE:
+        value: |-
+          @@(json_map's callback, %1 a rule: add:<trait> and remove:<trait> for an ActorTraits rule whose predicate holds; traits_data the item's roll data)[
+          if(cand(strmatch(json_query(%1,extract,$.key),ActorTraits),u(FUN`PREDICATE`TEST,firstof(json_query(%1,get,predicate),json(array)),%q<check_options>)),
+            [u(FUN`CHECK`TRAITS`OF,json_query(%1,get,add),add)] [u(FUN`CHECK`TRAITS`OF,json_query(%1,get,remove),remove)])]
+        flags: [funsyntax]
+      FUN`CHECK`TRAITS`OF:
+        value: |-
+          @@(%0 a JSON array of traits, %1 add or remove; traits_data the roll data their injected properties read)[
+          if(strlen(%0),iter(u(FUN`FORMULA`INJECT,json_map(me/FUN`RULE`SELECTOR,%0,%b),%q<traits_data>),if(regmatch(%i0,^\[a-z\]\[a-z0-9-\]*$),%1:%i0)))]
+        flags: [funsyntax]
+      # 1 when an item has an AdjustStrike rule for a property other than a Strike's traits, which the
+      # core does not apply.
+      FUN`CHECK`ADJSTRIKE`OTHER:
+        value: |-
+          @@(%0 a pack, %1 an id)[
+          t(words(json_map(me/FUN`CHECK`ADJSTRIKE`OTHER`ONE,firstof(json_query(u(FUN`ITEM`GET,%0,%1),extract,$.system.rules),json(array)),%b)))]
+        flags: [funsyntax]
+      FUN`CHECK`ADJSTRIKE`OTHER`ONE:
+        value: |-
+          @@(json_map's callback, %1 a rule)[
+          if(cand(strmatch(json_query(%1,extract,$.key),AdjustStrike),not(match(traits weapon-traits,json_query(%1,extract,$.property)))),x)]
         flags: [funsyntax]
       FUN`CHECK`RULEKEY:
         value: |-
@@ -1219,6 +1256,8 @@ objects:
           if(member(%q<grant_unapplied>,BattleForm),[setq(check_forms,%q<check_forms> %q<grant_pack>~%q<grant_id>~%q<grant_badge>~%q<grant_index>)][setq(grant_unapplied,remove(%q<grant_unapplied>,BattleForm))])][
           if(member(%q<grant_unapplied>,SpecialResource),[setq(check_resgrants,%q<check_resgrants> %q<grant_pack>~%q<grant_id>)][setq(grant_unapplied,remove(%q<grant_unapplied>,SpecialResource))])][
           if(member(%q<grant_unapplied>,CraftingAbility),[setq(check_craftgrants,%q<check_craftgrants> %q<grant_pack>~%q<grant_id>)][setq(grant_unapplied,remove(%q<grant_unapplied>,CraftingAbility))])][
+          if(member(%q<grant_unapplied>,ActorTraits),[setq(check_actortraits,%q<check_actortraits> %q<grant_pack>~%q<grant_id>~%q<grant_badge>~%q<grant_index>)][setq(grant_unapplied,remove(%q<grant_unapplied>,ActorTraits))])][
+          if(member(%q<grant_unapplied>,AdjustStrike),[setq(check_adjstrike,%q<check_adjstrike> %q<grant_pack>~%q<grant_id>~%q<grant_badge>~%q<grant_index>)][if(not(u(FUN`CHECK`ADJSTRIKE`OTHER,%q<grant_pack>,%q<grant_id>)),setq(grant_unapplied,remove(%q<grant_unapplied>,AdjustStrike)))])][
           if(member(%q<grant_unapplied>,AdjustModifier),[setq(check_adjust,squish(%q<check_adjust> [u(FUN`CHECK`ADJUSTS,%q<grant_pack>,%q<grant_id>)]))][setq(grant_unapplied,remove(%q<grant_unapplied>,AdjustModifier))])][
           setq(check_options,squish(%q<check_options> %q<grant_options>[if(cand(strlen(%q<grant_badge>),match(condition effect,%q<grant_kind>)),%b[first(%q<grant_options>)]:%q<grant_badge>)] [if(words(%q<grant_choiceopts>),u(FUN`CHECK`CHOICE`OPTIONS,%q<grant_choiceopts>,u(FUN`CHECK`CHOICES,%q<grant_index>)))]))][
           if(strmatch(%q<grant_kind>,condition),setq(check_conditions,%q<check_conditions> [json_query(%q<grant_prep>,extract,$.slug)]~%q<grant_badge>))][
@@ -1514,7 +1553,7 @@ objects:
       FUN`CHECK`STRIKES:
         value: |-
           @@(the Strikes, separated by |)[
-          if(strlen(u(FUN`CHECK`FORM`GET,strikes)),
+          setq(strikes_all,if(strlen(u(FUN`CHECK`FORM`GET,strikes)),
             trim(squish(iter(json_map(me/FUN`JSON`KEYS,json_query(%q<check_form>,extract,$.strikes),%b),u(FUN`STRIKE`FORM,%i0),%b,|),|),|),
           trim(squish(
             [iter(%q<check_gear>,if(cand(strmatch(elements(%i0,3,~),held),strmatch(json_query(get(u(DATA`PACK`EQUIPMENT)/ITEM`[first(%i0,~)]`PREP),extract,$.kind),weapon)),u(FUN`STRIKE`USE,u(FUN`STRIKE`WEAPON,u(FUN`ITEM`RUNED,first(%i0,~))),gear,elements(%i0,2,~),first(%i0,~))),%b,|)]|[
@@ -1522,7 +1561,33 @@ objects:
             iter(u(FUN`CHECK`MADE),if(strmatch(json_query(get(u(DATA`PACK`EQUIPMENT)/ITEM`[first(%i0,~)]`PREP),extract,$.kind),weapon),u(FUN`STRIKE`USE,u(FUN`STRIKE`WEAPON,u(FUN`ITEM`GET,equipment,first(%i0,~))),made,rest(%i0,~),first(%i0,~))),%b,|)]|[
             iter(%q<check_resources>,if(cand(strlen(elements(%i0,3,~)),strmatch(json_query(get(u(DATA`PACK`EQUIPMENT)/ITEM`[elements(%i0,3,~)]`PREP),extract,$.kind),weapon),gt(setr(strike_left,sub(elements(%i0,2,~),firstof(json_query(%q<check_daily>,extract,$.res\["[first(%i0,~)]"\]),0))),0)),u(FUN`STRIKE`USE,u(FUN`STRIKE`LEVELED,u(FUN`STRIKE`WEAPON,u(FUN`ITEM`GET,equipment,elements(%i0,3,~))),elements(%i0,3,~),elements(%i0,4,~)),res:[first(%i0,~)],%q<strike_left>,elements(%i0,3,~))),%b,|)]|[
             iter(%q<check_strikes>,[setq(strike_rule,json_query(u(FUN`ITEM`GET,elements(%i0,2,~),elements(%i0,3,~)),extract,$.system.rules\[[elements(%i0,4,~)]\]))][if(cand(not(t(json_query(%q<strike_rule>,extract,$.fist))),u(FUN`PREDICATE`TEST,firstof(json_query(%q<strike_rule>,get,predicate),json(array)),%q<check_options>)),u(FUN`STRIKE`RULE,%q<strike_rule>))],%b,|)]|[
-            u(FUN`STRIKE`FIST)],|),|))]
+            u(FUN`STRIKE`FIST)],|),|)))][
+          if(words(%q<check_adjstrike>),iter(%q<strikes_all>,u(FUN`STRIKE`ADJUST,%i0),|,|),%q<strikes_all>)]
+        flags: [funsyntax]
+      # A Strike with the traits that the AdjustStrike rules of check_adjstrike add or remove, each rule
+      # whose predicate holds for the character and whose definition holds for the Strike.
+      FUN`STRIKE`ADJUST:
+        value: |-
+          @@(%0 a Strike)[
+          setq(adj_traits,json_query(%0,extract,$.traits))][
+          setq(adj_options,squish(item:id:[json_query(%0,extract,$.id)] item:slug:[json_query(%0,extract,$.slug)] item:category:[json_query(%0,extract,$.category)] item:group:[json_query(%0,extract,$.group)] item:base:[json_query(%0,extract,$.base)] [if(member(%q<check_deity_weapons>,json_query(%0,extract,$.base)),item:deity-favored)] [if(gt(firstof(json_query(%0,extract,$.range),0),0),item:ranged,item:melee)] [iter(%q<adj_traits>,item:trait:%i0)]))][
+          setq(adj_got,iter(%q<check_adjstrike>,u(FUN`STRIKE`ADJUST`GRANT,%i0)))][
+          setq(adj_new,squish(%q<adj_traits> [setdiff(iter(graball(%q<adj_got>,add:*),after(%i0,add:)),%q<adj_traits>)]))][
+          null(iter(graball(%q<adj_got>,remove:*),setq(adj_new,remove(%q<adj_new>,after(%i0,remove:)))))][
+          if(comp(%q<adj_new>,%q<adj_traits>),json_mod(%0,patch,json(object,traits,json(string,%q<adj_new>))),%0)]
+        flags: [funsyntax]
+      FUN`STRIKE`ADJUST`GRANT:
+        value: |-
+          @@(%0 pack~id~badge~index of a grant with AdjustStrike rules)[
+          setq(adj_item,u(FUN`ITEM`GET,first(%0,~),elements(%0,2,~)))][
+          setq(traits_data,json(object,item,u(FUN`ITEM`DATA,%q<adj_item>,elements(%0,3,~),u(FUN`CHECK`CHOICES,elements(%0,4,~)))))][
+          json_map(me/FUN`STRIKE`ADJUST`RULE,firstof(json_query(%q<adj_item>,extract,$.system.rules),json(array)),%b)]
+        flags: [funsyntax]
+      FUN`STRIKE`ADJUST`RULE:
+        value: |-
+          @@(json_map's callback, %1 a rule: add:<trait> or remove:<trait> for an AdjustStrike rule on traits that holds; adj_options the Strike's roll options)[
+          if(cand(strmatch(json_query(%1,extract,$.key),AdjustStrike),match(traits weapon-traits,json_query(%1,extract,$.property)),match(add remove,json_query(%1,extract,$.mode)),u(FUN`PREDICATE`TEST,firstof(json_query(%1,get,predicate),json(array)),%q<check_options>),u(FUN`PREDICATE`TEST,u(FUN`FORMULA`INJECT,firstof(json_query(%1,get,definition),json(array)),%q<traits_data>),%q<adj_options>)),
+            u(FUN`CHECK`TRAITS`OF,json(array,json_query(%1,get,value)),json_query(%1,extract,$.mode)))]
         flags: [funsyntax]
       # The items made today and still unused, from check_daily (the day, which the caller sets): id~count.
       FUN`CHECK`MADE:
@@ -2881,10 +2946,37 @@ objects:
             regmatch(%0,^%(strength|dexterity|constitution|intelligence|wisdom|charisma%) \\+?%(-?\\d+%)$),
               gte(u({{core}}/FUN`CHECK`ABILITY,left(%0,3)),last(edit(%0,+,))),
             t(match(lcstr(%q<check_names>),%0,|)), 1,
+            regmatch(%0,^%(healing|harmful%) font$), t(member(%q<check_options>,divine-font:[if(strmatch(%0,healing*),heal,harm)])),
+            strmatch(%0,divine font), t(words(graball(%q<check_options>,divine-font:*))),
+            strmatch(%0,deity that allows clerics to have both fonts), cand(member(%q<check_options>,deity:primary:font:heal),member(%q<check_options>,deity:primary:font:harm)),
+            regmatch(%0,^deity with a simple%( or unarmed attack%)? favored weapon$), u(%!/FUN`BUILD`PREREQ`SIMPLE,strmatch(%0,*unarmed*)),
+            regmatch(%0,^%(holy|unholy%)%( trait%)?$), t(member(%q<check_options>,self:trait:[first(%0)])),
+            strmatch(%0,you aren't unholy), not(member(%q<check_options>,self:trait:unholy)),
+            regmatch(%0,^%(.+%) %(cause|doctrine%)$), if(t(match(lcstr(%q<check_names>),before(%0,%b[last(%0)]),|)),1,if(words(u({{core}}/FUN`ITEM`FIND,class-features,before(%0,%b[last(%0)]))),0,?)),
+            strmatch(%0,* or *), u(%!/FUN`BUILD`PREREQ`ANY,%0),
             strmatch(%0,* dedication), 0,
             words(u({{core}}/FUN`ITEM`FIND,feats,%0)), 0,
             words(u({{core}}/FUN`ITEM`FIND,class-features,%0)), 0,
             ?)]
+        flags: [funsyntax]
+      # A prerequisite of alternatives, such as harmful font or healing font: met when one is, ? when none is
+      # and one cannot be read.
+      FUN`BUILD`PREREQ`ANY:
+        value: |-
+          @@(%0 the prerequisite in lower case)[
+          setq(any_states,iter(edit(%0,\,%bor%b,|,%bor%b,|,\,%b,|),u(%!/FUN`BUILD`PREREQ`MET,trim(%i0)),|,%b))][
+          if(member(%q<any_states>,1),1,if(member(%q<any_states>,?),?,0))]
+        flags: [funsyntax]
+      # Whether one of the deity's favored weapons (check_deity_weapons) is a simple weapon, or with %0 1
+      # an unarmed attack: ? when a weapon is not in the game's books.
+      FUN`BUILD`PREREQ`SIMPLE:
+        value: |-
+          @@(%0 1 when an unarmed attack counts)[
+          setq(simple_states,iter(%q<check_deity_weapons>,switch(1,
+            strmatch(%i0,fist), t(%0),
+            t(strlen(setr(simple_id,u({{core}}/FUN`ITEM`FIND,equipment,%i0)))), t(match(simple[if(%0,%bunarmed)],json_query(u({{core}}/FUN`ITEM`GET,equipment,%q<simple_id>),extract,$.system.category))),
+            ?)))][
+          if(member(%q<simple_states>,1),1,if(member(%q<simple_states>,?),?,0))]
         flags: [funsyntax]
       FUN`BUILD`PREREQ`STATS:
         value: |-
@@ -2998,7 +3090,7 @@ objects:
           setq(items_ids,get(%q<items_store>/OPT`[first(%q<items_keys>)]))][
           null(iter(rest(%q<items_keys>),setq(items_ids,setinter(%q<items_ids>,get(%q<items_store>/OPT`%i0)))))][
           iter(%q<items_ids>,
-            if(cand(member(u({{core}}/DATA`CONFIG`BOOKS),get(%q<items_store>/ITEM`%i0`BOOK)),not(words(graball(%q<check_grants>,*~%0~%i0~*))),u({{core}}/FUN`PREDICATE`TEST,%q<items_own>,[if(%q<items_mixed>,%q<check_options>)] [json_query(setr(items_prep,get(%q<items_store>/ITEM`%i0`PREP)),extract,$.opts)] item:[json_query(%q<items_prep>,extract,$.slug)])),
+            if(cand(member(u({{core}}/DATA`CONFIG`BOOKS),get(%q<items_store>/ITEM`%i0`BOOK)),not(words(graball(%q<check_grants>,*~%0~%i0~*))),cor(comp(%0,feats),not(words(u(%!/FUN`BUILD`PREREQ`UNMET,%i0),|))),u({{core}}/FUN`PREDICATE`TEST,%q<items_own>,[if(%q<items_mixed>,%q<check_options>)] [json_query(setr(items_prep,get(%q<items_store>/ITEM`%i0`PREP)),extract,$.opts)] item:[json_query(%q<items_prep>,extract,$.slug)])),
               [if(%q<items_slugs>,json(string,json_query(%q<items_prep>,extract,$.slug)),json(string,Compendium.pf2e.[before(grab(u({{core}}/DATA`UUID),*~%0),~)].Item.[json_query(%q<items_prep>,extract,$.name)]))]^[json_query(%q<items_prep>,extract,$.name)]),
             %b,|)]
         flags: [funsyntax]
@@ -3299,6 +3391,7 @@ objects:
               Ancestry,firstof([u(%!/FUN`SHOW`GRANTED,%q<check_ancestry>)][if(strlen(%q<check_heritage>),%b%([u(%!/FUN`SHOW`GRANTED,%q<check_heritage>)]%))],tone(muted,none)),
               Background,firstof(u(%!/FUN`SHOW`GRANTED,%q<check_background>),tone(muted,none)),
               Class,[firstof(u(%!/FUN`SHOW`GRANTED,%q<check_class>),tone(muted,none))][if(strlen(%q<check_deity>),%, follows [json_query(u({{core}}/FUN`DEITY`GET,%q<check_deity>),extract,$.name)][if(strlen(setr(show_sanct,after(first(setdiff(graball(%q<check_options>,sanctification:*),sanctification:none)),:))),%b%(%q<show_sanct>%))])],
+              Traits,firstof(itemize(%q<check_traits>),tone(muted,none)),
               Attributes,iter(str dex con int wis cha,[capstr(%i0)] [u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`CHECK`ABILITY,%i0))],%b,%b%b))]%r[
             rule()]%r[
             lfields(,
