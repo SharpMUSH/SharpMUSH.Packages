@@ -1,7 +1,7 @@
 format: "1.16"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.6.0"
+version: "0.7.0"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -1570,7 +1570,7 @@ objects:
         value: |-
           @@(%0 a Strike)[
           setq(adj_traits,json_query(%0,extract,$.traits))][
-          setq(adj_options,squish(item:id:[json_query(%0,extract,$.id)] item:slug:[json_query(%0,extract,$.slug)] item:category:[json_query(%0,extract,$.category)] item:group:[json_query(%0,extract,$.group)] item:base:[json_query(%0,extract,$.base)] [if(gt(firstof(json_query(%0,extract,$.range),0),0),item:ranged,item:melee)] [iter(%q<adj_traits>,item:trait:%i0)]))][
+          setq(adj_options,squish(item:id:[json_query(%0,extract,$.id)] item:slug:[json_query(%0,extract,$.slug)] item:category:[json_query(%0,extract,$.category)] item:group:[json_query(%0,extract,$.group)] item:base:[json_query(%0,extract,$.base)] [if(member(%q<check_deity_weapons>,json_query(%0,extract,$.base)),item:deity-favored)] [if(gt(firstof(json_query(%0,extract,$.range),0),0),item:ranged,item:melee)] [iter(%q<adj_traits>,item:trait:%i0)]))][
           setq(adj_got,iter(%q<check_adjstrike>,u(FUN`STRIKE`ADJUST`GRANT,%i0)))][
           setq(adj_new,squish(%q<adj_traits> [setdiff(iter(graball(%q<adj_got>,add:*),after(%i0,add:)),%q<adj_traits>)]))][
           null(iter(graball(%q<adj_got>,remove:*),setq(adj_new,remove(%q<adj_new>,after(%i0,remove:)))))][
@@ -2967,17 +2967,16 @@ objects:
           setq(any_states,iter(edit(%0,\,%bor%b,|,%bor%b,|,\,%b,|),u(%!/FUN`BUILD`PREREQ`MET,trim(%i0)),|,%b))][
           if(member(%q<any_states>,1),1,if(member(%q<any_states>,?),?,0))]
         flags: [funsyntax]
-      # Whether the deity's favored weapon is a simple weapon (or, with %0 1, an unarmed attack), from the
-      # deity's roll option deity:primary:favored-weapon:<weapon>.
+      # Whether one of the deity's favored weapons (check_deity_weapons) is a simple weapon, or with %0 1
+      # an unarmed attack: ? when a weapon is not in the game's books.
       FUN`BUILD`PREREQ`SIMPLE:
         value: |-
           @@(%0 1 when an unarmed attack counts)[
-          setq(simple_weapon,after(first(graball(%q<check_options>,deity:primary:favored-weapon:*)),deity:primary:favored-weapon:))][
-          switch(1,
-            not(strlen(%q<simple_weapon>)), 0,
-            strmatch(%q<simple_weapon>,fist), t(%0),
-            strlen(setr(simple_id,u({{core}}/FUN`ITEM`FIND,equipment,%q<simple_weapon>))), t(match(simple[if(%0,%bunarmed)],json_query(u({{core}}/FUN`ITEM`GET,equipment,%q<simple_id>),extract,$.system.category))),
-            ?)]
+          setq(simple_states,iter(%q<check_deity_weapons>,switch(1,
+            strmatch(%i0,fist), t(%0),
+            strlen(setr(simple_id,u({{core}}/FUN`ITEM`FIND,equipment,%i0))), t(match(simple[if(%0,%bunarmed)],json_query(u({{core}}/FUN`ITEM`GET,equipment,%q<simple_id>),extract,$.system.category))),
+            ?)))][
+          if(member(%q<simple_states>,1),1,if(member(%q<simple_states>,?),?,0))]
         flags: [funsyntax]
       FUN`BUILD`PREREQ`STATS:
         value: |-
