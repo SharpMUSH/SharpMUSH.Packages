@@ -622,13 +622,13 @@ objects:
           @@(%1 a subfeature proficiency, %2 its statistic)[
           if(isint(setr(rank_value,json_query(%1,extract,$.rank))),[lcstr(%2)]~%q<rank_value>)]
         flags: [funsyntax]
-      # The item's own roll options as Foundry's filters read them: item:type, item:slug, item:level
+      # The item's own roll options as Foundry's filters read them: item:type (and item:type:feature for a class or ancestry feature), item:slug, item:level
       # (item:rank for a spell), item:category, item:rarity, and item:trait and item:tag for each.
       FUN`ITEM`OWN`OPTIONS:
         value: |-
           @@(%0 an item)[
           setq(own_level,firstof(json_query(%0,extract,$.system.level.value),0))][
-          squish(item:type:[json_query(%0,extract,$.type)] item:slug:[u(FUN`ITEM`SLUG,%0)] item:level:%q<own_level> [
+          squish(item:type:[json_query(%0,extract,$.type)] [if(cand(strmatch(json_query(%0,extract,$.type),feat),match(classfeature ancestryfeature calling curse deityboon pfsboon,json_query(%0,extract,$.system.category))),item:type:feature)] item:slug:[u(FUN`ITEM`SLUG,%0)] item:level:%q<own_level> [
             if(strmatch(json_query(%0,extract,$.type),spell),item:rank:%q<own_level>)] [
             if(strlen(setr(own_category,json_query(%0,extract,$.system.category))),item:category:%q<own_category>)] item:rarity:[
             firstof(json_query(%0,extract,$.system.traits.rarity),common)] [
