@@ -1,9 +1,9 @@
 format: "1.16"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.5.0"
+version: "0.6.0"
 authors: [SharpMUSH]
-description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, and audited awards with levels and runes (+pf2e/award)."
+description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, and audited awards with levels and runes (+pf2e/award)."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [pf2e, pathfinder, rules, dice]
@@ -98,6 +98,56 @@ objects:
       DATA`UUID: feats-srd~feats classfeatures~class-features ancestryfeatures~ancestry-features actionspf2e~actions spells-srd~spells equipment-srd~equipment conditionitems~conditions feat-effects~feat-effects spell-effects~spell-effects equipment-effects~equipment-effects other-effects~other-effects ancestries~ancestries heritages~heritages backgrounds~backgrounds classes~classes familiar-abilities~familiar-abilities
       # The common languages any character may take with Intelligence or the ancestry's extra languages.
       DATA`LANGUAGES: common draconic dwarven elven fey gnomish goblin halfling jotun orcish sakvroth
+      # The cleric domains of Player Core, and each one's initial and advanced domain spells, separated by |.
+      DATA`DOMAINS: air ambition cities confidence creation darkness death destruction dreams earth family fate fire freedom healing indulgence knowledge luck magic might moon nature nightmares pain passion perfection protection secrecy sun travel trickery truth tyranny undeath water wealth zeal
+      DATA`DOMAIN`AIR: "Pushing Gust|Disperse into Air"
+      DATA`DOMAIN`AMBITION: "Ignite Ambition|Competitive Edge"
+      DATA`DOMAIN`CITIES: "Face in the Crowd|Pulse of Civilization"
+      DATA`DOMAIN`CONFIDENCE: "Veil of Confidence|Delusional Pride"
+      DATA`DOMAIN`CREATION: "Creative Splash|Artistic Flourish"
+      DATA`DOMAIN`DARKNESS: "Cloak of Shadow|Darkened Sight"
+      DATA`DOMAIN`DEATH: "Death's Call|Eradicate Undeath"
+      DATA`DOMAIN`DESTRUCTION: "Cry of Destruction|Destructive Aura"
+      DATA`DOMAIN`DREAMS: "Sweet Dream|Dreamer's Call"
+      DATA`DOMAIN`EARTH: "Hurtling Stone|Localized Quake"
+      DATA`DOMAIN`FAMILY: "Soothing Words|Unity"
+      DATA`DOMAIN`FATE: "Read Fate|Tempt Fate"
+      DATA`DOMAIN`FIRE: "Fire Ray|Flame Barrier"
+      DATA`DOMAIN`FREEDOM: "Unimpeded Stride|Word of Freedom"
+      DATA`DOMAIN`HEALING: "Healer's Blessing|Rebuke Death"
+      DATA`DOMAIN`INDULGENCE: "Overstuff|Take its Course"
+      DATA`DOMAIN`KNOWLEDGE: "Scholarly Recollection|Know the Enemy"
+      DATA`DOMAIN`LUCK: "Bit of Luck|Lucky Break"
+      DATA`DOMAIN`MAGIC: "Magic's Vessel|Mystic Beacon"
+      DATA`DOMAIN`MIGHT: "Athletic Rush|Enduring Might"
+      DATA`DOMAIN`MOON: "Moonbeam|Touch of the Moon"
+      DATA`DOMAIN`NATURE: "Vibrant Thorns|Nature's Bounty"
+      DATA`DOMAIN`NIGHTMARES: "Waking Nightmare|Shared Nightmare"
+      DATA`DOMAIN`PAIN: "Savor the Sting|Retributive Pain"
+      DATA`DOMAIN`PASSION: "Charming Touch|Captivating Adoration"
+      DATA`DOMAIN`PERFECTION: "Perfected Mind|Perfected Body"
+      DATA`DOMAIN`PROTECTION: "Protector's Sacrifice|Protector's Sphere"
+      DATA`DOMAIN`SECRECY: "Whispering Quiet|Safeguard Secret"
+      DATA`DOMAIN`SUN: "Dazzling Flash"
+      DATA`DOMAIN`TRAVEL: "Agile Feet|Traveler's Transit"
+      DATA`DOMAIN`TRICKERY: "Sudden Shift|Trickster's Twin"
+      DATA`DOMAIN`TRUTH: "Word of Truth|Glimpse the Truth"
+      DATA`DOMAIN`TYRANNY: "Touch of Obedience|Commanding Lash"
+      DATA`DOMAIN`UNDEATH: "Touch of Undeath|Malignant Sustenance"
+      DATA`DOMAIN`WATER: "Tidal Surge|Downpour"
+      DATA`DOMAIN`WEALTH: "Appearance of Wealth|Precious Metals"
+      DATA`DOMAIN`ZEAL: "Weapon Surge|Zeal for Battle"
+      # Sample deities with names of their own, for +deity/samples to copy into the table: spells as
+      # <rank> <spell name>, separated by |, turned into spell ids as they are copied.
+      DATA`DEITY`SAMPLE`SOLENNE: '{"name":"Solenne","title":"the Dawnmother","text":"The sun that rises on everyone, saint and scoundrel alike. She heals the wounded, burns away what cannot be healed, and insists on a proper breakfast. Edicts: heal the sick, offer a second chance, greet each sunrise. Anathema: refuse help to someone who asks for it, create undead.","font":"heal","sanctification":"can holy","domains":"fire healing sun truth","alternate":"family","weapons":"scimitar","skill":"medicine","spells":"1 Breathe Fire|3 Fireball|4 Wall of Fire"}'
+      DATA`DEITY`SAMPLE`GRUMBOLD: '{"name":"Grumbold","title":"the Anvil-Father","text":"Patron of forges, families and doing it properly the first time. His hammer has never missed a nail, mostly because the nails are afraid of it. Edicts: make things that last, keep your word, look after your kin. Anathema: break an oath, sell shoddy work as sound.","font":"heal","sanctification":"can holy","domains":"creation earth family protection","alternate":"wealth","weapons":"warhammer","skill":"crafting","spells":"1 Mystic Armor|2 Enlarge|5 Wall of Stone"}'
+      DATA`DEITY`SAMPLE`VEXA: '{"name":"Vexa","title":"Queen of Thorns","text":"A tyrant who rules by contract and small print. Every bargain with her is fair, if you read all forty pages. Edicts: keep order, punish defiance, honor the letter of an agreement. Anathema: break a contract, release anyone from a bargain without payment.","font":"harm","sanctification":"must unholy","domains":"confidence pain trickery tyranny","alternate":"ambition","weapons":"whip","skill":"intimidation","spells":"1 Command|2 Blood Vendetta|3 Paralyze"}'
+      DATA`DEITY`SAMPLE`THE-QUIET-LANTERN: '{"name":"The Quiet Lantern","title":"Keeper of the Last Door","text":"She lights the way out of life and makes sure nobody comes back the wrong way. Calm, patient, and never late. Edicts: bury the dead with care, ease the dying, put undead to rest. Anathema: create undead, rob a grave.","font":"heal","sanctification":"","domains":"death fate healing knowledge","alternate":"moon","weapons":"dagger","skill":"medicine","spells":"1 Sanctuary|2 Calm|4 Vision of Death"}'
+      DATA`DEITY`SAMPLE`OLD-MOTHER-GORROW: '{"name":"Old Mother Gorrow","title":"the Root and the Rot","text":"Grandmother of the deep woods, who gives with one hand and composts with the other. Everything that grows feeds her, and so does everything that dies. Edicts: tend wild places, take only what you need, let the old make room for the new. Anathema: burn a forest for profit, waste a kill.","font":"heal harm","sanctification":"","domains":"moon nature water","alternate":"travel","weapons":"sickle","skill":"nature","spells":"1 Pest Form|2 Speak with Animals|3 Animal Form"}'
+      DATA`DEITY`SAMPLE`RISTLE: '{"name":"Ristle","title":"the Fox at the Crossroads","text":"A trickster who never lies, exactly, and has never once been where anyone was looking. Travelers leave him a coin at crossroads; he usually leaves it there, because that is funnier. Edicts: outwit the powerful, keep moving, share a good joke. Anathema: betray a friend who trusts you, stay put out of fear.","font":"heal harm","sanctification":"can holy unholy","domains":"freedom luck travel trickery","alternate":"cities","weapons":"rapier","skill":"thievery","spells":"1 Illusory Disguise|2 Invisibility|3 Haste"}'
+      DATA`DEITY`SAMPLE`MORDRAK: '{"name":"Mordrak","title":"the Hungering Dark","text":"Something under the world that wants everything to stop moving. Its priests promise that the dead never feel pain; they rarely mention why. Edicts: spread undeath, put out lights, outlast the living. Anathema: destroy an undead servant without need, heal the living out of mercy.","font":"harm","sanctification":"must unholy","domains":"darkness destruction nightmares undeath","alternate":"pain","weapons":"scythe","skill":"intimidation","spells":"1 Grim Tendrils|2 Darkness|3 Vampiric Feast"}'
+      DATA`DEITY`SAMPLE`LADY-COIN: '{"name":"Lady Coin","title":"Mistress of the Market","text":"She smiles on fair trade, loud haggling and anyone who pays their debts on time. Her temples double as banks, and the interest rate is a matter of doctrine. Edicts: deal fairly, pay what you owe, make your city prosper. Anathema: counterfeit money, cheat a customer.","font":"heal","sanctification":"can holy","domains":"ambition cities luck wealth","alternate":"knowledge","weapons":"light-mace","skill":"society","spells":"1 Item Facade|2 Translate|3 Enthrall"}'
+      DATA`DEITY`SAMPLE`BRANNOCH: '{"name":"Brannoch","title":"Stormfist","text":"God of thunder, contests and settling things outside. He holds that most problems yield to honest effort and the rest to a good punch. Edicts: test yourself, protect the weak, win fair. Anathema: strike a foe who has yielded, refuse a fair challenge.","font":"heal","sanctification":"can holy","domains":"air confidence might zeal","alternate":"protection","weapons":"fist","skill":"athletics","spells":"1 Thunderstrike|3 Lightning Bolt|4 Fly"}'
       # The lists a ChoiceSet names by config, as Foundry's CONFIG.PF2E has them.
       DATA`CHOICES`SKILLS: acrobatics arcana athletics crafting deception diplomacy intimidation medicine nature occultism performance religion society stealth survival thievery
       DATA`CHOICES`SAVES: fortitude reflex will
@@ -885,8 +935,9 @@ objects:
           setq(check_entries,u(FUN`SHEET`ENTRIES,%0))][
           setq(check_level,u(FUN`SHEET`LEVEL,%q<check_entries>))][
           setq(check_grants,u(FUN`SHEET`GRANTS,%q<check_entries>,%q<check_level>))][
-          setqm(check_options,self:level:%q<check_level>,check_conditions,,check_static,,check_dynamic,,check_names,,check_unapplied,,check_upgrades,,check_rankdyn,,check_strikes,,check_martial,,check_forms,,check_adjust,,check_resgrants,,check_craftgrants,,check_ancestry,,check_heritage,,check_background,,check_class,)][
+          setqm(check_options,self:level:%q<check_level>,check_conditions,,check_static,,check_dynamic,,check_names,,check_unapplied,,check_upgrades,,check_rankdyn,,check_strikes,,check_martial,,check_forms,,check_adjust,,check_resgrants,,check_craftgrants,,check_favoredrules,,check_ancestry,,check_heritage,,check_background,,check_class,)][
           null(iter(%q<check_grants>,u(FUN`CHECK`GRANT,%i0)))][
+          u(FUN`CHECK`DEITY)][
           null(iter(%q<check_rankdyn>,u(FUN`CHECK`RANKDYN,%i0)))][
           setq(check_upgrades,%q<check_upgrades> [u(FUN`CHECK`SPELLRANKS)])][
           setq(check_form,u(FUN`CHECK`FORM))][
@@ -1163,7 +1214,7 @@ objects:
           setqm(grant_kind,json_query(%q<grant_prep>,extract,$.kind),grant_options,json_query(%q<grant_prep>,extract,$.options),grant_name,json_query(%q<grant_prep>,extract,$.name),grant_synth,json_query(%q<grant_prep>,get,synth),grant_dynamic,json_query(%q<grant_prep>,extract,$.dynamic),grant_unapplied,json_query(%q<grant_prep>,extract,$.unapplied))][
           setqm(grant_ranks,json_query(%q<grant_prep>,extract,$.ranks),grant_rankdyn,json_query(%q<grant_prep>,extract,$.rankdyn),grant_choiceopts,json_query(%q<grant_prep>,extract,$.choiceopts),grant_strikes,json_query(%q<grant_prep>,extract,$.strikes))][
           setq(grant_badge,firstof(%q<grant_own>,json_query(%q<grant_prep>,extract,$.valued)))][
-          if(member(%q<grant_unapplied>,ActiveEffectLike),setq(grant_rankdyn,setunion(%q<grant_rankdyn>,u(FUN`CHECK`RANKCHOSEN,%q<grant_pack>,%q<grant_id>))))][
+          if(member(%q<grant_unapplied>,ActiveEffectLike),[setq(grant_rankdyn,setunion(%q<grant_rankdyn>,u(FUN`CHECK`RANKCHOSEN,%q<grant_pack>,%q<grant_id>)))][setq(check_favoredrules,%q<check_favoredrules> [u(FUN`CHECK`FAVOREDRULES,%q<grant_pack>,%q<grant_id>)])])][
           if(member(%q<grant_unapplied>,MartialProficiency),[setq(check_martial,%q<check_martial> %q<grant_pack>~%q<grant_id>~%q<grant_badge>~%q<grant_index>)][setq(grant_unapplied,remove(%q<grant_unapplied>,MartialProficiency))])][
           if(member(%q<grant_unapplied>,BattleForm),[setq(check_forms,%q<check_forms> %q<grant_pack>~%q<grant_id>~%q<grant_badge>~%q<grant_index>)][setq(grant_unapplied,remove(%q<grant_unapplied>,BattleForm))])][
           if(member(%q<grant_unapplied>,SpecialResource),[setq(check_resgrants,%q<check_resgrants> %q<grant_pack>~%q<grant_id>)][setq(grant_unapplied,remove(%q<grant_unapplied>,SpecialResource))])][
@@ -1191,6 +1242,84 @@ objects:
         value: |-
           @@(json_map's callback, %1 a rule, %2 its index)[
           if(cand(strmatch(json_query(%1,extract,$.key),ActiveEffectLike),match(upgrade override,json_query(%1,extract,$.mode)),strmatch(json_query(%1,extract,$.path),*rulesSelections*)),%2)]
+        flags: [funsyntax]
+      # The deity a character follows: the one chosen for a Deity feature's ChoiceSet (flag deity), as the
+      # game's table has it. Sets check_deity (its slug), check_deity_weapons (favored weapons' base slugs),
+      # check_deity_spells (spell ids) and check_favored (the rank in favored weapons the class gives), and
+      # adds the deity's roll options and its skill, trained. Nothing without a deity or one the table has not.
+      FUN`CHECK`DEITY:
+        value: |-
+          @@(after the grants)[
+          setqm(check_deity,,check_deity_weapons,,check_deity_spells,,check_favored,0)][
+          setq(deity_entry,first(graball(%q<check_entries>,choice~*|deity~*)))][
+          if(strlen(%q<deity_entry>),
+            [setq(deity_slug,edit(json_query(%q<check_ledger>,extract,$\[[elements(%q<deity_entry>,7,~)]\].value),",))][
+            if(strlen(setr(deity_data,u(FUN`DEITY`GET,%q<deity_slug>))),
+              [setqm(check_deity,%q<deity_slug>,check_deity_weapons,json_query(%q<deity_data>,extract,$.weapons),check_deity_spells,iter(json_query(%q<deity_data>,extract,$.spells),rest(%i0,~)))][
+              setq(check_options,squish(%q<check_options> [u(FUN`DEITY`OPTIONS,%q<deity_slug>,%q<deity_data>)]))][
+              if(strlen(setr(deity_skill,json_query(%q<deity_data>,extract,$.skill))),setq(check_upgrades,%q<check_upgrades> %q<deity_skill>~1))][
+              setq(check_favored,lmax(0 [iter(%q<check_favoredrules>,u(FUN`CHECK`FAVORED,%i0))]))])])]
+        flags: [funsyntax]
+      # The rules of an item that set flags.system.favoredWeaponRank, such as a cleric's doctrines: pack~id~index each.
+      FUN`CHECK`FAVOREDRULES:
+        value: |-
+          @@(%0 a pack, %1 an id)[
+          json_map(me/FUN`CHECK`FAVOREDRULE,firstof(json_query(u(FUN`ITEM`GET,%0,%1),extract,$.system.rules),json(array)),%b,%0~%1)]
+        flags: [funsyntax]
+      FUN`CHECK`FAVOREDRULE:
+        value: |-
+          @@(json_map's callback, %1 a rule, %2 its index, %3 pack~id)[
+          if(cand(strmatch(json_query(%1,extract,$.key),ActiveEffectLike),strmatch(json_query(%1,extract,$.path),flags.system.favoredWeaponRank)),%3~%2)]
+        flags: [funsyntax]
+      FUN`CHECK`FAVORED:
+        value: |-
+          @@(%0 pack~id~index of a favoredWeaponRank rule: its rank when its predicate holds, else 0)[
+          setq(favored_rule,json_query(u(FUN`ITEM`GET,first(%0,~),elements(%0,2,~)),extract,$.system.rules\[[elements(%0,3,~)]\]))][
+          if(u(FUN`PREDICATE`TEST,firstof(json_query(%q<favored_rule>,get,predicate),json(array)),%q<check_options>),firstof(json_query(%q<favored_rule>,extract,$.value),0),0)]
+        flags: [funsyntax]
+      FUN`DEITY: The game's deities.
+      # Each deity is a DEITY`<slug> attribute on this object, written by +deity: a JSON object of strings.
+      # name, title, text; font (heal, harm or both); sanctification (can or must, then holy, unholy or both;
+      # empty for none); domains and alternate (domains); weapons (favored weapons' base slugs, fist for a
+      # fist); skill; spells (rank~spell id for each). Paizo's deities are its proper nouns, so the feed has
+      # none: each game writes its own, or starts from the samples.
+      FUN`DEITY`GET:
+        value: |-
+          @@(%0 a deity's slug: its JSON, or nothing)[
+          if(regmatch(%0,^\[a-z0-9\]\[a-z0-9-\]*$),v(DEITY`%0))]
+        flags: [funsyntax]
+      FUN`DEITY`ALL:
+        value: |-
+          @@(every deity's slug)[
+          iter(lattr(me/DEITY`*),lcstr(after(%i0,DEITY`)))]
+        flags: [funsyntax]
+      FUN`DEITY`FIND:
+        value: |-
+          @@(%0 a name or the start of one: the slug of the one deity it names, or nothing)[
+          setq(find_slug,u(FUN`ITEM`SLUGGIFY,%0))][
+          switch(1,
+            not(strlen(%q<find_slug>)),,
+            t(strlen(u(FUN`DEITY`GET,%q<find_slug>))),%q<find_slug>,
+            eq(words(setr(find_some,squish(iter(u(FUN`DEITY`ALL),if(cor(strmatch(%i0,%q<find_slug>*),strmatch(%i0,the-%q<find_slug>*)),%i0))))),1),%q<find_some>,
+            )]
+        flags: [funsyntax]
+      FUN`DEITY`DOMAINS:
+        value: |-
+          @@(%0 a deity's slug: its domains, then its alternate domains)[
+          setq(domains_data,u(FUN`DEITY`GET,%0))][
+          squish(json_query(%q<domains_data>,extract,$.domains) [setdiff(json_query(%q<domains_data>,extract,$.alternate),json_query(%q<domains_data>,extract,$.domains))])]
+        flags: [funsyntax]
+      # The roll options a deity gives its follower, as Foundry's deities give them.
+      FUN`DEITY`OPTIONS:
+        value: |-
+          @@(%0 a deity's slug, %1 its JSON)[
+          setq(options_sanct,json_query(%1,extract,$.sanctification))][
+          deity deity:primary:%0 [
+          iter(json_query(%1,extract,$.font),deity:primary:font:%i0)] [
+          if(words(%q<options_sanct>),iter(rest(%q<options_sanct>),deity:primary:sanctification:[first(%q<options_sanct>)]:%i0))] [
+          iter(json_query(%1,extract,$.domains) [json_query(%1,extract,$.alternate)],deity:primary:domain:%i0)] [
+          iter(json_query(%1,extract,$.weapons),deity:primary:favored-weapon:%i0)] [
+          if(strlen(setr(options_skill,json_query(%1,extract,$.skill))),deity:primary:skill:%q<options_skill>)]]
         flags: [funsyntax]
       # A grant's choices, flag to value: those stored on the grant, then each choice entry made for it.
       FUN`CHECK`CHOICES:
@@ -1422,6 +1551,12 @@ objects:
             dice,if(strlen(%q<lev_dice>),max(json_query(%0,extract,$.dice),u(FUN`FORMULA`VALUE,json_query(json_query(%q<lev_rules>,extract,$\[%q<lev_dice>\]),get,value),%q<lev_data>,1)),json_query(%0,extract,$.dice))))]
         flags: [funsyntax]
       FUN`STRIKE: Strikes. A Strike is a JSON object of name, slug, id, category, group, base, traits (space-separated), dice, die, type, range, potency and striking.
+      # A champion's Deific Weapon: the damage die of a simple favored weapon, or of an unarmed one with a d4, one step bigger.
+      FUN`STRIKE`DEIFIC:
+        value: |-
+          @@(%0 a damage die, %1 the weapon's category, %2 its base)[
+          if(cand(member(%q<check_options>,feature:deific-weapon),member(%q<check_deity_weapons>,%2),cor(strmatch(%1,simple),cand(strmatch(%1,unarmed),strmatch(%0,d4)))),extract(d6 d8 d10 d12 d12,match(d4 d6 d8 d10 d12,%0),1),%0)]
+        flags: [funsyntax]
       FUN`STRIKE`WEAPON:
         value: |-
           @@(%0 a weapon item)[
@@ -1434,7 +1569,7 @@ objects:
             base,json(string,firstof(json_query(%0,extract,$.system.baseItem),u(FUN`ITEM`SLUG,%0))),
             traits,json(string,json_map(me/FUN`RULE`SELECTOR,firstof(json_query(%0,extract,$.system.traits.value),json(array)),%b)),
             dice,firstof(json_query(%0,extract,$.system.damage.dice),1),
-            die,json(string,if(strlen(json_query(%0,extract,$.system.damage.dice)),edit(json_query(%0,extract,$.system.damage.die),",),d4)),
+            die,json(string,u(FUN`STRIKE`DEIFIC,if(strlen(json_query(%0,extract,$.system.damage.dice)),edit(json_query(%0,extract,$.system.damage.die),",),d4),firstof(json_query(%0,extract,$.system.category),simple),firstof(json_query(%0,extract,$.system.baseItem),u(FUN`ITEM`SLUG,%0)))),
             pers,json(string,if(json_query(%0,extract,$.system.damage.persistent.number),[json_query(%0,extract,$.system.damage.persistent.number)][if(isint(json_query(%0,extract,$.system.damage.persistent.faces)),d[json_query(%0,extract,$.system.damage.persistent.faces)])] [edit(json_query(%0,extract,$.system.damage.persistent.type),",)])),
             splash,firstof(json_query(%0,extract,$.system.splashDamage.value),0),
             type,json(string,firstof(json_query(%0,extract,$.system.damage.damageType),bludgeoning)),
@@ -1490,7 +1625,7 @@ objects:
         flags: [funsyntax]
       FUN`STRIKE`FIST:
         value: |-
-          json(object,name,"Fist",slug,"fist",id,"fist",category,"unarmed",group,"brawling",base,"fist",traits,"agile finesse nonlethal unarmed",dice,1,die,"d4",type,"bludgeoning",range,0,potency,0,striking,0)
+          json(object,name,"Fist",slug,"fist",id,"fist",category,"unarmed",group,"brawling",base,"fist",traits,"agile finesse nonlethal unarmed",dice,1,die,json(string,u(FUN`STRIKE`DEIFIC,d4,unarmed,fist)),type,"bludgeoning",range,0,potency,0,striking,0)
         flags: [funsyntax]
       # A Strike's attack modifiers: the attribute (Dexterity at range, thrown weapons such as a
       # javelin included, the better of Strength and Dexterity with finesse, else Strength),
@@ -1503,8 +1638,8 @@ objects:
           setqm(strike_traits,json_query(%0,extract,$.traits),strike_slug,json_query(%0,extract,$.slug),strike_category,json_query(%0,extract,$.category))][
           setq(strike_ranged,gt(firstof(json_query(%0,extract,$.range),0),0))][
           setq(strike_attribute,if(%q<strike_ranged>,dex,if(cand(member(%q<strike_traits>,finesse),gt(u(FUN`CHECK`ABILITY,dex),u(FUN`CHECK`ABILITY,str))),dex,str)))][
-          setq(strike_options,squish(item:slug:%q<strike_slug> item:category:%q<strike_category> item:group:[json_query(%0,extract,$.group)] item:base:[json_query(%0,extract,$.base)] [if(%q<strike_ranged>,item:ranged,item:melee)] [iter(%q<strike_traits>,item:trait:%i0)]))][
-          setq(strike_rank,max(u(FUN`CHECK`RANK,%q<strike_category>),u(FUN`CHECK`RANK,weapon-base-[json_query(%0,extract,$.base)]),u(FUN`STRIKE`MARTIAL)))][
+          setq(strike_options,squish(item:slug:%q<strike_slug> item:category:%q<strike_category> item:group:[json_query(%0,extract,$.group)] item:base:[json_query(%0,extract,$.base)] [if(member(%q<check_deity_weapons>,json_query(%0,extract,$.base)),item:deity-favored)] [if(%q<strike_ranged>,item:ranged,item:melee)] [iter(%q<strike_traits>,item:trait:%i0)]))][
+          setq(strike_rank,max(u(FUN`CHECK`RANK,%q<strike_category>),u(FUN`CHECK`RANK,weapon-base-[json_query(%0,extract,$.base)]),u(FUN`STRIKE`MARTIAL),if(member(%q<strike_options>,item:deity-favored),%q<check_favored>,0)))][
           setq(strike_domains,attack attack-roll strike-attack-roll mundane-attack [if(%q<strike_ranged>,ranged,melee)]-strike-attack-roll [if(strmatch(%q<strike_category>,unarmed),unarmed-attack-roll)] %q<strike_attribute>-attack %q<strike_slug>-attack all check)][
           setq(strike_mods,u(FUN`CHECK`MODS,ability~[u(FUN`CHECK`ABILITY,%q<strike_attribute>)]~%q<strike_attribute>~0 proficiency~[u(FUN`CHECK`PROFICIENCY,%q<strike_rank>)]~proficiency~0 [if(gt(json_query(%0,extract,$.potency),0),item~[json_query(%0,extract,$.potency)]~potency~0)],%q<strike_domains>,%q<strike_options>))][
           if(cand(isint(setr(strike_form,json_query(%0,extract,$.form))),gt(%q<strike_form>,u(FUN`CHECK`TOTAL,%q<strike_mods>))),
@@ -1694,6 +1829,122 @@ objects:
         value: |-
           $(?is)^\+pf2e(/\S*)?(?\: +(.*))?$:think setqm(cmd_switch,lcstr(after(%1,/)),cmd_args,trim(%2)); @assert match(level ability rank grant revoke ledger update award hp,%q<cmd_switch>)=@pemit %#=notice(PF2E,There is no +pf2e/%q<cmd_switch>. The switches are /award%, /level%, /ability%, /rank%, /grant%, /revoke%, /hp%, /ledger and /update.,warn); think u(%!/FUN`COMMAND`TARGET); @include %!/INC`PF2E`%q<cmd_switch>
         flags: [regexp, cmdsyntax]
+      # +deity lists the game's deities and +deity <name> shows one; staff keep the table with /create, /set,
+      # /destroy and /samples. The table is DEITY`<slug> on the core (FUN`DEITY`GET).
+      CMD`DEITY:
+        value: |-
+          $(?is)^\+deit(?\:y|ies)(/\S*)?(?\: +(.*))?$:think setqm(cmd_switch,lcstr(after(%1,/)),cmd_args,trim(%2)); @assert cor(not(strlen(%q<cmd_switch>)),match(create set destroy samples,%q<cmd_switch>))=@pemit %#=notice(PF2E,There is no +deity/%q<cmd_switch>. Staff have /create%, /set%, /destroy and /samples.,warn); @assert cor(not(strlen(%q<cmd_switch>)),permission(%#,softcode.pf2e.staff))=@pemit %#=notice(PF2E,Only staff change the deities.,error); @include %!/INC`DEITY`[firstof(%q<cmd_switch>,show)]
+        flags: [regexp, cmdsyntax]
+      INC`DEITY`SHOW:
+        value: |-
+          @assert words(setr(deity_all,u({{core}}/FUN`DEITY`ALL)))=@pemit %#=notice(PF2E,The game has no deities yet.[if(permission(%#,softcode.pf2e.staff),%b+deity/create <name> adds one%, and +deity/samples adds nine samples to start from.,%bStaff add them.)],warn); @assert strlen(%q<cmd_args>)=@pemit %#=u(%!/FUN`DEITY`LIST,%q<deity_all>); think setq(deity_slug,u({{core}}/FUN`DEITY`FIND,%q<cmd_args>)); @assert strlen(%q<deity_slug>)=@pemit %#=notice(PF2E,There is no deity called %q<cmd_args>. +deity lists them.,warn); @pemit %#=u(%!/FUN`DEITY`SHOW,%q<deity_slug>)
+        flags: [cmdsyntax]
+      INC`DEITY`CREATE:
+        value: |-
+          think setq(deity_slug,u({{core}}/FUN`ITEM`SLUGGIFY,%q<cmd_args>)); @assert strlen(%q<deity_slug>)=@pemit %#=notice(PF2E,+deity/create <name>,warn); @assert not(strlen(u({{core}}/FUN`DEITY`GET,%q<deity_slug>)))=@pemit %#=notice(PF2E,There is a deity called [json_query(u({{core}}/FUN`DEITY`GET,%q<deity_slug>),extract,$.name)] already.,warn); think setq(deity_json,json(object,name,json(string,%q<cmd_args>),title,"",text,"",font,"",sanctification,"",domains,"",alternate,"",weapons,"",skill,"",spells,"")); &DEITY`%q<deity_slug> {{core}}=%q<deity_json>; @pemit %#=notice(PF2E,Added %q<cmd_args>. Fill it in with +deity/set %q<cmd_args>/<field>=<value>: font%, sanctification%, domains%, alternate%, weapon%, skill%, spells%, title and text.,ok)
+        flags: [cmdsyntax]
+      INC`DEITY`SET:
+        value: |-
+          think setqm(deity_name,trim(before(%q<cmd_args>,/)),deity_field,lcstr(trim(before(after(%q<cmd_args>,/),=))),deity_value,trim(after(%q<cmd_args>,=))); think setq(deity_slug,u({{core}}/FUN`DEITY`FIND,%q<deity_name>)); @assert strlen(%q<deity_slug>)=@pemit %#=notice(PF2E,There is no deity called %q<deity_name>. +deity/create <name> adds one.,warn); @assert match(name title text font sanctification domains alternate weapon skill spells,%q<deity_field>)=@pemit %#=notice(PF2E,+deity/set <deity>/<field>=<value>. The fields are name%, title%, text%, font%, sanctification%, domains%, alternate%, weapon%, skill and spells.,warn); think setq(deity_stored,u(%!/FUN`DEITY`VALUE,%q<deity_field>,%q<deity_value>)); @assert not(strmatch(%q<deity_stored>,!*))=@pemit %#=notice(PF2E,after(%q<deity_stored>,!),warn); think setq(deity_json,json_mod(u({{core}}/FUN`DEITY`GET,%q<deity_slug>),patch,json(object,switch(%q<deity_field>,weapon,weapons,%q<deity_field>),json(string,%q<deity_stored>)))); &DEITY`%q<deity_slug> {{core}}=%q<deity_json>; @pemit %#=notice(PF2E,[json_query(%q<deity_json>,extract,$.name)]: %q<deity_field> [switch(1,not(strlen(%q<deity_stored>)),cleared,strmatch(%q<deity_field>,text),set,set to [u(%!/FUN`DEITY`FIELD,%q<deity_field>,%q<deity_stored>)])].,ok)
+        flags: [cmdsyntax]
+      INC`DEITY`DESTROY:
+        value: |-
+          think setq(deity_slug,u({{core}}/FUN`DEITY`FIND,%q<cmd_args>)); @assert strlen(%q<deity_slug>)=@pemit %#=notice(PF2E,There is no deity called %q<cmd_args>.,warn); think setq(deity_name,json_query(u({{core}}/FUN`DEITY`GET,%q<deity_slug>),extract,$.name)); &DEITY`%q<deity_slug> {{core}}; @pemit %#=notice(PF2E,Removed %q<deity_name>. A character who chose them keeps the choice but gets nothing from it until a deity called %q<deity_name> is added again.,ok)
+        flags: [cmdsyntax]
+      INC`DEITY`SAMPLES:
+        value: |-
+          think setq(deity_new,squish(iter(lattr({{core}}/DATA`DEITY`SAMPLE`*),if(strlen(u({{core}}/FUN`DEITY`GET,lcstr(after(%i0,DATA`DEITY`SAMPLE`)))),,lcstr(after(%i0,DATA`DEITY`SAMPLE`)))))); @assert words(%q<deity_new>)=@pemit %#=notice(PF2E,Every sample deity is in the table already.,warn); @dolist/inplace %q<deity_new>={think setq(deity_json,get({{core}}/DATA`DEITY`SAMPLE`##)); think setq(deity_json,json_mod(%q<deity_json>,patch,json(object,spells,json(string,u(%!/FUN`DEITY`SPELLS,json_query(%q<deity_json>,extract,$.spells),0))))); &DEITY`## {{core}}=%q<deity_json>}; @pemit %#=notice(PF2E,Added [words(%q<deity_new>)] sample deities: [itemize(iter(%q<deity_new>,json_query(get({{core}}/DATA`DEITY`SAMPLE`%i0),extract,$.name),%b,|),|)]. They are a starting point: +deity/set changes them and +deity/destroy removes one.,ok)
+        flags: [cmdsyntax]
+      # A field's value as the table keeps it, or an error led by !.
+      FUN`DEITY`VALUE:
+        value: |-
+          @@(%0 a field, %1 the value typed)[
+          setq(value_words,lcstr(squish(%1)))][
+          switch(%0,
+            name,if(strlen(%1),%1,!A deity needs a name.),
+            title,%1,
+            text,%1,
+            font,switch(1,strmatch(%q<value_words>,none),,cand(words(%q<value_words>),not(words(setdiff(%q<value_words>,heal harm)))),squish([if(member(%q<value_words>,heal),heal)] [if(member(%q<value_words>,harm),harm)]),!The font is heal%, harm%, heal harm or none.),
+            sanctification,switch(1,cor(not(words(%q<value_words>)),strmatch(%q<value_words>,none)),,cand(match(can must,first(%q<value_words>)),words(rest(%q<value_words>)),not(words(setdiff(rest(%q<value_words>),holy unholy)))),[first(%q<value_words>)] [setunion(rest(%q<value_words>),)],!Sanctification is none%, or can or must followed by holy%, unholy or both: can holy.),
+            domains,u(%!/FUN`DEITY`DOMAINLIST,%q<value_words>),
+            alternate,u(%!/FUN`DEITY`DOMAINLIST,%q<value_words>),
+            weapon,u(%!/FUN`DEITY`WEAPONS,%1),
+            skill,switch(1,not(words(%q<value_words>)),,t(member(get({{core}}/DATA`CHOICES`SKILLS),%q<value_words>)),%q<value_words>,!The skill is one of [itemize(get({{core}}/DATA`CHOICES`SKILLS))].),
+            spells,u(%!/FUN`DEITY`SPELLS,%1,1),
+            !)]
+        flags: [funsyntax]
+      FUN`DEITY`DOMAINLIST:
+        value: |-
+          @@(%0 domains typed)[
+          if(words(setr(domain_bad,setdiff(%0,get({{core}}/DATA`DOMAINS)))),![itemize(%q<domain_bad>)] [if(eq(words(%q<domain_bad>),1),is not a domain,are not domains)]. The domains are [itemize(get({{core}}/DATA`DOMAINS))].,setunion(%0,))]
+        flags: [funsyntax]
+      # Favored weapons by name, separated by |: their base slugs, fist for a fist.
+      FUN`DEITY`WEAPONS:
+        value: |-
+          @@(%0 weapons typed)[
+          setqm(weapons_out,,weapons_bad,)][
+          null(iter(%0,
+            if(strlen(trim(%i0)),
+              if(strmatch(u({{core}}/FUN`ITEM`SLUGGIFY,%i0),fist),setq(weapons_out,%q<weapons_out> fist),
+                if(cand(strlen(setr(weapons_id,u({{core}}/FUN`ITEM`FIND,equipment,trim(%i0)))),strmatch(json_query(get(u({{core}}/DATA`PACK`EQUIPMENT)/ITEM`%q<weapons_id>`PREP),extract,$.kind),weapon)),
+                  setq(weapons_out,%q<weapons_out> [firstof(json_query(u({{core}}/FUN`ITEM`GET,equipment,%q<weapons_id>),extract,$.system.baseItem),u({{core}}/FUN`ITEM`SLUG,u({{core}}/FUN`ITEM`GET,equipment,%q<weapons_id>)))]),
+                  setq(weapons_bad,%q<weapons_bad>|[trim(%i0)])))),|))][
+          if(words(%q<weapons_bad>,|),!There is no weapon called [itemize(trim(%q<weapons_bad>,|),|)] from a book the game uses.,setunion(%q<weapons_out>,))]
+        flags: [funsyntax]
+      # A deity's spells, <rank> <spell> separated by |: rank~id for each. With %1, a spell not found or below its own rank is an error led by !; without, it is left out.
+      FUN`DEITY`SPELLS:
+        value: |-
+          @@(%0 spells typed, %1 1 for errors)[
+          setqm(spells_out,,spells_bad,)][
+          null(iter(%0,
+            if(strlen(trim(%i0)),
+              [setqm(spells_rank,first(trim(%i0)),spells_name,rest(trim(%i0)))][
+              setq(spells_id,if(isint(%q<spells_rank>),u({{core}}/FUN`ITEM`FIND,spells,%q<spells_name>)))][
+              if(cand(strlen(%q<spells_id>),gte(%q<spells_rank>,firstof(json_query(get(u({{core}}/DATA`PACK`SPELLS)/ITEM`%q<spells_id>`PREP),extract,$.level),1)),lte(%q<spells_rank>,10)),
+                setq(spells_out,%q<spells_out> %q<spells_rank>~%q<spells_id>),
+                setq(spells_bad,%q<spells_bad>|[trim(%i0)]))]),|))][
+          if(cand(%1,words(%q<spells_bad>,|)),!Each spell is <rank> <name>%, separated by |%, at its own rank or higher: 1 Sure Strike|3 Fireball. Not found: [itemize(trim(%q<spells_bad>,|),|)].,squish(%q<spells_out>))]
+        flags: [funsyntax]
+      # A field as people read it.
+      FUN`DEITY`FIELD:
+        value: |-
+          @@(%0 a field, %1 its stored value)[
+          switch(%0,
+            font,capstr(itemize(%1,%b,or)),
+            sanctification,if(words(%1),[if(strmatch(first(%1),must),must be,may be)] [itemize(rest(%1),%b,or)],none),
+            domains,itemize(iter(%1,capstr(%i0))),
+            alternate,itemize(iter(%1,capstr(%i0))),
+            weapon,u(%!/FUN`DEITY`FIELD,weapons,%1),
+            weapons,itemize(iter(%1,capstr(edit(%i0,-,%b)),%b,|),|),
+            skill,capstr(%1),
+            spells,itemize(iter(%1,rank [first(%i0,~)]: [u(%!/FUN`SHOW`SPELLNAME,rest(%i0,~))],%b,|),|),
+            %1)]
+        flags: [funsyntax]
+      FUN`DEITY`LIST:
+        value: |-
+          @@(%0 the deities' slugs)[
+          box(
+            [ldatatable(,Deity|Font|Domains|Favored weapon,iter(%0,[setq(list_deity,u({{core}}/FUN`DEITY`GET,%i0))][json_query(%q<list_deity>,extract,$.name)]|[firstof(u(%!/FUN`DEITY`FIELD,font,json_query(%q<list_deity>,extract,$.font)),tone(muted,none))]|[firstof(u(%!/FUN`DEITY`FIELD,domains,json_query(%q<list_deity>,extract,$.domains)),tone(muted,none))]|[firstof(u(%!/FUN`DEITY`FIELD,weapons,json_query(%q<list_deity>,extract,$.weapons)),tone(muted,none))],%b,%r),%r)]%r[
+            rule()]%r[
+            tone(muted,+deity <name> shows one. A cleric or champion chooses theirs with +build/choose deity=<name>.)],
+            Deities)]
+        flags: [funsyntax]
+      FUN`DEITY`SHOW:
+        value: |-
+          @@(%0 a deity's slug)[
+          setq(show_deity,u({{core}}/FUN`DEITY`GET,%0))][
+          box(
+            [fields(,
+              Divine font,firstof(u(%!/FUN`DEITY`FIELD,font,json_query(%q<show_deity>,extract,$.font)),tone(muted,none)),
+              Sanctification,capstr(u(%!/FUN`DEITY`FIELD,sanctification,json_query(%q<show_deity>,extract,$.sanctification))),
+              Domains,firstof(u(%!/FUN`DEITY`FIELD,domains,json_query(%q<show_deity>,extract,$.domains)),tone(muted,none)),
+              Alternate domains,firstof(u(%!/FUN`DEITY`FIELD,domains,json_query(%q<show_deity>,extract,$.alternate)),tone(muted,none)),
+              Favored weapon,firstof(u(%!/FUN`DEITY`FIELD,weapons,json_query(%q<show_deity>,extract,$.weapons)),tone(muted,none)),
+              Divine skill,firstof(u(%!/FUN`DEITY`FIELD,skill,json_query(%q<show_deity>,extract,$.skill)),tone(muted,none)),
+              Cleric spells,firstof(u(%!/FUN`DEITY`FIELD,spells,json_query(%q<show_deity>,extract,$.spells)),tone(muted,none)))][
+            if(strlen(setr(show_text,json_query(%q<show_deity>,extract,$.text))),%r[rule()]%r%q<show_text>)],
+            [json_query(%q<show_deity>,extract,$.name)][if(strlen(setr(show_title,json_query(%q<show_deity>,extract,$.title))),%, %q<show_title>)])]
+        flags: [funsyntax]
       # The day: PF2E`DAILY on the character, a JSON object with the wizard attribute flag, written by this
       # object and the table: hp (Hit Points now, absent when full), wounded, plan (the prepared spells,
       # rank to ids, 0 for cantrips), cast (the prepared spells cast, rank to ids), spent (spontaneous slots
@@ -1727,7 +1978,7 @@ objects:
           setq(prep_trads,json_map({{core}}/FUN`RULE`SELECTOR,firstof(json_query(u({{core}}/FUN`ITEM`GET,spells,%0),extract,$.system.traits.traditions),json(array)),%b))][
           switch(1,
             t(member(%q<prep_opts>,item:trait:focus)),%q<prep_name> is a focus spell: it needs no slot. +cast casts it.,
-            not(cor(words(graball(%q<cast_known>,%0~*)),cand(match(cleric druid,%q<cast_class>),member(%q<prep_trads>,%q<cast_trad>),member(%q<prep_opts>,item:rarity:common)))),if(match(cleric druid,%q<cast_class>),%q<prep_name> is not a common [capstr(%q<cast_trad>)] spell.,%q<prep_name> is not in your [if(strmatch(%q<cast_class>,witch),familiar,spellbook)]. +build/spell %q<prep_name> adds it.),
+            not(cor(words(graball(%q<cast_known>,%0~*)),cand(match(cleric druid,%q<cast_class>),member(%q<prep_trads>,%q<cast_trad>),member(%q<prep_opts>,item:rarity:common)),cand(strmatch(%q<cast_class>,cleric),member(%q<check_deity_spells>,%0)))),if(match(cleric druid,%q<cast_class>),%q<prep_name> is not a common [capstr(%q<cast_trad>)] spell.,%q<prep_name> is not in your [if(strmatch(%q<cast_class>,witch),familiar,spellbook)]. +build/spell %q<prep_name> adds it.),
             cand(not(%q<prep_cantrip>),lt(%q<prep_rank>,%q<prep_base>)),%q<prep_name> is rank %q<prep_base>: it cannot be prepared lower.,
             cand(not(%q<prep_cantrip>),gt(%q<prep_rank>,%q<cast_top>)),Your highest spell slots are rank %q<cast_top>.,
             gte(words(u(FUN`DAILY`AT,plan,%q<prep_rank>)),u(FUN`PREPARE`SLOTS,%q<prep_rank>)),Every [if(%q<prep_rank>,rank %q<prep_rank>,cantrip)] slot is full. +prepare/clear [if(%q<prep_rank>,%q<prep_rank>,cantrips)] empties them.,
@@ -2011,6 +2262,55 @@ objects:
         value: |-
           @dolist/inplace [if(%q<tree_count>,lnum(1,%q<tree_count>))]={think setq(entry_json,r(tree_json_##)); @include %!/INC`BUILD`PUT}
         flags: [cmdsyntax]
+      # Items whose GrantItems read the actor's flags, such as a cleric's First Doctrine (the doctrine chosen
+      # sets flags.system.cleric) or an alchemist's Field Discovery: once a choice sets those flags, what they
+      # name is granted, under the grant that set them, at the level of the grant that asked.
+      INC`BUILD`ACTORTREE:
+        value: |-
+          think u(%!/FUN`BUILD`LOAD); think u(%!/FUN`BUILD`ACTORFLAGS); think setq(actor_children,u(%!/FUN`BUILD`ACTORCHILDREN)); @break not(words(%q<actor_children>)); @include %!/INC`BUILD`BEGIN; think u(%!/FUN`BUILD`TREE,%q<actor_children>); @include %!/INC`BUILD`TREE`WRITE
+        flags: [cmdsyntax]
+      FUN`BUILD`ACTORFLAGS:
+        value: |-
+          @@(check_entries: sets actor_sys, the flags.system object the granted items' override rules set, and actor_src_<key>, n~step of the grant that set each key)[
+          setq(actor_sys,json(object))][
+          null(iter(graball(%q<check_entries>,grant~*),
+            [setqm(af_pack,before(elements(%i0,2,~),|),af_id,after(elements(%i0,2,~),|),af_n,elements(%i0,4,~),af_index,elements(%i0,7,~))][
+            if(strmatch(json_query(get(u({{core}}/DATA`PACK`%q<af_pack>)/ITEM`%q<af_id>`PREP),extract,$.unapplied),*ActiveEffectLike*),
+              [setq(af_rules,firstof(json_query(u({{core}}/FUN`ITEM`GET,%q<af_pack>,%q<af_id>),extract,$.system.rules),json(array)))][
+              null(iter(json_map(%!/FUN`BUILD`ACTORFLAG,%q<af_rules>,%b),u(%!/FUN`BUILD`ACTORFLAG`SET,json_query(%q<af_rules>,extract,$\[%i0\]))))])]))]
+        flags: [funsyntax]
+      FUN`BUILD`ACTORFLAG:
+        value: |-
+          @@(json_map's callback, %1 a rule, %2 its index: the index of an override of flags.system.<key> with an object)[
+          if(cand(strmatch(json_query(%1,extract,$.key),ActiveEffectLike),strmatch(json_query(%1,extract,$.mode),override),regmatch(json_query(%1,extract,$.path),^flags\\.system\\.\[A-Za-z0-9\]+$),strmatch(left(json_query(%1,extract,$.value),1),\{)),%2)]
+        flags: [funsyntax]
+      FUN`BUILD`ACTORFLAG`SET:
+        value: |-
+          @@(%0 the rule; af_ registers)[
+          setq(af_key,after(json_query(%0,extract,$.path),flags.system.))][
+          setq(actor_sys,json_mod(%q<actor_sys>,patch,json(object,%q<af_key>,json_query(%0,extract,$.value))))][
+          setq(actor_src_%q<af_key>,%q<af_n>~[json_query(%q<check_ledger>,extract,$\[%q<af_index>\].step)])]
+        flags: [funsyntax]
+      FUN`BUILD`ACTORCHILDREN:
+        value: |-
+          @@(after FUN`BUILD`ACTORFLAGS: what GrantItems reading the actor's flags bring and is not granted yet, each pack~ID~parent~step~level~depth~choices)[
+          setq(actor_data,json(object,actor,json(object,flags,json(object,system,%q<actor_sys>))))][
+          squish(iter(graball(%q<check_entries>,grant~*),
+            [setqm(ac_pack,before(elements(%i0,2,~),|),ac_id,after(elements(%i0,2,~),|),ac_level,elements(%i0,6,~))][
+            if(words(setr(ac_grants,json_query(get(u({{core}}/DATA`PACK`%q<ac_pack>)/ITEM`%q<ac_id>`PREP),extract,$.grants))),
+              [setq(ac_item,u({{core}}/FUN`ITEM`GET,%q<ac_pack>,%q<ac_id>))][
+              iter(%q<ac_grants>,u(%!/FUN`BUILD`ACTORCHILD,json_query(%q<ac_item>,extract,$.system.rules\[%i0\])))])]))]
+        flags: [funsyntax]
+      FUN`BUILD`ACTORCHILD:
+        value: |-
+          @@(%0 a GrantItem; ac_ registers)[
+          setq(ac_uuid,json_query(%0,extract,$.uuid))][
+          if(regmatch(%q<ac_uuid>,\\x7Bactor\\|flags\\.system\\.%(\[A-Za-z0-9\]+%),0 ac_key),
+            [setq(ac_src,r(actor_src_%q<ac_key>))][
+            setq(ac_found,if(strlen(%q<ac_src>),u(%!/FUN`BUILD`UUID,u({{core}}/FUN`FORMULA`INJECT,%q<ac_uuid>,%q<actor_data>))))][
+            if(cand(strlen(%q<ac_found>),not(words(graball(%q<check_entries>,grant~[edit(%q<ac_found>,~,|)]~*))),u({{core}}/FUN`PREDICATE`TEST,firstof(json_query(%0,get,predicate),json(array)),%q<check_options>)),
+              %q<ac_found>~[first(%q<ac_src>,~)]~[rest(%q<ac_src>,~)]~%q<ac_level>~1~{})])]
+        flags: [funsyntax]
       # The grants a queue of items brings, breadth first: each item, numbered from build_next, then
       # what it grants in turn, each item once. Sets tree_count and tree_json_<k>, each a grant entry.
       FUN`BUILD`TREE:
@@ -2092,7 +2392,7 @@ objects:
       # +build/choose <number>=<option>: a choice a granted item asks for, numbered as +build lists them.
       INC`BUILD`CHOOSE:
         value: |-
-          think setqm(build_choices,u(%!/FUN`BUILD`CHOICES`OPEN,0),build_at,trim(before(%q<cmd_rest>,=)),build_typed,trim(after(%q<cmd_rest>,=))); think if(not(isint(%q<build_at>)),setq(build_at,firstof(match(iter(%q<build_choices>,edit(elements(%i0,4,~),%b,_),|,%b),*[edit(%q<build_at>,%b,_)]*),%q<build_at>))); @assert cand(isint(%q<build_at>),gte(%q<build_at>,1),lte(%q<build_at>,words(%q<build_choices>,|)))=@pemit %#=notice(PF2E,[if(words(%q<build_choices>,|),Choose by number or name: [itemize(iter(%q<build_choices>,+build/choose #@=<option> for [elements(%i0,4,~)],|,|),|)].,Nothing asks for a choice.)],warn); think setq(build_choice,extract(%q<build_choices>,%q<build_at>,1,|)); think setqm(build_owner,first(%q<build_choice>,~),build_flag,elements(%q<build_choice>,2,~),build_step,choice-[first(%q<build_choice>,~)]-[elements(%q<build_choice>,2,~)]); @include %!/INC`BUILD`GUARD; think setq(build_value,u(%!/FUN`BUILD`CHOICE`MATCH,%q<build_choice>,%q<build_typed>)); @assert strlen(%q<build_value>)=@pemit %#=notice(PF2E,%q<build_typed> is not one of the options. +build/list choice %q<build_at> shows them.,warn); @include %!/INC`BUILD`BEGIN; @include/nobreak %!/INC`BUILD`CLEAR; think setq(entry_json,json(object,kind,"choice",entry,%q<build_owner>,flag,json(string,%q<build_flag>),value,json(string,%q<build_value>),step,json(string,%q<build_step>),parent,%q<build_owner>)); @include %!/INC`BUILD`PUT; think setq(build_choice_n,%q<build_last>); think u(%!/FUN`BUILD`LOAD); think setq(build_owner_grant,u(%!/FUN`BUILD`GRANT`BY`N,%q<build_owner>)); @include %!/INC`BUILD`BEGIN; think u(%!/FUN`BUILD`TREE,u(%!/FUN`BUILD`CHILDREN,elements(%q<build_owner_grant>,2,~),elements(%q<build_owner_grant>,3,~),u({{core}}/FUN`CHECK`CHOICES,elements(%q<build_owner_grant>,5,~)),%q<build_choice_n>,%q<build_step>,u(%!/FUN`BUILD`ENTRY`LEVEL,%q<build_owner>),1,%q<build_flag>)); @include %!/INC`BUILD`TREE`WRITE; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)][elements(%q<build_choice>,4,~)]: [u(%!/FUN`BUILD`CHOICE`LABEL,%q<build_value>)].,ok); @wait 0={think u(%!/FUN`BUILD`LOAD); @pemit %#=u(%!/FUN`BUILD`NEXT)}
+          think setqm(build_choices,u(%!/FUN`BUILD`CHOICES`OPEN,0),build_at,trim(before(%q<cmd_rest>,=)),build_typed,trim(after(%q<cmd_rest>,=))); think if(not(isint(%q<build_at>)),setq(build_at,firstof(match(iter(%q<build_choices>,edit(elements(%i0,4,~),%b,_),|,%b),*[edit(%q<build_at>,%b,_)]*),%q<build_at>))); @assert cand(isint(%q<build_at>),gte(%q<build_at>,1),lte(%q<build_at>,words(%q<build_choices>,|)))=@pemit %#=notice(PF2E,[if(words(%q<build_choices>,|),Choose by number or name: [itemize(iter(%q<build_choices>,+build/choose #@=<option> for [elements(%i0,4,~)],|,|),|)].,Nothing asks for a choice.)],warn); think setq(build_choice,extract(%q<build_choices>,%q<build_at>,1,|)); think setqm(build_owner,first(%q<build_choice>,~),build_flag,elements(%q<build_choice>,2,~),build_step,choice-[first(%q<build_choice>,~)]-[elements(%q<build_choice>,2,~)]); @include %!/INC`BUILD`GUARD; think setq(build_value,u(%!/FUN`BUILD`CHOICE`MATCH,%q<build_choice>,%q<build_typed>)); @assert strlen(%q<build_value>)=@pemit %#=notice(PF2E,%q<build_typed> is not one of the options. +build/list choice %q<build_at> shows them.,warn); @include %!/INC`BUILD`BEGIN; @include/nobreak %!/INC`BUILD`CLEAR; think setq(entry_json,json(object,kind,"choice",entry,%q<build_owner>,flag,json(string,%q<build_flag>),value,json(string,%q<build_value>),step,json(string,%q<build_step>),parent,%q<build_owner>)); @include %!/INC`BUILD`PUT; think setq(build_choice_n,%q<build_last>); think u(%!/FUN`BUILD`LOAD); think setq(build_owner_grant,u(%!/FUN`BUILD`GRANT`BY`N,%q<build_owner>)); @include %!/INC`BUILD`BEGIN; think u(%!/FUN`BUILD`TREE,u(%!/FUN`BUILD`CHILDREN,elements(%q<build_owner_grant>,2,~),elements(%q<build_owner_grant>,3,~),u({{core}}/FUN`CHECK`CHOICES,elements(%q<build_owner_grant>,5,~)),%q<build_choice_n>,%q<build_step>,u(%!/FUN`BUILD`ENTRY`LEVEL,%q<build_owner>),1,%q<build_flag>)); @include %!/INC`BUILD`TREE`WRITE; @include/nobreak %!/INC`BUILD`ACTORTREE; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)][elements(%q<build_choice>,4,~)]: [u(%!/FUN`BUILD`CHOICE`LABEL,%q<build_value>)].,ok); @wait 0={think u(%!/FUN`BUILD`LOAD); @pemit %#=u(%!/FUN`BUILD`NEXT)}
         flags: [cmdsyntax]
       # +build/spell <spell>[ at <rank>], +build/unspell <spell>[ at <rank>]: the spells the character knows, keeps in
       # a spellbook or has their familiar keep, and their focus spells. A spontaneous caster learns a spell at a rank.
@@ -2186,7 +2486,7 @@ objects:
       # +build/undo <step>: ancestry, heritage, background, class, boost <set>, skills, languages, feat <slot>, increase <level>, choice <number>.
       INC`BUILD`UNDO:
         value: |-
-          think setq(build_step,u(%!/FUN`BUILD`STEP`NAMED,%q<cmd_rest>)); @assert words(u(%!/FUN`BUILD`STEP,%q<build_step>))=@pemit %#=notice(PF2E,Nothing to undo for %q<cmd_rest>. Steps are ancestry%, heritage%, background%, class%, boost <set>%, skills%, languages%, feat <slot>%, increase <level> and choice <number>.,warn); @assert cor(%q<build_staff>,not(%q<build_locked>))=@pemit %#=notice(PF2E,The sheet is finished%, so only staff undo a step.,warn); @include %!/INC`BUILD`BEGIN; @include/nobreak %!/INC`BUILD`CLEAR; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)]Undid %q<cmd_rest>%, and what came with it.,ok); @wait 0={think u(%!/FUN`BUILD`LOAD); @pemit %#=u(%!/FUN`BUILD`NEXT)}
+          think setq(build_step,u(%!/FUN`BUILD`STEP`NAMED,%q<cmd_rest>)); @assert words(u(%!/FUN`BUILD`STEP,%q<build_step>))=@pemit %#=notice(PF2E,Nothing to undo for %q<cmd_rest>. Steps are ancestry%, heritage%, background%, class%, boost <set>%, skills%, languages%, feat <slot>%, increase <level> and choice <name>.,warn); @assert cor(%q<build_staff>,not(%q<build_locked>))=@pemit %#=notice(PF2E,The sheet is finished%, so only staff undo a step.,warn); @include %!/INC`BUILD`BEGIN; @include/nobreak %!/INC`BUILD`CLEAR; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)]Undid %q<cmd_rest>%, and what came with it.,ok); @wait 0={think u(%!/FUN`BUILD`LOAD); @pemit %#=u(%!/FUN`BUILD`NEXT)}
         flags: [cmdsyntax]
       # +build/done: the sheet is finished when nothing is left for its level; after that a player only fills new steps.
       INC`BUILD`DONE:
@@ -2280,7 +2580,8 @@ objects:
             boosts, boost-[rest(%q<step_words>)],
             feat, feat-[rest(%q<step_words>)],
             increase, increase-[rest(%q<step_words>)],
-            choice, [setq(step_choice,extract(u(%!/FUN`BUILD`CHOICES`OPEN,0),rest(%q<step_words>),1,|))]choice-[first(%q<step_choice>,~)]-[elements(%q<step_choice>,2,~)],
+            choice, if(isint(rest(%q<step_words>)),[setq(step_choice,extract(u(%!/FUN`BUILD`CHOICES`OPEN,0),rest(%q<step_words>),1,|))]choice-[first(%q<step_choice>,~)]-[elements(%q<step_choice>,2,~)],
+              firstof(first(squish(iter(graball(%q<check_entries>,choice~*),if(strmatch(elements(%i0,8,~),choice-*-[edit(rest(%q<step_words>),%b,)]*),elements(%i0,8,~))))),choice-[rest(%q<step_words>)])),
             language, languages,
             %q<step_words>)]
         flags: [funsyntax]
@@ -2610,21 +2911,23 @@ objects:
               [setq(open_rule,json_query(%q<open_item>,extract,$.system.rules\[%i0\]))][
               setq(open_flag,u({{core}}/FUN`RULE`CHOICE`FLAG,%q<open_rule>,%i0))][
               if(cand(not(strlen(json_query(%q<open_choices>,extract,$.%q<open_flag>))),u({{core}}/FUN`PREDICATE`TEST,firstof(json_query(%q<open_rule>,get,predicate),json(array)),%q<check_options>),cor(not(%1),not(strmatch(u(%!/FUN`BUILD`CHOICE`KIND,%q<open_rule>),none)))),
-                setq(open_found,%q<open_found>|[first(%0,~)]~%q<open_flag>~%i0~[setr(open_name,json_query(%q<open_prep>,extract,$.name))][if(strmatch(edit(%q<open_name>,',),*[setr(open_words,u(%!/FUN`BUILD`CAMEL`WORDS,%q<open_flag>))]*),,: %q<open_words>)]))]))])]
+                setq(open_found,%q<open_found>|[first(%0,~)]~%q<open_flag>~%i0~[setr(open_name,json_query(%q<open_prep>,extract,$.name))][if(strmatch(edit(%q<open_name>,',),*[setr(open_words,u(%!/FUN`BUILD`CAMEL`WORDS,firstof(edit(json_query(%q<open_rule>,extract,$.slug),-,%b),%q<open_flag>)))]*),,: %q<open_words>)]))]))])]
         flags: [funsyntax]
       FUN`BUILD`CAMEL`WORDS:
         value: |-
           capstr(lcstr(regeditall(%0,%(\[a-z0-9\]%)%(\[A-Z\]%),$1 $2)))
         flags: [funsyntax]
-      # What kind of options a ChoiceSet offers: list (its own), items (a filter), config (a named list), or
-      # none when the builder cannot list them. Deities are Paizo's proper nouns, so the feed has none.
+      # What kind of options a ChoiceSet offers: list (its own), items (a filter), config (a named list),
+      # deity (the game's deity table), domains (the deity's), or none when the builder cannot list them.
       FUN`BUILD`CHOICE`KIND:
         value: |-
           @@(%0 the ChoiceSet)[
           setq(kind_choices,json_query(%0,get,choices))][
           switch(1,
+            cand(not(strlen(%q<check_deity>)),strmatch(%0,*deity:primary:*)),none,
             strmatch(left(%q<kind_choices>,1),\[),list,
-            strmatch(json_query(%0,extract,$.choices.itemType),deity),none,
+            strmatch(json_query(%0,extract,$.choices.itemType),deity),if(words(u({{core}}/FUN`DEITY`ALL)),deity,none),
+            strmatch(json_query(%0,extract,$.choices),system.details.deities.domains),if(strlen(%q<check_deity>),domains,none),
             t(strlen(json_query(%0,extract,$.choices.filter))),items,
             t(strlen(u({{core}}/DATA`CHOICES`[ucstr(firstof(json_query(%0,extract,$.choices.config),json_query(%0,extract,$.choices)))]))),config,
             none)]
@@ -2633,19 +2936,27 @@ objects:
       FUN`BUILD`CHOICE`OPTIONS:
         value: |-
           @@(%0 an open choice owner~flag~index~prompt)[
-          setq(option_grant,u(%!/FUN`BUILD`GRANT`BY`N,first(%0,~)))][
-          setq(option_rule,json_query(u({{core}}/FUN`ITEM`GET,elements(%q<option_grant>,2,~),elements(%q<option_grant>,3,~)),extract,$.system.rules\[[elements(%0,3,~)]\]))][
+          setq(option_rule,u(%!/FUN`BUILD`CHOICE`RULE,%0))][
           switch(u(%!/FUN`BUILD`CHOICE`KIND,%q<option_rule>),
-            list, json_map(%!/FUN`BUILD`CHOICE`LISTED,json_query(%q<option_rule>,extract,$.choices),|),
+            list, trim(squish(json_map(%!/FUN`BUILD`CHOICE`LISTED,json_query(%q<option_rule>,extract,$.choices),|),|),|),
             items, u(%!/FUN`BUILD`CHOICE`ITEMS,%q<option_rule>),
+            deity, iter(u({{core}}/FUN`DEITY`ALL),"%i0"^[json_query(u({{core}}/FUN`DEITY`GET,%i0),extract,$.name)],%b,|),
+            domains, iter(u({{core}}/FUN`DEITY`DOMAINS,%q<check_deity>),"%i0"^[capstr(%i0)] %([first(get({{core}}/DATA`DOMAIN`%i0),|)]%),%b,|),
             config, u(%!/FUN`BUILD`CHOICE`CONFIG,%q<option_rule>),
             )]
         flags: [funsyntax]
+      FUN`BUILD`CHOICE`RULE:
+        value: |-
+          @@(%0 an open choice owner~flag~index~prompt: its ChoiceSet)[
+          setq(rule_grant,u(%!/FUN`BUILD`GRANT`BY`N,first(%0,~)))][
+          json_query(u({{core}}/FUN`ITEM`GET,elements(%q<rule_grant>,2,~),elements(%q<rule_grant>,3,~)),extract,$.system.rules\[[elements(%0,3,~)]\])]
+        flags: [funsyntax]
       FUN`BUILD`CHOICE`LISTED:
         value: |-
-          @@(%1 one listed choice: {value, label} or a plain value)[
-          setq(listed_value,firstof(json_query(%1,get,value),if(strmatch(left(%1,1),\{),,%1)))][
-          if(strmatch(left(%q<listed_value>,1),"),%q<listed_value>,if(strmatch(left(%q<listed_value>,1),\{),%q<listed_value>,json(string,%q<listed_value>)))]^[u(%!/FUN`BUILD`CHOICE`LABEL,%q<listed_value>,json_query(%1,extract,$.label))]
+          @@(%1 one listed choice: {value, label, predicate} or a plain value; nothing when its predicate fails)[
+          if(cand(strmatch(left(%1,1),\{),strlen(json_query(%1,get,predicate)),not(u({{core}}/FUN`PREDICATE`TEST,json_query(%1,get,predicate),%q<check_options>))),,
+            [setq(listed_value,firstof(json_query(%1,get,value),if(strmatch(left(%1,1),\{),,%1)))][
+            if(strmatch(left(%q<listed_value>,1),"),%q<listed_value>,if(strmatch(left(%q<listed_value>,1),\{),%q<listed_value>,json(string,%q<listed_value>)))]^[u(%!/FUN`BUILD`CHOICE`LABEL,%q<listed_value>,json_query(%1,extract,$.label))])]
         flags: [funsyntax]
       FUN`BUILD`CHOICE`CONFIG:
         value: |-
@@ -2699,6 +3010,7 @@ objects:
           setq(label_value,if(strmatch(left(%0,1),\{),,json_query(%0,extract,$)))][
           switch(1,
             cand(strlen(%1),not(strmatch(%1,PF2E.*))), %1,
+            t(strlen(setr(label_deity,u({{core}}/FUN`DEITY`GET,%q<label_value>)))), json_query(%q<label_deity>,extract,$.name),
             strmatch(left(%0,1),\{), capstr(firstof(json_query(%0,extract,$.slug),json_query(%0,extract,$.label),%0)),
             strmatch(%q<label_value>,Compendium.*.Item.*), after(%q<label_value>,.Item.),
             strmatch(%q<label_value>,system.*.rank), u(%!/FUN`SHOW`STAT,extract(edit(%q<label_value>,.,%b),dec(words(edit(%q<label_value>,.,%b))),1)),
@@ -2742,7 +3054,26 @@ objects:
             iter(5 10 15 20,if(lte(%i0,%q<check_level>),u(%!/FUN`BUILD`TODO`ONE,boost-%i0,Four boosts%, level %i0,+build/boost %i0=str dex con wis)),%b,|)]|[
             u(%!/FUN`BUILD`TODO`SPELLS)]|[
             setq(todo_listable,u(%!/FUN`BUILD`CHOICES`OPEN,1))][
-            iter(u(%!/FUN`BUILD`CHOICES`OPEN,0),if(member(%q<todo_listable>,%i0,|),open,staff)~[rest(rest(rest(%i0,~),~),~)]~[if(member(%q<todo_listable>,%i0,|),+build/list choice #@,staff only: the game's books have nothing to choose)],|,|)],|),|)]
+            iter(u(%!/FUN`BUILD`CHOICES`OPEN,0),if(member(%q<todo_listable>,%i0,|),open,staff)~[rest(rest(rest(%i0,~),~),~)]~[if(member(%q<todo_listable>,%i0,|),+build/list choice #@,u(%!/FUN`BUILD`CHOICE`STAFF,%i0))],|,|)],|),|)]
+        flags: [funsyntax]
+      # Why a choice has nothing to list: no deities in the table, no deity chosen yet, or nothing in the books.
+      FUN`BUILD`CHOICE`STAFF:
+        value: |-
+          @@(%0 an open choice)[
+          setq(staff_rule,u(%!/FUN`BUILD`CHOICE`RULE,%0))][
+          switch(1,
+            strmatch(json_query(%q<staff_rule>,extract,$.choices.itemType),deity),the game has no deities yet: staff add them with +deity/create,
+            cor(strmatch(%q<staff_rule>,*deity:primary:*),strmatch(%q<staff_rule>,*system.details.deities.domains*)),choose a deity first,
+            staff only: the game's books have nothing to choose)]
+        flags: [funsyntax]
+      # The initial domain spell of each domain chosen with Domain Initiate or Deity's Domain.
+      FUN`BUILD`TODO`DOMAINS:
+        value: |-
+          @@(check_ and cast_ registers)[
+          iter(graball(%q<check_entries>,choice~*|domainInitiate~*) [graball(%q<check_entries>,choice~*|deitysDomain~*)],
+            [setq(dom_name,lcstr(edit(json_query(%q<check_ledger>,extract,$\[[elements(%i0,7,~)]\].value),",)))][
+            setq(dom_spell,first(get({{core}}/DATA`DOMAIN`%q<dom_name>),|))][
+            if(strlen(%q<dom_spell>),[if(member(%q<cast_focus>,u({{core}}/FUN`ITEM`FIND,spells,%q<dom_spell>)),done,open)]~Domain spell%, [capstr(%q<dom_name>)]~+build/spell %q<dom_spell>)],%b,|)]
         flags: [funsyntax]
       # The spells to learn: a spontaneous caster's cantrips and each rank's spells, then a signature spell for each
       # rank from 1 to 9 once they have Signature Spells; a wizard's spellbook or a witch's familiar.
@@ -2758,7 +3089,8 @@ objects:
             t(match(wizard witch,%q<cast_class>)),
               [u(%!/FUN`BUILD`TODO`COUNT,0,Cantrips,+build/list spells cantrips)]|[
               u(%!/FUN`BUILD`TODO`COUNT,-1,Spells,+build/list spells <rank>)],
-            )]
+            )]|[
+          u(%!/FUN`BUILD`TODO`DOMAINS)]
         flags: [funsyntax]
       FUN`BUILD`TODO`COUNT:
         value: |-
@@ -2966,7 +3298,7 @@ objects:
               Level,[%q<check_level>] [tone(muted,%([u(%!/FUN`PURSE`TOTAL,%q<sheet_target>,xp)] XP%))],
               Ancestry,firstof([u(%!/FUN`SHOW`GRANTED,%q<check_ancestry>)][if(strlen(%q<check_heritage>),%b%([u(%!/FUN`SHOW`GRANTED,%q<check_heritage>)]%))],tone(muted,none)),
               Background,firstof(u(%!/FUN`SHOW`GRANTED,%q<check_background>),tone(muted,none)),
-              Class,firstof(u(%!/FUN`SHOW`GRANTED,%q<check_class>),tone(muted,none)),
+              Class,[firstof(u(%!/FUN`SHOW`GRANTED,%q<check_class>),tone(muted,none))][if(strlen(%q<check_deity>),%, follows [json_query(u({{core}}/FUN`DEITY`GET,%q<check_deity>),extract,$.name)][if(strlen(setr(show_sanct,after(first(setdiff(graball(%q<check_options>,sanctification:*),sanctification:none)),:))),%b%(%q<show_sanct>%))])],
               Attributes,iter(str dex con int wis cha,[capstr(%i0)] [u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`CHECK`ABILITY,%i0))],%b,%b%b))]%r[
             rule()]%r[
             lfields(,
@@ -4632,6 +4964,7 @@ objects:
         - `+build` makes your character, one choice at a time: `+help pf2e build`.
         - `+sheet` shows it and `+check` rolls against it: `+help pf2e sheet`, `+help pf2e check`.
         - `+spells`, `+prepare` and `+cast` are for casters, `+rest` begins a new day: `+help pf2e spells`, `+help pf2e day`.
+        - `+deity` lists the game's deities, which clerics and champions follow: `+help pf2e deity`.
         - `+alchemy` makes alchemical items from your formula book: `+help pf2e alchemy`.
         - `+enc` runs a fight: `+help pf2e enc`. GMs build one from the bestiary and run it: `+help pf2e enc build`, `+help pf2e enc gm`.
         - `+explore`, `+challenge` and `+recall` cover exploration, skill challenges and Recall Knowledge.
@@ -4640,7 +4973,7 @@ objects:
 
         Your sheet is a ledger: every choice is an entry, and nothing is ever overwritten. Money and experience have ledgers of their own. `+pf2e/ledger` shows the sheet's, `+pf2e/ledger money` and `+pf2e/ledger xp` the others with their totals.
       SEE`PF2E: |-
-        pf2e build|pf2e sheet|pf2e enc|pf2e spells|pf2e cast|pf2e alchemy
+        pf2e build|pf2e sheet|pf2e enc|pf2e spells|pf2e cast|pf2e deity|pf2e alchemy
       HELP`PF2E`BUILD: |-
         `+build` makes your character. Type it on its own to see every step, what is done and what to type next.
 
@@ -4651,7 +4984,7 @@ objects:
         - `+build/skills <skill> <skill> ...`: every skill your class lets you choose, in one line. The skills you are already trained in show on `+build/list skills`.
         - `+build/language <name> ...`: your extra languages, in one line.
         - `+build/feat <slot>=<name>`: a feat for a slot, such as `+build/feat class-1=Sudden Charge`. `+build/list feats class-1` lists only the feats whose prerequisites you meet.
-        - `+build/choose <number or name>=<option>`: a choice a feature asks for, such as `+build/choose instinct=giant`. `+build/list choice instinct` lists the options.
+        - `+build/choose <number or name>=<option>`: a choice a feature asks for, such as `+build/choose instinct=giant` or `+build/choose deity=Solenne` (`+help pf2e deity`). `+build/list choice instinct` lists the options.
         - `+build/spell <name>`, `+build/unspell <name>`: the spells a spontaneous caster, a wizard or a witch knows, and focus spells. `+build/list spells 1` lists the rank 1 spells of your tradition, `+build/list spells cantrips` the cantrips, `+build/list spells 1 any` every tradition's. A spontaneous caster learns as many spells of a rank as they have slots, a wizard's spellbook and a witch's familiar hold 10 cantrips and 5 spells plus 2 a level. A cleric or druid learns none: they prepare any common spell of their tradition.
         - `+build/signature <spell>\[ at <rank>\]`: a signature spell, with the Signature Spells feature.
         - `+build/formula <item>`, `+build/unformula <item>`: formulas for alchemical items of your level or lower, four from Alchemical Crafting and two a level from an alchemist's formula book.
@@ -4672,7 +5005,7 @@ objects:
       SEE`PF2E`BUILD: |-
         pf2e sheet|pf2e advance
       HELP`PF2E`SHEET: |-
-        `+sheet` shows your character: level and experience, ancestry, background, class, attributes, hit points, AC with the armor worn, the shield held, Speed, class DC, spell attack and DC, every skill and save with its rank and modifier, Lores, Strikes, languages, money, gear, spells by rank, feats and features, actions and conditions.
+        `+sheet` shows your character: level and experience, ancestry, background, class and deity, attributes, hit points, AC with the armor worn, the shield held, Speed, class DC, spell attack and DC, every skill and save with its rank and modifier, Lores, Strikes, languages, money, gear, spells by rank, feats and features, actions and conditions.
 
         - Every weapon has a Strike, held ones first; one that is carried says so, because you draw it before you Strike with it.
         - `+sheet` shows your own; staff add a name: `+sheet Amiri`.
@@ -4893,8 +5226,54 @@ objects:
         - `+pf2e/hp <player>/<hit points>` sets Hit Points outside an encounter.
         - `+pf2e/ledger <player>\[=money or xp\]` lists the sheet's ledger, or the money or experience ledger with its total.
         - `+pf2e/update` reads Foundry's content again from the feed.
+        - `+deity/create`, `+deity/set`, `+deity/destroy` and `+deity/samples` keep the deity table: `+help pf2e deity staff`.
       SEE`PF2E`STAFF: |-
-        pf2e advance|pf2e
+        pf2e advance|pf2e deity staff|pf2e
+      HELP`PF2E`DEITY: |-
+        `+deity` lists the game's deities. `+deity <name>` shows one: Divine Font, sanctification, domains, favored weapon, divine skill and cleric spells.
+
+        A cleric or champion chooses theirs while building: `+build/choose deity=<name>`. The deity decides:
+
+        - which sanctification they may choose, and a cleric's Divine Font, heal or harm;
+        - the domains Domain Initiate offers, and `+build` then names the domain spell to learn;
+        - the divine skill, which they are trained in;
+        - the favored weapon: a cleric is trained in it, and a champion's Deific Weapon makes a simple one deal a bigger die;
+        - the cleric spells, which a cleric can prepare whatever their tradition.
+
+        `+sheet` shows the deity beside the class.
+
+        Example:
+
+        `+build/choose deity=Solenne`
+
+        Output: `\[PF2E\] Done: Deity (Cleric): Solenne.`
+      SEE`PF2E`DEITY: |-
+        pf2e build|pf2e spells|pf2e deity staff
+      HELP`PF2E`DEITY`STAFF: |-
+        Pathfinder's own deities are Paizo's, so each game keeps a table of its own. Staff fill it in.
+
+        - `+deity/samples` adds nine sample deities with names of their own, such as Solenne the Dawnmother and Brannoch Stormfist. Change them, or use them as worked examples.
+        - `+deity/create <name>` adds a deity.
+        - `+deity/set <deity>/<field>=<value>` fills one field. An empty value clears it.
+        - `+deity/destroy <deity>` removes one. A character who chose it gets nothing from it until it is added again.
+
+        ## Fields
+
+        - `font`: `heal`, `harm`, `heal harm` or `none`.
+        - `sanctification`: `none`, or `can` or `must` with `holy`, `unholy` or both: `can holy`.
+        - `domains` and `alternate`: domains from Player Core, such as `fire healing sun truth`.
+        - `weapon`: weapon names separated by `|`, or `fist`.
+        - `skill`: one skill, such as `medicine`.
+        - `spells`: `<rank> <spell>` separated by `|`: `1 Breathe Fire|3 Fireball`.
+        - `name`, `title` and `text`: what `+deity <name>` shows. Put edicts and anathema in the text.
+
+        Example:
+
+        `+deity/set Solenne/domains=fire healing sun truth`
+
+        Output: `\[PF2E\] Done: Solenne: domains set to Fire, Healing, Sun, and Truth.`
+      SEE`PF2E`DEITY`STAFF: |-
+        pf2e deity|pf2e staff
 
   - ref: data_actions
     type: thing
