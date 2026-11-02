@@ -85,7 +85,7 @@ objects:
       DATA`CHECK`DOMAINS: acrobatics acrobatics-check all arcana arcana-check athletics athletics-check cha-based cha-skill-check check con-based crafting crafting-check deception deception-check dex-based dex-skill-check diplomacy diplomacy-check fortitude fortitude-check int-based int-skill-check intimidation intimidation-check medicine medicine-check nature nature-check occultism occultism-check perception perception-check performance performance-check reflex reflex-check religion religion-check saving-throw skill-check society society-check stealth stealth-check str-based str-skill-check survival survival-check thievery thievery-check will will-check wis-based wis-skill-check lore-skill-check ac hp hp-per-level land-speed all-speeds speed initiative class class-dc spell-attack spell-attack-roll spell-dc attack attack-roll strike-attack-roll melee-strike-attack-roll ranged-strike-attack-roll unarmed-attack-roll str-attack dex-attack mundane-attack damage strike-damage attack-damage melee-strike-damage melee-damage ranged-strike-damage unarmed-damage
       # Which shape of ITEM`<id>`PREP the core reads. The updater prepares an item again when its PREP
       # was made for another shape.
-      DATA`PREP`VERSION: 2
+      DATA`PREP`VERSION: 3
       # The proficiencies other than the statistics: weapon categories, armor categories, spellcasting and the class DC.
       DATA`PROFICIENCIES: simple martial advanced unarmed unarmored light medium heavy spellcasting classdc
       # GM Core's DC for each level, from level -1 to 25, and how much each difficulty moves it.
@@ -860,11 +860,12 @@ objects:
           @@(%0 the rule)[
           cand(not(t(json_query(%0,extract,$.toggleable))),strmatch(firstof(json_query(%0,extract,$.domain),all),all),not(strlen(json_query(%0,extract,$.predicate))),not(regmatch(json_query(%0,extract,$.option),\\x7B)))]
         flags: [funsyntax]
-      # Foundry's ChoiceSet flag: the rule's own, else the item's slug in camel case.
+      # Foundry's ChoiceSet flag: the rule's own, else its slug in camel case, else the item's slug.
       FUN`RULE`CHOICE`FLAG:
         value: |-
           @@(%0 a ChoiceSet, %1 its index; synthetic_slug the item's slug)[
-          firstof(json_query(%0,extract,$.flag),[first(edit(%q<synthetic_slug>,-,%b))][iter(rest(edit(%q<synthetic_slug>,-,%b)),capstr(%i0),%b,)],choice%1)]
+          setq(flag_slug,firstof(json_query(%0,extract,$.slug),%q<synthetic_slug>))][
+          firstof(json_query(%0,extract,$.flag),[first(edit(%q<flag_slug>,-,%b))][iter(rest(edit(%q<flag_slug>,-,%b)),capstr(%i0),%b,)],choice%1)]
         flags: [funsyntax]
       # Foundry's label for a rule's modifier: the rule's own label, else the item's name. A label that is
       # a Foundry language key is not in the feed's items, so the item's name stands for it.
