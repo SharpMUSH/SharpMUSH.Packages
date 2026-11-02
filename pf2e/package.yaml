@@ -1,7 +1,7 @@
 format: "1.16"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.7.0"
+version: "0.7.1"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -2476,7 +2476,7 @@ objects:
           setq(build_badge,if(cand(strmatch(%q<cast_kind>,spontaneous),not(%q<build_cantrip>),not(%q<build_focus>)),firstof(%1,%q<build_base>)))][
           setq(build_classes,setinter(%q<build_opts>,iter(%q<cast_class> [iter(graball(%q<check_options>,feat:*-dedication),before(after(%i0,feat:),-dedication))],item:trait:%i0)))][
           switch(1,
-            cand(%q<build_focus>,words(%q<build_classes>)),u(%!/FUN`BUILD`SPELL`HAVE,%0),
+            cand(%q<build_focus>,cor(words(%q<build_classes>),member(u(%!/FUN`BUILD`DOMAIN`SPELLS),%0))),u(%!/FUN`BUILD`SPELL`HAVE,%0),
             %q<build_focus>,%q<build_name> is a focus spell of another class.,
             not(strlen(%q<cast_kind>)),Your class casts no spells from slots.,
             cand(match(cleric druid,%q<cast_class>),not(%q<build_cantrip>)),As a [capstr(%q<cast_class>)] you prepare any common [capstr(%q<cast_trad>)] spell without learning it: +prepare %q<build_name>.,
@@ -2908,8 +2908,8 @@ objects:
         flags: [funsyntax]
       FUN`BUILD`ANCESTRY`TRAITS:
         value: |-
-          @@(the traits whose ancestry feats the character can take: the ancestry's and the heritage's slug)[
-          squish([u({{core}}/FUN`ITEM`SLUG,%q<build_ancestry_item>)] [if(strlen(%q<build_heritage_item>),u({{core}}/FUN`ITEM`SLUG,%q<build_heritage_item>))])]
+          @@(the traits whose ancestry feats the character can take: the ancestry's and the heritage's slug, and an ancestry adopted with Adopted Ancestry)[
+          squish([u({{core}}/FUN`ITEM`SLUG,%q<build_ancestry_item>)] [if(strlen(%q<build_heritage_item>),u({{core}}/FUN`ITEM`SLUG,%q<build_heritage_item>))] [iter(graball(%q<check_entries>,choice~*|ancestry~*),edit(json_query(%q<check_ledger>,extract,$\[[elements(%i0,7,~)]\].value),",))])]
         flags: [funsyntax]
       # The prerequisites the builder reads: a rank in a skill or save, an attribute modifier, or a feat
       # or feature by name. Gives each that is not met, separated by |.
@@ -3058,14 +3058,16 @@ objects:
             if(u({{core}}/FUN`PREDICATE`TEST,edit(%q<config_predicate>,\{choice|value\},%i0),%q<check_options> [iter(%q<check_stats>,skill:%i0:rank:[u({{core}}/FUN`CHECK`RANK,%i0)])]),"%i0"^[u(%!/FUN`SHOW`STAT,%i0)]),%b,|)]
         flags: [funsyntax]
       # A filter's options: the items of the packs the ChoiceSet names (feats and class features unless
-      # it names spells) that pass its filter, from books the game uses; narrowed first by the indexed
+      # it names spells, ancestries or heritages) that pass its filter, from books the game uses; narrowed first by the indexed
       # statements of the filter.
       FUN`BUILD`CHOICE`ITEMS:
         value: |-
           @@(%0 the ChoiceSet)[
           setqm(items_filter,u({{core}}/FUN`FORMULA`INJECT,json_query(%0,extract,$.choices.filter),json(object,actor,%q<check_actor>)),items_slugs,t(json_query(%0,extract,$.choices.slugsAsValues)))][
-          setq(items_packs,switch(json_query(%0,extract,$.choices.itemType),spell,spells,feats class-features))][
+          setq(items_type,json_query(%0,extract,$.choices.itemType))][
+          setq(items_packs,switch(%q<items_type>,spell,spells,ancestry,ancestries,heritage,heritages,feats class-features))][
           setq(items_keys,u({{core}}/FUN`ITEM`INDEXED,json_map({{core}}/FUN`RULE`SELECTOR,%q<items_filter>,%b)))][
+          if(cand(not(words(%q<items_keys>)),strlen(%q<items_type>)),setq(items_keys,u({{core}}/FUN`ITEM`INDEXED,item:type:%q<items_type>)))][
           setqm(items_actor,u(%!/FUN`BUILD`CHOICE`PART,0),items_own,u(%!/FUN`BUILD`CHOICE`PART,1))][
           setq(items_mixed,regmatch(regeditall(%q<items_own>,"item:\[^"\]*",),"\[a-z\]\[a-z0-9-\]*:))][
           if(u({{core}}/FUN`PREDICATE`TEST,%q<items_actor>,%q<check_options>),
@@ -3157,6 +3159,14 @@ objects:
             strmatch(json_query(%q<staff_rule>,extract,$.choices.itemType),deity),the game has no deities yet: staff add them with +deity/create,
             cor(strmatch(%q<staff_rule>,*deity:primary:*),strmatch(%q<staff_rule>,*system.details.deities.domains*)),choose a deity first,
             staff only: the game's books have nothing to choose)]
+        flags: [funsyntax]
+      # The ids of the initial domain spells of the domains chosen with Domain Initiate or Deity's Domain,
+      # which any class may learn as focus spells.
+      FUN`BUILD`DOMAIN`SPELLS:
+        value: |-
+          @@(check_ registers)[
+          iter(graball(%q<check_entries>,choice~*|domainInitiate~*) [graball(%q<check_entries>,choice~*|deitysDomain~*)],
+            u({{core}}/FUN`ITEM`FIND,spells,first(get({{core}}/DATA`DOMAIN`[lcstr(edit(json_query(%q<check_ledger>,extract,$\[[elements(%i0,7,~)]\].value),",))]),|)))]
         flags: [funsyntax]
       # The initial domain spell of each domain chosen with Domain Initiate or Deity's Domain.
       FUN`BUILD`TODO`DOMAINS:
