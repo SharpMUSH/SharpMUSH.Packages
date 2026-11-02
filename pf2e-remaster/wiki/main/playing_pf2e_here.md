@@ -56,6 +56,10 @@ Output of the class step:
 Strength +4, Trained +3
 ```
 
+Your feats and effects take part in the roll the way they do in Foundry. Fortune rolls two d20s and keeps the higher, misfortune the lower, and when both apply neither does. A feat such as Juggernaut can turn a success into a critical success, and the roll says which feat did it. Notes that apply to the result follow the roll. Assurance and other rules that replace the d20 are named after the statistic: `+check athletics with assurance=20`.
+
+Some feats apply only when you say so, such as Bashing Charge or the choice a Devise a Stratagem takes. `+toggle` lists them, and `+toggle <name>` turns one on or off. In an encounter, `+enc/toggle <name>` changes the encounter's copy and leaves your sheet as it is.
+
 Your sheet is a ledger. Every choice is an entry, and nothing is overwritten, so staff can always see how a character came to be. Money and experience have ledgers of their own: `+pf2e/ledger` shows the sheet's, and `+pf2e/ledger money` and `+pf2e/ledger xp` show the others with their totals.
 
 ## Encounters

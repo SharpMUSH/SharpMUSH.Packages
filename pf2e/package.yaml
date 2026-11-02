@@ -1,7 +1,7 @@
 format: "1.16"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.7.1"
+version: "0.8.0"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -56,6 +56,7 @@ objects:
       DATA`PACK`SPELLS: "{{data_spells}}"
       DATA`PACK`VEHICLES: "{{data_vehicles}}"
       DATA`PACK`PATHFINDER-MONSTER-CORE: "{{data_pathfinder_monster_core}}"
+      DATA`PACK`LANG: "{{data_lang}}"
       # The packs +enc/add and +recall find creatures in, and those +enc/add finds hazards in.
       DATA`CREATURE`PACKS: pathfinder-monster-core
       DATA`HAZARD`PACKS: hazards
@@ -366,6 +367,326 @@ objects:
             1, max(0,dec(%q<degree_base>)),
             %q<degree_base>)]
         flags: [funsyntax]
+      FUN`ROLL: A check's d20 as Foundry's Check.roll makes it. FUN`CHECK`GRANT collects the roll rules (Note, RollTwice, AdjustDegreeOfSuccess, SubstituteRoll) in check_rollrules as kind~pack~id~badge~index.
+      # The rules of one kind that apply to a check: each one's selectors meet the domains and its
+      # predicate holds. pack~id~badge~index~rule for each, rule its index in the item's rules.
+      FUN`ROLLRULE`MATCHING:
+        value: |-
+          @@(%0 a rule kind, %1 the domains, %2 the roll options)[
+          squish(iter(graball(%q<check_rollrules>,%0~*),u(FUN`ROLLRULE`OF,rest(%i0,~),%0,%1,%2)))]
+        flags: [funsyntax]
+      FUN`ROLLRULE`OF:
+        value: |-
+          @@(%0 pack~id~badge~index of a grant, %1 a rule kind, %2 the domains, %3 the roll options)[
+          setq(rr_item,u(FUN`ITEM`GET,first(%0,~),elements(%0,2,~)))][
+          setq(rr_rules,firstof(json_query(%q<rr_item>,extract,$.system.rules),json(array)))][
+          setq(rr_data,u(FUN`ROLLRULE`DATA,%0))][
+          iter(json_map(me/FUN`CHECK`RULEKEY,%q<rr_rules>,%b,%1),if(u(FUN`ROLLRULE`FITS,json_query(%q<rr_rules>,extract,$\[%i0\]),%2,%3),%0~%i0))]
+        flags: [funsyntax]
+      FUN`ROLLRULE`DATA:
+        value: |-
+          @@(%0 pack~id~badge~index of a grant; rr_item its item: the roll data its rules read)[
+          json(object,actor,firstof(%q<check_actor>,json(object)),item,u(FUN`ITEM`DATA,%q<rr_item>,elements(%0,3,~),u(FUN`CHECK`CHOICES,elements(%0,4,~))))]
+        flags: [funsyntax]
+      # A SubstituteRoll with no selector is for every check, and a rule that adjusts the degree of
+      # whoever rolls against its actor (affects origin or target) is not one of its own checks.
+      FUN`ROLLRULE`FITS:
+        value: |-
+          @@(%0 a rule, %1 the domains, %2 the roll options; rr_data the roll data)[
+          cand(
+            not(match(origin target,json_query(%0,extract,$.affects))),
+            words(setinter(firstof(u(FUN`RULE`SELECTORS,%0,%q<rr_data>),if(strmatch(json_query(%0,extract,$.key),SubstituteRoll),check)),%1)),
+            u(FUN`PREDICATE`TEST,u(FUN`FORMULA`INJECT,firstof(json_query(%0,get,predicate),json(array)),%q<rr_data>),%2))]
+        flags: [funsyntax]
+      FUN`ROLLRULE`GET:
+        value: |-
+          @@(%0 pack~id~badge~index~rule)[
+          json_query(u(FUN`ITEM`GET,first(%0,~),elements(%0,2,~)),extract,$.system.rules\[[elements(%0,5,~)]\])]
+        flags: [funsyntax]
+      # Foundry's label: the rule's own, else its item's name without an Effect: or Stance: in front.
+      FUN`ROLLRULE`LABEL:
+        value: |-
+          @@(%0 pack~id~badge~index~rule)[
+          firstof(u(FUN`LANG,json_query(u(FUN`ROLLRULE`GET,%0),extract,$.label)),
+            regeditall(json_query(u(FUN`ITEM`GET,first(%0,~),elements(%0,2,~)),extract,$.name),^\[^:\]+:\\s+,))]
+        flags: [funsyntax]
+      # RollTwice: higher or lower when the rules that apply all keep the same, nothing when none
+      # applies or they disagree.
+      FUN`ROLL`TWICE:
+        value: |-
+          @@(%0 the domains, %1 the roll options)[
+          setq(twice_keeps,setunion(iter(u(FUN`ROLLRULE`MATCHING,RollTwice,%0,%1),firstof(json_query(u(FUN`ROLLRULE`GET,%i0),extract,$.keep),higher)),))][
+          if(eq(words(%q<twice_keeps>),1),%q<twice_keeps>)]
+        flags: [funsyntax]
+      # SubstituteRoll: slug~required~value~effect~pack~id~badge~index~rule for each that applies, the
+      # value held between 1 and 20, the slug the rule's or the item's name sluggified.
+      FUN`ROLL`SUBSTITUTES:
+        value: |-
+          @@(%0 the domains, %1 the roll options)[
+          squish(iter(u(FUN`ROLLRULE`MATCHING,SubstituteRoll,%0,%1),u(FUN`ROLL`SUBSTITUTE,%i0)))]
+        flags: [funsyntax]
+      FUN`ROLL`SUBSTITUTE:
+        value: |-
+          @@(%0 pack~id~badge~index~rule)[
+          setq(rr_item,u(FUN`ITEM`GET,first(%0,~),elements(%0,2,~)))][
+          setq(rr_rule,json_query(%q<rr_item>,extract,$.system.rules\[[elements(%0,5,~)]\]))][
+          setq(rr_value,u(FUN`FORMULA`VALUE,json_query(%q<rr_rule>,get,value),json_mod(u(FUN`ROLLRULE`DATA,%0),set,$.rule,%q<rr_rule>),))][
+          if(isnum(%q<rr_value>),
+            [firstof(json_query(%q<rr_rule>,extract,$.slug),u(FUN`ITEM`SLUGGIFY,json_query(%q<rr_item>,extract,$.name)))]~[strmatch(json_query(%q<rr_rule>,extract,$.required),true)]~[max(1,min(20,trunc(%q<rr_value>)))]~[firstof(json_query(%q<rr_rule>,extract,$.effectType),fortune)]~%0)]
+        flags: [funsyntax]
+      # The substitution that counts: a required one first, else the one asked for by its slug (or the
+      # start of it).
+      FUN`ROLL`CHOOSE:
+        value: |-
+          @@(%0 the domains, %1 the roll options, %2 a slug or nothing)[
+          setq(sub_all,u(FUN`ROLL`SUBSTITUTES,%0,%1))][
+          firstof(
+            first(iter(%q<sub_all>,if(elements(%i0,2,~),%i0))),
+            if(strlen(%2),firstof(first(iter(%q<sub_all>,if(strmatch(first(%i0,~),%2),%i0))),first(iter(%q<sub_all>,if(strmatch(first(%i0,~),%2*),%i0))))))]
+        flags: [funsyntax]
+      # What the d20 is before it is rolled. A substitution and a RollTwice of opposite effects cancel
+      # each other: the d20 is a plain one, and the check takes both the fortune and misfortune options.
+      # Sets roll_twice, roll_sub, roll_dice (the d20's formula, or the substitution's number), roll_tags
+      # (|-separated: Fortune, Misfortune or the substitution) and roll_extra (the roll options this adds,
+      # substitute:<slug> among them, which AdjustModifier rules such as Assurance's read).
+      FUN`ROLL`PLAN:
+        value: |-
+          @@(%0 the domains, %1 the roll options, %2 the substitution asked for, a slug or nothing)[
+          setq(roll_twice,u(FUN`ROLL`TWICE,%0,%1))][
+          setq(roll_sub,u(FUN`ROLL`CHOOSE,%0,%1,%2))][
+          setq(roll_effects,setunion(elements(%q<roll_sub>,4,~) [switch(%q<roll_twice>,higher,fortune,lower,misfortune)],))][
+          switch(1,
+            eq(words(%q<roll_effects>),2), setqm(roll_sub,,roll_twice,,roll_dice,1d20,roll_tags,Fortune|Misfortune,roll_extra,fortune misfortune),
+            t(strlen(%q<roll_sub>)), setqm(roll_dice,elements(%q<roll_sub>,3,~),roll_tags,[capstr(elements(%q<roll_sub>,4,~))] %([u(FUN`ROLLRULE`LABEL,elements(%q<roll_sub>,5 6 7 8 9,~,~))]%),roll_extra,%q<roll_effects> substitute:[first(%q<roll_sub>,~)]),
+            setqm(roll_dice,switch(%q<roll_twice>,higher,2d20kh,lower,2d20kl,1d20),roll_tags,switch(%q<roll_twice>,higher,Fortune,lower,Misfortune),roll_extra,%q<roll_effects>))]
+        flags: [funsyntax]
+      # The check's roll options: the sheet's, its domains', and the statistic's, as Foundry's Statistic adds them.
+      FUN`ROLL`OPTIONS:
+        value: |-
+          @@(%0 a statistic, %1 1 for initiative rolled with it)[
+          squish(%q<check_options> [u(FUN`ROLLOPTION`DOMAINS,u(FUN`STAT`DOMAINS,%0)[if(%1,%binitiative)])] [if(%1,check:statistic:initiative check:statistic:base:%0 check:type:initiative,check:statistic:%0 check:type:[switch(u(FUN`STAT`KIND,%0),skill,skill,lore,skill,save,saving-throw,perception,perception,%0)])])]
+        flags: [funsyntax]
+      # The roll, after FUN`ROLL`PLAN. Sets roll_record, roll_face (the d20's kept face, or the
+      # substitution's number), roll_result, roll_post (check:total:<n>, check:total:natural:<face>,
+      # check:total:delta:<n>), and against a DC roll_unadjusted, roll_degree (0 to 3) and roll_adjust
+      # (amount~rule of the AdjustDegreeOfSuccess that changed it); then roll_notes, the Notes that show.
+      FUN`ROLL`CHECK:
+        value: |-
+          @@(%0 the total modifier, %1 the domains, %2 the roll options with roll_extra, %3 a DC or nothing)[
+          setq(roll_record,roll(%q<roll_dice>[if(gte(%0,0),+%0,%0)],,record))][
+          setq(roll_face,if(strlen(%q<roll_sub>),elements(%q<roll_sub>,3,~),json_query(%q<roll_record>,extract,$.dice\[0\].total)))][
+          setq(roll_result,json_query(%q<roll_record>,extract,$.total))][
+          setq(roll_post,squish(check:total:%q<roll_result> [if(strlen(%q<roll_sub>),,check:total:natural:%q<roll_face>)] [if(strlen(%3),check:total:delta:[sub(%q<roll_result>,%3)])]))][
+          if(strlen(%3),
+            [setq(roll_unadjusted,u(FUN`DEGREE`OF`CHECK,%q<roll_result>,%3,%q<roll_face>))][
+            setq(roll_adjust,u(FUN`ROLL`ADJUSTMENT,%q<roll_unadjusted>,%1,%2 %q<roll_post>))][
+            setq(roll_degree,if(strlen(%q<roll_adjust>),u(FUN`ROLL`ADJUST`TO,%q<roll_unadjusted>,first(%q<roll_adjust>,~)),%q<roll_unadjusted>))],
+            setqm(roll_unadjusted,,roll_adjust,,roll_degree,))][
+          setq(roll_notes,u(FUN`ROLL`NOTES,%1,%2 %q<roll_post>,%q<roll_degree>))]
+        flags: [funsyntax]
+      # AdjustDegreeOfSuccess: every rule that applies writes its adjustments into one record, a later
+      # rule's replacing an earlier one's for the same outcome. The first of all, criticalFailure,
+      # failure, success, criticalSuccess that names an adjustment and is all or the degree rolled
+      # counts, except one degree better on a critical success or worse on a critical failure.
+      FUN`ROLL`ADJUSTMENT:
+        value: |-
+          @@(%0 the degree before, %1 the domains, %2 the roll options: amount~pack~id~badge~index~rule, or nothing)[
+          setqm(ados_all,,ados_criticalFailure,,ados_failure,,ados_success,,ados_criticalSuccess,)][
+          null(iter(u(FUN`ROLLRULE`MATCHING,AdjustDegreeOfSuccess,%1,%2),
+            [setq(ados_rule,u(FUN`ROLLRULE`GET,%i0))][
+            iter(all criticalFailure failure success criticalSuccess,if(strlen(setr(ados_amount,json_query(%q<ados_rule>,extract,$.adjustment.%i0))),setq(ados_%i0,%q<ados_amount>~%i1)))]))][
+          first(iter(lnum(5),
+            [setq(ados_at,r(ados_[extract(all criticalFailure failure success criticalSuccess,inc(%i0),1)]))][
+            if(cand(strlen(%q<ados_at>),
+              not(cand(eq(%0,3),strmatch(first(%q<ados_at>,~),one-degree-better))),
+              not(cand(eq(%0,0),strmatch(first(%q<ados_at>,~),one-degree-worse))),
+              cor(not(%i0),eq(dec(%i0),%0))),%q<ados_at>)]))]
+        flags: [funsyntax]
+      FUN`ROLL`ADJUST`TO:
+        value: |-
+          @@(%0 a degree, %1 an adjustment's amount: the degree it gives)[
+          switch(%1,
+            one-degree-better, min(3,inc(%0)),
+            two-degrees-better, min(3,add(%0,2)),
+            one-degree-worse, max(0,dec(%0)),
+            two-degrees-worse, max(0,sub(%0,2)),
+            to-critical-failure, 0,
+            to-failure, 1,
+            to-success, 2,
+            to-critical-success, 3,
+            %0)]
+        flags: [funsyntax]
+      # Notes: each Note rule that applies, kept when the check has no degree, the note names no
+      # outcome, or its outcomes include the degree.
+      FUN`ROLL`NOTES:
+        value: |-
+          @@(%0 the domains, %1 the roll options with the post-roll ones, %2 the degree or nothing)[
+          squish(iter(u(FUN`ROLLRULE`MATCHING,Note,%0,%1),if(u(FUN`ROLL`NOTE`SHOWS,u(FUN`ROLLRULE`GET,%i0),%2),%i0)))]
+        flags: [funsyntax]
+      FUN`ROLL`NOTE`SHOWS:
+        value: |-
+          @@(%0 a Note rule, %1 the degree or nothing)[
+          setq(note_out,json_query(%0,extract,$.outcome))][
+          cor(not(strlen(%1)),not(strmatch(%q<note_out>,*"*)),strmatch(%q<note_out>,*"[extract(criticalFailure failure success criticalSuccess,inc(%1),1)]"*))]
+        flags: [funsyntax]
+      # A note as Foundry writes it: its title (the item's name reduced, or the rule's) and its text,
+      # injected properties resolved (the item's description among them) and string keys in words.
+      # HTML is left for the display.
+      FUN`ROLL`NOTE`TEXT:
+        value: |-
+          @@(%0 pack~id~badge~index~rule)[
+          setq(rr_item,u(FUN`ITEM`GET,first(%0,~),elements(%0,2,~)))][
+          setq(rr_rule,json_query(%q<rr_item>,extract,$.system.rules\[[elements(%0,5,~)]\]))][
+          setq(rr_text,json(string,get(u(DATA`PACK`[first(%0,~)])/ITEM`[elements(%0,2,~)]`TEXT)))][
+          setq(rr_data,json_mod(json_mod(json_mod(u(FUN`ROLLRULE`DATA,%0),set,$.rule,%q<rr_rule>),set,$.item.description,%q<rr_text>),set,$.item.system.description,json(object,value,%q<rr_text>)))][
+          setq(note_title,regeditall(u(FUN`LANG,trim(u(FUN`FORMULA`INJECT,json_query(%q<rr_rule>,extract,$.title),%q<rr_data>))),^\[^:\]+:\\s+,))][
+          [if(strlen(%q<note_title>),%q<note_title>:%b)][u(FUN`LANG,u(FUN`FORMULA`INJECT,json_query(%q<rr_rule>,extract,$.text),%q<rr_data>))]]
+        flags: [funsyntax]
+      FUN`ROLL`NOTE`GM:
+        value: |-
+          @@(%0 pack~id~badge~index~rule: 1 when only the GM sees the note)[
+          strmatch(json_query(u(FUN`ROLLRULE`GET,%0),extract,$.visibility),gm)]
+        flags: [funsyntax]
+      FUN`ROLLOPTION: RollOption rules that are not always on, as Foundry's RollOptionRuleElement sets them. FUN`CHECK`GRANT collects the grants with any in check_rollopts as pack~id~badge~index.
+      # After the items' own options: each rule whose predicate holds sets its option, a toggle as its
+      # ledger's toggle entries (else the rule's value) say, a count as option:<n>. Options of a domain
+      # other than all go in check_domopts as domain~option, read by the checks of that domain.
+      # check_toggles holds one domain~option~value~selection~pack~id~badge~index~enabled~suboptions~always~rule
+      # per toggle, its suboptions' values joined by dots and rule the rule's index in the item's rules.
+      FUN`ROLLOPTION`ALL:
+        value: |-
+          @@(check_rollopts the grants)[
+          setqm(check_toggles,,check_domopts,)][
+          null(iter(%q<check_rollopts>,u(FUN`ROLLOPTION`GRANT,%i0)))][
+          setq(check_options,squish(%q<check_options>))]
+        flags: [funsyntax]
+      FUN`ROLLOPTION`GRANT:
+        value: |-
+          @@(%0 pack~id~badge~index)[
+          setq(rr_item,u(FUN`ITEM`GET,first(%0,~),elements(%0,2,~)))][
+          setq(ro_rules,firstof(json_query(%q<rr_item>,extract,$.system.rules),json(array)))][
+          setq(rr_data,u(FUN`ROLLRULE`DATA,%0))][
+          null(iter(json_map(me/FUN`CHECK`RULEKEY,%q<ro_rules>,%b,RollOption),u(FUN`ROLLOPTION`ONE,json_query(%q<ro_rules>,extract,$\[%i0\]),%0,%i0)))]
+        flags: [funsyntax]
+      FUN`ROLLOPTION`ONE:
+        value: |-
+          @@(%0 a RollOption rule, %1 pack~id~badge~index, %2 the rule's index; rr_data the roll data)[
+          if(not(u(FUN`RULE`OPTION`STATIC,%0)),
+            [setqm(ro_sel,,ro_domain,u(FUN`FORMULA`INJECT,firstof(json_query(%0,extract,$.domain),all),%q<rr_data>),ro_option,u(FUN`ROLLOPTION`CLEAN,u(FUN`FORMULA`INJECT,json_query(%0,extract,$.option),%q<rr_data>)))][
+            setq(ro_test,%q<check_options> [u(FUN`ROLLOPTION`DOMAIN,%q<ro_domain>)])][
+            if(cand(strlen(%q<ro_option>),u(FUN`PREDICATE`TEST,u(FUN`FORMULA`INJECT,firstof(json_query(%0,get,predicate),json(array)),%q<rr_data>),%q<ro_test>)),
+              switch(json_query(%0,extract,$.toggleable),
+                true, u(FUN`ROLLOPTION`TOGGLE,%0,%1,%2),
+                totm, ,
+                if(strmatch(json_query(%0,extract,$.count),true),
+                  u(FUN`ROLLOPTION`COUNT),
+                  u(FUN`ROLLOPTION`SET,not(strmatch(json_query(%0,extract,$.value),false))))))])]
+        flags: [funsyntax]
+      # Foundry keeps letters, digits, hyphens and colons, one of each in a row.
+      FUN`ROLLOPTION`CLEAN:
+        value: |-
+          @@(%0 an option)[
+          trim(regeditall(regeditall(regeditall(%0,\[^-:\\w\],),:+,:),-+,-))]
+        flags: [funsyntax]
+      FUN`ROLLOPTION`DOMAIN:
+        value: |-
+          @@(%0 a domain: the options set in it, nothing for all)[
+          if(comp(%0,all),iter(graball(%q<check_domopts>,%0~*),rest(%i0,~)))]
+        flags: [funsyntax]
+      # The options of the domains a check reads, such as a skill's options for skill-check.
+      FUN`ROLLOPTION`DOMAINS:
+        value: |-
+          @@(%0 the domains)[
+          if(words(%q<check_domopts>),squish(iter(%0,u(FUN`ROLLOPTION`DOMAIN,%i0))))]
+        flags: [funsyntax]
+      FUN`ROLLOPTION`SET:
+        value: |-
+          @@(%0 1 to set ro_option, and ro_option:ro_sel with a selection, in ro_domain)[
+          if(%0,
+            if(strmatch(%q<ro_domain>,all),
+              setq(check_options,%q<check_options> %q<ro_option>[if(strlen(%q<ro_sel>),%b%q<ro_option>:%q<ro_sel>)]),
+              setq(check_domopts,%q<check_domopts> %q<ro_domain>~%q<ro_option>[if(strlen(%q<ro_sel>),%b%q<ro_domain>~%q<ro_option>:%q<ro_sel>)])))]
+        flags: [funsyntax]
+      # A count: option:1 the first time, then the number one higher for each rule after.
+      FUN`ROLLOPTION`COUNT:
+        value: |-
+          @@(ro_option)[
+          setq(ro_count,first(iter(%q<check_options>,if(cand(strmatch(%i0,%q<ro_option>:*),isint(after(%i0,%q<ro_option>:))),after(%i0,%q<ro_option>:)))))][
+          setq(check_options,[if(strlen(%q<ro_count>),remove(%q<check_options>,%q<ro_option>:%q<ro_count>),%q<check_options>)] %q<ro_option>:[inc(firstof(%q<ro_count>,0))])]
+        flags: [funsyntax]
+      # A toggle: its value is the last toggle entry for its domain and option, else the rule's own;
+      # always on when alwaysActive; disabledValue when disabledIf holds. With suboptions it takes the
+      # selection asked for when that is still one of them, else the rule's, else the first. A rule
+      # with suboptions of which none applies is left out. A mergeable rule whose option is already a
+      # toggle adds its suboptions to that one.
+      FUN`ROLLOPTION`TOGGLE:
+        value: |-
+          @@(%0 the rule, %1 pack~id~badge~index, %2 the rule's index; ro_domain, ro_option, ro_test)[
+          setq(ro_subs,u(FUN`ROLLOPTION`SUBS,%0))][
+          setq(ro_hassubs,cand(strlen(%q<ro_raw>),comp(%q<ro_raw>,\[\])))][
+          setq(ro_have,first(iter(lnum(words(%q<check_toggles>)),if(strmatch(extract(%q<check_toggles>,inc(%i0),1),%q<ro_domain>~%q<ro_option>~*),inc(%i0)))))][
+          setq(ro_state,elements(last(graball(%q<check_entries>,toggle~%q<ro_domain>|%q<ro_option>~*)),3,~))][
+          switch(1,
+            cand(%q<ro_hassubs>,not(words(%q<ro_subs>))), ,
+            cand(strlen(%q<ro_have>),strmatch(json_query(%0,extract,$.mergeable),true)), u(FUN`ROLLOPTION`MERGE,%q<ro_have>),
+            [setq(ro_always,strmatch(json_query(%0,extract,$.alwaysActive),true))][
+            setq(ro_enabled,if(strlen(json_query(%0,extract,$.disabledIf)),not(u(FUN`PREDICATE`TEST,u(FUN`FORMULA`INJECT,json_query(%0,get,disabledIf),%q<rr_data>),%q<ro_test>)),1))][
+            setq(ro_value,switch(1,
+              %q<ro_always>, 1,
+              cand(not(%q<ro_enabled>),match(true false,json_query(%0,extract,$.disabledValue))), strmatch(json_query(%0,extract,$.disabledValue),true),
+              t(strlen(%q<ro_state>)), first(%q<ro_state>,|),
+              strmatch(json_query(%0,extract,$.value),true)))][
+            setq(ro_sel,if(words(%q<ro_subs>),firstof(if(member(%q<ro_subs>,setr(ro_asked,rest(%q<ro_state>,|))),%q<ro_asked>),if(member(%q<ro_subs>,setr(ro_asked,json_query(%0,extract,$.selection))),%q<ro_asked>),first(%q<ro_subs>))))][
+            setq(check_toggles,%q<check_toggles> %q<ro_domain>~%q<ro_option>~%q<ro_value>~%q<ro_sel>~%1~%q<ro_enabled>~[edit(%q<ro_subs>,%b,.)]~%q<ro_always>~%2)][
+            u(FUN`ROLLOPTION`SET,%q<ro_value>)])]
+        flags: [funsyntax]
+      FUN`ROLLOPTION`MERGE:
+        value: |-
+          @@(%0 the toggle's place in check_toggles; ro_subs this rule's suboptions)[
+          setq(ro_had,extract(%q<check_toggles>,%0,1))][
+          setq(check_toggles,replace(%q<check_toggles>,%0,[elements(%q<ro_had>,1 2 3 4 5 6 7 8 9,~,~)]~[edit(setunion(edit(elements(%q<ro_had>,10,~),.,%b),%q<ro_subs>),%b,.)]~[elements(%q<ro_had>,11 12,~,~)]))][
+          if(cand(elements(%q<ro_had>,3,~),member(%q<ro_subs>,setr(ro_sel,rest(%q<ro_state>,|))),not(strmatch(elements(%q<ro_had>,4,~),%q<ro_sel>))),u(FUN`ROLLOPTION`SET,1))]
+        flags: [funsyntax]
+      # The values of the suboptions whose predicates hold: a list in the rule, or every skill for
+      # config skills, its predicate read with {choice|value} the skill.
+      FUN`ROLLOPTION`SUBS:
+        value: |-
+          @@(%0 the rule; rr_data, ro_test)[
+          setq(ro_raw,json_query(%0,get,suboptions))][
+          switch(left(%q<ro_raw>,1),
+            \[, squish(json_map(me/FUN`ROLLOPTION`SUB,%q<ro_raw>,%b)),
+            \{, if(strmatch(json_query(%q<ro_raw>,extract,$.config),skills),
+              [setq(ro_ranks,iter(graball(%q<check_entries>,rank~*),skill:[elements(%i0,2,~)]:rank:[elements(%i0,3,~)]))][
+              squish(iter(v(DATA`STATISTICS),if(cand(strmatch(u(FUN`STAT`KIND,%i0),skill),u(FUN`PREDICATE`TEST,edit(firstof(json_query(%q<ro_raw>,get,predicate),json(array)),\{choice|value\},%i0),%q<ro_test> %q<ro_ranks>)),%i0)))]))]
+        flags: [funsyntax]
+      FUN`ROLLOPTION`SUB:
+        value: |-
+          @@(json_map's callback, %1 a suboption)[
+          if(u(FUN`PREDICATE`TEST,u(FUN`FORMULA`INJECT,firstof(json_query(%1,get,predicate),json(array)),%q<rr_data>),%q<ro_test>),json_query(%1,extract,$.value))]
+        flags: [funsyntax]
+      # Foundry's flag for a toggle's selection, the option in dromedary case: devise-a-stratagem is deviseAStratagem.
+      FUN`ROLLOPTION`FLAG:
+        value: |-
+          @@(%0 an option)[
+          setq(ro_words,lcstr(edit(edit(%0,:,%b),-,%b)))][
+          [first(%q<ro_words>)][iter(rest(%q<ro_words>),capstr(%i0),%b,)]]
+        flags: [funsyntax]
+      FUN`LANG: Foundry's English strings, LANG`<KEY> on data_lang, from the feed's lang files.
+      # A key such as PF2E.SpecificRule.Assurance.Note in words; text with @Localize[key] in it, each
+      # in words. Anything else, or a key the game lacks, is left as it is.
+      FUN`LANG:
+        value: |-
+          @@(%0 a key or text)[
+          if(regmatch(%0,^PF2E\\.\[\\w.-\]+$),
+            firstof(u(FUN`LANG`GET,%0),%0),
+            if(strmatch(%0,*@Localize\[*),regeditall(%0,@Localize\\\[%(\[^\\\]\]+%)\\\],u(FUN`LANG`GET,$1)),%0))]
+        flags: [funsyntax]
+      FUN`LANG`GET:
+        value: |-
+          @@(%0 a key)[
+          setq(lang_value,get(u(DATA`PACK`LANG)/LANG`%0))][
+          if(strlen(%q<lang_value>),json_query(%q<lang_value>,unescape))]
+        flags: [funsyntax]
       FUN`FORMULA: Rule element values. %1 is the roll data, a JSON object with actor, item and rule keys shaped like Foundry's.
       # Foundry's RuleElement.resolveValue for a number or a string: injected properties first, then a
       # whole number is that number, text without @ is that text, and a formula is rolled with the roll
@@ -437,7 +758,8 @@ objects:
             formula, ucstr(json_query(%1,extract,$.id)),
             choice, [json_query(%1,extract,$.entry)]|[json_query(%1,extract,$.flag)],
             rune, [ucstr(json_query(%1,extract,$.id))]|[json_query(%1,extract,$.rune)],
-            language, json_query(%1,extract,$.name))]~[switch(%q<sheet_kind>,
+            language, json_query(%1,extract,$.name),
+            toggle, [json_query(%1,extract,$.domain)]|[json_query(%1,extract,$.option)])]~[switch(%q<sheet_kind>,
             level, json_query(%1,extract,$.level),
             ability, json_query(%1,extract,$.mod),
             rank, json_query(%1,extract,$.rank),
@@ -449,6 +771,7 @@ objects:
             rune, json_query(%1,extract,$.value),
             hp, json_query(%1,extract,$.value),
             signature, json_query(%1,extract,$.rank),
+            toggle, [strmatch(json_query(%1,extract,$.value),true)]|[json_query(%1,extract,$.selection)],
             1)]~[json_query(%1,extract,$.n)]~[json_query(%1,extract,$.parent)]~[json_query(%1,extract,$.level)]~%2~[json_query(%1,extract,$.step)]
         flags: [funsyntax]
       FUN`SHEET`REVOKED:
@@ -936,11 +1259,12 @@ objects:
           setq(check_entries,u(FUN`SHEET`ENTRIES,%0))][
           setq(check_level,u(FUN`SHEET`LEVEL,%q<check_entries>))][
           setq(check_grants,u(FUN`SHEET`GRANTS,%q<check_entries>,%q<check_level>))][
-          setqm(check_options,self:level:%q<check_level>,check_conditions,,check_static,,check_dynamic,,check_names,,check_unapplied,,check_upgrades,,check_rankdyn,,check_strikes,,check_martial,,check_forms,,check_adjust,,check_actortraits,,check_traits,,check_adjstrike,,check_resgrants,,check_craftgrants,,check_favoredrules,,check_ancestry,,check_heritage,,check_background,,check_class,)][
+          setqm(check_options,self:level:%q<check_level>,check_conditions,,check_static,,check_dynamic,,check_names,,check_unapplied,,check_upgrades,,check_rankdyn,,check_strikes,,check_martial,,check_forms,,check_adjust,,check_rollrules,,check_rollopts,,check_toggles,,check_domopts,,check_actortraits,,check_traits,,check_adjstrike,,check_resgrants,,check_craftgrants,,check_favoredrules,,check_ancestry,,check_heritage,,check_background,,check_class,)][
           null(iter(%q<check_grants>,u(FUN`CHECK`GRANT,%i0)))][
           u(FUN`CHECK`DEITY)][
           null(iter(%q<check_actortraits>,u(FUN`CHECK`ACTORTRAITS,%i0)))][
           setq(check_options,squish(%q<check_options> [iter(%q<check_traits>,self:trait:%i0)]))][
+          u(FUN`ROLLOPTION`ALL)][
           null(iter(%q<check_rankdyn>,u(FUN`CHECK`RANKDYN,%i0)))][
           setq(check_upgrades,%q<check_upgrades> [u(FUN`CHECK`SPELLRANKS)])][
           setq(check_form,u(FUN`CHECK`FORM))][
@@ -1258,7 +1582,9 @@ objects:
           if(member(%q<grant_unapplied>,CraftingAbility),[setq(check_craftgrants,%q<check_craftgrants> %q<grant_pack>~%q<grant_id>)][setq(grant_unapplied,remove(%q<grant_unapplied>,CraftingAbility))])][
           if(member(%q<grant_unapplied>,ActorTraits),[setq(check_actortraits,%q<check_actortraits> %q<grant_pack>~%q<grant_id>~%q<grant_badge>~%q<grant_index>)][setq(grant_unapplied,remove(%q<grant_unapplied>,ActorTraits))])][
           if(member(%q<grant_unapplied>,AdjustStrike),[setq(check_adjstrike,%q<check_adjstrike> %q<grant_pack>~%q<grant_id>~%q<grant_badge>~%q<grant_index>)][if(not(u(FUN`CHECK`ADJSTRIKE`OTHER,%q<grant_pack>,%q<grant_id>)),setq(grant_unapplied,remove(%q<grant_unapplied>,AdjustStrike)))])][
-          if(member(%q<grant_unapplied>,AdjustModifier),[setq(check_adjust,squish(%q<check_adjust> [u(FUN`CHECK`ADJUSTS,%q<grant_pack>,%q<grant_id>)]))][setq(grant_unapplied,remove(%q<grant_unapplied>,AdjustModifier))])][
+          if(member(%q<grant_unapplied>,AdjustModifier),[setq(check_adjust,squish(%q<check_adjust> [u(FUN`CHECK`ADJUSTS,%q<grant_pack>,%q<grant_id>,%q<grant_badge>,%q<grant_index>)]))][setq(grant_unapplied,remove(%q<grant_unapplied>,AdjustModifier))])][
+          if(member(%q<grant_unapplied>,RollOption),[setq(check_rollopts,%q<check_rollopts> %q<grant_pack>~%q<grant_id>~%q<grant_badge>~%q<grant_index>)][setq(grant_unapplied,remove(%q<grant_unapplied>,RollOption))])][
+          null(iter(Note RollTwice AdjustDegreeOfSuccess SubstituteRoll,if(member(%q<grant_unapplied>,%i0),[setq(check_rollrules,%q<check_rollrules> %i0~%q<grant_pack>~%q<grant_id>~%q<grant_badge>~%q<grant_index>)][setq(grant_unapplied,remove(%q<grant_unapplied>,%i0))])))][
           setq(check_options,squish(%q<check_options> %q<grant_options>[if(cand(strlen(%q<grant_badge>),match(condition effect,%q<grant_kind>)),%b[first(%q<grant_options>)]:%q<grant_badge>)] [if(words(%q<grant_choiceopts>),u(FUN`CHECK`CHOICE`OPTIONS,%q<grant_choiceopts>,u(FUN`CHECK`CHOICES,%q<grant_index>)))]))][
           if(strmatch(%q<grant_kind>,condition),setq(check_conditions,%q<check_conditions> [json_query(%q<grant_prep>,extract,$.slug)]~%q<grant_badge>))][
           if(gt(strlen(%q<grant_synth>),2),setq(check_static,[if(strlen(%q<check_static>),%q<check_static>\,)][mid(%q<grant_synth>,1,sub(strlen(%q<grant_synth>),2))]))][
@@ -1366,7 +1692,8 @@ objects:
           @@(%0 the grant's index in check_ledger)[
           if(strlen(%0),
             [setq(choices_out,firstof(json_query(%q<check_ledger>,extract,$\[%0\].choices),json(object)))][
-            null(iter(graball(%q<check_entries>,choice~[json_query(%q<check_ledger>,extract,$\[%0\].n)]|*),setq(choices_out,json_mod(%q<choices_out>,patch,json(object,after(elements(%i0,2,~),|),json_query(%q<check_ledger>,extract,$\[[elements(%i0,7,~)]\].value))))))]%q<choices_out>,
+            null(iter(graball(%q<check_entries>,choice~[json_query(%q<check_ledger>,extract,$\[%0\].n)]|*),setq(choices_out,json_mod(%q<choices_out>,patch,json(object,after(elements(%i0,2,~),|),json_query(%q<check_ledger>,extract,$\[[elements(%i0,7,~)]\].value))))))][
+            null(iter(%q<check_toggles>,if(cand(strmatch(elements(%i0,8,~),%0),elements(%i0,3,~),strlen(elements(%i0,4,~))),setq(choices_out,json_mod(%q<choices_out>,patch,json(object,u(FUN`ROLLOPTION`FLAG,elements(%i0,2,~)),if(isint(elements(%i0,4,~)),elements(%i0,4,~),json(string,elements(%i0,4,~)))))))))]%q<choices_out>,
             json(object))]
         flags: [funsyntax]
       # option:value for each ChoiceSet with a roll option that has a selection; a selected item gives its slug.
@@ -1396,21 +1723,28 @@ objects:
       # options of its own (a weapon's), a synthetic's predicate is tested again with them too.
       FUN`CHECK`MODS:
         value: |-
-          @@(%0 the base entries, %1 the domains, %2 more roll options, or nothing)[
+          @@(%0 the base entries, %1 the domains, %2 more roll options, or nothing; the domains' own options are added to them)[
+          setq(mods_more,squish(%2 [u(FUN`ROLLOPTION`DOMAINS,%1)]))][
           setq(mods_all,%0 [
             iter(sort(setunion(iter(%1,iter(graball(%q<check_index>,%i0~*),after(%i0,~))),),n),
-              if(strmatch(setr(mods_flat,if(words(%2),u(FUN`CHECK`FLAT,%i0,%q<check_options> %2),elements(%q<check_flats>,inc(%i0)))),-),,%q<mods_flat>))])][
-          u(FUN`MODIFIER`STACK,if(words(%q<check_adjust>),iter(%q<mods_all>,u(FUN`CHECK`ADJUST,%i0,%1,%2)),%q<mods_all>))]
+              if(strmatch(setr(mods_flat,if(words(%q<mods_more>),u(FUN`CHECK`FLAT,%i0,%q<check_options> %q<mods_more>),elements(%q<check_flats>,inc(%i0)))),-),,%q<mods_flat>))])][
+          u(FUN`MODIFIER`STACK,if(words(%q<check_adjust>),squish(iter(%q<mods_all>,u(FUN`CHECK`ADJUST,%i0,%1,%q<mods_more>))),%q<mods_all>))]
         flags: [funsyntax]
-      # An entry as the AdjustModifier rules change it: each rule whose selector is among the domains, whose
-      # slug is the entry's (or that names none) and whose predicate holds multiplies, adds, subtracts,
-      # overrides, upgrades or downgrades its value, in the order granted.
+      # An entry as the AdjustModifier rules change it: the rules whose selector is among the domains,
+      # whose slug is the entry's (or that name none) and whose predicate holds with the check's roll
+      # options and the modifier's own (bonus:type:item, penalty:slug:frightened, ...). One that
+      # suppresses drops the entry; the others multiply, add, subtract, override, upgrade or downgrade
+      # its value, in the order granted.
       FUN`CHECK`ADJUST:
         value: |-
           @@(%0 type~value~slug~force, %1 the domains, %2 more roll options)[
-          setq(adj_value,elements(%0,2,~))][
-          null(iter(%q<check_adjust>,
-            if(cand(cor(not(strlen(elements(%i0,5,~))),strmatch(elements(%i0,5,~),elements(%0,3,~))),words(setinter(edit(elements(%i0,4,~),.,%b),%1)),u(FUN`PREDICATE`TEST,firstof(json_query(u(FUN`ITEM`GET,first(%i0,~),elements(%i0,2,~)),extract,$.system.rules\[[elements(%i0,3,~)]\].predicate),json(array)),%q<check_options> %2)),
+          setqm(adj_value,elements(%0,2,~),adj_type,first(%0,~),adj_slug,elements(%0,3,~))][
+          setq(adj_kind,switch(1,cand(gte(%q<adj_value>,0),not(match(ability untyped,%q<adj_type>))),bonus,cand(lt(%q<adj_value>,0),comp(%q<adj_type>,ability)),penalty,modifier))][
+          setq(adj_options,%q<check_options> %2 %q<adj_kind>:slug:%q<adj_slug> %q<adj_kind>:type:%q<adj_type> %q<adj_kind>:value:%q<adj_value>[if(strmatch(%q<adj_type>,ability),%bmodifier:ability:%q<adj_slug>)])][
+          setq(adj_rules,iter(%q<check_adjust>,
+            if(cand(cor(not(strlen(elements(%i0,5,~))),strmatch(elements(%i0,5,~),%q<adj_slug>)),words(setinter(edit(elements(%i0,4,~),.,%b),%1)),u(FUN`PREDICATE`TEST,firstof(json_query(u(FUN`ITEM`GET,first(%i0,~),elements(%i0,2,~)),extract,$.system.rules\[[elements(%i0,3,~)]\].predicate),json(array)),%q<adj_options>)),%i0)))][
+          if(words(iter(%q<adj_rules>,if(strmatch(elements(%i0,6,~),suppress),x))),,
+            [null(iter(%q<adj_rules>,
               setq(adj_value,switch(elements(%i0,6,~),
                 multiply,trunc(mul(%q<adj_value>,elements(%i0,7,~))),
                 add,add(%q<adj_value>,elements(%i0,7,~)),
@@ -1418,20 +1752,27 @@ objects:
                 override,elements(%i0,7,~),
                 upgrade,max(%q<adj_value>,elements(%i0,7,~)),
                 downgrade,min(%q<adj_value>,elements(%i0,7,~)),
-                %q<adj_value>)))))][
-          [first(%0,~)]~%q<adj_value>~[rest(rest(%0,~),~)]]
+                %q<adj_value>))))][
+            %q<adj_type>~%q<adj_value>~[rest(rest(%0,~),~)]])]
         flags: [funsyntax]
-      # A grant's AdjustModifier rules with a number for a value: pack~id~index~selectors~slug~mode~value,
-      # the selectors joined by dots.
+      # A grant's AdjustModifier rules with a number for a value or that suppress:
+      # pack~id~index~selectors~slug~mode~value, the selectors (selector or selectors, injected
+      # properties resolved with the grant's choices) joined by dots, and mode suppress for one that
+      # suppresses.
       FUN`CHECK`ADJUSTS:
         value: |-
-          @@(%0 a pack, %1 an id)[
-          iter(json_map(me/FUN`CHECK`ADJUSTS`ONE,firstof(json_query(u(FUN`ITEM`GET,%0,%1),extract,$.system.rules),json(array)),%b),%0~%1~%i0)]
+          @@(%0 a pack, %1 an id, %2 the grant's badge, %3 its index in check_ledger)[
+          setq(adjusts_item,u(FUN`ITEM`GET,%0,%1))][
+          iter(json_map(me/FUN`CHECK`ADJUSTS`ONE,firstof(json_query(%q<adjusts_item>,extract,$.system.rules),json(array)),%b,json(object,actor,json(object),item,u(FUN`ITEM`DATA,%q<adjusts_item>,%2,u(FUN`CHECK`CHOICES,%3)))),%0~%1~%i0)]
         flags: [funsyntax]
       FUN`CHECK`ADJUSTS`ONE:
         value: |-
-          @@(json_map's callback, %1 a rule, %2 its index)[
-          if(cand(strmatch(json_query(%1,extract,$.key),AdjustModifier),isnum(json_query(%1,extract,$.value))),%2~[edit(u(FUN`RULE`SELECTORS,%1,json(object)),%b,.)]~[edit(json_query(%1,extract,$.slug),",)]~[edit(json_query(%1,extract,$.mode),",)]~[json_query(%1,extract,$.value)])]
+          @@(json_map's callback, %1 a rule, %2 its index, %3 the roll data)[
+          if(strmatch(json_query(%1,extract,$.key),AdjustModifier),
+            [setq(adjusts_selectors,edit(u(FUN`RULE`SELECTORS,if(strlen(json_query(%1,get,selectors)),json_mod(%1,set,$.selector,json_query(%1,get,selectors)),%1),%3),%b,.))][
+            switch(1,
+              strmatch(json_query(%1,extract,$.suppress),true), %2~%q<adjusts_selectors>~[edit(json_query(%1,extract,$.slug),",)]~suppress~0,
+              isnum(json_query(%1,extract,$.value)), %2~%q<adjusts_selectors>~[edit(json_query(%1,extract,$.slug),",)]~[edit(json_query(%1,extract,$.mode),",)]~[json_query(%1,extract,$.value)])])]
         flags: [funsyntax]
       FUN`CHECK`TOTAL:
         value: |-
@@ -1456,12 +1797,12 @@ objects:
       # given, such as initiative).
       FUN`CHECK`CHOSEN:
         value: |-
-          @@(%0 a statistic, %1 more domains)[
+          @@(%0 a statistic, %1 more domains, %2 more roll options)[
           setq(chosen_attribute,u(FUN`STAT`ATTRIBUTE,%0))][
-          setq(chosen_mods,u(FUN`CHECK`MODS,ability~[u(FUN`CHECK`ABILITY,%q<chosen_attribute>)]~%q<chosen_attribute>~0 proficiency~[u(FUN`CHECK`PROFICIENCY,u(FUN`CHECK`RANK,%0))]~proficiency~0 [u(FUN`CHECK`ARMOR`PENALTY,%0,%q<chosen_attribute>)] [u(FUN`CHECK`RESILIENT,%0)],u(FUN`STAT`DOMAINS,%0) %1,))][
+          setq(chosen_mods,u(FUN`CHECK`MODS,ability~[u(FUN`CHECK`ABILITY,%q<chosen_attribute>)]~%q<chosen_attribute>~0 proficiency~[u(FUN`CHECK`PROFICIENCY,u(FUN`CHECK`RANK,%0))]~proficiency~0 [u(FUN`CHECK`ARMOR`PENALTY,%0,%q<chosen_attribute>)] [u(FUN`CHECK`RESILIENT,%0)],u(FUN`STAT`DOMAINS,%0) %1,%2))][
           setq(chosen_form,u(FUN`CHECK`FORM`GET,skills.%0.modifier))][
           if(cand(isint(%q<chosen_form>),gt(%q<chosen_form>,u(FUN`CHECK`TOTAL,%q<chosen_mods>))),
-            u(FUN`CHECK`FORMONLY,u(FUN`CHECK`MODS,untyped~%q<chosen_form>~battle-form~0,u(FUN`STAT`DOMAINS,%0) %1,),status circumstance),
+            u(FUN`CHECK`FORMONLY,u(FUN`CHECK`MODS,untyped~%q<chosen_form>~battle-form~0,u(FUN`STAT`DOMAINS,%0) %1,%2),status circumstance),
             %q<chosen_mods>)]
         flags: [funsyntax]
       # A resilient rune on the worn armor: its item bonus to saving throws.
@@ -1827,6 +2168,11 @@ objects:
         value: |-
           @break not(words(%q<opts_old>)); @dolist/inplace %q<opts_old>=&OPT`## %q<store>=[remove(get(%q<store>/OPT`##),%q<id>)]
         flags: [cmdsyntax]
+      # A line of a lang file: <key> <hash> LANG <JSON string>.
+      INC`IMPORT`LANG:
+        value: |-
+          &LANG`%q<id> %q<store>=%q<value>
+        flags: [cmdsyntax]
       INC`IMPORT`TEXT:
         value: |-
           &ITEM`%q<id>`TEXT %q<store>=[json_query(%q<value>,unescape)]
@@ -1848,7 +2194,7 @@ objects:
       # path|pack|book|hash.
       FUN`FEED`FILES:
         value: |-
-          json_map(me/FUN`FEED`BOOK,json_query(%0,get,books))
+          squish([json_map(me/FUN`FEED`BOOK,json_query(%0,get,books))] [if(strlen(json_query(%0,get,lang)),json_map(me/FUN`FEED`FILE,json_query(%0,get,lang),%b,lang))])
         flags: [funsyntax]
       FUN`FEED`BOOK:
         value: |-
@@ -1864,8 +2210,8 @@ objects:
         flags: [funsyntax]
       FUN`FEED`KEY:
         value: |-
-          @@(%0 a file's path, items/pc1/feats-3.txt, as the key PC1-FEATS-3)[
-          ucstr(edit(before(after(%0,items/),.txt),/,-))]
+          @@(%0 a file's path, items/pc1/feats-3.txt, as the key PC1-FEATS-3; lang/strings-1.txt as LANG-STRINGS-1)[
+          ucstr(edit(before(if(strmatch(%0,items/*),after(%0,items/),%0),.txt),/,-))]
         flags: [funsyntax]
 
   # The commands. WIZARD so that it reads and writes the ledger on any character. Each ledger entry is
@@ -2241,17 +2587,94 @@ objects:
           @break not(strmatch(json_query(%q<entry_json>,type),object))=@pemit %#=notice(PF2E,The entry could not be written: %q<entry_json>,error); think setq(entry_n,inc(lmax(0 [iter(lattr(%q<sheet_target>/PF2E`LEDGER`*),last(%i0,`))]))); &PF2E`LEDGER`%q<entry_n> %q<sheet_target>=[json_mod(%q<entry_json>,patch,json(object,n,%q<entry_n>,by,json(string,objid(%#))))]; @set %q<sheet_target>/PF2E`LEDGER`%q<entry_n>=wizard; @pemit %#=notice(PF2E,[if(strmatch(num(%q<sheet_target>),num(%#)),,[name(%q<sheet_target>)]:%b)]%q<entry_text> %(entry %q<entry_n>%).,ok)
         flags: [cmdsyntax]
       # A check: the statistic's modifiers stacked, a d20 rolled and kept, and against a DC its degree.
+      # "with <slug>" anywhere after the statistic picks a roll substitution, such as with assurance.
       INC`CHECK`ROLL:
         value: |-
-          think setq(roll_stat,u(%!/FUN`COMMAND`STAT,%q<cmd_stat>)); @assert eq(words(%q<roll_stat>),1)=@pemit %#=notice(PF2E,u(%!/FUN`SHOW`STAT`MISS,%q<cmd_stat>,%q<roll_stat>),warn); @assert cor(not(strlen(%q<cmd_dc>)),isint(%q<cmd_dc>))=@pemit %#=notice(PF2E,A DC is a whole number%, such as +check athletics=20.,warn); think u(%!/FUN`CHECK`PREPARE); @remit %l=notice(PF2E,u(%!/FUN`SHOW`CHECK))
+          think setqm(with_at,match(%q<cmd_stat>,with),with_dc,match(%q<cmd_dc>,with)); think setqm(cmd_with,trim(if(%q<with_at>,extract(%q<cmd_stat>,inc(%q<with_at>),99),if(%q<with_dc>,extract(%q<cmd_dc>,inc(%q<with_dc>),99)))),cmd_stat,if(%q<with_at>,extract(%q<cmd_stat>,1,dec(%q<with_at>)),%q<cmd_stat>),cmd_dc,if(%q<with_dc>,extract(%q<cmd_dc>,1,dec(%q<with_dc>)),%q<cmd_dc>)); think setq(roll_stat,u(%!/FUN`COMMAND`STAT,%q<cmd_stat>)); @assert eq(words(%q<roll_stat>),1)=@pemit %#=notice(PF2E,u(%!/FUN`SHOW`STAT`MISS,%q<cmd_stat>,%q<roll_stat>),warn); @assert cor(not(strlen(%q<cmd_dc>)),isint(%q<cmd_dc>))=@pemit %#=notice(PF2E,A DC is a whole number%, such as +check athletics=20.,warn); think u(%!/FUN`CHECK`PREPARE); @assert cor(not(strlen(%q<cmd_with>)),strlen(%q<roll_sub>),strmatch(%q<roll_tags>,Fortune|Misfortune))=@pemit %#=notice(PF2E,u(%!/FUN`SHOW`SUB`MISS),warn); think u({{core}}/FUN`ROLL`CHECK,%q<roll_total>,%q<roll_domains>,%q<roll_options> %q<roll_extra>,%q<cmd_dc>); @remit %l=notice(PF2E,u(%!/FUN`SHOW`CHECK)); @include %!/INC`CHECK`GMNOTES
+        flags: [cmdsyntax]
+      # Notes only the GM sees go to the GM of the room's encounter, else to staff who rolled.
+      INC`CHECK`GMNOTES:
+        value: |-
+          think setq(gm_notes,iter(%q<roll_notes>,if(u({{core}}/FUN`ROLL`NOTE`GM,%i0),%i0))); @break not(words(%q<gm_notes>)); think setq(gm_to,firstof(json_query(get({{table}}/ENC`[edit(num(%l),#,)]),extract,$.gm),if(permission(%#,softcode.pf2e.staff),%#))); @break not(strlen(%q<gm_to>)); @pemit %q<gm_to>=notice(PF2E,GM note on [name(%q<sheet_target>)]'s [capstr(%q<roll_stat>)]:%r[iter(%q<gm_notes>,u(%!/FUN`SHOW`TEXT,regeditall(u({{core}}/FUN`ROLL`NOTE`TEXT,%i0),\[\\r\\n\]+,%b)),%b,%r)])
         flags: [cmdsyntax]
       FUN`CHECK`PREPARE:
         value: |-
-          @@(sets the core's check_ registers, then roll_chosen, roll_total and roll_record)[
+          @@(sets the core's check_ registers, then roll_domains, roll_options, roll_chosen, roll_total and what FUN`ROLL`PLAN sets)[
           u({{core}}/FUN`CHECK`PREPARE,%q<sheet_ledger>)][
-          setq(roll_chosen,u({{core}}/FUN`CHECK`CHOSEN,%q<roll_stat>))][
-          setq(roll_total,ladd(0 [iter(%q<roll_chosen>,elements(%i0,2,~))]))][
-          setq(roll_record,roll(1d20[u(%!/FUN`SHOW`SIGNED,%q<roll_total>)],,record))]
+          setq(roll_domains,u({{core}}/FUN`STAT`DOMAINS,%q<roll_stat>))][
+          setq(roll_options,u({{core}}/FUN`ROLL`OPTIONS,%q<roll_stat>))][
+          u({{core}}/FUN`ROLL`PLAN,%q<roll_domains>,%q<roll_options>,%q<cmd_with>)][
+          setq(roll_chosen,u({{core}}/FUN`CHECK`CHOSEN,%q<roll_stat>,,%q<roll_options> %q<roll_extra>))][
+          setq(roll_total,ladd(0 [iter(%q<roll_chosen>,elements(%i0,2,~))]))]
+        flags: [funsyntax]
+      # +toggle: the sheet's toggles, the RollOption rules a player turns on and off. Each change is a
+      # toggle entry in the ledger, so a later one wins and an encounter's copy keeps its own.
+      CMD`TOGGLE:
+        value: |-
+          $(?is)^\+toggle(?\: +(.*))?$:think setq(cmd_args,trim(%1)); think u(%!/FUN`COMMAND`TARGET); think setqm(cmd_name,trim(before(%q<cmd_rest>,=)),cmd_to,lcstr(trim(after(%q<cmd_rest>,=)))); @include %!/INC`TARGET`VIEW; think u({{core}}/FUN`CHECK`PREPARE,%q<sheet_ledger>); @assert strlen(%q<cmd_name>)={@pemit %#=u(%!/FUN`SHOW`TOGGLES)}; @include %!/INC`TOGGLE`SET
+        flags: [regexp, cmdsyntax]
+      INC`TOGGLE`SET:
+        value: |-
+          think setq(tg_at,u(%!/FUN`TOGGLE`FIND,%q<cmd_name>)); @assert eq(words(%q<tg_at>),1)=@pemit %#=notice(PF2E,u(%!/FUN`TOGGLE`MISS,%q<cmd_name>,%q<tg_at>),warn); think u(%!/FUN`TOGGLE`ASK,%q<tg_at>,%q<cmd_to>); @assert cor(match(on off,%q<cmd_to>),not(strlen(%q<cmd_to>)),strlen(%q<tg_sel>))=@pemit %#=notice(PF2E,%q<tg_label> has no choice called %q<cmd_to>. The choices are [itemize(iter(%q<tg_subs>,u(%!/FUN`TOGGLE`SUBLABEL,%q<tg_at>,%i0),%b,|),|,or)].,warn); @assert cor(%q<tg_value>,not(elements(%q<tg>,11,~)))=@pemit %#=notice(PF2E,%q<tg_label> is always on. +toggle %q<tg_label>=<choice> picks one of [itemize(iter(%q<tg_subs>,u(%!/FUN`TOGGLE`SUBLABEL,%q<tg_at>,%i0),%b,|),|,or)].,warn); @assert elements(%q<tg>,9,~)=@pemit %#=notice(PF2E,%q<tg_label> cannot be changed now.,warn); think setq(entry_json,json(object,kind,"toggle",domain,json(string,first(%q<tg>,~)),option,json(string,elements(%q<tg>,2,~)),value,if(%q<tg_value>,true,false),selection,if(strlen(%q<tg_sel>),json(string,%q<tg_sel>),null))); @include %!/INC`BUILD`PUT; @pemit %#=notice(PF2E,[if(strmatch(num(%q<sheet_target>),num(%#)),,[name(%q<sheet_target>)]:%b)]%q<tg_label>: [if(%q<tg_value>,on,off)][if(strlen(%q<tg_sel>),%, [u(%!/FUN`TOGGLE`SUBLABEL,%q<tg_at>,%q<tg_sel>)])].,ok)
+        flags: [cmdsyntax]
+      FUN`TOGGLE`ASK:
+        value: |-
+          @@(%0 a toggle's place in check_toggles, %1 what was asked for: on, off, a choice, or nothing to turn it over. Sets tg, tg_label, tg_subs, tg_value and tg_sel)[
+          setq(tg,extract(%q<check_toggles>,%0,1))][
+          setqm(tg_label,u(%!/FUN`TOGGLE`LABEL,%0),tg_subs,edit(elements(%q<tg>,10,~),.,%b))][
+          setqm(tg_value,switch(%1,,not(elements(%q<tg>,3,~)),off,0,1),tg_sel,if(match(on off,%1),elements(%q<tg>,4,~),if(strlen(%1),u(%!/FUN`TOGGLE`SUBFIND,%0,%1),elements(%q<tg>,4,~))))]
+        flags: [funsyntax]
+      FUN`TOGGLE`LABEL:
+        value: |-
+          @@(%0 a toggle's place in check_toggles)[
+          u({{core}}/FUN`ROLLRULE`LABEL,elements(extract(%q<check_toggles>,%0,1),5 6 7 8 12,~,~))]
+        flags: [funsyntax]
+      # A suboption's label: the rule's for it, else the value in words.
+      FUN`TOGGLE`SUBLABEL:
+        value: |-
+          @@(%0 a toggle's place in check_toggles, %1 a suboption's value)[
+          setq(tg_rule,u({{core}}/FUN`ROLLRULE`GET,elements(extract(%q<check_toggles>,%0,1),5 6 7 8 12,~,~)))][
+          firstof(u({{core}}/FUN`LANG,first(json_map(%!/FUN`TOGGLE`SUBLABEL`OF,firstof(json_query(%q<tg_rule>,get,suboptions),json(array)),|,%1),|)),capstr(edit(%1,-,%b)))]
+        flags: [funsyntax]
+      FUN`TOGGLE`SUBLABEL`OF:
+        value: |-
+          @@(json_map's callback, %1 a suboption, %3 the value wanted)[
+          if(strmatch(json_query(%1,extract,$.value),%3),json_query(%1,extract,$.label))]
+        flags: [funsyntax]
+      FUN`TOGGLE`SUBFIND:
+        value: |-
+          @@(%0 a toggle's place in check_toggles, %1 typed text: the suboption it names, by value or label, exactly or by its start)[
+          setq(tg_subs_all,edit(elements(extract(%q<check_toggles>,%0,1),10,~),.,%b))][
+          firstof(
+            first(iter(%q<tg_subs_all>,if(cor(strmatch(%i0,%1),strmatch(u(%!/FUN`TOGGLE`SUBLABEL,%0,%i0),%1)),%i0))),
+            if(eq(words(setr(tg_starts,iter(%q<tg_subs_all>,if(cor(strmatch(%i0,%1*),strmatch(u(%!/FUN`TOGGLE`SUBLABEL,%0,%i0),%1*)),%i0)))),1),%q<tg_starts>))]
+        flags: [funsyntax]
+      FUN`TOGGLE`FIND:
+        value: |-
+          @@(%0 typed text: the places in check_toggles of the toggles it names, by label or option, exactly first, else by its start)[
+          setq(tg_exact,squish(iter(lnum(words(%q<check_toggles>)),if(cor(strmatch(u(%!/FUN`TOGGLE`LABEL,inc(%i0)),%0),strmatch(elements(extract(%q<check_toggles>,inc(%i0),1),2,~),%0)),inc(%i0)))))][
+          firstof(%q<tg_exact>,squish(iter(lnum(words(%q<check_toggles>)),if(cor(strmatch(u(%!/FUN`TOGGLE`LABEL,inc(%i0)),%0*),strmatch(elements(extract(%q<check_toggles>,inc(%i0),1),2,~),%0*)),inc(%i0)))))]
+        flags: [funsyntax]
+      FUN`TOGGLE`MISS:
+        value: |-
+          @@(%0 typed text, %1 the toggles it could be)[
+          if(words(%1),%0 could be [itemize(iter(%1,u(%!/FUN`TOGGLE`LABEL,%i0),%b,|),|,or)]. Type more of the name.,Nothing on [name(%q<sheet_target>)]'s sheet toggles called %0. +toggle lists what does.)]
+        flags: [funsyntax]
+      FUN`SHOW`TOGGLES:
+        value: |-
+          @@(check_toggles: each toggle, on or off, with its choice and the other choices)[
+          if(words(%q<check_toggles>),
+            box([iter(lnum(words(%q<check_toggles>)),u(%!/FUN`SHOW`TOGGLE,inc(%i0)),%b,%r)]%r[rule()]%r[tone(muted,+toggle <name> turns one on or off. +toggle <name>=<choice> picks a choice.)],[firstof(%q<tg_name>,name(%q<sheet_target>))]'s toggles),
+            notice(PF2E,[firstof(%q<tg_name>,name(%q<sheet_target>))] has nothing to toggle.,ok))]
+        flags: [funsyntax]
+      FUN`SHOW`TOGGLE:
+        value: |-
+          @@(%0 a toggle's place in check_toggles)[
+          setq(tg_one,extract(%q<check_toggles>,%0,1))][
+          [u(%!/FUN`TOGGLE`LABEL,%0)]: [if(elements(%q<tg_one>,3,~),tone(strong,on),off)][
+          if(strlen(elements(%q<tg_one>,4,~)),%, [u(%!/FUN`TOGGLE`SUBLABEL,%0,elements(%q<tg_one>,4,~))])][
+          if(gt(words(setr(tg_others,remove(edit(elements(%q<tg_one>,10,~),.,%b),elements(%q<tg_one>,4,~)))),0),%b[tone(muted,%(or [itemize(iter(%q<tg_others>,u(%!/FUN`TOGGLE`SUBLABEL,%0,%i0),%b,|),|,or)]%))])][
+          if(not(elements(%q<tg_one>,9,~)),%b[tone(muted,%(cannot be changed now%))])]]
         flags: [funsyntax]
       # +build: the character builder. Every choice is a ledger entry tagged with its step, so a step
       # is undone by revoking its entries, and what a step brings (heritage under ancestry, features
@@ -3573,12 +3996,29 @@ objects:
         flags: [funsyntax]
       FUN`SHOW`CHECK:
         value: |-
-          @@(the check: who rolled what, the modifiers that counted, and against a DC the degree)[
-          setq(roll_face,json_query(%q<roll_record>,extract,$.dice\[0\].results\[0\].result))][
-          setq(roll_result,json_query(%q<roll_record>,extract,$.total))][
+          @@(the check: who rolled what, its fortune, misfortune or substitution, the modifiers that counted, against a DC the degree and the rule that changed it, then the notes)[
           name(%q<sheet_target>)] rolls [capstr(%q<roll_stat>)]: [json_query(%q<roll_record>,extract,$.text)][
-          if(strlen(%q<cmd_dc>),%bvs DC %q<cmd_dc>: [tone(strong,extract(Critical failure|Failure|Success|Critical success,inc(u({{core}}/FUN`DEGREE`OF`CHECK,%q<roll_result>,%q<cmd_dc>,%q<roll_face>)),1,|))])]%b(roll [json_query(%q<roll_record>,extract,$.id)])[
-          if(words(%q<roll_chosen>),%r[tone(muted,iter(%q<roll_chosen>,[u(%!/FUN`SHOW`LABEL,elements(%i0,3,~),%q<roll_stat>)] [u(%!/FUN`SHOW`SIGNED,elements(%i0,2,~))],%b,%,%b))])]
+          if(strlen(%q<roll_tags>),%b%([itemize(%q<roll_tags>,|)]%))][
+          if(strlen(%q<cmd_dc>),%bvs DC %q<cmd_dc>: [tone(strong,u(%!/FUN`SHOW`DEGREE,%q<roll_degree>))][
+            if(strlen(%q<roll_adjust>),%b%([u({{core}}/FUN`ROLLRULE`LABEL,rest(%q<roll_adjust>,~))]%, [lcstr(u(%!/FUN`SHOW`DEGREE,%q<roll_unadjusted>))] rolled%))])]%b(roll [json_query(%q<roll_record>,extract,$.id)])[
+          if(words(%q<roll_chosen>),%r[tone(muted,iter(%q<roll_chosen>,[u(%!/FUN`SHOW`LABEL,elements(%i0,3,~),%q<roll_stat>)] [u(%!/FUN`SHOW`SIGNED,elements(%i0,2,~))],%b,%,%b))])][
+          u(%!/FUN`SHOW`NOTES,%q<roll_notes>)]
+        flags: [funsyntax]
+      FUN`SHOW`DEGREE:
+        value: |-
+          extract(Critical failure|Failure|Success|Critical success,inc(%0),1,|)
+        flags: [funsyntax]
+      # The notes everyone sees, each on a line of its own.
+      FUN`SHOW`NOTES:
+        value: |-
+          @@(%0 the notes, pack~id~badge~index~rule for each)[
+          iter(%0,if(not(u({{core}}/FUN`ROLL`NOTE`GM,%i0)),%r[u(%!/FUN`SHOW`TEXT,regeditall(u({{core}}/FUN`ROLL`NOTE`TEXT,%i0),\[\\r\\n\]+,%b))]),%b,)]
+        flags: [funsyntax]
+      FUN`SHOW`SUB`MISS:
+        value: |-
+          @@(cmd_with what was asked for: why it does not apply, and what does)[
+          setq(sub_here,iter(u({{core}}/FUN`ROLL`SUBSTITUTES,%q<roll_domains>,%q<roll_options>),first(%i0,~)))][
+          Nothing called %q<cmd_with> replaces the d20 on this check.[if(words(%q<sub_here>),%bThis check can take [itemize(%q<sub_here>,%b,or)].)]]
         flags: [funsyntax]
       FUN`SHOW`LEDGER:
         value: |-
@@ -3636,7 +4076,7 @@ objects:
     attributes:
       CMD`ENC:
         value: |-
-          $(?is)^\+enc(/\S*)?(?\: +(.*))?$:think setqm(cmd_switch,firstof(lcstr(after(%1,/)),show),cmd_args,trim(%2)); @assert match(show start add remove join init next strike check save use act effect raise damage heal cond persist delay look bestiary award keep undo redo end,%q<cmd_switch>)=@pemit %#=notice(PF2E,There is no +enc/%q<cmd_switch>. +help +enc lists the switches.,warn); think u(%!/FUN`ENC`LOAD,%l); @include %!/INC`ENC`%q<cmd_switch>
+          $(?is)^\+enc(/\S*)?(?\: +(.*))?$:think setqm(cmd_switch,firstof(lcstr(after(%1,/)),show),cmd_args,trim(%2)); @assert match(show start add remove join init next strike check save use act effect raise damage heal cond persist delay look bestiary award keep undo redo end toggle,%q<cmd_switch>)=@pemit %#=notice(PF2E,There is no +enc/%q<cmd_switch>. +help +enc lists the switches.,warn); think u(%!/FUN`ENC`LOAD,%l); @include %!/INC`ENC`%q<cmd_switch>
         flags: [regexp, cmdsyntax]
       # +cast <spell>[ at <rank>][ with <n> actions][ as <variant>][=<targets>]: in an encounter you are in, on its
       # copy of you and on its combatants; elsewhere from your sheet's day, with healing onto the characters named.
@@ -3875,7 +4315,8 @@ objects:
               json(object,kind,"level",level,u(FUN`ENC`LEVEL,%0),n,1))]\,[
             iter(setunion(setr(enc_keys,json_map(%!/FUN`JSON`KEY,%q<enc_conds>,%b)) [iter(%q<enc_keys>,u(FUN`ENC`IMPLIED,%i0))],),if(strlen(setr(enc_cid,u({{core}}/FUN`ITEM`FIND,conditions,%i0))),json(object,kind,"grant",pack,"conditions",id,json(string,%q<enc_cid>),badge,if(setr(enc_badge,json_query(%q<enc_conds>,extract,$.%i0)),%q<enc_badge>,null),n,add(100000,inum(0)))),%b,\,)]\,[
             iter(json_map(%!/FUN`JSON`KEY,setr(enc_used,firstof(u(FUN`ENC`C,%0,used),json(object))),%b),json(object,kind,"gear",id,json(string,%i0),qty,first(json_query(%q<enc_used>,extract,$.%i0),|),where,json(string,rest(json_query(%q<enc_used>,extract,$.%i0),|)),n,add(200000,inum(0))),%b,\,)]\,[
-            iter(json_map(%!/FUN`JSON`KEY,setr(enc_fx,firstof(u(FUN`ENC`C,%0,fx),json(object))),%b),json(object,kind,"grant",pack,json(string,edit(json_query(%q<enc_fx>,extract,$\["%i0"\].pack),",)),id,json(string,%i0),choices,json_mod(firstof(json_query(%q<enc_fx>,extract,$\["%i0"\].ch),json(object)),patch,json(object,effectLevel,json_query(%q<enc_fx>,extract,$\["%i0"\].lvl))),n,add(300000,inum(0))),%b,\,)],\,),\,)]\]]
+            iter(json_map(%!/FUN`JSON`KEY,setr(enc_fx,firstof(u(FUN`ENC`C,%0,fx),json(object))),%b),json(object,kind,"grant",pack,json(string,edit(json_query(%q<enc_fx>,extract,$\["%i0"\].pack),",)),id,json(string,%i0),choices,json_mod(firstof(json_query(%q<enc_fx>,extract,$\["%i0"\].ch),json(object)),patch,json(object,effectLevel,json_query(%q<enc_fx>,extract,$\["%i0"\].lvl))),n,add(300000,inum(0))),%b,\,)]\,[
+            iter(json_map(%!/FUN`JSON`KEY,setr(enc_tg,firstof(u(FUN`ENC`C,%0,tg),json(object))),%b),json(object,kind,"toggle",domain,json(string,before(%i0,|)),option,json(string,after(%i0,|)),value,if(first(json_query(%q<enc_tg>,extract,$\["%i0"\]),|),true,false),selection,if(strlen(setr(enc_tgsel,rest(json_query(%q<enc_tg>,extract,$\["%i0"\]),|))),json(string,%q<enc_tgsel>),null),n,add(400000,inum(0))),%b,\,)],\,),\,)]\]]
         flags: [funsyntax]
       # The conditions a condition brings with it, as Foundry grants them: off-guard with prone, blinded, off-guard and prone with unconscious.
       FUN`ENC`IMPLIED:
@@ -3910,10 +4351,10 @@ objects:
       # both with the conditions' modifiers.
       FUN`ACT`STAT:
         value: |-
-          @@(%0 a statistic)[
+          @@(%0 a statistic, %1 more domains, %2 more roll options)[
           if(strlen(%q<act_npc>),
-            u({{core}}/FUN`CHECK`MODS,untyped~[u(FUN`ACT`NPC`BASE,%0)]~base~0,u({{core}}/FUN`STAT`DOMAINS,%0),),
-            u({{core}}/FUN`CHECK`CHOSEN,%0))]
+            u({{core}}/FUN`CHECK`MODS,untyped~[u(FUN`ACT`NPC`BASE,%0)]~base~0,u({{core}}/FUN`STAT`DOMAINS,%0) %1,%2),
+            u({{core}}/FUN`CHECK`CHOSEN,%0,%1,%2))]
         flags: [funsyntax]
       FUN`ACT`NPC`BASE:
         value: |-
@@ -3971,11 +4412,48 @@ objects:
       # A d20 check of total %0 against DC %1: sets roll_record, roll_face, roll_result and roll_degree (0 to 3, empty without a DC).
       FUN`ACT`ROLL:
         value: |-
-          @@(%0 the modifier, %1 a DC or nothing)[
-          setq(roll_record,roll(1d20[u(%!/FUN`SHOW`SIGNED,%0)],,record))][
-          setq(roll_face,json_query(%q<roll_record>,extract,$.dice\[0\].results\[0\].result))][
-          setq(roll_result,json_query(%q<roll_record>,extract,$.total))][
-          setq(roll_degree,if(strlen(%1),u({{core}}/FUN`DEGREE`OF`CHECK,%q<roll_result>,%1,%q<roll_face>)))]
+          @@(%0 the modifier, %1 a DC or nothing, %2 the attack's domains, a Strike's when nothing)[
+          setq(act_domains,firstof(%2,attack attack-roll strike-attack-roll check all))][
+          setq(act_options,squish(%q<check_options> [u({{core}}/FUN`ROLLOPTION`DOMAINS,%q<act_domains>)] check:type:attack-roll))][
+          u({{core}}/FUN`ROLL`PLAN,%q<act_domains>,%q<act_options>,)][
+          u({{core}}/FUN`ROLL`CHECK,%0,%q<act_domains>,%q<act_options> %q<roll_extra>,%1)]
+        flags: [funsyntax]
+      # A statistic's check for a combatant: its RollTwice, required substitution, degree adjustments
+      # and notes as +check has them, the d20's fortune or misfortune among the options its modifiers
+      # are worked out with.
+      FUN`ACT`CHECK:
+        value: |-
+          @@(%0 a statistic, %1 a DC or nothing, %2 a number to add, %3 1 for initiative: sets the core's roll_ registers)[
+          setq(act_domains,squish(u({{core}}/FUN`STAT`DOMAINS,%0) [if(%3,initiative)]))][
+          setq(act_options,u({{core}}/FUN`ROLL`OPTIONS,%0,%3))][
+          u({{core}}/FUN`ROLL`PLAN,%q<act_domains>,%q<act_options>,)][
+          u({{core}}/FUN`ROLL`CHECK,add(u({{core}}/FUN`CHECK`TOTAL,u(FUN`ACT`STAT,%0,if(%3,initiative),%q<act_options> %q<roll_extra>)),firstof(%2,0)),%q<act_domains>,%q<act_options> %q<roll_extra>,%1)]
+        flags: [funsyntax]
+      # An attack is rolled with the attacker's rules after the target is prepared for its AC: HOLD keeps
+      # the registers a roll reads under a name, TAKE puts them back.
+      DATA`ACT`HOLD: check_rollrules check_actor check_options check_ledger check_entries check_toggles check_domopts check_level
+      FUN`ACT`HOLD:
+        value: |-
+          @@(%0 a name)[
+          null(iter(v(DATA`ACT`HOLD),setq(hold_%0_%i0,r(%i0))))]
+        flags: [funsyntax]
+      FUN`ACT`TAKE:
+        value: |-
+          @@(%0 a name)[
+          null(iter(v(DATA`ACT`HOLD),setq(%i0,r(hold_%0_%i0))))]
+        flags: [funsyntax]
+      # After a roll: its fortune, misfortune or substitution, and the rule that changed its degree.
+      FUN`ACT`TAGS:
+        value: |-
+          [if(strlen(%q<roll_tags>),%b%([itemize(%q<roll_tags>,|)]%))]
+        flags: [funsyntax]
+      FUN`ACT`ADJUSTED:
+        value: |-
+          [if(strlen(%q<roll_adjust>),%b%([u({{core}}/FUN`ROLLRULE`LABEL,rest(%q<roll_adjust>,~))]%, [lcstr(u(FUN`ACT`DEGREE,%q<roll_unadjusted>))] rolled%))]
+        flags: [funsyntax]
+      FUN`ACT`NOTES:
+        value: |-
+          u({{commands}}/FUN`SHOW`NOTES,%q<roll_notes>)
         flags: [funsyntax]
       FUN`ACT`DEGREE:
         value: |-
@@ -4090,8 +4568,8 @@ objects:
         value: |-
           @@(%0 a combatant's index, with save_stat, save_dc and save_parts: their save and the damage they take, as a line)[
           u(FUN`ENC`PREPARE,%0)][
-          u(FUN`ACT`ROLL,u({{core}}/FUN`CHECK`TOTAL,u(FUN`ACT`STAT,%q<save_stat>)),%q<save_dc>)][
-          setq(save_line,[u(FUN`ENC`C,%0,name)]: [json_query(%q<roll_record>,extract,$.text)]%, [lcstr(u(FUN`ACT`DEGREE,%q<roll_degree>))])][
+          u(FUN`ACT`CHECK,%q<save_stat>,%q<save_dc>)][
+          setq(save_line,[u(FUN`ENC`C,%0,name)]: [json_query(%q<roll_record>,extract,$.text)][u(FUN`ACT`TAGS)]%, [lcstr(u(FUN`ACT`DEGREE,%q<roll_degree>))][u(FUN`ACT`ADJUSTED)])][
           if(strlen(%q<save_parts>),
             if(eq(%q<roll_degree>,3),
               setq(save_line,%q<save_line>%, no damage),
@@ -4101,7 +4579,7 @@ objects:
               u(FUN`ACT`IWR,%0)][
               u(FUN`ACT`HARM,%0,%q<dmg_total>,eq(%q<roll_degree>,0))][
               setq(save_line,%q<save_line>%, [switch(%q<roll_degree>,2,half,0,double,full)] damage %q<dmg_raw>[u(FUN`ACT`IWR`TEXT)]. %q<harm_text>)]))][
-          %q<save_line>.]
+          %q<save_line>.[u(FUN`ACT`NOTES)]]
         flags: [funsyntax]
 
       # +enc/init: everyone without initiative rolls it; +enc/init <who>=<skill> rolls one with a skill.
@@ -4129,12 +4607,15 @@ objects:
           @@(sets enc and enc_say)[
           setq(strike_map,mul(min(2,u(FUN`ENC`C,%q<act_at>,map)),if(elements(%q<act_strike>,5,|),4,5)))][
           setq(strike_total,sub(elements(%q<act_strike>,2,|),%q<strike_map>))][
+          u(FUN`ACT`HOLD,by)][
           u(FUN`ENC`PREPARE,%q<act_target>)][
           setq(strike_ac,u(FUN`ACT`AC))][
+          u(FUN`ACT`HOLD,on)][u(FUN`ACT`TAKE,by)][
           u(FUN`ACT`ROLL,%q<strike_total>,%q<strike_ac>)][
+          u(FUN`ACT`TAKE,on)][
           u(FUN`ENC`SET,%q<act_at>,map,inc(u(FUN`ENC`C,%q<act_at>,map)))][
           setq(strike_crit,cand(eq(%q<roll_degree>,3),not(u(FUN`ACT`IMMUNE,%q<act_target>,critical-hits))))][
-          setq(enc_say,[u(FUN`ENC`C,%q<act_at>,name)] Strikes [u(FUN`ENC`C,%q<act_target>,name)] with [first(%q<act_strike>,|)]: [json_query(%q<roll_record>,extract,$.text)][if(%q<strike_map>,%b%(MAP -%q<strike_map>%))] vs AC [if(cor(%q<enc_gm>,strmatch(u(FUN`ENC`C,%q<act_target>,kind),pc)),%q<strike_ac>,?)]: [tone(strong,u(FUN`ACT`DEGREE,%q<roll_degree>))][if(cand(eq(%q<roll_degree>,3),not(%q<strike_crit>)),%, but [u(FUN`ENC`C,%q<act_target>,name)] is immune to critical hits)].)][
+          setq(enc_say,[u(FUN`ENC`C,%q<act_at>,name)] Strikes [u(FUN`ENC`C,%q<act_target>,name)] with [first(%q<act_strike>,|)]: [json_query(%q<roll_record>,extract,$.text)][u(FUN`ACT`TAGS)][if(%q<strike_map>,%b%(MAP -%q<strike_map>%))] vs AC [if(cor(%q<enc_gm>,strmatch(u(FUN`ENC`C,%q<act_target>,kind),pc)),%q<strike_ac>,?)]: [tone(strong,u(FUN`ACT`DEGREE,%q<roll_degree>))][u(FUN`ACT`ADJUSTED)][if(cand(eq(%q<roll_degree>,3),not(%q<strike_crit>)),%, but [u(FUN`ENC`C,%q<act_target>,name)] is immune to critical hits)].[u(FUN`ACT`NOTES)])][
           if(gte(%q<roll_degree>,2),
             [u(FUN`ACT`STRIKE`DAMAGE,elements(%q<act_strike>,3,|),elements(%q<act_strike>,4,|),%q<strike_crit>)][
             setqm(strike_splash,firstof(elements(%q<act_strike>,9,|),0),strike_type,last(elements(%q<act_strike>,3,|)))][
@@ -4165,10 +4646,16 @@ objects:
             setqm(dmg_total,add(%q<strike_main_total>,%q<dmg_total>),dmg_text,%q<strike_main_text>%, %q<dmg_text> [if(strlen(%q<strike_fatal>),fatal,deadly)],dmg_parts,%q<strike_main_parts>|%q<dmg_parts>)][
           setq(dmg_raw,%q<dmg_total>)])]
         flags: [funsyntax]
+      # +enc/toggle [<who>:]<name>[=<choice>, on or off]: a toggle in the encounter's copy of the
+      # sheet, kept in the combatant's tg as domain|option to value|selection; the sheet never sees it.
+      INC`ENC`TOGGLE:
+        value: |-
+          @include %!/INC`ENC`NEED; think setqm(tg_who,if(strmatch(before(%q<cmd_args>,=),*:*),trim(before(%q<cmd_args>,:))),tg_rest,trim(if(strmatch(before(%q<cmd_args>,=),*:*),after(%q<cmd_args>,:),%q<cmd_args>))); think setq(act_at,if(strlen(%q<tg_who>),u(%!/FUN`ENC`FIND,%q<tg_who>),u(%!/FUN`ENC`MINE))); think setqm(cmd_name,trim(before(%q<tg_rest>,=)),cmd_to,lcstr(trim(after(%q<tg_rest>,=)))); @assert strlen(%q<act_at>)=@pemit %#=notice(PF2E,if(strlen(%q<tg_who>),No one in the encounter is called %q<tg_who>.,You are not in the encounter. +enc/toggle <who>:<name> names whose toggle it is.),warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,You change only your own toggles.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think setqm(tg_name,u(%!/FUN`ENC`C,%q<act_at>,name),sheet_target,%#); @assert strlen(%q<cmd_name>)={@pemit %#=u({{commands}}/FUN`SHOW`TOGGLES)}; think setq(tg_at,u({{commands}}/FUN`TOGGLE`FIND,%q<cmd_name>)); @assert eq(words(%q<tg_at>),1)=@pemit %#=notice(PF2E,u({{commands}}/FUN`TOGGLE`MISS,%q<cmd_name>,%q<tg_at>),warn); think u({{commands}}/FUN`TOGGLE`ASK,%q<tg_at>,%q<cmd_to>); @assert cor(match(on off,%q<cmd_to>),not(strlen(%q<cmd_to>)),strlen(%q<tg_sel>))=@pemit %#=notice(PF2E,%q<tg_label> has no choice called %q<cmd_to>.,warn); @assert cor(%q<tg_value>,not(elements(%q<tg>,11,~)))=@pemit %#=notice(PF2E,%q<tg_label> is always on.,warn); @assert elements(%q<tg>,9,~)=@pemit %#=notice(PF2E,%q<tg_label> cannot be changed now.,warn); think u(%!/FUN`ENC`SET,%q<act_at>,tg,json_mod(firstof(u(%!/FUN`ENC`C,%q<act_at>,tg),json(object)),set,$\["[first(%q<tg>,~)]|[elements(%q<tg>,2,~)]"\],json(string,%q<tg_value>|%q<tg_sel>))); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,%q<tg_name>: %q<tg_label> [if(%q<tg_value>,on,off)][if(strlen(%q<tg_sel>),%, [u({{commands}}/FUN`TOGGLE`SUBLABEL,%q<tg_at>,%q<tg_sel>)])].)
+        flags: [cmdsyntax]
       # +enc/check <who>=<statistic>[ vs <DC>]: a check for a combatant, with their conditions.
       INC`ENC`CHECK:
         value: |-
-          @include %!/INC`ENC`NEED; think setqm(check_who,trim(before(%q<cmd_args>,=)),check_what,trim(after(%q<cmd_args>,=))); think setqm(act_at,if(strlen(setr(check_found,u(%!/FUN`ENC`FIND,%q<check_who>))),%q<check_found>,-1),check_stat,u({{commands}}/FUN`COMMAND`STAT,trim(before(%q<check_what>,%bvs))),check_dc,trim(after(%q<check_what>,%bvs))); @assert gte(%q<act_at>,0)=@pemit %#=notice(PF2E,No one in the encounter is called %q<check_who>.,warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,You make checks only for yourself.,warn); @assert eq(words(%q<check_stat>),1)=@pemit %#=notice(PF2E,+enc/check <who>=<statistic> [vs <DC>]%, such as +enc/check 2=reflex vs 18.,warn); @assert cor(not(strlen(%q<check_dc>)),isint(%q<check_dc>))=@pemit %#=notice(PF2E,A DC is a whole number.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think u(%!/FUN`ACT`ROLL,u({{core}}/FUN`CHECK`TOTAL,u(%!/FUN`ACT`STAT,%q<check_stat>)),%q<check_dc>); @remit %l=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] rolls [u({{commands}}/FUN`SHOW`STAT,%q<check_stat>)]: [json_query(%q<roll_record>,extract,$.text)][if(strlen(%q<check_dc>),%bvs DC %q<check_dc>: [tone(strong,u(%!/FUN`ACT`DEGREE,%q<roll_degree>))])].)
+          @include %!/INC`ENC`NEED; think setqm(check_who,trim(before(%q<cmd_args>,=)),check_what,trim(after(%q<cmd_args>,=))); think setqm(act_at,if(strlen(setr(check_found,u(%!/FUN`ENC`FIND,%q<check_who>))),%q<check_found>,-1),check_stat,u({{commands}}/FUN`COMMAND`STAT,trim(before(%q<check_what>,%bvs))),check_dc,trim(after(%q<check_what>,%bvs))); @assert gte(%q<act_at>,0)=@pemit %#=notice(PF2E,No one in the encounter is called %q<check_who>.,warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,You make checks only for yourself.,warn); @assert eq(words(%q<check_stat>),1)=@pemit %#=notice(PF2E,+enc/check <who>=<statistic> [vs <DC>]%, such as +enc/check 2=reflex vs 18.,warn); @assert cor(not(strlen(%q<check_dc>)),isint(%q<check_dc>))=@pemit %#=notice(PF2E,A DC is a whole number.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think u(%!/FUN`ACT`CHECK,%q<check_stat>,%q<check_dc>); @remit %l=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] rolls [u({{commands}}/FUN`SHOW`STAT,%q<check_stat>)]: [json_query(%q<roll_record>,extract,$.text)][u(%!/FUN`ACT`TAGS)][if(strlen(%q<check_dc>),%bvs DC %q<check_dc>: [tone(strong,u(%!/FUN`ACT`DEGREE,%q<roll_degree>))][u(%!/FUN`ACT`ADJUSTED)])].[u(%!/FUN`ACT`NOTES)])
         flags: [cmdsyntax]
       # +enc/save <who>=<save> vs <DC>[ <damage>]: a save for several combatants; with damage, a basic save from one
       # damage roll: none on a critical success, half on a success, double on a critical failure.
@@ -4429,7 +4916,7 @@ objects:
       # A cast in the encounter, by the character you play there, on their copy of the day.
       INC`CAST`ENC:
         value: |-
-          @assert cor(%q<enc_gm>,eq(%q<act_at>,u(%!/FUN`ENC`ACTING)))=@pemit %#=notice(PF2E,It is [u(%!/FUN`ENC`C,u(%!/FUN`ENC`ACTING),name)]'s turn.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think u({{core}}/FUN`CAST`PREPARE); think setqm(daily,firstof(u(%!/FUN`ENC`C,%q<act_at>,daily),json(object)),cast_map,u(%!/FUN`ENC`C,%q<act_at>,map),cast_side,u(%!/FUN`ENC`C,%q<act_at>,side)); @include %!/INC`CAST`PICK; think setq(cast_on,if(strlen(%q<cast_targets>),u(%!/FUN`ENC`TARGETS,%q<cast_targets>),%q<act_at>)); @assert not(strlen(%q<targets_missing>))=@pemit %#=notice(PF2E,No one in the encounter is called %q<targets_missing>.,warn); @assert words(%q<cast_on>)=@pemit %#=notice(PF2E,No one is there to cast on.,warn); think u(%!/FUN`SPELL`PREPARE,strmatch(u(%!/FUN`ENC`C,first(%q<cast_on>),side),%q<cast_side>)); @assert cor(strlen(%q<cast_targets>),strlen(%q<cast_fx>),strlen(%q<spell_heal>),not(cor(%q<spell_attack>,strlen(%q<spell_save>),strlen(%q<spell_dmg>))))=@pemit %#=notice(PF2E,Name the targets: +cast [u({{commands}}/FUN`SHOW`SPELLNAME,%q<cast_id>)]=<names>%, or foes%, characters or everyone.,warn); think u({{commands}}/FUN`DAILY`SPEND,%q<cast_id>); think u(%!/FUN`ENC`SET,%q<act_at>,daily,%q<daily>); think u(%!/FUN`CAST`ROLLS); think setq(cast_atk,sub(%q<cast_atk>,mul(min(2,%q<cast_map>),5))); think setq(cast_lines,iter(%q<cast_on>,u(%!/FUN`CAST`ON,%i0),%b,%r)); think if(%q<spell_attack>,u(%!/FUN`ENC`SET,%q<act_at>,map,inc(%q<cast_map>))); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,[u(%!/FUN`CAST`HEAD)][if(strlen(%q<cast_say>),%r%q<cast_say>)][if(strlen(trim(%q<cast_lines>)),%r[trim(squish(%q<cast_lines>,%r),%r)])])
+          @assert cor(%q<enc_gm>,eq(%q<act_at>,u(%!/FUN`ENC`ACTING)))=@pemit %#=notice(PF2E,It is [u(%!/FUN`ENC`C,u(%!/FUN`ENC`ACTING),name)]'s turn.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think u({{core}}/FUN`CAST`PREPARE); think u(%!/FUN`ACT`HOLD,by); think setqm(daily,firstof(u(%!/FUN`ENC`C,%q<act_at>,daily),json(object)),cast_map,u(%!/FUN`ENC`C,%q<act_at>,map),cast_side,u(%!/FUN`ENC`C,%q<act_at>,side)); @include %!/INC`CAST`PICK; think setq(cast_on,if(strlen(%q<cast_targets>),u(%!/FUN`ENC`TARGETS,%q<cast_targets>),%q<act_at>)); @assert not(strlen(%q<targets_missing>))=@pemit %#=notice(PF2E,No one in the encounter is called %q<targets_missing>.,warn); @assert words(%q<cast_on>)=@pemit %#=notice(PF2E,No one is there to cast on.,warn); think u(%!/FUN`SPELL`PREPARE,strmatch(u(%!/FUN`ENC`C,first(%q<cast_on>),side),%q<cast_side>)); @assert cor(strlen(%q<cast_targets>),strlen(%q<cast_fx>),strlen(%q<spell_heal>),not(cor(%q<spell_attack>,strlen(%q<spell_save>),strlen(%q<spell_dmg>))))=@pemit %#=notice(PF2E,Name the targets: +cast [u({{commands}}/FUN`SHOW`SPELLNAME,%q<cast_id>)]=<names>%, or foes%, characters or everyone.,warn); think u({{commands}}/FUN`DAILY`SPEND,%q<cast_id>); think u(%!/FUN`ENC`SET,%q<act_at>,daily,%q<daily>); think u(%!/FUN`CAST`ROLLS); think setq(cast_atk,sub(%q<cast_atk>,mul(min(2,%q<cast_map>),5))); think setq(cast_lines,iter(%q<cast_on>,u(%!/FUN`CAST`ON,%i0),%b,%r)); think if(%q<spell_attack>,u(%!/FUN`ENC`SET,%q<act_at>,map,inc(%q<cast_map>))); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,[u(%!/FUN`CAST`HEAD)][if(strlen(%q<cast_say>),%r%q<cast_say>)][if(strlen(trim(%q<cast_lines>)),%r[trim(squish(%q<cast_lines>,%r),%r)])])
         flags: [cmdsyntax]
       # What the spell does to combatant %0: heals an ally it can heal, else a spell attack against AC, a save
       # against the spell DC (basic or not), or damage with neither; an ally or the caster gets the spell's effect.
@@ -4450,9 +4937,11 @@ objects:
           @@(%0 a target's index: a spell attack against their AC, doubled on a critical hit)[
           u(FUN`ENC`PREPARE,%0)][
           setq(on_ac,u(FUN`ACT`AC))][
-          u(FUN`ACT`ROLL,%q<cast_atk>,%q<on_ac>)][
+          u(FUN`ACT`HOLD,on)][u(FUN`ACT`TAKE,by)][
+          u(FUN`ACT`ROLL,%q<cast_atk>,%q<on_ac>,spell-attack spell-attack-roll attack attack-roll check all)][
+          u(FUN`ACT`TAKE,on)][
           setq(on_crit,cand(eq(%q<roll_degree>,3),not(u(FUN`ACT`IMMUNE,%0,critical-hits))))][
-          [u(FUN`ENC`C,%0,name)]: [json_query(%q<roll_record>,extract,$.text)][if(%q<cast_map>,%b%(MAP -[mul(min(2,%q<cast_map>),5)]%))] vs AC [if(cor(%q<enc_gm>,strmatch(u(FUN`ENC`C,%0,kind),pc)),%q<on_ac>,?)]%, [lcstr(u(FUN`ACT`DEGREE,%q<roll_degree>))][
+          [u(FUN`ENC`C,%0,name)]: [json_query(%q<roll_record>,extract,$.text)][u(FUN`ACT`TAGS)][if(%q<cast_map>,%b%(MAP -[mul(min(2,%q<cast_map>),5)]%))] vs AC [if(cor(%q<enc_gm>,strmatch(u(FUN`ENC`C,%0,kind),pc)),%q<on_ac>,?)]%, [lcstr(u(FUN`ACT`DEGREE,%q<roll_degree>))][
           if(cand(gte(%q<roll_degree>,2),strlen(%q<cast_dmg_parts>)),
             [setq(dmg_parts,iter(%q<cast_dmg_parts>,[first(%i0,~)]~[mul(rest(%i0,~),if(%q<on_crit>,2,1))],|,|))][
             setq(dmg_raw,ladd(0 [iter(%q<dmg_parts>,rest(%i0,~),|,%b)]))][
@@ -4565,9 +5054,9 @@ objects:
           setq(init_stat,firstof(u({{commands}}/FUN`COMMAND`STAT,%1),if(cor(u(FUN`ENC`C,%0,hazard),strmatch(u(FUN`ENC`C,%0,act),avoid-notice)),stealth),perception))][
           u(FUN`ENC`PREPARE,%0)][
           setq(init_scout,if(cand(strmatch(u(FUN`ENC`C,%0,side),pc),words(iter(u(FUN`ENC`INDEXES),if(strmatch(u(FUN`ENC`C,%i0,act),scout),%i0)))),1,0))][
-          u(FUN`ACT`ROLL,add(u({{core}}/FUN`CHECK`TOTAL,u(FUN`ACT`STAT,%q<init_stat>)),%q<init_scout>),)][
+          u(FUN`ACT`CHECK,%q<init_stat>,,%q<init_scout>,1)][
           u(FUN`ENC`SET,%0,init,%q<roll_result>)][
-          setq(init_text,[u(FUN`ENC`C,%0,name)]: [u({{commands}}/FUN`SHOW`STAT,%q<init_stat>)] [json_query(%q<roll_record>,extract,$.text)][if(%q<init_scout>,%b%(+1 Scout%))])]
+          setq(init_text,[u(FUN`ENC`C,%0,name)]: [u({{commands}}/FUN`SHOW`STAT,%q<init_stat>)] [json_query(%q<roll_record>,extract,$.text)][u(FUN`ACT`TAGS)][if(%q<init_scout>,%b%(+1 Scout%))])]
         flags: [funsyntax]
       # Sorts the combatants by initiative, highest first; on a tie creatures go before characters.
       FUN`TURN`ORDER:
@@ -4711,8 +5200,8 @@ objects:
           @@(%0 a character, %1 a statistic, %2 a DC: their roll as a line)[
           u({{core}}/FUN`CHECK`PREPARE,u({{commands}}/FUN`LEDGER`OF,%0))][
           setq(act_npc,)][
-          u(FUN`ACT`ROLL,u({{core}}/FUN`CHECK`TOTAL,u(FUN`ACT`STAT,%1)),%2)][
-          name(%0)]: [json_query(%q<roll_record>,extract,$.text)]%, [lcstr(u(FUN`ACT`DEGREE,%q<roll_degree>))]
+          u(FUN`ACT`CHECK,%1,%2)][
+          name(%0)]: [json_query(%q<roll_record>,extract,$.text)][u(FUN`ACT`TAGS)]%, [lcstr(u(FUN`ACT`DEGREE,%q<roll_degree>))][u(FUN`ACT`ADJUSTED)][u(FUN`ACT`NOTES)]
         flags: [funsyntax]
 
       # --- Skill challenges: victory points -----------------------------------------------------
@@ -4738,7 +5227,7 @@ objects:
       # +challenge/roll <skill>: one check a round each; critical success +2, success +1, failure 0, critical failure -1.
       INC`CHALLENGE`ROLL:
         value: |-
-          @assert strlen(%q<vp>)=@pemit %#=notice(PF2E,There is no skill challenge here.,warn); @assert not(member(json_query(%q<vp>,extract,$.rolled),objid(%#)))=@pemit %#=notice(PF2E,You have already rolled this round. Wait for +challenge/round.,warn); think setq(vp_stat,u({{commands}}/FUN`COMMAND`STAT,%q<cmd_args>)); @assert eq(words(%q<vp_stat>),1)=@pemit %#=notice(PF2E,+challenge/roll <skill>. +challenge lists the skills that help.,warn); think setq(vp_dc,firstof(json_query(%q<vp>,extract,$.options.%q<vp_stat>),json_query(%q<vp>,extract,$.dc))); @assert isint(%q<vp_dc>)=@pemit %#=notice(PF2E,[u({{commands}}/FUN`SHOW`STAT,%q<vp_stat>)] does not help here. +challenge lists the skills that do.,warn); think u({{core}}/FUN`CHECK`PREPARE,u({{commands}}/FUN`LEDGER`OF,%#)); think setq(act_npc,); think u(%!/FUN`ACT`ROLL,u({{core}}/FUN`CHECK`TOTAL,u(%!/FUN`ACT`STAT,%q<vp_stat>)),%q<vp_dc>); think setq(vp_gain,extract(-1 0 1 2,inc(%q<roll_degree>),1)); think setq(vp,json_mod(json_mod(%q<vp>,set,$.vp,add(json_query(%q<vp>,extract,$.vp),%q<vp_gain>)),set,$.rolled,json(string,squish([json_query(%q<vp>,extract,$.rolled)] [objid(%#)])))); &%q<vp_attr> %!=%q<vp>; @remit %l=notice(PF2E,%N rolls [u({{commands}}/FUN`SHOW`STAT,%q<vp_stat>)] for [json_query(%q<vp>,extract,$.name)]: [json_query(%q<roll_record>,extract,$.text)] vs DC %q<vp_dc>: [tone(strong,u(%!/FUN`ACT`DEGREE,%q<roll_degree>))]%, [u(%!/FUN`SHOW`SIGNED,%q<vp_gain>)] VP. [json_query(%q<vp>,extract,$.vp)] of [json_query(%q<vp>,extract,$.goal)].[if(gte(json_query(%q<vp>,extract,$.vp),json_query(%q<vp>,extract,$.goal)),%b[tone(strong,The challenge is won!)])])
+          @assert strlen(%q<vp>)=@pemit %#=notice(PF2E,There is no skill challenge here.,warn); @assert not(member(json_query(%q<vp>,extract,$.rolled),objid(%#)))=@pemit %#=notice(PF2E,You have already rolled this round. Wait for +challenge/round.,warn); think setq(vp_stat,u({{commands}}/FUN`COMMAND`STAT,%q<cmd_args>)); @assert eq(words(%q<vp_stat>),1)=@pemit %#=notice(PF2E,+challenge/roll <skill>. +challenge lists the skills that help.,warn); think setq(vp_dc,firstof(json_query(%q<vp>,extract,$.options.%q<vp_stat>),json_query(%q<vp>,extract,$.dc))); @assert isint(%q<vp_dc>)=@pemit %#=notice(PF2E,[u({{commands}}/FUN`SHOW`STAT,%q<vp_stat>)] does not help here. +challenge lists the skills that do.,warn); think u({{core}}/FUN`CHECK`PREPARE,u({{commands}}/FUN`LEDGER`OF,%#)); think setq(act_npc,); think u(%!/FUN`ACT`CHECK,%q<vp_stat>,%q<vp_dc>); think setq(vp_gain,extract(-1 0 1 2,inc(%q<roll_degree>),1)); think setq(vp,json_mod(json_mod(%q<vp>,set,$.vp,add(json_query(%q<vp>,extract,$.vp),%q<vp_gain>)),set,$.rolled,json(string,squish([json_query(%q<vp>,extract,$.rolled)] [objid(%#)])))); &%q<vp_attr> %!=%q<vp>; @remit %l=notice(PF2E,%N rolls [u({{commands}}/FUN`SHOW`STAT,%q<vp_stat>)] for [json_query(%q<vp>,extract,$.name)]: [json_query(%q<roll_record>,extract,$.text)][u(%!/FUN`ACT`TAGS)] vs DC %q<vp_dc>: [tone(strong,u(%!/FUN`ACT`DEGREE,%q<roll_degree>))][u(%!/FUN`ACT`ADJUSTED)]%, [u(%!/FUN`SHOW`SIGNED,%q<vp_gain>)] VP. [json_query(%q<vp>,extract,$.vp)] of [json_query(%q<vp>,extract,$.goal)].[if(gte(json_query(%q<vp>,extract,$.vp),json_query(%q<vp>,extract,$.goal)),%b[tone(strong,The challenge is won!)])])
         flags: [cmdsyntax]
       INC`CHALLENGE`ROUND:
         value: |-
@@ -4758,7 +5247,7 @@ objects:
       DATA`RECALL`SKILLS: aberration~occultism animal~nature astral~occultism beast~arcana.nature celestial~religion construct~arcana.crafting dragon~arcana dream~occultism elemental~arcana.nature ethereal~occultism fey~nature fiend~religion fungus~nature humanoid~society monitor~religion ooze~occultism plant~nature shade~religion spirit~occultism time~occultism undead~religion
       INC`RECALL:
         value: |-
-          think setq(recall_found,if(strlen(%q<enc>),if(strlen(setr(recall_at,u(%!/FUN`ENC`FIND,%q<cmd_what>))),if(cand(strmatch(u(%!/FUN`ENC`C,%q<recall_at>,kind),npc),not(u(%!/FUN`ENC`C,%q<recall_at>,hazard))),[u(%!/FUN`ENC`C,%q<recall_at>,pack)]~[u(%!/FUN`ENC`C,%q<recall_at>,id)])))); think setq(recall_found,firstof(%q<recall_found>,u(%!/FUN`ENC`CREATURE,%q<cmd_what>,1))); @assert strlen(%q<recall_found>)=@pemit %#=notice(PF2E,There is no creature called %q<cmd_what> here or in the books the game uses.,warn); think setq(recall_item,u({{core}}/FUN`ITEM`GET,first(%q<recall_found>,~),rest(%q<recall_found>,~))); think setq(recall_skills,u(%!/FUN`RECALL`SKILLS,%q<recall_item>)); think setq(recall_stat,firstof(u({{commands}}/FUN`COMMAND`STAT,%q<cmd_skill>),first(%q<recall_skills>))); @assert eq(words(%q<recall_stat>),1)=@pemit %#=notice(PF2E,There is no one skill called %q<cmd_skill>.,warn); @assert cor(member(%q<recall_skills>,%q<recall_stat>),strmatch(%q<recall_stat>,*-lore))=@pemit %#=notice(PF2E,[u({{commands}}/FUN`SHOW`STAT,%q<recall_stat>)] does not identify this creature. Try [itemize(iter(%q<recall_skills>,u({{commands}}/FUN`SHOW`STAT,%i0),%b,|),|,or)]%, or a Lore that fits.,warn); think setq(recall_dc,sub(u(%!/FUN`DC`OF,json_query(%q<recall_item>,extract,$.system.details.level.value),,json_query(%q<recall_item>,extract,$.system.traits.rarity)),if(strmatch(%q<recall_stat>,*-lore),2,0))); think u({{core}}/FUN`CHECK`PREPARE,u({{commands}}/FUN`LEDGER`OF,%#)); think setq(act_npc,); think u(%!/FUN`ACT`ROLL,u({{core}}/FUN`CHECK`TOTAL,u(%!/FUN`ACT`STAT,%q<recall_stat>)),%q<recall_dc>); @pemit %#=notice(PF2E,You try to recall what you know with [u({{commands}}/FUN`SHOW`STAT,%q<recall_stat>)]...%r[u(%!/FUN`RECALL`TELLS,%q<recall_item>,%q<roll_degree>)]); @include/nobreak %!/INC`RECALL`GM
+          think setq(recall_found,if(strlen(%q<enc>),if(strlen(setr(recall_at,u(%!/FUN`ENC`FIND,%q<cmd_what>))),if(cand(strmatch(u(%!/FUN`ENC`C,%q<recall_at>,kind),npc),not(u(%!/FUN`ENC`C,%q<recall_at>,hazard))),[u(%!/FUN`ENC`C,%q<recall_at>,pack)]~[u(%!/FUN`ENC`C,%q<recall_at>,id)])))); think setq(recall_found,firstof(%q<recall_found>,u(%!/FUN`ENC`CREATURE,%q<cmd_what>,1))); @assert strlen(%q<recall_found>)=@pemit %#=notice(PF2E,There is no creature called %q<cmd_what> here or in the books the game uses.,warn); think setq(recall_item,u({{core}}/FUN`ITEM`GET,first(%q<recall_found>,~),rest(%q<recall_found>,~))); think setq(recall_skills,u(%!/FUN`RECALL`SKILLS,%q<recall_item>)); think setq(recall_stat,firstof(u({{commands}}/FUN`COMMAND`STAT,%q<cmd_skill>),first(%q<recall_skills>))); @assert eq(words(%q<recall_stat>),1)=@pemit %#=notice(PF2E,There is no one skill called %q<cmd_skill>.,warn); @assert cor(member(%q<recall_skills>,%q<recall_stat>),strmatch(%q<recall_stat>,*-lore))=@pemit %#=notice(PF2E,[u({{commands}}/FUN`SHOW`STAT,%q<recall_stat>)] does not identify this creature. Try [itemize(iter(%q<recall_skills>,u({{commands}}/FUN`SHOW`STAT,%i0),%b,|),|,or)]%, or a Lore that fits.,warn); think setq(recall_dc,sub(u(%!/FUN`DC`OF,json_query(%q<recall_item>,extract,$.system.details.level.value),,json_query(%q<recall_item>,extract,$.system.traits.rarity)),if(strmatch(%q<recall_stat>,*-lore),2,0))); think u({{core}}/FUN`CHECK`PREPARE,u({{commands}}/FUN`LEDGER`OF,%#)); think setq(act_npc,); think u(%!/FUN`ACT`CHECK,%q<recall_stat>,%q<recall_dc>); @pemit %#=notice(PF2E,You try to recall what you know with [u({{commands}}/FUN`SHOW`STAT,%q<recall_stat>)]...%r[u(%!/FUN`RECALL`TELLS,%q<recall_item>,%q<roll_degree>)]); @include/nobreak %!/INC`RECALL`GM
         flags: [cmdsyntax]
       # The GM of the room's encounter hears every Recall Knowledge roll; a critical failure is flagged.
       INC`RECALL`GM:
@@ -5065,7 +5554,7 @@ objects:
         This game plays Pathfinder Second Edition, with the rules of Player Core, Player Core 2, GM Core and Monster Core as Foundry VTT's pf2e system has them.
 
         - `+build` makes your character, one choice at a time: `+help pf2e build`.
-        - `+sheet` shows it and `+check` rolls against it: `+help pf2e sheet`, `+help pf2e check`.
+        - `+sheet` shows it and `+check` rolls against it: `+help pf2e sheet`, `+help pf2e check`. `+toggle` turns your situational feats on and off: `+help pf2e toggle`.
         - `+spells`, `+prepare` and `+cast` are for casters, `+rest` begins a new day: `+help pf2e spells`, `+help pf2e day`.
         - `+deity` lists the game's deities, which clerics and champions follow: `+help pf2e deity`.
         - `+alchemy` makes alchemical items from your formula book: `+help pf2e alchemy`.
@@ -5120,17 +5609,42 @@ objects:
 
         - A statistic is a skill, a save, Perception or a Lore: `+check athletics`, `+check will=18`, `+check society lore=15`.
         - The modifiers that counted are listed under the roll; Foundry's stacking rules decide which.
+        - Fortune and misfortune roll two d20s and keep the higher or the lower. When both apply, neither does.
+        - A feat or effect can change the degree, such as a success at Fortitude that becomes a critical success. The roll names it and what was rolled.
+        - Notes from your feats and effects follow the roll when they apply to its result.
+        - `with <name>` uses something that replaces the d20, such as Assurance: `+check athletics with assurance=20`. A rule that must replace it does so on its own.
+        - What your toggles turn on counts: `+help pf2e toggle`.
 
         Example:
 
-        `+check athletics=15`
+        `+check athletics with assurance=20`
 
         Output:
 
-        `\[PF2E\] Amiri rolls Athletics: 1d20\[16\] + 7 = 23 vs DC 15: Success (roll 178)`
-        `Strength +4, Trained +3`
+        ```
+        \[PF2E\] Tess rolls Athletics: 10 + 9 = 19 (Fortune (Assurance)) vs DC 20: Failure (roll 10)
+        Expert +9
+        ```
       SEE`PF2E`CHECK: |-
-        pf2e sheet|pf2e dc
+        pf2e sheet|pf2e toggle|pf2e dc
+      HELP`PF2E`TOGGLE: |-
+        `+toggle` lists what you can turn on and off: a feat or effect that applies only when you say so, such as Bashing Charge or a stance's choice.
+
+        - `+toggle <name>` turns one on or off. The start of the name is enough.
+        - `+toggle <name>=<choice>` turns it on with that choice; `=on` and `=off` say which.
+        - Some are always on, and you pick only the choice. Some cannot be changed while something else holds.
+        - In an encounter, `+enc/toggle <name>` changes the encounter's copy only; your sheet keeps its own.
+        - Staff add a name: `+toggle Tess/Bashing Charge`.
+
+        Example:
+
+        `+toggle devise=skill`
+
+        Output:
+
+        `\[PF2E\] Done: Devise a Stratagem: on, Skill.`
+      SEE`PF2E`TOGGLE: |-
+        pf2e check|pf2e enc
       HELP`PF2E`ENC: |-
         `+enc` runs a fight in the room. The encounter keeps its own copy of everyone in it: hit points, conditions, dying and the consumables used never touch a sheet, and the encounter stays as it is, across days, until whoever runs it ends it. The GM's commands are in `+help pf2e enc build` and `+help pf2e enc gm`.
 
@@ -5145,6 +5659,7 @@ objects:
 
         - `+enc/strike <target>\[=<Strike>\]`: a Strike against the target's AC, with the multiple attack penalty. A hit deals damage, doubled on a critical hit, and a creature's weaknesses, resistances and immunities count.
         - `+enc/check <who>=<statistic> \[vs <DC>\]`: a check or save with your conditions.
+        - `+enc/toggle \[<who>:\]<name>\[=<choice>\]`: a toggle in the encounter's copy, as `+help pf2e toggle` has it.
         - `+enc/save <who>=<save> vs <DC> \[<damage>\]`: a save for everyone named, such as a spell's targets. Name several with commas, or `foes`, `characters` or `everyone`. With damage it is a basic save from one roll: none on a critical success, half on a success, double on a critical failure.
         - `+enc/use <item>`: drinks, eats or uses a consumable from the encounter's copy, or an item you made today. A healing item heals, and a mutagen or elixir gives its effect.
         - Bombs and versatile vials are Strikes: `+enc/strike <target>=<bomb>` throws one and uses it up. A hit adds the splash and persistent damage; a failure still splashes the target.
@@ -5529,3 +6044,10 @@ objects:
     attributes:
       ITEM: "Items of the Foundry pack pathfinder-monster-core. ITEM`<ID> is the item as Foundry stores it, less its description and embedded items; leaves TEXT (the description), HASH (the feed's hash of the whole item), BOOK, and EMBED`<ID> for each embedded item. <ID> is Foundry's _id in upper case."
       NAME: "NAME`<slug> lists the ids of the items with that name, the name in lower case with every run of other characters a hyphen."
+
+  - ref: data_lang
+    type: thing
+    name: "PF2e Data: lang"
+    location: "{{core}}"
+    attributes:
+      LANG: "Foundry's English strings that items name, from the feed's lang files. LANG`<KEY> is the string as a JSON string, <KEY> the key in upper case, such as LANG`PF2E.SPECIFICRULE.ASSURANCE.NOTE."
