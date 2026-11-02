@@ -264,6 +264,32 @@ def item_lines(item):
 	return lines
 
 
+def lang_lines(lang):
+	"""Foundry's English strings the items name, one a line: <key> <hash> LANG <value>, the value a JSON
+	string, so a game can show a rule's note or label in words."""
+	lines = []
+	for key in sorted(lang):
+		value = canonical(lang[key])
+		lines.append(f"{key} {hashlib.sha256(value.encode('utf-8')).hexdigest()[:16]} LANG {value}\n")
+	return lines
+
+
+def write_lang(out, lang):
+	"""lang/strings-<n>.txt, as the index lists them under lang."""
+	shutil.rmtree(os.path.join(out, "lang"), ignore_errors=True)
+	files = []
+	for n, group in enumerate(chunks(lang_lines(lang)), start=1):
+		rel = f"lang/strings-{n}.txt"
+		path = os.path.join(out, rel)
+		os.makedirs(os.path.dirname(path), exist_ok=True)
+		data = "".join(group)
+		with open(path, "w", encoding="utf-8", newline="\n") as f:
+			f.write(data)
+		files.append({"path": rel, "pack": "lang", "lines": len(group), "items": len(group),
+			"bytes": len(data.encode("utf-8")), "hash": hashlib.sha256(data.encode("utf-8")).hexdigest()[:16]})
+	return files
+
+
 def chunks(lines):
 	"""Lines grouped into files of at most MAX_FILE bytes."""
 	group, size = [], 0
@@ -312,7 +338,7 @@ def write(out, foundry, result):
 		index_books.append({"slug": book["slug"], "name": book["name"], "title": book["title"], "default": book["default"],
 			"items": sum(f["items"] for f in files), "files": files})
 	index = {"format": 1, "foundry": {"repository": "https://github.com/foundryvtt/pf2e", "commit": commit, "committed": committed},
-		"licence": "ORC", "books": index_books}
+		"licence": "ORC", "books": index_books, "lang": write_lang(out, lang)}
 	with open(os.path.join(out, "lang.json"), "w", encoding="utf-8", newline="\n") as f:
 		f.write(json.dumps(lang, indent="\t", ensure_ascii=False, sort_keys=True) + "\n")
 	with open(os.path.join(out, "index.json"), "w", encoding="utf-8", newline="\n") as f:
