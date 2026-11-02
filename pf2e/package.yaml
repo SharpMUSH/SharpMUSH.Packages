@@ -1180,7 +1180,7 @@ objects:
       # FUN`STRIKE`ATTACK has set strike_options: Fighter Weapon Mastery and the like.
       FUN`STRIKE`MARTIAL:
         value: |-
-          lmax(0 [iter(%q<check_martial>,u(FUN`STRIKE`MARTIAL`GRANT,%i0))])
+          lmax(0 [iter(%q<check_martial>,iter(u(FUN`STRIKE`MARTIAL`GRANT,%i0),if(strmatch(%i0,same:*),min(u(FUN`CHECK`RANK,elements(%i0,2,:)),elements(%i0,3,:)),%i0)))])
         flags: [funsyntax]
       FUN`STRIKE`MARTIAL`GRANT:
         value: |-
@@ -1191,8 +1191,8 @@ objects:
         flags: [funsyntax]
       FUN`STRIKE`MARTIAL`RULE:
         value: |-
-          @@(json_map's callback, %1 a rule: its rank when it is a MartialProficiency whose definition holds for the Strike)[
-          if(strmatch(json_query(%1,extract,$.key),MartialProficiency),if(u(FUN`PREDICATE`TEST,u(FUN`FORMULA`INJECT,firstof(json_query(%1,get,definition),json(array)),%q<martial_data>),%q<strike_options>),firstof(json_query(%1,extract,$.value),0)))]
+          @@(json_map's callback, %1 a rule: its rank when it is a MartialProficiency whose definition holds for the Strike, or same:<category>:<cap> when the rank is another category's)[
+          if(strmatch(json_query(%1,extract,$.key),MartialProficiency),if(u(FUN`PREDICATE`TEST,u(FUN`FORMULA`INJECT,firstof(json_query(%1,get,definition),json(array)),%q<martial_data>),%q<strike_options>),firstof(json_query(%1,extract,$.value),if(strlen(json_query(%1,get,sameAs)),same:[edit(json_query(%1,get,sameAs),",)]:[if(strlen(json_query(%1,get,maxRank)),dec(match(untrained trained expert master legendary,edit(json_query(%1,get,maxRank),",))),4)]),0)))]
         flags: [funsyntax]
       # Name|attack|second|third|damage|traits for a Strike: the multiple attack penalty is 5 a step, 4 when agile.
       # A weapon that is not held says where it is, after its name.
@@ -3081,7 +3081,7 @@ objects:
       # until the start of their next turn.
       INC`ENC`RAISE:
         value: |-
-          @include %!/INC`ENC`NEED; think setq(act_at,if(strlen(%q<cmd_args>),u(%!/FUN`ENC`FIND,%q<cmd_args>),u(%!/FUN`ENC`ACTING))); @assert cand(strlen(%q<act_at>),gte(%q<act_at>,0))=@pemit %#=notice(PF2E,if(strlen(%q<cmd_args>),No one in the encounter is called %q<cmd_args>.,No one is acting. Name who raises a shield: +enc/raise <who>.),warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,It is [u(%!/FUN`ENC`C,%q<act_at>,name)]'s turn.,warn); @assert strmatch(u(%!/FUN`ENC`C,%q<act_at>,kind),pc)=@pemit %#=notice(PF2E,A creature's shield is part of its AC already.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); @assert strlen(%q<check_shield>)=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] holds no shield. +build/equip <shield>=held.,warn); think u(%!/FUN`ENC`SET,%q<act_at>,raised,1); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] raises [json_query(%q<check_shield>,extract,$.name)]: +[firstof(json_query(%q<check_shield>,extract,$.system.acBonus),0)] AC until [u(%!/FUN`ENC`C,%q<act_at>,name)]'s next turn starts.)
+          @include %!/INC`ENC`NEED; think setq(act_at,if(strlen(%q<cmd_args>),u(%!/FUN`ENC`FIND,%q<cmd_args>),u(%!/FUN`ENC`ACTING))); @assert cand(strlen(%q<act_at>),gte(%q<act_at>,0))=@pemit %#=notice(PF2E,if(strlen(%q<cmd_args>),No one in the encounter is called %q<cmd_args>.,No one is acting. Name who raises a shield: +enc/raise <who>.),warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,It is [u(%!/FUN`ENC`C,%q<act_at>,name)]'s turn.,warn); @assert strmatch(u(%!/FUN`ENC`C,%q<act_at>,kind),pc)=@pemit %#=notice(PF2E,A creature's shield is part of its AC already.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); @assert cor(%q<enc_gm>,eq(%q<act_at>,u(%!/FUN`ENC`ACTING)),member(%q<check_options>,feat:reactive-shield))=@pemit %#=notice(PF2E,Raise a Shield is an action on [u(%!/FUN`ENC`C,%q<act_at>,name)]'s own turn%, or a reaction with Reactive Shield.,warn); @assert strlen(%q<check_shield>)=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] holds no shield. +build/equip <shield>=held.,warn); think u(%!/FUN`ENC`SET,%q<act_at>,raised,1); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] raises [json_query(%q<check_shield>,extract,$.name)]: +[firstof(json_query(%q<check_shield>,extract,$.system.acBonus),0)] AC until [u(%!/FUN`ENC`C,%q<act_at>,name)]'s next turn starts.)
         flags: [cmdsyntax]
       INC`ENC`COND:
         value: |-
@@ -3691,7 +3691,7 @@ objects:
         - `+enc/check <who>=<statistic> \[vs <DC>\]`: a check or save with your conditions.
         - `+enc/save <who>=<save> vs <DC> \[<damage>\]`: a save for everyone named, such as a spell's targets. Name several with commas, or `foes`, `characters` or `everyone`. With damage it is a basic save from one roll: none on a critical success, half on a success, double on a critical failure.
         - `+enc/use <item>`: drinks, eats or uses a consumable from the encounter's copy; a healing item heals.
-        - `+enc/raise`: Raise a Shield. The shield you hold adds its bonus to your AC until your next turn starts.
+        - `+enc/raise`: Raise a Shield on your turn, or as a reaction with Reactive Shield. The shield you hold adds its bonus to your AC until your next turn starts.
         - `+enc/delay` waits until after the next in line, and `+enc/next` ends your turn.
 
         Example:
