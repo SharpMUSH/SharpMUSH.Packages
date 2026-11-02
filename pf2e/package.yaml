@@ -457,7 +457,7 @@ objects:
           setq(roll_effects,setunion(elements(%q<roll_sub>,4,~) [switch(%q<roll_twice>,higher,fortune,lower,misfortune)],))][
           switch(1,
             eq(words(%q<roll_effects>),2), setqm(roll_sub,,roll_twice,,roll_dice,1d20,roll_tags,Fortune|Misfortune,roll_extra,fortune misfortune),
-            strlen(%q<roll_sub>), setqm(roll_dice,elements(%q<roll_sub>,3,~),roll_tags,[capstr(elements(%q<roll_sub>,4,~))] %([u(FUN`ROLLRULE`LABEL,elements(%q<roll_sub>,5 6 7 8 9,~,~))]%),roll_extra,%q<roll_effects> substitute:[first(%q<roll_sub>,~)]),
+            t(strlen(%q<roll_sub>)), setqm(roll_dice,elements(%q<roll_sub>,3,~),roll_tags,[capstr(elements(%q<roll_sub>,4,~))] %([u(FUN`ROLLRULE`LABEL,elements(%q<roll_sub>,5 6 7 8 9,~,~))]%),roll_extra,%q<roll_effects> substitute:[first(%q<roll_sub>,~)]),
             setqm(roll_dice,switch(%q<roll_twice>,higher,2d20kh,lower,2d20kl,1d20),roll_tags,switch(%q<roll_twice>,higher,Fortune,lower,Misfortune),roll_extra,%q<roll_effects>))]
         flags: [funsyntax]
       # The check's roll options: the sheet's and the statistic's, as Foundry's Statistic adds them.
@@ -3798,10 +3798,14 @@ objects:
           @@(the check: who rolled what, its fortune, misfortune or substitution, the modifiers that counted, against a DC the degree and the rule that changed it, then the notes)[
           name(%q<sheet_target>)] rolls [capstr(%q<roll_stat>)]: [json_query(%q<roll_record>,extract,$.text)][
           if(strlen(%q<roll_tags>),%b%([itemize(%q<roll_tags>,|)]%))][
-          if(strlen(%q<cmd_dc>),%bvs DC %q<cmd_dc>: [tone(strong,u(%!/FUN`ACT`DEGREE,%q<roll_degree>))][
-            if(strlen(%q<roll_adjust>),%b%([u({{core}}/FUN`ROLLRULE`LABEL,rest(%q<roll_adjust>,~))]%, [lcstr(u(%!/FUN`ACT`DEGREE,%q<roll_unadjusted>))] rolled%))])]%b(roll [json_query(%q<roll_record>,extract,$.id)])[
+          if(strlen(%q<cmd_dc>),%bvs DC %q<cmd_dc>: [tone(strong,u(%!/FUN`SHOW`DEGREE,%q<roll_degree>))][
+            if(strlen(%q<roll_adjust>),%b%([u({{core}}/FUN`ROLLRULE`LABEL,rest(%q<roll_adjust>,~))]%, [lcstr(u(%!/FUN`SHOW`DEGREE,%q<roll_unadjusted>))] rolled%))])]%b(roll [json_query(%q<roll_record>,extract,$.id)])[
           if(words(%q<roll_chosen>),%r[tone(muted,iter(%q<roll_chosen>,[u(%!/FUN`SHOW`LABEL,elements(%i0,3,~),%q<roll_stat>)] [u(%!/FUN`SHOW`SIGNED,elements(%i0,2,~))],%b,%,%b))])][
           u(%!/FUN`SHOW`NOTES,%q<roll_notes>)]
+        flags: [funsyntax]
+      FUN`SHOW`DEGREE:
+        value: |-
+          extract(Critical failure|Failure|Success|Critical success,inc(%0),1,|)
         flags: [funsyntax]
       # The notes everyone sees, each on a line of its own.
       FUN`SHOW`NOTES:
