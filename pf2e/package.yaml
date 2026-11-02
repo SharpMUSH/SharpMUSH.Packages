@@ -2974,7 +2974,7 @@ objects:
           @@(%0 1 when an unarmed attack counts)[
           setq(simple_states,iter(%q<check_deity_weapons>,switch(1,
             strmatch(%i0,fist), t(%0),
-            strlen(setr(simple_id,u({{core}}/FUN`ITEM`FIND,equipment,%i0))), t(match(simple[if(%0,%bunarmed)],json_query(u({{core}}/FUN`ITEM`GET,equipment,%q<simple_id>),extract,$.system.category))),
+            t(strlen(setr(simple_id,u({{core}}/FUN`ITEM`FIND,equipment,%i0)))), t(match(simple[if(%0,%bunarmed)],json_query(u({{core}}/FUN`ITEM`GET,equipment,%q<simple_id>),extract,$.system.category))),
             ?)))][
           if(member(%q<simple_states>,1),1,if(member(%q<simple_states>,?),?,0))]
         flags: [funsyntax]
