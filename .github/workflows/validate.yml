@@ -41,6 +41,10 @@ jobs:
         working-directory: packages
         run: python3 tools/check-pf2e-navigation.py
 
+      - name: Check the PF2e cache version follows the package version
+        working-directory: packages
+        run: python3 tools/check-pf2e-cache-version.py
+
   immutable-tags:
     # Release tags (<pkg>/vX.Y.Z) are immutable: this job fails any push that
     # moves or deletes one. Combine with a repository ruleset for enforcement.
