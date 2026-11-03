@@ -1,7 +1,7 @@
 format: "1.19"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.9.15"
+version: "0.9.16"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -73,10 +73,10 @@ objects:
       DATA`CONFIG`VARIANTS: ""
       DATA`CONFIG`VARIANTS`TYPE: list
       DATA`CONFIG`VARIANTS`DEFAULT: ""
-      DATA`CONFIG`VARIANTS`CHOICES: free-archetype abp abp-fundamental proficiency-without-level
+      DATA`CONFIG`VARIANTS`CHOICES: free-archetype abp abp-fundamental gradual-boosts proficiency-without-level
       DATA`CONFIG`VARIANTS`LABEL: Variant rules
       DATA`CONFIG`VARIANTS`EXAMPLE: free-archetype
-      DATA`CONFIG`VARIANTS`DESCRIPTION: "The GM Core variant rules the game plays with, none by default. free-archetype: an archetype feat at every even level, beside the class feats. abp: Automatic Bonus Progression, the bonuses of fundamental runes coming from the character's level and weapons and armor carrying no runes. abp-fundamental: the same, but weapons and armor keep as many property runes as the level's potency allows. proficiency-without-level: proficiency bonuses leave out the level, and so do creatures' statistics, DCs by level and the XP table."
+      DATA`CONFIG`VARIANTS`DESCRIPTION: "The GM Core variant rules the game plays with, none by default. free-archetype: an archetype feat at every even level, beside the class feats. abp: Automatic Bonus Progression, the bonuses of fundamental runes coming from the character's level and weapons and armor carrying no runes. abp-fundamental: the same, but weapons and armor keep as many property runes as the level's potency allows. gradual-boosts: one attribute boost at each level from 2nd to 5th, 7th to 10th, 12th to 15th and 17th to 20th, in place of four at 5th, 10th, 15th and 20th. proficiency-without-level: proficiency bonuses leave out the level, and so do creatures' statistics, DCs by level and the XP table."
       DATA`CONFIG`PROFICIENCY-BONUSES: -2 2 4 6 8
       DATA`CONFIG`PROFICIENCY-BONUSES`TYPE: list
       DATA`CONFIG`PROFICIENCY-BONUSES`DEFAULT: -2 2 4 6 8
@@ -111,7 +111,7 @@ objects:
       # ledger read again costs a few hundred function calls. The key is the ledger with the package's
       # version, the books and CACHE`STAMP, which the updater and the deity table change. CACHE lists
       # the keys oldest first; past DATA`CACHE`KEEP the oldest goes.
-      DATA`CACHE`VERSION: "0.9.15"
+      DATA`CACHE`VERSION: "0.9.16"
       DATA`CACHE`KEEP: 200
       DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_itemalts check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_shieldrules check_bulkrules check_bulk check_bulk_enc check_bulk_max check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
       # The ItemAlteration properties the core applies, by the kind of item they reach.
@@ -4218,7 +4218,7 @@ objects:
       # +build/boost <set>=<attributes>: ancestry, background, class, or a level (1, 5, 10, 15, 20).
       INC`BUILD`BOOST:
         value: |-
-          think setqm(build_set,lcstr(trim(before(%q<cmd_rest>,=))),build_typed,iter(lcstr(trim(after(%q<cmd_rest>,=))),firstof(u(%!/FUN`COMMAND`ABILITY,%i0),if(strmatch(%i0,free),free,?%i0))),build_step,boost-[lcstr(trim(before(%q<cmd_rest>,=)))]); @assert match(ancestry background class 1 5 10 15 20,%q<build_set>)=@pemit %#=notice(PF2E,Boost sets are ancestry%, background%, class%, and levels 1%, 5%, 10%, 15 and 20: +build/boost 1=str dex con wis.,warn); @assert not(member(iter(%q<build_typed>,left(%i0,1)),?))=@pemit %#=notice(PF2E,The attributes are str%, dex%, con%, int%, wis and cha.,warn); @include %!/INC`BUILD`GUARD; think setq(build_plan,u(%!/FUN`BUILD`BOOST`PLAN,%q<build_set>,%q<build_typed>)); @assert not(strmatch(%q<build_plan>,#-*))=@pemit %#=notice(PF2E,rest(%q<build_plan>),warn); @include %!/INC`BUILD`BEGIN; @include/nobreak %!/INC`BUILD`CLEAR; @dolist/inplace %q<build_plan>={think setq(entry_json,json(object,kind,json(string,before(##,~)),ability,json(string,elements(##,2,~)),step,json(string,%q<build_step>),parent,firstof(elements(##,3,~),null))); @include %!/INC`BUILD`PUT}; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)][switch(%q<build_set>,class,Key attribute,ancestry,Ancestry boosts,background,Background boosts,Level %q<build_set> boosts)]: [itemize(iter(%q<build_plan>,[if(strmatch(first(%i0,~),flaw),flaw%b)][capstr(elements(%i0,2,~))],%b,|),|)].,ok); @wait 0={think u(%!/FUN`BUILD`LOAD); @pemit %#=u(%!/FUN`BUILD`NEXT)}
+          think setqm(build_set,lcstr(trim(before(%q<cmd_rest>,=))),build_typed,iter(lcstr(trim(after(%q<cmd_rest>,=))),firstof(u(%!/FUN`COMMAND`ABILITY,%i0),if(strmatch(%i0,free),free,?%i0))),build_step,boost-[lcstr(trim(before(%q<cmd_rest>,=)))]); @assert match(ancestry background class 1 [if(u(%!/FUN`BUILD`GRADUAL),u(%!/FUN`BUILD`GRADUAL`LEVELS,20),5 10 15 20)],%q<build_set>)=@pemit %#=notice(PF2E,Boost sets are ancestry%, background%, class%, and [if(u(%!/FUN`BUILD`GRADUAL),level 1 and each level from 2 to 5%, 7 to 10%, 12 to 15 and 17 to 20: +build/boost 2=str,levels 1%, 5%, 10%, 15 and 20: +build/boost 1=str dex con wis)].,warn); @assert not(member(iter(%q<build_typed>,left(%i0,1)),?))=@pemit %#=notice(PF2E,The attributes are str%, dex%, con%, int%, wis and cha.,warn); @include %!/INC`BUILD`GUARD; think setq(build_plan,u(%!/FUN`BUILD`BOOST`PLAN,%q<build_set>,%q<build_typed>)); @assert not(strmatch(%q<build_plan>,#-*))=@pemit %#=notice(PF2E,rest(%q<build_plan>),warn); @include %!/INC`BUILD`BEGIN; @include/nobreak %!/INC`BUILD`CLEAR; @dolist/inplace %q<build_plan>={think setq(entry_json,json(object,kind,json(string,before(##,~)),ability,json(string,elements(##,2,~)),step,json(string,%q<build_step>),parent,firstof(elements(##,3,~),null))); @include %!/INC`BUILD`PUT}; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)][switch(%q<build_set>,class,Key attribute,ancestry,Ancestry boosts,background,Background boosts,Level %q<build_set> boost[if(gt(words(%q<build_plan>),1),s)])]: [itemize(iter(%q<build_plan>,[if(strmatch(first(%i0,~),flaw),flaw%b)][capstr(elements(%i0,2,~))],%b,|),|)].,ok); @wait 0={think u(%!/FUN`BUILD`LOAD); @pemit %#=u(%!/FUN`BUILD`NEXT)}
         flags: [cmdsyntax]
       # +build/skills <skill> ...: the skills the class lets you choose, each trained; a Lore is <topic> lore.
       INC`BUILD`SKILLS:
@@ -4537,7 +4537,8 @@ objects:
             ancestry, u(%!/FUN`BUILD`BOOST`ITEM,%q<build_ancestry_item>,%1,ancestry,1),
             background, u(%!/FUN`BUILD`BOOST`ITEM,%q<build_background_item>,%1,background,0),
             class, u(%!/FUN`BUILD`BOOST`CLASS,%1),
-            u(%!/FUN`BUILD`BOOST`FREE,%0,%1))]
+            1, u(%!/FUN`BUILD`BOOST`FREE,%0,%1),
+            if(u(%!/FUN`BUILD`GRADUAL),u(%!/FUN`BUILD`BOOST`GRADUAL,%0,%1),u(%!/FUN`BUILD`BOOST`FREE,%0,%1)))]
         flags: [funsyntax]
       # An ancestry's or background's boosts: each with one option is fixed, each with more takes the
       # next attribute typed; all different. An ancestry's flaws come too, unless the first word is free:
@@ -4606,6 +4607,28 @@ objects:
             neq(words(%1),4), #-1 Four free boosts%, each to a different attribute: +build/boost %0=str dex con wis.,
             neq(words(setunion(%1,)),4), #-1 Each of the four boosts goes to a different attribute.,
             iter(%1,boost~%i0~))]
+        flags: [funsyntax]
+      # Gradual ability boosts (GM Core): one boost at each level of a group, 2 to 5, 7 to 10, 12 to 15 and
+      # 17 to 20, and no attribute twice in a group.
+      FUN`BUILD`GRADUAL:
+        value: |-
+          t(member(get({{core}}/DATA`CONFIG`VARIANTS),gradual-boosts))
+        flags: [funsyntax]
+      FUN`BUILD`GRADUAL`LEVELS:
+        value: |-
+          @@(%0 a level: the levels up to it that give a gradual boost)[
+          squish(iter(lnum(2,%0),if(neq(mod(%i0,5),1),%i0)))]
+        flags: [funsyntax]
+      FUN`BUILD`BOOST`GRADUAL:
+        value: |-
+          @@(%0 a level, %1 the attribute typed)[
+          setq(gradual_top,mul(5,ceil(fdiv(%0,5))))][
+          setq(gradual_taken,squish(iter(lnum(sub(%q<gradual_top>,3),%q<gradual_top>),if(neq(%i0,%0),iter(graball(%q<check_entries>,boost~*~boost-%i0),elements(%i0,2,~))))))][
+          switch(1,
+            gt(%0,%q<check_level>), #-1 Your level is %q<check_level>%, below %0.,
+            neq(words(%1),1), #-1 One boost at each level: +build/boost %0=str.,
+            member(%q<gradual_taken>,%1), #-1 [capstr(%1)] has a boost from another level between [sub(%q<gradual_top>,3)] and %q<gradual_top> already%, and each attribute takes one boost in that group.,
+            boost~%1~)]
         flags: [funsyntax]
       FUN`BUILD`SKILL`LIST:
         value: |-
@@ -4944,7 +4967,7 @@ objects:
             if(gt(%q<todo_lang_need>,0),[if(gte(words(u(%!/FUN`BUILD`STEP,languages)),%q<todo_lang_need>),done,open)]~Languages %([setr(todo_lang_have,words(u(%!/FUN`BUILD`STEP,languages)))] of %q<todo_lang_need>%)~+build/language <[if(eq(sub(%q<todo_lang_need>,%q<todo_lang_have>),1),a language,[sub(%q<todo_lang_need>,%q<todo_lang_have>)] languages)]>)]|[
             iter(u(%!/FUN`BUILD`SLOTS),u(%!/FUN`BUILD`TODO`ONE,feat-%i0,[capstr(first(%i0,-))] feat%, level [last(%i0,-)],+build/list feats %i0),%b,|)]|[
             iter(u(%!/FUN`BUILD`LEVELS,skillIncreaseLevels),if(lte(%i0,%q<check_level>),u(%!/FUN`BUILD`TODO`ONE,increase-%i0,Skill increase%, level %i0,+build/increase %i0=<skill>)),%b,|)]|[
-            iter(5 10 15 20,if(lte(%i0,%q<check_level>),u(%!/FUN`BUILD`TODO`ONE,boost-%i0,Four boosts%, level %i0,+build/boost %i0=str dex con wis)),%b,|)]|[
+            if(u(%!/FUN`BUILD`GRADUAL),iter(u(%!/FUN`BUILD`GRADUAL`LEVELS,%q<check_level>),u(%!/FUN`BUILD`TODO`ONE,boost-%i0,Boost%, level %i0,+build/boost %i0=<attribute>),%b,|),iter(5 10 15 20,if(lte(%i0,%q<check_level>),u(%!/FUN`BUILD`TODO`ONE,boost-%i0,Four boosts%, level %i0,+build/boost %i0=str dex con wis)),%b,|))]|[
             u(%!/FUN`BUILD`TODO`SPELLS)]|[
             setq(todo_listable,u(%!/FUN`BUILD`CHOICES`OPEN,1))][
             iter(u(%!/FUN`BUILD`CHOICES`OPEN,0),if(member(%q<todo_listable>,%i0,|),open,staff)~[rest(rest(rest(%i0,~),~),~)]~[if(member(%q<todo_listable>,%i0,|),+build/list choice #@,u(%!/FUN`BUILD`CHOICE`STAFF,%i0))],|,|)],|),|)]
@@ -7479,7 +7502,7 @@ objects:
         ## Steps
 
         - `+build/ancestry <name>`, `+build/heritage <name>`, `+build/background <name>`, `+build/class <name>`. The start of a name is enough when only one fits: `+build/heritage ancient`. What each brings comes with it.
-        - `+build/boost ancestry=<attributes>`, `+build/boost background=<attributes>`, `+build/boost class=<attribute>`, `+build/boost 1=<four attributes>`. Type a set on its own, such as `+build/boost background`, to see what it asks for.
+        - `+build/boost ancestry=<attributes>`, `+build/boost background=<attributes>`, `+build/boost class=<attribute>`, `+build/boost 1=<four attributes>`, and four more at levels 5, 10, 15 and 20: `+build/boost 5=<four attributes>`. With gradual boosts (`+help pf2e variants`) a level from 2 to 5, 7 to 10, 12 to 15 or 17 to 20 gives one: `+build/boost 3=<attribute>`. Type a set on its own, such as `+build/boost background`, to see what it asks for.
         - `+build/skills <skill> <skill> ...`: every skill your class lets you choose, in one line. The skills you are already trained in show on `+build/list skills`.
         - `+build/language <name> ...`: your extra languages, in one line.
         - `+build/feat <slot>=<name>`: a feat for a slot, such as `+build/feat class-1=Sudden Charge`. `+build/list feats class-1` lists only the feats whose prerequisites you meet. With Free Archetype (`+help pf2e variants`) every even level has an `archetype-<level>` slot as well.
@@ -7809,6 +7832,7 @@ objects:
         - `free-archetype`: an archetype feat at every even level, beside the class feats. Its slots are `archetype-2`, `archetype-4` and so on: `+build/feat archetype-2=Medic Dedication`. They take archetype feats only, and the second dedication waits for two other feats from the first archetype, as a class feat slot does.
         - `abp`: Automatic Bonus Progression. A character's level gives the bonuses fundamental runes would: a potency bonus to Strikes from 2nd level, to AC from 5th, to Perception from 7th and to saves from 8th, rising to +3, and a second weapon damage die at 4th level, a third at 12th and a fourth at 19th. Weapons and armor carry no runes, and an item bonus that equipment gives does not count.
         - `abp-fundamental`: the same, but a weapon keeps as many property runes as its attack potency and armor as many as its defense potency.
+        - `gradual-boosts`: one attribute boost at each level from 2nd to 5th, 7th to 10th, 12th to 15th and 17th to 20th, in place of four at 5th, 10th, 15th and 20th: `+build/boost 3=dex`. Within each group of four levels, an attribute takes one boost.
         - `proficiency-without-level`: a proficiency bonus is -2 untrained, +2 trained, +4 expert, +6 master and +8 legendary, without the level; staff change these with `+config pf2e/proficiency-bonuses=-2 2 4 6 8`. Creatures and hazards lose their level from AC, attacks, saves, Perception, skills and DCs, a DC by level loses the level too, and XP uses GM Core's table for this variant, from seven levels below the party to seven above.
       SEE`PF2E`VARIANTS: |-
         pf2e build|pf2e staff
