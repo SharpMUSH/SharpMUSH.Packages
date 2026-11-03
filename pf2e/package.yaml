@@ -1,7 +1,7 @@
 format: "1.16"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.9.5"
+version: "0.9.6"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -92,7 +92,7 @@ objects:
       # ledger read again costs a few hundred function calls. The key is the ledger with the package's
       # version, the books and CACHE`STAMP, which the updater and the deity table change. CACHE lists
       # the keys oldest first; past DATA`CACHE`KEEP the oldest goes.
-      DATA`CACHE`VERSION: "0.9.5"
+      DATA`CACHE`VERSION: "0.9.6"
       DATA`CACHE`KEEP: 200
       DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_itemalts check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
       # The ItemAlteration properties the core applies, by the kind of item they reach.
@@ -248,6 +248,54 @@ objects:
       DATA`ITEMALT`EQUIPMENT: description name bulk
       # Foundry's damage types.
       DATA`DAMAGE`TYPES: acid bleed bludgeoning cold electricity fire force mental piercing poison slashing sonic spirit untyped vitality void
+      # Foundry's IWR.describe for the types that are not a damage type, a material or a condition; DATA`IWR`D`<kind>`<type> for one kind.
+      DATA`IWR`D`R`ADAMANTINE: '[{"or":["damage:material:adamantine","damage:material:keep-stone"]}]'
+      DATA`IWR`D`W`COLD-IRON: '[{"or":["damage:material:cold-iron","damage:material:sovereign-steel"]}]'
+      DATA`IWR`D`W`SILVER: '[{"or":["damage:material:silver","damage:material:dawnsilver"]}]'
+      DATA`IWR`D`AIR: '["item:trait:air"]'
+      DATA`IWR`D`ALCHEMICAL: '["item:trait:alchemical"]'
+      DATA`IWR`D`ALL-DAMAGE: '["damage"]'
+      DATA`IWR`D`ARCANE: '[{"or":["item:trait:arcane","origin:action:trait:arcane"]}]'
+      DATA`IWR`D`AREA-DAMAGE: '["area-damage"]'
+      DATA`IWR`D`ARROW-VULNERABILITY: '["item:group:bow"]'
+      DATA`IWR`D`AUDITORY: '["item:trait:auditory"]'
+      DATA`IWR`D`AXE-VULNERABILITY: '["item:group:axe"]'
+      DATA`IWR`D`AXES: '["item:group:axe"]'
+      DATA`IWR`D`CRITICAL-HITS: '["check:outcome:critical-success"]'
+      DATA`IWR`D`DAMAGE-FROM-SPELLS: '["damage",{"or":["item:type:spell","item:from-spell","item:trait:impulse"]}]'
+      DATA`IWR`D`DISEASE: '["item:trait:disease"]'
+      DATA`IWR`D`DIVINE: '[{"or":["item:trait:divine","origin:action:trait:divine"]}]'
+      DATA`IWR`D`DUSKWOOD: '[{"or":["damage:material:duskwood",{"and":["self:mode:undead","damage:material:peachwood"]}]}]'
+      DATA`IWR`D`EARTH: '["item:trait:earth"]'
+      DATA`IWR`D`EMOTION: '["item:type:effect","item:trait:emotion"]'
+      DATA`IWR`D`ENERGY: '["damage:category:energy"]'
+      DATA`IWR`D`FEAR-EFFECTS: '["item:type:effect","item:trait:fear"]'
+      DATA`IWR`D`GHOST-TOUCH: '[{"or":["item:rune:property:astral","item:rune:property:ghost-touch","item:rune:property:greater-astral"]}]'
+      DATA`IWR`D`HOLY: '[{"or":["origin:action:trait:holy","item:trait:holy"]}]'
+      DATA`IWR`D`MAGICAL: '[{"or":["item:magical","origin:action:trait:magical","origin:action:trait:arcane","origin:action:trait:divine","origin:action:trait:occult","origin:action:trait:primal"]}]'
+      DATA`IWR`D`MENTAL: '[{"or":["damage:type:mental",{"and":["item:type:effect","item:trait:mental"]}]}]'
+      DATA`IWR`D`METAL: '["item:trait:metal"]'
+      DATA`IWR`D`NON-MAGICAL: '[{"not":"item:magical"}]'
+      DATA`IWR`D`OBJECT-IMMUNITIES: '[{"or":["damage:type:bleed","damage:type:mental","damage:type:poison","damage:type:spirit",{"and":["item:type:condition",{"or":["item:slug:doomed","item:slug:drained","item:slug:fatigued","item:slug:paralyzed","item:slug:sickened","item:slug:unconscious"]}]}]}]'
+      DATA`IWR`D`OCCULT: '[{"or":["item:trait:occult","origin:action:trait:occult"]}]'
+      DATA`IWR`D`OLFACTORY: '["item:trait:olfactory"]'
+      DATA`IWR`D`PERSISTENT-DAMAGE: '[{"or":["damage:category:persistent",{"and":["item:type:condition","item:slug:persistent-damage"]}]}]'
+      DATA`IWR`D`PHYSICAL: '["damage:category:physical"]'
+      DATA`IWR`D`PRECISION: '["damage:component:precision"]'
+      DATA`IWR`D`PRIMAL: '[{"or":["item:trait:primal","origin:action:trait:primal"]}]'
+      DATA`IWR`D`RADIATION: '["item:trait:radiation"]'
+      DATA`IWR`D`SPELLS: '["damage",{"or":["item:type:spell","item:from-spell","item:trait:impulse"]}]'
+      DATA`IWR`D`SPLASH-DAMAGE: '["damage:component:splash"]'
+      DATA`IWR`D`UNARMED-ATTACKS: '["item:category:unarmed"]'
+      DATA`IWR`D`UNHOLY: '[{"or":["origin:action:trait:unholy","item:trait:unholy"]}]'
+      DATA`IWR`D`VISUAL: '["item:trait:visual"]'
+      DATA`IWR`D`WATER: '["item:trait:water"]'
+      DATA`IWR`D`WOOD: '["item:trait:wood"]'
+      DATA`IWR`MATERIALS: abysium adamantine cold-iron dawnsilver djezet duskwood inubrix keep-stone noqual orichalcum peachwood siccatite silver sisterstone-dusk sisterstone-scarlet sovereign-steel warpglass
+      # Foundry's NON_DAMAGE_WEAKNESSES: added once to the whole damage when any instance fits.
+      DATA`IWR`NONDAMAGE: arcane divine occult primal air earth ghost-touch holy metal plant radiation salt-water salt spells unholy water wood
+      DATA`DAMAGE`PHYSICAL: bludgeoning piercing slashing bleed
+      DATA`DAMAGE`ENERGY: acid cold electricity fire sonic vitality void force
       # The proficiencies other than the statistics: weapon categories, armor categories, spellcasting and the class DC.
       DATA`PROFICIENCIES: simple martial advanced unarmed unarmored light medium heavy spellcasting classdc
       # GM Core's DC for each level, from level -1 to 25, and how much each difficulty moves it.
@@ -1949,19 +1997,96 @@ objects:
           setq(check_names,[if(strlen(%q<check_names>),%q<check_names>|)]%q<grant_name>[if(strlen(%q<grant_own>),%b%q<grant_own>)])][
           if(words(%q<grant_unapplied>),setq(check_unapplied,[if(strlen(%q<check_unapplied>),%q<check_unapplied>|)]%q<grant_name> %([itemize(%q<grant_unapplied>)]%)))]
         flags: [funsyntax]
-      # The sheet's Weakness, Resistance or Immunity rules whose predicates hold, after FUN`CHECK`PREPARE, as
-      # type~value for each of their types (value 0 for an immunity), the way a creature's statistics list them.
-      FUN`CHECK`IWR:
+      # The sheet's Weakness, Resistance or Immunity rules whose predicates hold, after FUN`CHECK`PREPARE, as IWR
+      # entries (FUN`IWR`ENTRY), separated by spaces. An
+      # entry whose mode is remove takes its type off the list it is merged into (FUN`IWR`MERGE).
+      FUN`CHECK`IWRJ:
         value: |-
           @@(%0 Weakness, Resistance or Immunity)[
-          u(FUN`CHECK`RULES`EACH,%0,FUN`CHECK`IWR`ONE,)]
+          u(FUN`CHECK`RULES`EACH,%0,FUN`CHECK`IWRJ`ONE,)]
         flags: [funsyntax]
-      FUN`CHECK`IWR`ONE:
+      FUN`CHECK`IWRJ`ONE:
         value: |-
           @@(%0 a rule, %1 its roll data)[
-          setq(iwro_k,json_query(%0,extract,$.key))][
-          setq(iwro_v,if(strmatch(%q<iwro_k>,Immunity),0,trunc(u(FUN`FORMULA`VALUE,json_query(%0,get,value),%1,0))))][
-          iter(u(FUN`RULE`LIST,%0,type,%1),if(cor(strmatch(%q<iwro_k>,Immunity),gt(%q<iwro_v>,0)),%i0~%q<iwro_v>))]
+          setqm(iwro_k,json_query(%0,extract,$.key),iwro_m,json_query(%0,extract,$.mode))][
+          setq(iwro_v,if(cor(strmatch(%q<iwro_k>,Immunity),strmatch(%q<iwro_m>,remove)),0,trunc(u(FUN`FORMULA`VALUE,json_query(%0,get,value),%1,0))))][
+          iter(u(FUN`RULE`LIST,%0,type,%1),if(cor(strmatch(%q<iwro_k>,Immunity),strmatch(%q<iwro_m>,remove),gt(%q<iwro_v>,0)),u(FUN`IWR`ENTRY,%0,%i0,%q<iwro_v>)))]
+        flags: [funsyntax]
+
+      # --- Weakness, resistance and immunity -------------------------------------------------------
+      FUN`IWR: "Foundry's IWR classes. An entry is compact JSON with no spaces: type, value, exceptions, doubleVs, definition (a custom type's predicate) and mode (remove). Lists of entries are separated by spaces."
+      # %0 an object with exceptions, doubleVs and definition as Foundry stores them, %1 its type, %2 its value.
+      FUN`IWR`ENTRY:
+        value: |-
+          @@(%0 a rule or an actor's IWR object, %1 the type, %2 the value)[
+          json(object,type,json(string,%1),value,firstof(%2,0),exceptions,\[[json_map(me/FUN`IWR`EXCEPTION,firstof(json_query(%0,get,exceptions),json(array)),\,)]\],doubleVs,\[[json_map(me/FUN`IWR`EXCEPTION,firstof(json_query(%0,get,doubleVs),json(array)),\,)]\],definition,firstof(json_query(%0,get,definition),null),mode,if(strmatch(json_query(%0,extract,$.mode),remove),"remove",null))]
+        flags: [funsyntax]
+      # json_map's callback: an exception as a type's name, or as its definition when it is an object (its label dropped).
+      FUN`IWR`EXCEPTION:
+        value: |-
+          switch(%0,string,json(string,edit(%1,%b,-)),object,json(object,definition,firstof(json_query(%1,get,definition),json(array))),)
+        flags: [funsyntax]
+      # An actor's list as Foundry stores it (system.attributes.weaknesses and the others): its entries.
+      FUN`IWR`ACTOR:
+        value: |-
+          @@(%0 a JSON array of IWR objects)[
+          if(strmatch(json_query(%0,type),array),json_map(me/FUN`IWR`ACTOR`ONE,%0,%b))]
+        flags: [funsyntax]
+      FUN`IWR`ACTOR`ONE:
+        value: |-
+          u(FUN`IWR`ENTRY,%1,json_query(%1,extract,$.type),json_query(%1,extract,$.value))
+        flags: [funsyntax]
+      # Two lists merged: the second's remove entries take their types off both.
+      FUN`IWR`MERGE:
+        value: |-
+          @@(%0 entries, %1 more entries)[
+          setq(iwrm_off,iter(%1,if(strmatch(json_query(%i0,extract,$.mode),remove),json_query(%i0,extract,$.type))))][
+          squish(iter(%0 %1,if(cor(strmatch(json_query(%i0,extract,$.mode),remove),member(%q<iwrm_off>,json_query(%i0,extract,$.type))),,%i0)))]
+        flags: [funsyntax]
+      # Foundry's IWR.describe: the predicate a type stands for, %1 W, R or I for the kind; materials,
+      # damage types and conditions by rule, the rest from DATA`IWR`D`[<kind>`]<type>.
+      FUN`IWR`HOLDS:
+        value: |-
+          @@(%0 a type, or an exception object with a definition, %1 W, R or I, %2 the roll options: 1 when it holds)[
+          switch(1,
+            strmatch(left(%0,1),\{), u(FUN`PREDICATE`TEST,firstof(json_query(%0,get,definition),json(array)),%2),
+            hasattr(me,DATA`IWR`D`%1`%0), u(FUN`PREDICATE`TEST,v(DATA`IWR`D`%1`%0),%2),
+            hasattr(me,DATA`IWR`D`%0), u(FUN`PREDICATE`TEST,v(DATA`IWR`D`%0),%2),
+            t(member(v(DATA`DAMAGE`TYPES),%0)), t(member(%2,damage:type:%0)),
+            t(member(v(DATA`IWR`MATERIALS),%0)), t(member(%2,damage:material:%0)),
+            cand(member(%2,item:type:condition),member(%2,item:slug:%0)))]
+        flags: [funsyntax]
+      # Foundry's IWR.test: the type holds and none of its exceptions does.
+      FUN`IWR`APPLIES:
+        value: |-
+          @@(%0 an entry, %1 W, R or I, %2 the roll options)[
+          setqm(iwra_k,%1,iwra_o,%2)][
+          cand(
+            if(strmatch(json_query(%0,extract,$.type),custom),u(FUN`PREDICATE`TEST,firstof(json_query(%0,get,definition),json(array)),%2),u(FUN`IWR`HOLDS,json_query(%0,extract,$.type),%1,%2)),
+            not(member(json_map(me/FUN`IWR`EXCEPTION`HOLDS,firstof(json_query(%0,get,exceptions),json(array)),%b),1)))]
+        flags: [funsyntax]
+      FUN`IWR`EXCEPTION`HOLDS:
+        value: |-
+          u(FUN`IWR`HOLDS,%1,%q<iwra_k>,%q<iwra_o>)
+        flags: [funsyntax]
+      # Resistance.getDoubledValue: twice the value when one of its doubleVs holds.
+      FUN`IWR`VALUE:
+        value: |-
+          @@(%0 an entry, %1 the roll options)[
+          setqm(iwra_k,R,iwra_o,%1)][
+          mul(json_query(%0,extract,$.value),if(member(json_map(me/FUN`IWR`EXCEPTION`HOLDS,firstof(json_query(%0,get,doubleVs),json(array)),%b),1),2,1))]
+        flags: [funsyntax]
+      # An entry as text: physical except silver, fire double against non-magical.
+      FUN`IWR`LABEL:
+        value: |-
+          @@(%0 an entry, %1 1 to give its value)[
+          setq(iwrl_x,json_map(me/FUN`IWR`LABEL`ONE,firstof(json_query(%0,get,exceptions),json(array)),|))][
+          setq(iwrl_d,json_map(me/FUN`IWR`LABEL`ONE,firstof(json_query(%0,get,doubleVs),json(array)),|))][
+          edit(json_query(%0,extract,$.type),-,%b)[if(%1,%b[json_query(%0,extract,$.value)])][if(strlen(%q<iwrl_x>),%bexcept [itemize(%q<iwrl_x>,|,or)])][if(strlen(%q<iwrl_d>),%, double against [itemize(%q<iwrl_d>,|,or)])]]
+        flags: [funsyntax]
+      FUN`IWR`LABEL`ONE:
+        value: |-
+          switch(%0,string,if(strmatch(%1,non-magical),%1,edit(%1,-,%b)),certain sources)
         flags: [funsyntax]
       # The sheet's rules of one key whose predicates hold with the roll options and %2, after FUN`CHECK`PREPARE:
       # what the attribute %1 returns for each, called with the rule and its grant's roll data.
@@ -2448,7 +2573,13 @@ objects:
             range,firstof(json_query(%0,extract,$.system.range),0),
             hands,if(strmatch(json_query(%0,extract,$.system.usage.value),*two-hands*),2,1),
             potency,firstof(json_query(%0,extract,$.system.runes.potency),0),
-            striking,firstof(json_query(%0,extract,$.system.runes.striking),0))]
+            striking,firstof(json_query(%0,extract,$.system.runes.striking),0),
+            material,json(string,json_query(%0,extract,$.system.material.type)))]
+        flags: [funsyntax]
+      # A rune's slug as Foundry's roll options give it: greaterFlaming as greater-flaming.
+      FUN`RUNE`KEBAB:
+        value: |-
+          lcstr(regeditall(%0,%(\[a-z0-9\]%)%(\[A-Z\]%),$1-$2))
         flags: [funsyntax]
       FUN`STRIKE`RULE:
         value: |-
@@ -2511,7 +2642,7 @@ objects:
           setqm(strike_traits,json_query(%0,extract,$.traits),strike_slug,json_query(%0,extract,$.slug),strike_category,json_query(%0,extract,$.category))][
           setq(strike_ranged,gt(firstof(json_query(%0,extract,$.range),0),0))][
           setq(strike_attribute,if(%q<strike_ranged>,dex,if(cand(member(%q<strike_traits>,finesse),gt(u(FUN`CHECK`ABILITY,dex),u(FUN`CHECK`ABILITY,str))),dex,str)))][
-          setq(strike_options,squish(item:slug:%q<strike_slug> item:category:%q<strike_category> item:group:[json_query(%0,extract,$.group)] item:base:[json_query(%0,extract,$.base)] [if(member(%q<check_deity_weapons>,json_query(%0,extract,$.base)),item:deity-favored)] [if(%q<strike_ranged>,item:ranged,item:melee)] item:damage:type:[firstof(json_query(%0,extract,$.type),bludgeoning)] [iter(%q<strike_traits>,item:trait:%i0)]))][
+          setq(strike_options,squish(item:slug:%q<strike_slug> item:category:%q<strike_category> item:group:[json_query(%0,extract,$.group)] item:base:[json_query(%0,extract,$.base)] [if(member(%q<check_deity_weapons>,json_query(%0,extract,$.base)),item:deity-favored)] [if(%q<strike_ranged>,item:ranged,item:melee)] item:damage:type:[firstof(json_query(%0,extract,$.type),bludgeoning)] [iter(%q<strike_traits>,item:trait:%i0)] [if(strlen(json_query(%0,extract,$.material)),item:material:[json_query(%0,extract,$.material)])] [if(cor(member(%q<strike_traits>,magical),gt(json_query(%0,extract,$.potency),0),gt(json_query(%0,extract,$.striking),0),words(json_query(%0,extract,$.property))),item:magical)] [iter(json_query(%0,extract,$.property),item:rune:property:[u(FUN`RUNE`KEBAB,%i0)])]))][
           setq(strike_rank,max(u(FUN`CHECK`RANK,%q<strike_category>),u(FUN`CHECK`RANK,weapon-base-[json_query(%0,extract,$.base)]),u(FUN`STRIKE`MARTIAL),if(member(%q<strike_options>,item:deity-favored),%q<check_favored>,0)))][
           setq(strike_domains,attack attack-roll strike-attack-roll mundane-attack [if(%q<strike_ranged>,ranged,melee)]-strike-attack-roll [if(strmatch(%q<strike_category>,unarmed),unarmed-attack-roll)] %q<strike_attribute>-attack %q<strike_slug>-attack all check)][
           setq(strike_mods,u(FUN`CHECK`MODS,ability~[u(FUN`CHECK`ABILITY,%q<strike_attribute>)]~%q<strike_attribute>~0 proficiency~[u(FUN`CHECK`PROFICIENCY,%q<strike_rank>)]~proficiency~0 [if(gt(json_query(%0,extract,$.potency),0),item~[json_query(%0,extract,$.potency)]~potency~0)],%q<strike_domains>,%q<strike_options>))][
@@ -2610,7 +2741,7 @@ objects:
           u(FUN`DAMAGE`RULES)][
           setq(strike_traits,json_map(me/FUN`RULE`SELECTOR,firstof(json_query(%0,extract,$.system.traits.value),json(array)),%b))][
           setqm(strike_ranged,regmatch(%q<strike_traits>,\\brange),strike_slug,u(FUN`ITEM`SLUG,%0),strike_category,,strike_rank,)][
-          setq(strike_options,squish(item:slug:%q<strike_slug> [if(%q<strike_ranged>,item:ranged,item:melee)] [iter(%q<strike_traits>,item:trait:%i0)]))][
+          setq(strike_options,squish(item:slug:%q<strike_slug> [if(%q<strike_ranged>,item:ranged,item:melee)] [iter(%q<strike_traits>,item:trait:%i0)] [if(member(%q<strike_traits>,magical),item:magical)]))][
           setq(dmg_domains,setunion([json_query(%0,extract,$._id)]-damage %q<strike_slug>-damage [if(%q<strike_ranged>,ranged,melee)]-strike-damage [if(%q<strike_ranged>,ranged,melee)]-damage [if(member(%q<strike_traits>,unarmed),unarmed,weapon)]-damage attack-damage strike-damage damage,))][
           setqm(dmg_striking,0,dmg_potency,0,dmg_over,,dmg_upgraded,0,dmg_weapon,%0,dmg_ignore,)][
           setq(dmg_options,setunion(%q<check_options> %q<strike_options> %1 %q<strike_traits> [if(%q<strike_ranged>,ranged,melee)] [u(FUN`ROLLOPTION`DOMAINS,%q<dmg_domains>)],))][
@@ -2835,7 +2966,7 @@ objects:
           u(FUN`DAMAGE`RULES)][
           setq(dmg_domains,squish(damage spell-damage [if(strlen(%q<spell_id>),[lcstr(%q<spell_id>)]-damage)] [if(%q<spell_attack>,attack-damage attack-spell-damage)]))][
           setqm(dmg_type,firstof(last(first(%0,%,)),untyped),dmg_over,,dmg_upgraded,0,dmg_weapon,,dmg_n,0,dmg_pn,0)][
-          setq(dmg_options,setunion(%q<check_options> action:cast-a-spell self:action:slug:cast-a-spell %q<spell_traits> %q<cast_trad> [iter(json_query(get(u(DATA`PACK`SPELLS)/ITEM`%q<spell_id>`PREP),extract,$.opts),if(strmatch(%i0,item:rank:*),,%i0))] item:rank:%q<spell_rank> %2 [u(FUN`ROLLOPTION`DOMAINS,%q<dmg_domains>)],))][
+          setq(dmg_options,setunion(%q<check_options> action:cast-a-spell self:action:slug:cast-a-spell item:magical [if(strlen(%q<cast_trad>),origin:action:trait:%q<cast_trad>)] %q<spell_traits> %q<cast_trad> [iter(json_query(get(u(DATA`PACK`SPELLS)/ITEM`%q<spell_id>`PREP),extract,$.opts),if(strmatch(%i0,item:rank:*),,%i0))] item:rank:%q<spell_rank> %2 [u(FUN`ROLLOPTION`DOMAINS,%q<dmg_domains>)],))][
           setq(dmg_plan,trim(squish(
             [iter(%0,u(FUN`DAMAGE`SPELL`TERMS,trim(%i0),),%,,|)]|[
             iter(%1,u(FUN`DAMAGE`SPELL`TERMS,trim(%i0),persistent),%,,|)]|[
@@ -4773,8 +4904,13 @@ objects:
       FUN`SHOW`DEFENCES:
         value: |-
           @@(after the core's FUN`CHECK`PREPARE)[
-          setqm(def_w,u({{core}}/FUN`CHECK`IWR,Weakness),def_r,u({{core}}/FUN`CHECK`IWR,Resistance),def_i,u({{core}}/FUN`CHECK`IWR,Immunity))][
-          squish(trim([if(words(%q<def_w>),Weak to [itemize(iter(%q<def_w>,[edit(first(%i0,~),-,%b)] [rest(%i0,~)],%b,|),|)].)] [if(words(%q<def_r>),Resists [itemize(iter(%q<def_r>,[edit(first(%i0,~),-,%b)] [rest(%i0,~)],%b,|),|)].)] [if(words(%q<def_i>),Immune to [itemize(iter(%q<def_i>,edit(first(%i0,~),-,%b),%b,|),|)].)]))]
+          setqm(def_w,u(%!/FUN`SHOW`IWR,Weakness,1),def_r,u(%!/FUN`SHOW`IWR,Resistance,1),def_i,u(%!/FUN`SHOW`IWR,Immunity,0))][
+          squish(trim([if(strlen(%q<def_w>),Weak to [itemize(%q<def_w>,|)].)] [if(strlen(%q<def_r>),Resists [itemize(%q<def_r>,|)].)] [if(strlen(%q<def_i>),Immune to [itemize(%q<def_i>,|)].)]))]
+        flags: [funsyntax]
+      FUN`SHOW`IWR:
+        value: |-
+          @@(%0 Weakness, Resistance or Immunity, %1 1 to give values: the sheet's entries as text, separated by |)[
+          trim(squish(iter(u({{core}}/FUN`CHECK`IWRJ,%0),if(strmatch(json_query(%i0,extract,$.mode),remove),,u({{core}}/FUN`IWR`LABEL,%i0,%1)),%b,|),|),b,|)]
         flags: [funsyntax]
       # The spells on the sheet by rank: cantrips, each rank, then focus spells.
       FUN`SHOW`SPELLS:
@@ -5541,24 +5677,37 @@ objects:
         flags: [funsyntax]
       # Damage against a creature or hazard: immunities, the highest resistance that fits each type, the highest
       # weakness that fits any type once, then a hazard's hardness, as Pathfinder applies them.
+      # Foundry's applyIWR. Each damage type's instance (type, and persistent or not) is tested with its formal
+      # description and iwr_opts, the damage's roll options: a creature unaffected by its type takes none; an
+      # immunity takes it all; immunity to precision takes the precision damage; the highest weakness that fits
+      # adds once; the highest resistance that fits, or resistance to precision up to the precision damage, takes
+      # from what is left, unless dmg_ignore, the resistance types a Strike's runes ignore, fits the instance.
+      # Weaknesses to a tradition, holy, unholy, spells and the like (DATA`IWR`NONDAMAGE) add once to the whole.
       FUN`ACT`IWR:
         value: |-
-          @@(%0 the target's index, using dmg_parts, type~amount~kind each, and dmg_ignore, the resistances a Strike's runes ignore: sets dmg_total and dmg_iwr, what changed it, and turns regeneration off for a turn when a type deactivates it)[
-          setqm(iwr_item,if(strmatch(u(FUN`ENC`C,%0,kind),npc),u(FUN`ENC`ITEM,%0)),dmg_iwr,,iwr_weak,0,iwr_weak_type,)][
+          @@(%0 the target's index, using dmg_parts, type~amount~kind each, iwr_opts and dmg_ignore: sets dmg_total and dmg_iwr, what changed it, and turns regeneration off for a turn when a type deactivates it)[
+          u(FUN`ACT`IWR`LOAD,%0)][
+          setqm(dmg_iwr,,iwr_base,squish(%q<iwr_opts> damage [u(FUN`ACT`IWR`MATERIALS)]))][
+          setq(iwr_keys,setunion(iter(%q<dmg_parts>,[first(%i0,~)]~[if(strmatch(elements(%i0,3,~),persistent),persistent)],|,%b),))][
+          setq(dmg_total,ladd(0 [iter(%q<iwr_keys>,u(FUN`ACT`IWR`INSTANCE,%i0))]))][
+          null(iter(%q<iwr_w>,if(cand(member(get({{core}}/DATA`IWR`NONDAMAGE),json_query(%i0,extract,$.type)),words(iter(%q<iwr_keys>,if(u({{core}}/FUN`IWR`APPLIES,%i1,W,u(FUN`ACT`IWR`OPTS,%i0)),x)))),[setq(dmg_total,add(%q<dmg_total>,json_query(%i0,extract,$.value)))][setq(dmg_iwr,%q<dmg_iwr>|weakness to [u({{core}}/FUN`IWR`LABEL,%i0)] +[json_query(%i0,extract,$.value)])])))][
+          if(gt(setr(iwr_hard,firstof(json_query(%q<iwr_item>,extract,$.system.attributes.hardness),0)),0),[setq(dmg_total,max(0,sub(%q<dmg_total>,%q<iwr_hard>)))][setq(dmg_iwr,%q<dmg_iwr>|hardness %q<iwr_hard>)])][
+          setq(iwr_off,edit(edit(before(after(lcstr(json_query(%q<iwr_item>,extract,$.system.attributes.hp.details)),deactivated by%b),%)),cold iron,cold-iron),%bor%b,%b))][
+          if(words(iter(%q<dmg_parts>,if(cand(member(%q<iwr_off>,first(%i0,~)),gt(elements(%i0,2,~),0)),x),|)),u(FUN`ENC`SET,%0,regoff,1))][
+          setq(dmg_iwr,trim(%q<dmg_iwr>,|,l))]
+        flags: [funsyntax]
+      # The target's weaknesses, resistances and immunities, its own and from its rules (iwr_w, iwr_r, iwr_i), and
+      # its traits (iwr_traits) for what its type is unaffected by; iwr_for is the target they are for.
+      FUN`ACT`IWR`LOAD:
+        value: |-
+          @@(%0 the target's index)[
+          setqm(iwr_for,%0,iwr_item,if(strmatch(u(FUN`ENC`C,%0,kind),npc),u(FUN`ENC`ITEM,%0)))][
           u(FUN`ACT`IWR`RULES,%0)][
-          if(cor(strlen(%q<iwr_item>),words(%q<iwr_rw> %q<iwr_rr> %q<iwr_ri>)),
-            [setqm(iwr_w,squish([u(FUN`ACT`IWR`LIST,json_query(%q<iwr_item>,extract,$.system.attributes.weaknesses))] %q<iwr_rw>),iwr_r,squish([u(FUN`ACT`IWR`LIST,json_query(%q<iwr_item>,extract,$.system.attributes.resistances))] %q<iwr_rr>),iwr_i,squish([u(FUN`ACT`IWR`LIST,json_query(%q<iwr_item>,extract,$.system.attributes.immunities))] %q<iwr_ri>))][
-            if(words(%q<dmg_ignore>),setq(iwr_r,squish(iter(%q<iwr_r>,if(member(%q<dmg_ignore>,first(%i0,~)),,%i0)))))][
-            setq(iwr_keys,setunion(iter(%q<dmg_parts>,[first(%i0,~)]~[if(strmatch(elements(%i0,3,~),persistent),persistent)],|,%b),))][
-            setq(dmg_total,ladd(0 [iter(%q<iwr_keys>,[setq(iwr_k,%i0)][u(FUN`ACT`IWR`PART,first(%i0,~),u(FUN`ACT`IWR`SUM,%q<iwr_k>,*),u(FUN`ACT`IWR`SUM,%q<iwr_k>,precision))])]))][
-            if(%q<iwr_weak>,[setq(dmg_total,add(%q<dmg_total>,%q<iwr_weak>))][setq(dmg_iwr,%q<dmg_iwr>|weakness to [edit(%q<iwr_weak_type>,-,%b)] +%q<iwr_weak>)])][
-            if(gt(setr(iwr_hard,firstof(json_query(%q<iwr_item>,extract,$.system.attributes.hardness),0)),0),[setq(dmg_total,max(0,sub(%q<dmg_total>,%q<iwr_hard>)))][setq(dmg_iwr,%q<dmg_iwr>|hardness %q<iwr_hard>)])][
-            setq(iwr_off,edit(edit(before(after(lcstr(json_query(%q<iwr_item>,extract,$.system.attributes.hp.details)),deactivated by%b),%)),cold iron,cold-iron),%bor%b,%b))][
-            if(words(iter(%q<dmg_parts>,if(cand(member(%q<iwr_off>,first(%i0,~)),gt(elements(%i0,2,~),0)),x),|)),u(FUN`ENC`SET,%0,regoff,1))][
-            setq(dmg_iwr,trim(%q<dmg_iwr>,|,l))])]
+          setqm(iwr_w,u({{core}}/FUN`IWR`MERGE,u({{core}}/FUN`IWR`ACTOR,json_query(%q<iwr_item>,extract,$.system.attributes.weaknesses)),%q<iwr_rw>),iwr_r,u({{core}}/FUN`IWR`MERGE,u({{core}}/FUN`IWR`ACTOR,json_query(%q<iwr_item>,extract,$.system.attributes.resistances)),%q<iwr_rr>),iwr_i,u({{core}}/FUN`IWR`MERGE,u({{core}}/FUN`IWR`ACTOR,json_query(%q<iwr_item>,extract,$.system.attributes.immunities)),%q<iwr_ri>))][
+          if(strlen(%q<iwr_item>),setq(iwr_traits,json_map(%!/FUN`JSON`ITEM,firstof(json_query(%q<iwr_item>,extract,$.system.traits.value),json(array)),%b)))]
         flags: [funsyntax]
       # The target's own Weakness, Resistance and Immunity rules, from its sheet and effects: iwr_rw, iwr_rr and
-      # iwr_ri. The target is prepared for them when it is not already, and the registers put back after.
+      # iwr_ri, and its traits. The target is prepared for them when it is not already, and the registers put back after.
       FUN`ACT`IWR`RULES:
         value: |-
           @@(%0 the target's index)[
@@ -5568,21 +5717,29 @@ objects:
         flags: [funsyntax]
       FUN`ACT`IWR`READ:
         value: |-
-          setqm(iwr_rw,u({{core}}/FUN`CHECK`IWR,Weakness),iwr_rr,u({{core}}/FUN`CHECK`IWR,Resistance),iwr_ri,u({{core}}/FUN`CHECK`IWR,Immunity))
+          setqm(iwr_rw,u({{core}}/FUN`CHECK`IWRJ,Weakness),iwr_rr,u({{core}}/FUN`CHECK`IWRJ,Resistance),iwr_ri,u({{core}}/FUN`CHECK`IWRJ,Immunity),iwr_traits,%q<check_traits>)
         flags: [funsyntax]
-      FUN`ACT`IWR`LIST:
+      # The materials of the damage, as Foundry's DamageInstance.materials: the weapon's material and a material trait.
+      FUN`ACT`IWR`MATERIALS:
         value: |-
-          @@(%0 a JSON list of {type, value}: type~value for each, separated by spaces)[
-          if(strlen(%0),json_map(%!/FUN`ACT`IWR`ONE,%0,%b))]
+          @@(iwr_opts)[
+          setunion(iter(%q<iwr_opts>,switch(%i0,item:material:*,damage:material:[after(%i0,item:material:)],item:trait:*,if(member(get({{core}}/DATA`IWR`MATERIALS),after(%i0,item:trait:)),damage:material:[after(%i0,item:trait:)]))),)]
         flags: [funsyntax]
-      FUN`ACT`IWR`ONE:
+      # An instance's formal description with the damage's options: damage:type, damage:category and persistent.
+      FUN`ACT`IWR`OPTS:
         value: |-
-          [json_query(%1,extract,$.type)]~[json_query(%1,extract,$.value)]
+          @@(%0 a key, type~ or type~persistent; iwr_base)[
+          squish(%q<iwr_base> damage:type:[first(%0,~)] [switch(1,t(member(get({{core}}/DATA`DAMAGE`PHYSICAL),first(%0,~))),damage:category:physical,t(member(get({{core}}/DATA`DAMAGE`ENERGY),first(%0,~))),damage:category:energy)] [if(strlen(rest(%0,~)),damage:category:persistent)])]
         flags: [funsyntax]
-      FUN`ACT`IWR`FITS:
+      # Foundry's isAffectedBy: vitality harms only the undead, void neither the undead nor constructs, bleed only the living.
+      FUN`ACT`IWR`AFFECTED:
         value: |-
-          @@(%0 a weakness, resistance or immunity type, %1 a damage type)[
-          cor(strmatch(%0,%1),strmatch(%0,all-damage),cand(strmatch(%0,physical),member(bludgeoning piercing slashing,%1)))]
+          @@(%0 a damage type; iwr_traits)[
+          switch(%0,
+            vitality, t(member(%q<iwr_traits>,undead)),
+            void, not(cor(member(%q<iwr_traits>,undead),member(%q<iwr_traits>,construct))),
+            bleed, not(cor(member(%q<iwr_traits>,undead),member(%q<iwr_traits>,construct))),
+            1)]
         flags: [funsyntax]
       # The damage of one key of FUN`ACT`IWR, type~ or type~persistent, of a kind (* for all of them).
       FUN`ACT`IWR`SUM:
@@ -5590,25 +5747,52 @@ objects:
           @@(%0 a key, %1 a kind pattern)[
           ladd(0 [iter(%q<dmg_parts>,if(cand(strmatch([first(%i0,~)]~[if(strmatch(elements(%i0,3,~),persistent),persistent)],%0),strmatch(elements(%i0,3,~),%1)),elements(%i0,2,~)),|,%b)])]
         flags: [funsyntax]
-      # One damage type's instance, as Foundry's applyIWR takes it: an immunity to the type takes it all; an
-      # immunity or resistance to precision takes from its precision damage; the highest resistance that fits
-      # the type takes from the rest once.
-      FUN`ACT`IWR`PART:
+      # One instance as applyIWR takes it: the damage it deals, noting each change in dmg_iwr.
+      FUN`ACT`IWR`INSTANCE:
         value: |-
-          @@(%0 a damage type, %1 its amount, %2 the precision damage in it: the amount taken, noting the weakness that fits best)[
-          if(words(iter(%q<iwr_i>,if(u(FUN`ACT`IWR`FITS,first(%i0,~),%0),x))),
-            [setq(dmg_iwr,%q<dmg_iwr>|immunity to [edit(%0,-,%b)])]0,
-            [setq(iwr_amt,%1)][
-            if(gt(%2,0),
-              if(member(iter(%q<iwr_i>,first(%i0,~)),precision),
-                [setq(iwr_amt,sub(%q<iwr_amt>,%2))][setq(dmg_iwr,%q<dmg_iwr>|immunity to precision)],
-                if(setr(iwr_pv,lmax(0 [iter(%q<iwr_r>,if(strmatch(first(%i0,~),precision),rest(%i0,~)))])),
-                  [setq(dmg_iwr,%q<dmg_iwr>|resistance to precision -[min(%2,%q<iwr_pv>)])][setq(iwr_amt,sub(%q<iwr_amt>,min(%2,%q<iwr_pv>)))])))][
-            setq(iwr_rv,lmax(0 [iter(%q<iwr_r>,if(u(FUN`ACT`IWR`FITS,first(%i0,~),%0),rest(%i0,~)))]))][
-            setq(iwr_wv,lmax(0 [iter(%q<iwr_w>,if(u(FUN`ACT`IWR`FITS,first(%i0,~),%0),rest(%i0,~)))]))][
-            if(cand(gt(%q<iwr_amt>,0),gt(%q<iwr_wv>,%q<iwr_weak>)),setqm(iwr_weak,%q<iwr_wv>,iwr_weak_type,%0))][
-            if(cand(%q<iwr_rv>,gt(%q<iwr_amt>,0)),setq(dmg_iwr,%q<dmg_iwr>|resistance to [edit(%0,-,%b)] -[min(%q<iwr_amt>,%q<iwr_rv>)]))][
-            max(0,sub(%q<iwr_amt>,%q<iwr_rv>))])]
+          @@(%0 a key, type~ or type~persistent)[
+          setqm(iwi_type,first(%0,~),iwi_total,u(FUN`ACT`IWR`SUM,%0,*),iwi_prec,u(FUN`ACT`IWR`SUM,%0,precision),iwi_splash,u(FUN`ACT`IWR`SUM,%0,splash),iwi_opts,u(FUN`ACT`IWR`OPTS,%0))][
+          setq(iwi_label,[edit(%q<iwi_type>,-,%b)][if(strlen(rest(%0,~)),%bpersistent)])][
+          switch(1,
+            lte(%q<iwi_total>,0), 0,
+            not(u(FUN`ACT`IWR`AFFECTED,%q<iwi_type>)), [setq(dmg_iwr,%q<dmg_iwr>|no effect from %q<iwi_label>)]0,
+            t(strlen(setr(iwi_imm,first(iter(%q<iwr_i>,if(cand(comp(json_query(%i0,extract,$.type),critical-hits),u({{core}}/FUN`IWR`APPLIES,%i0,I,%q<iwi_opts>)),%i0)))))), [setq(dmg_iwr,%q<dmg_iwr>|immunity to [u({{core}}/FUN`IWR`LABEL,%q<iwi_imm>)])]0,
+            u(FUN`ACT`IWR`AFTER))]
+        flags: [funsyntax]
+      FUN`ACT`IWR`AFTER:
+        value: |-
+          @@(iwi_ registers: precision immunity, then the weakness and the resistance)[
+          setqm(iwi_amt,%q<iwi_total>,iwi_pimm,if(gt(%q<iwi_prec>,0),words(iter(%q<iwr_i>,if(cand(strmatch(json_query(%i0,extract,$.type),precision),u({{core}}/FUN`IWR`APPLIES,%i0,I,%q<iwi_opts> damage:component:precision)),x)))))][
+          if(%q<iwi_pimm>,[setq(iwi_amt,sub(%q<iwi_amt>,min(%q<iwi_prec>,%q<iwi_amt>)))][setq(dmg_iwr,%q<dmg_iwr>|immunity to precision -[min(%q<iwi_prec>,%q<iwi_total>)])])][
+          if(lte(%q<iwi_amt>,0),0,[
+          setq(iwi_ws,squish(iter(%q<iwr_w>,
+            switch(json_query(%i0,extract,$.type),
+              precision, if(cand(gt(%q<iwi_prec>,0),u({{core}}/FUN`IWR`APPLIES,%i0,W,%q<iwi_opts> damage:component:precision)),%i0),
+              splash-damage, if(gt(%q<iwi_splash>,0),%i0),
+              if(cand(not(member(get({{core}}/DATA`IWR`NONDAMAGE),json_query(%i0,extract,$.type))),u({{core}}/FUN`IWR`APPLIES,%i0,W,%q<iwi_opts>)),%i0)))))][
+          setq(iwi_wv,lmax(0 [iter(%q<iwi_ws>,json_query(%i0,extract,$.value))]))][
+          if(%q<iwi_wv>,setq(dmg_iwr,%q<dmg_iwr>|weakness to [u({{core}}/FUN`IWR`LABEL,first(iter(%q<iwi_ws>,if(eq(json_query(%i0,extract,$.value),%q<iwi_wv>),%i0))))] +%q<iwi_wv>))][
+          setq(iwi_amt,add(%q<iwi_amt>,%q<iwi_wv>))][
+          setq(iwi_ign,words(iter(%q<dmg_ignore>,if(u({{core}}/FUN`IWR`HOLDS,%i0,R,%q<iwi_opts>),x))))][
+          setq(iwi_crit,member(%q<iwi_opts>,check:outcome:critical-success))][
+          setq(iwi_rs,squish(iter(%q<iwr_r>,
+            switch(json_query(%i0,extract,$.type),
+              critical-hits, if(cand(%q<iwi_crit>,gt(div(%q<iwi_total>,2),0)),[min(u({{core}}/FUN`IWR`VALUE,%i0,%q<iwi_opts>),div(%q<iwi_total>,2))]~[%q<iwi_ign>]~%i0),
+              precision, if(cand(gt(%q<iwi_prec>,0),not(%q<iwi_pimm>),u({{core}}/FUN`IWR`APPLIES,%i0,R,%q<iwi_opts> damage:component:precision)),[min(u({{core}}/FUN`IWR`VALUE,%i0,%q<iwi_opts>),%q<iwi_prec>)]~0~%i0),
+              if(u({{core}}/FUN`IWR`APPLIES,%i0,R,%q<iwi_opts>),[u({{core}}/FUN`IWR`VALUE,%i0,%q<iwi_opts>)]~[%q<iwi_ign>]~%i0)))))][
+          setq(iwi_rv,lmax(0 [iter(%q<iwi_rs>,if(not(elements(%i0,2,~)),first(%i0,~)))]))][
+          switch(1,
+            gt(%q<iwi_rv>,0), [setq(iwi_rr,first(iter(%q<iwi_rs>,if(cand(not(elements(%i0,2,~)),eq(first(%i0,~),%q<iwi_rv>)),rest(rest(%i0,~),~)))))][setq(dmg_iwr,%q<dmg_iwr>|resistance to [u({{core}}/FUN`IWR`LABEL,%q<iwi_rr>)] -[min(%q<iwi_amt>,%q<iwi_rv>)])],
+            words(%q<iwi_rs>), setq(dmg_iwr,%q<dmg_iwr>|resistance to [u({{core}}/FUN`IWR`LABEL,rest(rest(first(%q<iwi_rs>),~),~))] ignored))][
+          max(0,sub(%q<iwi_amt>,%q<iwi_rv>))])]
+        flags: [funsyntax]
+      # Whether persistent damage of a type takes hold of combatant %0: not when an immunity fits it.
+      FUN`ACT`IWR`PERSISTS:
+        value: |-
+          @@(%0 a combatant's index, %1 a damage type; iwr_opts)[
+          if(comp(%q<iwr_for>,%0),u(FUN`ACT`IWR`LOAD,%0))][
+          setq(iwp_opts,squish(%q<iwr_opts> damage [u(FUN`ACT`IWR`MATERIALS)] damage:type:%1 [switch(1,t(member(get({{core}}/DATA`DAMAGE`PHYSICAL),%1)),damage:category:physical,t(member(get({{core}}/DATA`DAMAGE`ENERGY),%1)),damage:category:energy)] damage:category:persistent))][
+          cand(u(FUN`ACT`IWR`AFFECTED,%1),not(words(iter(%q<iwr_i>,if(cand(comp(json_query(%i0,extract,$.type),critical-hits),u({{core}}/FUN`IWR`APPLIES,%i0,I,%q<iwp_opts>)),x)))))]
         flags: [funsyntax]
       FUN`ACT`IWR`TEXT:
         value: |-
@@ -5719,7 +5903,7 @@ objects:
           if(%q<strike_degree>,u(FUN`ACT`STRIKE`PLAN,%q<strike_degree>))][
           u(FUN`ACT`TAKE,on)][
           if(cor(words(%q<dmg_parts>,|),words(%q<dmg_pers>,|)),
-            [u(FUN`ACT`IWR,%q<act_target>)][
+            [setq(iwr_opts,%q<dmg_options>)][u(FUN`ACT`IWR,%q<act_target>)][
             u(FUN`ACT`HARM,%q<act_target>,%q<dmg_total>,%q<strike_crit>)][
             setq(enc_say,%q<enc_say>%r[if(gte(%q<strike_degree>,2),Damage,Splash)]: %q<dmg_text>[if(gt(words(%q<dmg_parts>,|),1),%b= %q<dmg_raw>)][u(FUN`ACT`IWR`TEXT)]. %q<harm_text>.[iter(%q<dmg_pers>,u(FUN`CAST`PERSIST,%q<act_target>,first(%i0,~),rest(%i0,~)),|,)][if(%q<dmg_splash>,%bEach other creature within 5 feet takes %q<dmg_splash> %q<dmg_splash_type> splash damage: +enc/damage.)])])][
           setq(enc_say,%q<enc_say>[u(FUN`ACT`RUNE`NOTES,%q<strike_degree>)])][
@@ -5815,13 +5999,13 @@ objects:
       # damage roll: none on a critical success, half on a success, double on a critical failure.
       INC`ENC`SAVE:
         value: |-
-          @include %!/INC`ENC`NEED; think setqm(save_who,trim(before(%q<cmd_args>,=)),save_what,trim(after(%q<cmd_args>,=))); think setqm(save_stat,u({{commands}}/FUN`COMMAND`STAT,trim(before(%q<save_what>,%bvs%b))),save_dc,first(after(%q<save_what>,%bvs%b)),save_formula,trim(rest(after(%q<save_what>,%bvs%b)))); @assert cand(match(fortitude reflex will,%q<save_stat>),isint(%q<save_dc>))=@pemit %#=notice(PF2E,+enc/save <who>=<save> vs <DC> <damage>%, such as +enc/save foes=reflex vs 21 6d6 fire. Name several with commas%, or foes%, characters or everyone. Without damage it is a plain save.,warn); @assert cor(%q<enc_gm>,cand(gte(u(%!/FUN`ENC`ACTING),0),u(%!/FUN`ENC`MAY,u(%!/FUN`ENC`ACTING))))=@pemit %#=notice(PF2E,Only the GM or whoever is acting calls for saves.,warn); think setq(save_at,u(%!/FUN`ENC`TARGETS,%q<save_who>)); @assert not(strlen(%q<targets_missing>))=@pemit %#=notice(PF2E,No one in the encounter is called %q<targets_missing>.,warn); @assert words(%q<save_at>)=@pemit %#=notice(PF2E,No one is left to roll.,warn); think if(strlen(%q<save_formula>),u(%!/FUN`ACT`DAMAGE,%q<save_formula>,0),setqm(dmg_parts,,dmg_text,,dmg_total,0)); @assert cand(isint(%q<dmg_total>),cor(not(strlen(%q<save_formula>)),strlen(%q<dmg_parts>)))=@pemit %#=notice(PF2E,%q<save_formula> is not damage. Give a formula such as 6d6 fire.,warn); think setqm(save_parts,%q<dmg_parts>,save_text,%q<dmg_text>,save_raw,%q<dmg_total>,save_ok,); think setq(save_lines,iter(%q<save_at>,u(%!/FUN`ACT`SAVE,%i0),%b,%r)); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,[if(strlen(%q<save_formula>),Basic%b)][u({{commands}}/FUN`SHOW`STAT,%q<save_stat>)] save against DC %q<save_dc>[if(strlen(%q<save_formula>),%, %q<save_text>[if(gt(words(%q<save_parts>,|),1),%b= %q<save_raw>)])]:%r%q<save_lines>); think setqm(rr_sw,save,rr_at,squish(iter(%q<save_at>,if(strmatch(u(%!/FUN`ENC`C,%i0,kind),pc),%i0))),rr_ok,squish(%q<save_ok>),rr_save,json(object,stat,json(string,%q<save_stat>),dc,%q<save_dc>,parts,json(string,%q<save_parts>))); @include %!/INC`HERO`MARK
+          @include %!/INC`ENC`NEED; think setqm(save_who,trim(before(%q<cmd_args>,=)),save_what,trim(after(%q<cmd_args>,=))); think setqm(save_stat,u({{commands}}/FUN`COMMAND`STAT,trim(before(%q<save_what>,%bvs%b))),save_dc,first(after(%q<save_what>,%bvs%b)),save_formula,trim(rest(after(%q<save_what>,%bvs%b)))); @assert cand(match(fortitude reflex will,%q<save_stat>),isint(%q<save_dc>))=@pemit %#=notice(PF2E,+enc/save <who>=<save> vs <DC> <damage>%, such as +enc/save foes=reflex vs 21 6d6 fire. Name several with commas%, or foes%, characters or everyone. Without damage it is a plain save.,warn); @assert cor(%q<enc_gm>,cand(gte(u(%!/FUN`ENC`ACTING),0),u(%!/FUN`ENC`MAY,u(%!/FUN`ENC`ACTING))))=@pemit %#=notice(PF2E,Only the GM or whoever is acting calls for saves.,warn); think setq(save_at,u(%!/FUN`ENC`TARGETS,%q<save_who>)); @assert not(strlen(%q<targets_missing>))=@pemit %#=notice(PF2E,No one in the encounter is called %q<targets_missing>.,warn); @assert words(%q<save_at>)=@pemit %#=notice(PF2E,No one is left to roll.,warn); think if(strlen(%q<save_formula>),u(%!/FUN`ACT`DAMAGE,%q<save_formula>,0),setqm(dmg_parts,,dmg_text,,dmg_total,0)); @assert cand(isint(%q<dmg_total>),cor(not(strlen(%q<save_formula>)),strlen(%q<dmg_parts>)))=@pemit %#=notice(PF2E,%q<save_formula> is not damage. Give a formula such as 6d6 fire.,warn); think setqm(save_parts,%q<dmg_parts>,save_text,%q<dmg_text>,save_raw,%q<dmg_total>,save_ok,,iwr_opts,,dmg_ignore,); think setq(save_lines,iter(%q<save_at>,u(%!/FUN`ACT`SAVE,%i0),%b,%r)); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,[if(strlen(%q<save_formula>),Basic%b)][u({{commands}}/FUN`SHOW`STAT,%q<save_stat>)] save against DC %q<save_dc>[if(strlen(%q<save_formula>),%, %q<save_text>[if(gt(words(%q<save_parts>,|),1),%b= %q<save_raw>)])]:%r%q<save_lines>); think setqm(rr_sw,save,rr_at,squish(iter(%q<save_at>,if(strmatch(u(%!/FUN`ENC`C,%i0,kind),pc),%i0))),rr_ok,squish(%q<save_ok>),rr_save,json(object,stat,json(string,%q<save_stat>),dc,%q<save_dc>,parts,json(string,%q<save_parts>))); @include %!/INC`HERO`MARK
         flags: [cmdsyntax]
       # +enc/damage[/half or /double] <who>=<amount or formula>: damage from the GM, halved (rounded down) or
       # doubled before weaknesses and resistances, as Foundry's chat card applies it.
       INC`ENC`DAMAGE:
         value: |-
-          @include %!/INC`ENC`NEEDGM; think setqm(dmg_who,trim(before(%q<cmd_args>,=)),dmg_what,trim(after(%q<cmd_args>,=))); @assert strlen(setr(act_at,u(%!/FUN`ENC`FIND,%q<dmg_who>)))=@pemit %#=notice(PF2E,No one in the encounter is called %q<dmg_who>.,warn); @assert strlen(%q<dmg_what>)=@pemit %#=notice(PF2E,+enc/damage <who>=<amount or formula>%, such as +enc/damage 3=2d6 fire.,warn); @assert cor(not(strlen(%q<cmd_sub>)),match(half double,%q<cmd_sub>))=@pemit %#=notice(PF2E,+enc/damage/half and +enc/damage/double are the only kinds.,warn); think if(isint(%q<dmg_what>),setqm(dmg_total,%q<dmg_what>,dmg_raw,%q<dmg_what>,dmg_text,%q<dmg_what>,dmg_parts,untyped~%q<dmg_what>~main),u(%!/FUN`ACT`DAMAGE,%q<dmg_what>,0)); @assert cand(isint(%q<dmg_total>),gte(%q<dmg_total>,0))=@pemit %#=notice(PF2E,%q<dmg_what> is not damage. Give a number or a formula such as 2d6 fire.,warn); think if(strlen(%q<cmd_sub>),[setq(dmg_parts,iter(%q<dmg_parts>,[first(%i0,~)]~[if(strmatch(%q<cmd_sub>,half),div(elements(%i0,2,~),2),mul(elements(%i0,2,~),2))]~[elements(%i0,3,~)],|,|))][setq(dmg_total,ladd(0 [iter(%q<dmg_parts>,elements(%i0,2,~),|,%b)]))][setq(dmg_text,%q<dmg_text>%, [if(strmatch(%q<cmd_sub>,half),halved,doubled)] to %q<dmg_total>)]); think u(%!/FUN`ACT`IWR,%q<act_at>); think u(%!/FUN`ACT`HARM,%q<act_at>,%q<dmg_total>,0); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,%q<harm_text>[if(cor(not(isint(%q<dmg_what>)),strlen(%q<dmg_iwr>),strlen(%q<cmd_sub>)),%b%([trim(%q<dmg_text>)][if(strlen(%q<dmg_iwr>),%, with [itemize(%q<dmg_iwr>,|)])]%))].)
+          @include %!/INC`ENC`NEEDGM; think setqm(dmg_who,trim(before(%q<cmd_args>,=)),dmg_what,trim(after(%q<cmd_args>,=))); @assert strlen(setr(act_at,u(%!/FUN`ENC`FIND,%q<dmg_who>)))=@pemit %#=notice(PF2E,No one in the encounter is called %q<dmg_who>.,warn); @assert strlen(%q<dmg_what>)=@pemit %#=notice(PF2E,+enc/damage <who>=<amount or formula>%, such as +enc/damage 3=2d6 fire.,warn); @assert cor(not(strlen(%q<cmd_sub>)),match(half double,%q<cmd_sub>))=@pemit %#=notice(PF2E,+enc/damage/half and +enc/damage/double are the only kinds.,warn); think if(isint(%q<dmg_what>),setqm(dmg_total,%q<dmg_what>,dmg_raw,%q<dmg_what>,dmg_text,%q<dmg_what>,dmg_parts,untyped~%q<dmg_what>~main),u(%!/FUN`ACT`DAMAGE,%q<dmg_what>,0)); @assert cand(isint(%q<dmg_total>),gte(%q<dmg_total>,0))=@pemit %#=notice(PF2E,%q<dmg_what> is not damage. Give a number or a formula such as 2d6 fire.,warn); think if(strlen(%q<cmd_sub>),[setq(dmg_parts,iter(%q<dmg_parts>,[first(%i0,~)]~[if(strmatch(%q<cmd_sub>,half),div(elements(%i0,2,~),2),mul(elements(%i0,2,~),2))]~[elements(%i0,3,~)],|,|))][setq(dmg_total,ladd(0 [iter(%q<dmg_parts>,elements(%i0,2,~),|,%b)]))][setq(dmg_text,%q<dmg_text>%, [if(strmatch(%q<cmd_sub>,half),halved,doubled)] to %q<dmg_total>)]); think setqm(iwr_opts,,dmg_ignore,); think u(%!/FUN`ACT`IWR,%q<act_at>); think u(%!/FUN`ACT`HARM,%q<act_at>,%q<dmg_total>,0); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,%q<harm_text>[if(cor(not(isint(%q<dmg_what>)),strlen(%q<dmg_iwr>),strlen(%q<cmd_sub>)),%b%([trim(%q<dmg_text>)][if(strlen(%q<dmg_iwr>),%, with [itemize(%q<dmg_iwr>,|)])]%))].)
         flags: [cmdsyntax]
       # +enc/use [<who>=]<item>: a consumable from the combatant's gear, used up in the encounter's copy only; a healing item heals.
       INC`ENC`USE:
@@ -6003,7 +6187,7 @@ objects:
           setqm(cast_dmg_parts,,cast_dmg_text,,cast_heal_n,0,cast_heal_text,,cast_say,)][
           if(cor(strlen(%q<spell_dmg>),strlen(%q<spell_pers>)),
             [u({{core}}/FUN`DAMAGE`SPELL,%q<spell_dmg>,%q<spell_pers>,)][u({{core}}/FUN`DAMAGE`FORMULA,2)][u(FUN`ACT`DAMAGE`ROLL)][
-            setqm(cast_dmg_parts,%q<dmg_parts>,cast_dmg_text,trim(%q<dmg_text>),cast_dmg_raw,%q<dmg_raw>,spell_pers,iter(%q<dmg_pers>,first(%i0,~),|,%,%b))])][
+            setqm(cast_iwropts,squish(%q<dmg_options> [if(strlen(json_query(%q<spell_sys>,extract,$.area.type)),area-damage)]),cast_dmg_parts,%q<dmg_parts>,cast_dmg_text,trim(%q<dmg_text>),cast_dmg_raw,%q<dmg_raw>,spell_pers,iter(%q<dmg_pers>,first(%i0,~),|,%,%b))])][
           if(strlen(%q<spell_heal>),[u(FUN`ACT`DAMAGE,%q<spell_heal>,0)][setqm(cast_heal_n,%q<dmg_total>,cast_heal_text,trim(%q<dmg_text>))])][
           setq(cast_say,trim(squish([if(%q<spell_attack>,Spell attack [u(FUN`SHOW`SIGNED,%q<cast_atk>)].)] [if(strlen(%q<spell_save>),DC %q<cast_dc> [if(%q<spell_basic>,basic%b)][capstr(%q<spell_save>)].)] [if(strlen(%q<cast_dmg_text>),Damage %q<cast_dmg_text>[if(gt(words(%q<cast_dmg_parts>,|),1),%b= %q<cast_dmg_raw>)].)] [if(strlen(%q<spell_pers>),Persistent %q<spell_pers>.)] [if(strlen(%q<cast_heal_text>),Healing %q<cast_heal_text>.)])))]
         flags: [funsyntax]
@@ -6081,6 +6265,7 @@ objects:
       FUN`CAST`ON:
         value: |-
           @@(%0 a target's index; cast_ and spell_ registers)[
+          setq(iwr_opts,%q<cast_iwropts>)][
           setq(on_ally,strmatch(u(FUN`ENC`C,%0,side),%q<cast_side>))][
           setq(on_line,switch(1,
             cand(%q<cast_heal_n>,cor(%q<on_ally>,not(%q<spell_both>))),[u(FUN`ACT`HEAL,%0,%q<cast_heal_n>)]%q<heal_text>.,
@@ -6109,8 +6294,13 @@ objects:
         flags: [funsyntax]
       FUN`CAST`PERSIST:
         value: |-
-          @@(%0 a target's index, %1 persistent damage, formula and type, separated by commas, %2 1 when doubled)[
-          null(iter(%1,u(FUN`ENC`PATCH,%0,json(object,pers,json(object,last(trim(%i0)),json(string,if(%2,2*%([first(trim(%i0))]%),first(trim(%i0))))))),%,))]%b[u(FUN`ENC`C,%0,name)] takes [trim(%1)] persistent damage[if(%2,%, doubled)].
+          @@(%0 a target's index, %1 persistent damage, formula and type, separated by commas, %2 1 when doubled; iwr_opts the damage's roll options: a type the target is immune to, or unaffected by, does not take hold)[
+          setq(cp_all,iter(%1,trim(%i0),%,,|))][
+          setq(cp_keep,squish(iter(%q<cp_all>,if(u(FUN`ACT`IWR`PERSISTS,%0,last(%i0)),%i0),|,|),|))][
+          setq(cp_off,squish(iter(%q<cp_all>,if(u(FUN`ACT`IWR`PERSISTS,%0,last(%i0)),,last(%i0)),|,|),|))][
+          null(iter(%q<cp_keep>,u(FUN`ENC`PATCH,%0,json(object,pers,json(object,last(%i0),json(string,if(%2,2*%([first(%i0)]%),first(%i0)))))),|))][
+          if(words(%q<cp_keep>,|),%b[u(FUN`ENC`C,%0,name)] takes [itemize(%q<cp_keep>,|)] persistent damage[if(%2,%, doubled)].)][
+          if(words(%q<cp_off>,|),%b[u(FUN`ENC`C,%0,name)] takes no persistent [itemize(%q<cp_off>,|)] damage.)]
         flags: [funsyntax]
       # An effect on combatant %0 from its pack and id, at level %3 with choices %4, ending at the start of combatant
       # key %5's turn once its duration in rounds is over (none for one lasting the encounter or longer). A new battle
@@ -6262,6 +6452,7 @@ objects:
           setq(end_pers,u(FUN`ENC`C,%0,pers))][
           null(iter(json_map(%!/FUN`JSON`KEY,%q<end_pers>,%b),
             [u(FUN`ACT`DAMAGE,[json_query(%q<end_pers>,extract,$.%i0)] %i0,0)][
+            setqm(dmg_parts,iter(%q<dmg_parts>,[first(%i0,~)]~[elements(%i0,2,~)]~persistent,|,|),iwr_opts,item:type:condition item:slug:persistent-damage,dmg_ignore,)][
             u(FUN`ACT`IWR,%0)][
             u(FUN`ACT`HARM,%0,%q<dmg_total>,0)][
             setq(end_flat,die(1,20))][
@@ -6434,13 +6625,13 @@ objects:
       FUN`RECALL`DEFENCES:
         value: |-
           @@(%0 a creature: its weaknesses, resistances and immunities)[
-          setqm(def_weak,u(FUN`RECALL`LIST,json_query(%0,extract,$.system.attributes.weaknesses)),def_resist,u(FUN`RECALL`LIST,json_query(%0,extract,$.system.attributes.resistances)),def_immune,json_map({{core}}/FUN`RULE`SELECTOR,firstof(json_query(%0,extract,$.system.attributes.immunities),json(array)),%b))][
-          firstof(squish(trim([if(strlen(%q<def_weak>),Weak to %q<def_weak>.)] [if(strlen(%q<def_resist>),Resists %q<def_resist>.)] [if(words(%q<def_immune>),Immune to [itemize(iter(%q<def_immune>,json_query(%i0,extract,$.type)))].)])),No weaknesses%, resistances or immunities.)]
+          setqm(def_weak,u(FUN`RECALL`LIST,json_query(%0,extract,$.system.attributes.weaknesses),1),def_resist,u(FUN`RECALL`LIST,json_query(%0,extract,$.system.attributes.resistances),1),def_immune,u(FUN`RECALL`LIST,json_query(%0,extract,$.system.attributes.immunities),0))][
+          firstof(squish(trim([if(strlen(%q<def_weak>),Weak to %q<def_weak>.)] [if(strlen(%q<def_resist>),Resists %q<def_resist>.)] [if(strlen(%q<def_immune>),Immune to %q<def_immune>.)])),No weaknesses%, resistances or immunities.)]
         flags: [funsyntax]
       FUN`RECALL`LIST:
         value: |-
-          @@(%0 a list of {type, value}: as words)[
-          if(strlen(%0),itemize(iter(lnum(json_query(%0,size)),[edit(json_query(%0,extract,$\[%i0\].type),-,%b)] [json_query(%0,extract,$\[%i0\].value)],%b,|),|))]
+          @@(%0 a list of IWR objects, %1 1 to give values: as words, with their exceptions)[
+          itemize(iter(u({{core}}/FUN`IWR`ACTOR,%0),u({{core}}/FUN`IWR`LABEL,%i0,%1),%b,|),|)]
         flags: [funsyntax]
       FUN`RECALL`ABILITIES:
         value: |-
@@ -6837,7 +7028,7 @@ objects:
 
         ## On your turn
 
-        - `+enc/strike <target>\[=<Strike>\]`: a Strike against the target's AC, with the multiple attack penalty. A hit deals damage, doubled on a critical hit, and a creature's weaknesses, resistances and immunities count. Damage dice and changes from feats and effects count too, such as deadly and fatal dice, precision damage against an off-guard target, or a die size raised. The line shows the formula that was rolled, such as `2*(1d10+4)+2d10 piercing, 2d10 bleed`.
+        - `+enc/strike <target>\[=<Strike>\]`: a Strike against the target's AC, with the multiple attack penalty. A hit deals damage, doubled on a critical hit, and weaknesses, resistances and immunities count the way Foundry applies them: each damage type on its own, with exceptions such as physical except silver, resistance doubled against non-magical damage, the weapon's material and runes, holy and unholy, and vitality and void that only harm some creatures. Damage dice and changes from feats and effects count too, such as deadly and fatal dice, precision damage against an off-guard target, or a die size raised. The line shows the formula that was rolled, such as `2*(1d10+4)+2d10 piercing, 2d10 bleed`.
         - `+enc/check <who>=<statistic> \[vs <DC>\]`: a check or save with your conditions.
         - `+enc/toggle \[<who>:\]<name>\[=<choice>\]`: a toggle in the encounter's copy, as `+help pf2e toggle` has it.
         - `+enc/save <who>=<save> vs <DC> \[<damage>\]`: a save for everyone named, such as a spell's targets. Name several with commas, or `foes`, `characters` or `everyone`. With damage it is a basic save from one roll: none on a critical success, half on a success, double on a critical failure.
