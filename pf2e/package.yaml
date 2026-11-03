@@ -1,7 +1,7 @@
 format: "1.19"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.9.14"
+version: "0.9.15"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -73,10 +73,19 @@ objects:
       DATA`CONFIG`VARIANTS: ""
       DATA`CONFIG`VARIANTS`TYPE: list
       DATA`CONFIG`VARIANTS`DEFAULT: ""
-      DATA`CONFIG`VARIANTS`CHOICES: free-archetype abp abp-fundamental
+      DATA`CONFIG`VARIANTS`CHOICES: free-archetype abp abp-fundamental proficiency-without-level
       DATA`CONFIG`VARIANTS`LABEL: Variant rules
       DATA`CONFIG`VARIANTS`EXAMPLE: free-archetype
-      DATA`CONFIG`VARIANTS`DESCRIPTION: "The GM Core variant rules the game plays with, none by default. free-archetype: an archetype feat at every even level, beside the class feats. abp: Automatic Bonus Progression, the bonuses of fundamental runes coming from the character's level and weapons and armor carrying no runes. abp-fundamental: the same, but weapons and armor keep as many property runes as the level's potency allows."
+      DATA`CONFIG`VARIANTS`DESCRIPTION: "The GM Core variant rules the game plays with, none by default. free-archetype: an archetype feat at every even level, beside the class feats. abp: Automatic Bonus Progression, the bonuses of fundamental runes coming from the character's level and weapons and armor carrying no runes. abp-fundamental: the same, but weapons and armor keep as many property runes as the level's potency allows. proficiency-without-level: proficiency bonuses leave out the level, and so do creatures' statistics, DCs by level and the XP table."
+      DATA`CONFIG`PROFICIENCY-BONUSES: -2 2 4 6 8
+      DATA`CONFIG`PROFICIENCY-BONUSES`TYPE: list
+      DATA`CONFIG`PROFICIENCY-BONUSES`DEFAULT: -2 2 4 6 8
+      DATA`CONFIG`PROFICIENCY-BONUSES`PATTERN: ^-?[0-9]+$
+      DATA`CONFIG`PROFICIENCY-BONUSES`MIN: 5
+      DATA`CONFIG`PROFICIENCY-BONUSES`MAX: 5
+      DATA`CONFIG`PROFICIENCY-BONUSES`LABEL: Proficiency without level bonuses
+      DATA`CONFIG`PROFICIENCY-BONUSES`EXAMPLE: -2 2 4 6 8
+      DATA`CONFIG`PROFICIENCY-BONUSES`DESCRIPTION: "With proficiency-without-level, the bonus for untrained, trained, expert, master and legendary, in that order."
       DATA`CONFIG`REPOSITORY: SharpMUSH/SharpMUSH.Packages
       DATA`CONFIG`REPOSITORY`TYPE: text
       DATA`CONFIG`REPOSITORY`DEFAULT: SharpMUSH/SharpMUSH.Packages
@@ -102,7 +111,7 @@ objects:
       # ledger read again costs a few hundred function calls. The key is the ledger with the package's
       # version, the books and CACHE`STAMP, which the updater and the deity table change. CACHE lists
       # the keys oldest first; past DATA`CACHE`KEEP the oldest goes.
-      DATA`CACHE`VERSION: "0.9.14"
+      DATA`CACHE`VERSION: "0.9.15"
       DATA`CACHE`KEEP: 200
       DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_itemalts check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_shieldrules check_bulkrules check_bulk check_bulk_enc check_bulk_max check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
       # The ItemAlteration properties the core applies, by the kind of item they reach.
@@ -1049,6 +1058,11 @@ objects:
           [setq(abp_variants,v(DATA`CONFIG`VARIANTS))][
           switch(1,t(member(%q<abp_variants>,abp)),abp,t(member(%q<abp_variants>,abp-fundamental)),abp-fundamental,)]
         flags: [funsyntax]
+      # Proficiency without level (GM Core), as Foundry's pwol variant: 1 when the game plays with it.
+      FUN`PWOL:
+        value: |-
+          t(member(v(DATA`CONFIG`VARIANTS),proficiency-without-level))
+        flags: [funsyntax]
       FUN`ABP`ATTACK:
         value: |-
           @@(%0 a level: the attack potency)[
@@ -1598,7 +1612,7 @@ objects:
       FUN`CHECK`PREPARE:
         value: |-
           @@(%0 the ledger, %1 1 to leave out the synthetics, for the builder)[
-          setq(check_key,left(digest(sha1,%0|%1|[v(DATA`CACHE`VERSION)]|[v(DATA`CONFIG`BOOKS)]|[v(DATA`CONFIG`VARIANTS)]|[v(CACHE`STAMP)]),20))][
+          setq(check_key,left(digest(sha1,%0|%1|[v(DATA`CACHE`VERSION)]|[v(DATA`CONFIG`BOOKS)]|[v(DATA`CONFIG`VARIANTS)]|[v(DATA`CONFIG`PROFICIENCY-BONUSES)]|[v(CACHE`STAMP)]),20))][
           if(hasattr(me,CACHE`%q<check_key>),
             [setqm(check_ledger,%0,check_dmgready,0)][null(iter(v(DATA`CACHE`REGISTERS),setq(%i0,v(CACHE`%q<check_key>`%i0))))],
             [u(FUN`CHECK`PREPARE`BUILD,%0,%1)][u(FUN`CACHE`SAVE)])]
@@ -2665,8 +2679,8 @@ objects:
         flags: [funsyntax]
       FUN`CHECK`PROFICIENCY:
         value: |-
-          @@(%0 a rank: its proficiency bonus, 2 per rank plus the level, 0 untrained)[
-          if(%0,add(mul(2,%0),%q<check_level>),0)]
+          @@(%0 a rank: its proficiency bonus, 2 per rank plus the level, 0 untrained; with proficiency without level the game's bonus for the rank)[
+          if(u(FUN`PWOL),extract(v(DATA`CONFIG`PROFICIENCY-BONUSES),inc(max(0,min(4,%0))),1),if(%0,add(mul(2,%0),%q<check_level>),0))]
         flags: [funsyntax]
       FUN`CHECK`ABILITY:
         value: |-
@@ -5858,6 +5872,7 @@ objects:
           @@(%0 a combatant's index)[
           setq(act_npc,if(strmatch(u(FUN`ENC`C,%0,kind),npc),u(FUN`ENC`ITEM,%0)))][
           setq(act_adj,if(strlen(%q<act_npc>),firstof(u(FUN`ENC`C,%0,adj),0),0))][
+          setq(act_pwol,if(cand(strlen(%q<act_npc>),u({{core}}/FUN`PWOL)),max(0,firstof(json_query(%q<act_npc>,extract,$.system.details.level.value),0)),0))][
           setq(act_raised,t(u(FUN`ENC`C,%0,raised)))][
           setq(check_daily,firstof(u(FUN`ENC`C,%0,daily),json(object)))][
           u({{core}}/FUN`CHECK`PREPARE,u(FUN`ENC`LEDGER,%0))][
@@ -5878,7 +5893,7 @@ objects:
       FUN`ACT`NPC`BASE:
         value: |-
           @@(%0 a statistic: the creature's or hazard's modifier as its statistics give it, adjusted for elite or weak)[
-          add(%q<act_adj>,switch(u({{core}}/FUN`STAT`KIND,%0),
+          add(sub(%q<act_adj>,%q<act_pwol>),switch(u({{core}}/FUN`STAT`KIND,%0),
             perception, firstof(json_query(%q<act_npc>,extract,$.system.perception.mod),0),
             save, firstof(json_query(%q<act_npc>,extract,$.system.saves.%0.value),0),
             firstof(json_query(%q<act_npc>,extract,$.system.skills.%0.base),if(strmatch(%0,stealth),json_query(%q<act_npc>,extract,$.system.attributes.stealth.value)),json_query(%q<act_npc>,extract,$.system.abilities.[u({{core}}/FUN`STAT`ATTRIBUTE,%0)].mod),0)))]
@@ -5890,7 +5905,7 @@ objects:
           setq(ac_raised,if(%q<sh_raised>,circumstance~%q<sh_ac>~raised-shield~0))][
           add(10,u({{core}}/FUN`CHECK`TOTAL,
             if(strlen(%q<act_npc>),
-              u({{core}}/FUN`CHECK`MODS,untyped~[add(%q<act_adj>,sub(firstof(json_query(%q<act_npc>,extract,$.system.attributes.ac.value),10),10))]~base~0 %q<ac_raised>,ac all dex-based,),
+              u({{core}}/FUN`CHECK`MODS,untyped~[add(sub(%q<act_adj>,%q<act_pwol>),sub(firstof(json_query(%q<act_npc>,extract,$.system.attributes.ac.value),10),10))]~base~0 %q<ac_raised>,ac all dex-based,),
               u({{core}}/FUN`CHECK`AC,%q<ac_raised>))))]
         flags: [funsyntax]
       # The prepared combatant's shield, as Foundry's actor shield: a character's held shield, a creature's own, or a
@@ -5983,7 +5998,7 @@ objects:
           setq(strike_item,get(%q<npc_store>/%0))][
           setq(strike_traits,json_map({{core}}/FUN`RULE`SELECTOR,firstof(json_query(%q<strike_item>,extract,$.system.traits.value),json(array)),%b))][
           setq(strike_ranged,regmatch(%q<strike_traits>,\\brange))][
-          setq(strike_attack,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`MODS,untyped~[add(%q<act_adj>,firstof(json_query(%q<strike_item>,extract,$.system.bonus.value),0))]~base~0,attack attack-roll strike-attack-roll all check [if(%q<strike_ranged>,ranged,melee)]-strike-attack-roll,)))][
+          setq(strike_attack,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`MODS,untyped~[add(sub(%q<act_adj>,%q<act_pwol>),firstof(json_query(%q<strike_item>,extract,$.system.bonus.value),0))]~base~0,attack attack-roll strike-attack-roll all check [if(%q<strike_ranged>,ranged,melee)]-strike-attack-roll,)))][
           u({{core}}/FUN`DAMAGE`NPC,%q<strike_item>,,%q<act_adj>)][u({{core}}/FUN`DAMAGE`FORMULA,2)][
           json_query(%q<strike_item>,extract,$.name)]|%q<strike_attack>|[u({{core}}/FUN`DAMAGE`TEXT)]|%q<strike_traits>|[if(member(%q<strike_traits>,agile),4,5)]|||||npc:%0
         flags: [funsyntax]
@@ -6009,7 +6024,7 @@ objects:
         flags: [funsyntax]
       # An attack is rolled with the attacker's rules after the target is prepared for its AC: HOLD keeps
       # the registers a roll and its damage read (every check_ register and these) under a name, TAKE puts them back.
-      DATA`ACT`HOLD: act_npc act_adj act_raised npc_store
+      DATA`ACT`HOLD: act_npc act_adj act_pwol act_raised npc_store
       FUN`ACT`HOLD:
         value: |-
           @@(%0 a name)[
@@ -7182,8 +7197,8 @@ objects:
       # --- DCs -----------------------------------------------------------------------------------
       FUN`DC`OF:
         value: |-
-          @@(%0 a level, %1 a difficulty, %2 a rarity: the DC by level from GM Core)[
-          add(extract(get({{core}}/DATA`DC`LEVEL),add(2,max(-1,min(25,%0))),1),firstof(after(grab(get({{core}}/DATA`DC`ADJUST),%1~*),~),0),firstof(after(grab(get({{core}}/DATA`DC`RARITY),%2~*),~),0))]
+          @@(%0 a level, %1 a difficulty, %2 a rarity: the DC by level from GM Core, less the level with proficiency without level)[
+          add(if(u({{core}}/FUN`PWOL),mul(-1,max(0,%0)),0),extract(get({{core}}/DATA`DC`LEVEL),add(2,max(-1,min(25,%0))),1),firstof(after(grab(get({{core}}/DATA`DC`ADJUST),%1~*),~),0),firstof(after(grab(get({{core}}/DATA`DC`RARITY),%2~*),~),0))]
         flags: [funsyntax]
       FUN`DC`TEXT:
         value: |-
@@ -7397,9 +7412,11 @@ objects:
         flags: [funsyntax]
       FUN`XP`OF:
         value: |-
-          @@(%0 a level, %1 the party's level, %2 1 for a simple hazard: the XP from GM Core's tables, none more than four levels below the party)[
+          @@(%0 a level, %1 the party's level, %2 1 for a simple hazard: the XP from GM Core's tables, none more than four levels below the party; with proficiency without level, seven levels for creatures and complex hazards)[
           setq(xp_diff,sub(%0,%1))][
-          if(lt(%q<xp_diff>,-4),0,extract(if(%2,2 3 4 6 8 12 16 24 32,10 15 20 30 40 60 80 120 160),add(5,min(4,%q<xp_diff>)),1))]
+          if(cand(not(%2),u({{core}}/FUN`PWOL)),
+            if(lt(%q<xp_diff>,-7),0,extract(9 12 14 18 21 26 32 40 48 60 72 90 108 135 160,add(8,min(7,%q<xp_diff>)),1)),
+            if(lt(%q<xp_diff>,-4),0,extract(if(%2,2 3 4 6 8 12 16 24 32,10 15 20 30 40 60 80 120 160),add(5,min(4,%q<xp_diff>)),1)))]
         flags: [funsyntax]
       FUN`ENC`PCLEVEL:
         value: |-
@@ -7792,6 +7809,7 @@ objects:
         - `free-archetype`: an archetype feat at every even level, beside the class feats. Its slots are `archetype-2`, `archetype-4` and so on: `+build/feat archetype-2=Medic Dedication`. They take archetype feats only, and the second dedication waits for two other feats from the first archetype, as a class feat slot does.
         - `abp`: Automatic Bonus Progression. A character's level gives the bonuses fundamental runes would: a potency bonus to Strikes from 2nd level, to AC from 5th, to Perception from 7th and to saves from 8th, rising to +3, and a second weapon damage die at 4th level, a third at 12th and a fourth at 19th. Weapons and armor carry no runes, and an item bonus that equipment gives does not count.
         - `abp-fundamental`: the same, but a weapon keeps as many property runes as its attack potency and armor as many as its defense potency.
+        - `proficiency-without-level`: a proficiency bonus is -2 untrained, +2 trained, +4 expert, +6 master and +8 legendary, without the level; staff change these with `+config pf2e/proficiency-bonuses=-2 2 4 6 8`. Creatures and hazards lose their level from AC, attacks, saves, Perception, skills and DCs, a DC by level loses the level too, and XP uses GM Core's table for this variant, from seven levels below the party to seven above.
       SEE`PF2E`VARIANTS: |-
         pf2e build|pf2e staff
       HELP`PF2E`DEITY: |-
