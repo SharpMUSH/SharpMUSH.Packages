@@ -1,13 +1,15 @@
-format: "1.16"
+format: "1.20"
 package: sheet-fabula-config
 title: "JRPG sheet: +config settings"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Puts the JRPG sheet settings and its class table into +config: registers them with the +config registry, so staff see and change them with +config fabula."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, fabula, config, bridge]
-category: Characters
+category: Game System
+subcategory: JRPG
+bridge: true
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. sheet-fabula declares its settings as

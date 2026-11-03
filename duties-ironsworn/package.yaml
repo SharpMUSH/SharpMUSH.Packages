@@ -1,13 +1,15 @@
-format: "1.16"
+format: "1.20"
 package: duties-ironsworn
 title: "Duties: Ironsworn rolls"
-version: 1.1.0
+version: 1.1.1
 authors: [SharpMUSH]
 description: "Lets Duties roll on the Ironsworn sheet: a roll provider called ironsworn, so a duty's checks make action rolls with a stat against two challenge dice, with help adding to the action score, and experience or momentum as rewards. Pick it with +config duties/system=ironsworn."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [duties, ironsworn, sheet, dice, bridge]
-category: Characters
+category: Game System
+subcategory: Ironsworn
+bridge: true
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. Duties asks the game's one active roll

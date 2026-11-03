@@ -1,13 +1,15 @@
-format: "1.16"
+format: "1.20"
 package: sheet-ironsworn-config
 title: "Ironsworn sheet: +config settings"
-version: 1.0.2
+version: 1.0.3
 authors: [SharpMUSH]
 description: "Puts the Ironsworn sheet settings and its stat and asset tables and bestiary into +config: registers them with the +config registry, so staff see and change them with +config ironsworn."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, ironsworn, config, bridge]
-category: Characters
+category: Game System
+subcategory: Ironsworn
+bridge: true
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. sheet-ironsworn declares its settings as

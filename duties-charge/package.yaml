@@ -1,13 +1,15 @@
-format: "1.16"
+format: "1.20"
 package: duties-charge
 title: "Duties: Charge rolls"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Lets Duties roll on the Charge sheet: a roll provider called charge, so a duty's checks roll an action's dots against a risk and gain momentum, with assists and pushes paid in momentum, and momentum, milestones or stress recovery as rewards. Pick it with +config duties/system=charge."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [duties, charge, sheet, dice, bridge]
-category: Characters
+category: Game System
+subcategory: Charge
+bridge: true
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. Duties asks the game's one active roll

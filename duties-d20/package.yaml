@@ -1,13 +1,15 @@
-format: "1.16"
+format: "1.20"
 package: duties-d20
 title: "Duties: d20 sheet rolls"
-version: 1.0.1
+version: 1.0.2
 authors: [SharpMUSH]
 description: "Lets Duties roll on the d20 sheet: a roll provider called d20, so a duty's checks roll 1d20 plus a character's ability or skill against a DC. Pick it with +config duties/system=d20."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [duties, d20, sheet, dice, bridge]
-category: Characters
+category: Game System
+subcategory: D20
+bridge: true
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. Duties asks the game's one active roll

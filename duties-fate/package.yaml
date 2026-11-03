@@ -1,13 +1,15 @@
-format: "1.16"
+format: "1.20"
 package: duties-fate
 title: "Duties: Fate sheet rolls"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Lets Duties roll on the Fate sheet: a roll provider called fate, so a duty's checks roll four Fate dice plus a skill or approach against an opposition on the ladder, with teamwork, paid invokes and fate points as rewards. Pick it with +config duties/system=fate."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [duties, fate, sheet, dice, bridge]
-category: Characters
+category: Game System
+subcategory: Fate
+bridge: true
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. Duties asks the game's one active roll

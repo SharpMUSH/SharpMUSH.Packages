@@ -1,13 +1,15 @@
-format: "1.16"
+format: "1.20"
 package: sheet-fitd-config
 title: "Forged in the Dark sheet: +config settings"
-version: 1.0.2
+version: 1.0.3
 authors: [SharpMUSH]
 description: "Puts the Forged in the Dark sheet settings and its action, attribute and threat tables into +config: registers them with the +config registry, so staff see and change them with +config fitd."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, fitd, config, bridge]
-category: Characters
+category: Game System
+subcategory: Forged in the Dark
+bridge: true
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. sheet-fitd declares its settings as

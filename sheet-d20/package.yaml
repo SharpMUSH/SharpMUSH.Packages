@@ -1,13 +1,14 @@
-format: "1.16"
+format: "1.20"
 package: sheet-d20
 title: "D20 sheet"
-version: 2.2.1
+version: 2.2.2
 authors: [SharpMUSH]
 description: "A d20 character sheet built from a ledger: six ability scores, a skill list the game edits, training, level, hit points, coin and gear, with separate audited ledgers for XP, coin and gear. Guided character creation, XP advances, +check rolls 1d20 plus a trait against a DC, and encounters that keep their own copy of each sheet, with foes from a bestiary the game edits, initiative, turns and conditions."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, d20, dice, checks, encounters]
-category: Characters
+category: Game System
+subcategory: D20
 requires_server: ">=0.1"
 
 # One permission, for the people who keep sheets: change any character's sheet at any time and read every

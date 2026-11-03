@@ -1,13 +1,14 @@
-format: "1.16"
+format: "1.20"
 package: sheet-fabula
 title: "JRPG sheet"
-version: 1.2.0
+version: 1.2.1
 authors: [SharpMUSH]
 description: "A JRPG character sheet compatible with Fabula Ultima: four attributes as die sizes, classes and their skill levels, HP, MP, IP, Fabula Points, status effects and bonds. +check rolls two attribute dice against a Difficulty Level, with rerolls and bond invokes paid in Fabula Points. Requires the Fabula Ultima Core Rulebook; see NOTICE.md."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, fabula, classes, bonds, dice]
-category: Characters
+category: Game System
+subcategory: JRPG
 requires_server: ">=0.1"
 
 # One permission, for the people who keep sheets: change any character's sheet at any time and read every sheet.

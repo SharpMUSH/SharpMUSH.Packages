@@ -1,13 +1,14 @@
-format: "1.16"
+format: "1.20"
 package: fate-system-toolkit
 title: "Fate System Toolkit (unofficial)"
-version: 1.1.0
+version: 1.1.1
 authors: [SharpMUSH]
 description: "Rules from the Fate System Toolkit for the Fate sheet: conditions that soak stress in place of consequences (fleeting, sticky and lasting, treated before they heal), a Wealth track for money that a player checks for a bonus on a roll and staff refill with audited parcels of loot, Stormcallers, magic drawn from five great storms at a cost in refresh, with barriers and each storm's own attacks; super skills that double for a fate point and step back after, with fate-point bids between powers; gadgets and magic items with a function, flaws and stunts; and cyberware on a cyber-heart, with surgery paid for in play. Based on the Fate System Toolkit SRD under CC BY 3.0. An unofficial fan package, not affiliated with or endorsed by Evil Hat Productions."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, fate, magic, supers, cyberware]
-category: Characters
+category: Game System
+subcategory: Fate
 requires_server: ">=0.1"
 
 # It keeps conditions in the Fate sheet's play (encounter copies hold them through PLAY`CONDITION), counts them

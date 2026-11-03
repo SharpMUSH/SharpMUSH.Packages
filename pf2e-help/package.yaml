@@ -1,13 +1,15 @@
-format: "1.16"
+format: "1.20"
 package: pf2e-help
 title: "Pathfinder 2e: +help topics"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Puts the Pathfinder 2e topics into +help: registers the pf2e package's help with the +help librarian."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [pathfinder, pf2e, help, bridge]
-category: Characters
+category: Game System
+subcategory: Pathfinder 2e
+bridge: true
 requires_server: ">=0.1"
 
 # A bridge: pf2e keeps its topics on its own help object, and plus-help reads any object registered
