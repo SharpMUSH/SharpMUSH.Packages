@@ -1,7 +1,7 @@
 format: "1.16"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.9.10"
+version: "0.9.11"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -92,7 +92,7 @@ objects:
       # ledger read again costs a few hundred function calls. The key is the ledger with the package's
       # version, the books and CACHE`STAMP, which the updater and the deity table change. CACHE lists
       # the keys oldest first; past DATA`CACHE`KEEP the oldest goes.
-      DATA`CACHE`VERSION: "0.9.10"
+      DATA`CACHE`VERSION: "0.9.11"
       DATA`CACHE`KEEP: 200
       DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_itemalts check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_shieldrules check_bulkrules check_bulk check_bulk_enc check_bulk_max check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
       # The ItemAlteration properties the core applies, by the kind of item they reach.
@@ -393,9 +393,11 @@ objects:
       # statement must hold.
       FUN`PREDICATE`TEST:
         value: |-
-          @@(Foundry Predicate.test: every statement in the array %0 holds for the roll options %1)[
-          switch(json_query(%0,type),
-            array, not(member(u(FUN`PREDICATE`RESULTS,%0,%1),0)),
+          @@(Foundry Predicate.test: every statement in the array %0 holds for the roll options %1; pred_grant the grant
+          whose rule it is, whose parent: options are parent~<its index>: among the roll options)[
+          setq(pred_test,if(cand(strlen(%q<pred_grant>),strmatch(%0,*"parent:*)),edit(%0,"parent:,"parent~%q<pred_grant>:),%0))][
+          switch(json_query(%q<pred_test>,type),
+            array, not(member(u(FUN`PREDICATE`RESULTS,%q<pred_test>,%1),0)),
             0)]
         flags: [funsyntax]
       # One 1 or 0 per statement of the JSON array %0.
@@ -1224,6 +1226,32 @@ objects:
           @@(%0 a name: lower case, apostrophes dropped, every other run of non-letters a hyphen)[
           trim(regeditall(lcstr(regeditall(%0,\['’\],)),\[^a-z0-9\]+,-),-,b)]
         flags: [funsyntax]
+      # Foundry tests an item's rules with the item's own roll options too, under parent: its id, slug, level, traits,
+      # other tags and badge, the item and actor it came from (origin: an effect's caster and spell), the check that
+      # brought it (context:check:outcome) and the item whose GrantItem granted it (granter). Each grant whose rules
+      # name one has them among the roll options as parent~<its index>:, and FUN`PREDICATE`TEST reads its parent:
+      # statements so.
+      FUN`CHECK`PARENT`GRANT:
+        value: |-
+          @@(grant_ registers of one grant: sets grant_parent and adds its parent options to check_options)[
+          setq(grant_parent,u(FUN`ITEM`PARENT,grant_pack,%q<grant_pack>,%q<grant_id>,%q<grant_own>,u(FUN`CHECK`CHOICES,%q<grant_index>),u(FUN`CHECK`GRANTER,%q<grant_index>)))][
+          setq(check_options,squish(%q<check_options> [iter(%q<grant_parent>,parent~%q<grant_index>:%i0)]))][
+          setq(pred_grant,)]
+        flags: [funsyntax]
+      # The roll options an item gives itself, without the parent: in front.
+      FUN`ITEM`PARENT:
+        value: |-
+          @@(%0 unused, %1 pack, %2 id, %3 badge, %4 choices with an effect's _origin, %5 the granter's pack~id)[
+          setqm(par_item,u(FUN`ITEM`GET,%1,%2),par_origin,json_query(%4,extract,$._origin))][
+          setq(par_level,firstof(json_query(%4,extract,$.effectLevel),json_query(%q<par_item>,extract,$.system.level.value)))][
+          squish(id:%2 slug:[u(FUN`ITEM`SLUG,%q<par_item>)] type:[json_query(%q<par_item>,extract,$.type)] [if(isint(%q<par_level>),level:%q<par_level>)] [iter(json_map(me/FUN`RULE`SELECTOR,firstof(json_query(%q<par_item>,extract,$.system.traits.value),json(array)),%b),trait:%i0)] [iter(json_map(me/FUN`RULE`SELECTOR,firstof(json_query(%q<par_item>,extract,$.system.traits.otherTags),json(array)),%b),tag:%i0)] [if(isint(%3),badge:value:%3)] [if(strlen(%q<par_origin>),[iter(json_map(me/FUN`RULE`SELECTOR,firstof(json_query(%q<par_origin>,extract,$.options),json(array)),%b),origin:%i0)] [if(isint(setr(par_out,json_query(%q<par_origin>,extract,$.outcome))),context:check:outcome:%q<par_out>)])] [if(strlen(%5),[setq(par_granter,u(FUN`ITEM`GET,first(%5,~),rest(%5,~)))]granter:id:[rest(%5,~)] granter:slug:[u(FUN`ITEM`SLUG,%q<par_granter>)] [iter(json_map(me/FUN`RULE`SELECTOR,firstof(json_query(%q<par_granter>,extract,$.system.traits.value),json(array)),%b),granter:trait:%i0)])])]
+        flags: [funsyntax]
+      # The item whose GrantItem granted a grant: pack~id of the grant its ledger entry names as parent.
+      FUN`CHECK`GRANTER:
+        value: |-
+          @@(%0 the grant's index in check_ledger)[
+          if(isint(setr(granter_n,json_query(%q<check_ledger>,extract,$\[%0\].parent))),elements(first(graball(%q<check_grants>,%q<granter_n>~*)),2 3,~,~))]
+        flags: [funsyntax]
       # The badge: the grant's own, else a valued condition's system.value.value.
       FUN`ITEM`BADGE:
         value: |-
@@ -1453,7 +1481,7 @@ objects:
         value: |-
           @@(%0 the synthetics so far, %1 pack~id~badge~rules~index)[
           setq(synthetic_item,u(FUN`ITEM`GET,elements(%1,1,~),elements(%1,2,~)))][
-          setqm(synthetic_rules,json_query(%q<synthetic_item>,extract,$.system.rules),synthetic_slug,u(FUN`ITEM`SLUG,%q<synthetic_item>))][
+          setqm(synthetic_rules,edit(json_query(%q<synthetic_item>,extract,$.system.rules),"parent:,"parent~[elements(%1,5,~)]:),synthetic_slug,u(FUN`ITEM`SLUG,%q<synthetic_item>))][
           setq(synthetic_data,json(object,actor,%q<synthetic_actor>,item,u(FUN`ITEM`DATA,%q<synthetic_item>,elements(%1,3,~),u(FUN`CHECK`CHOICES,elements(%1,5,~)))))][
           fold(me/FUN`SYNTHETICS`RULE,edit(elements(%1,4,~),.,%b),%0)]
         flags: [funsyntax]
@@ -2151,7 +2179,9 @@ objects:
           @@(%0 a grant n~pack~id~badge~index)[
           setqm(grant_pack,elements(%0,2,~),grant_id,elements(%0,3,~),grant_own,elements(%0,4,~),grant_index,elements(%0,5,~))][
           setq(grant_prep,get(u(DATA`PACK`%q<grant_pack>)/ITEM`%q<grant_id>`PREP))][
+          setq(grant_parent,)][if(strmatch(get(u(DATA`PACK`%q<grant_pack>)/ITEM`%q<grant_id>),*"parent:*),u(FUN`CHECK`PARENT`GRANT))][
           setqm(grant_kind,json_query(%q<grant_prep>,extract,$.kind),grant_options,json_query(%q<grant_prep>,extract,$.options),grant_name,json_query(%q<grant_prep>,extract,$.name),grant_synth,json_query(%q<grant_prep>,get,synth),grant_dynamic,json_query(%q<grant_prep>,extract,$.dynamic),grant_unapplied,json_query(%q<grant_prep>,extract,$.unapplied))][
+          if(strlen(%q<grant_parent>),setq(grant_synth,edit(%q<grant_synth>,"parent:,"parent~%q<grant_index>:)))][
           setqm(grant_ranks,json_query(%q<grant_prep>,extract,$.ranks),grant_rankdyn,json_query(%q<grant_prep>,extract,$.rankdyn),grant_choiceopts,json_query(%q<grant_prep>,extract,$.choiceopts),grant_strikes,json_query(%q<grant_prep>,extract,$.strikes))][
           setq(grant_badge,firstof(%q<grant_own>,json_query(%q<grant_prep>,extract,$.valued)))][
           if(cand(member(%q<grant_unapplied>,ActiveEffectLike),strmatch(get(u(DATA`PACK`%q<grant_pack>)/ITEM`%q<grant_id>),*"path":"system.attributes.shield*)),setq(check_shieldrules,%q<check_shieldrules> %q<grant_pack>~%q<grant_id>~%q<grant_own>~%q<grant_index>))][
@@ -2449,7 +2479,8 @@ objects:
       # A grant's choices, flag to value: those stored on the grant, then each choice entry made for it.
       FUN`CHECK`CHOICES:
         value: |-
-          @@(%0 the grant's index in check_ledger)[
+          @@(%0 the grant's index in check_ledger: its choices, and pred_grant set to it for the predicates of its rules)[
+          setq(pred_grant,%0)][
           if(strlen(%0),
             [setq(choices_out,firstof(json_query(%q<check_ledger>,extract,$\[%0\].choices),json(object)))][
             null(iter(graball(%q<check_entries>,choice~[json_query(%q<check_ledger>,extract,$\[%0\].n)]|*),setq(choices_out,json_mod(%q<choices_out>,patch,json(object,after(elements(%i0,2,~),|),json_query(%q<check_ledger>,extract,$\[[elements(%i0,7,~)]\].value))))))][
@@ -6260,7 +6291,7 @@ objects:
       # +enc/use [<who>=]<item>: a consumable from the combatant's gear, used up in the encounter's copy only; a healing item heals.
       INC`ENC`USE:
         value: |-
-          @include %!/INC`ENC`NEED; think setqm(use_who,if(strmatch(%q<cmd_args>,*=*),trim(before(%q<cmd_args>,=))),use_text,trim(if(strmatch(%q<cmd_args>,*=*),after(%q<cmd_args>,=),%q<cmd_args>))); think setq(act_at,if(strlen(%q<use_who>),u(%!/FUN`ENC`FIND,%q<use_who>),u(%!/FUN`ENC`MINE))); @assert strlen(%q<act_at>)=@pemit %#=notice(PF2E,if(strlen(%q<use_who>),No one in the encounter is called %q<use_who>.,You are not in the encounter. +enc/use <who>=<item> names who uses it.),warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,You use only your own things.,warn); @assert strmatch(u(%!/FUN`ENC`C,%q<act_at>,kind),pc)=@pemit %#=notice(PF2E,A creature uses what its statistics give it.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think setq(fx_on,); think if(cand(not(strlen(u(%!/FUN`ACT`MADE`FIND,%q<use_text>))),not(strlen(u({{commands}}/FUN`BUILD`GEAR`FIND,%q<use_text>))),regmatchi(%q<use_text>,^%(.+%)\\s+on\\s+%(.+?%)$,0 use_a use_b)),setqm(use_text,%q<use_a>,fx_on,%q<use_b>)); think setq(use_made,u(%!/FUN`ACT`MADE`FIND,%q<use_text>)); think setqm(use_src,if(strlen(%q<use_made>),made,gear),use_id,firstof(%q<use_made>,u({{commands}}/FUN`BUILD`GEAR`FIND,%q<use_text>))); @assert strlen(%q<use_id>)=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] has no %q<use_text> left.,warn); @assert not(strmatch(json_query(get(u({{core}}/DATA`PACK`EQUIPMENT)/ITEM`%q<use_id>`PREP),extract,$.kind),weapon))=@pemit %#=notice(PF2E,[u({{commands}}/FUN`SHOW`ITEM,equipment,%q<use_id>,)] is thrown or wielded: +enc/strike <target>=[u({{commands}}/FUN`SHOW`ITEM,equipment,%q<use_id>,)].,warn); @assert strmatch(json_query(get(u({{core}}/DATA`PACK`EQUIPMENT)/ITEM`%q<use_id>`PREP),extract,$.kind),consumable)=@pemit %#=notice(PF2E,[u({{commands}}/FUN`SHOW`ITEM,equipment,%q<use_id>,)] is not used up. Only consumables are.,warn); think setq(use_ownnote,u(%!/FUN`FX`OWNED`NOTE,%q<act_at>,u(%!/FUN`FX`LINKED,get(u({{core}}/DATA`PACK`EQUIPMENT)/ITEM`%q<use_id>`TEXT),equipment-effects))); @assert not(strlen(%q<use_ownnote>))=@pemit %#=notice(PF2E,%q<use_ownnote>,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think setqm(use_state,u({{core}}/FUN`SHEET`VALUE,%q<check_entries>,gear,%q<use_id>),use_name,u({{commands}}/FUN`SHOW`ITEM,equipment,%q<use_id>,),use_heal,u(%!/FUN`ACT`USE`HEAL,get(u({{core}}/DATA`PACK`EQUIPMENT)/ITEM`%q<use_id>`TEXT)),heal_text,,dmg_text,); think setq(use_left,dec(if(strmatch(%q<use_src>,made),json_query(%q<check_daily>,extract,$.made\["%q<use_id>"\]),first(%q<use_state>,|)))); think u(%!/FUN`ACT`CONSUME,%q<act_at>,%q<use_src>~%q<use_id>); think if(strlen(%q<use_heal>),[u(%!/FUN`ACT`DAMAGE,%q<use_heal>,0)][u(%!/FUN`ACT`HEAL,%q<act_at>,%q<dmg_total>)]); think setq(use_fxline,iter(u(%!/FUN`FX`LINKED,get(u({{core}}/DATA`PACK`EQUIPMENT)/ITEM`%q<use_id>`TEXT),equipment-effects),u(%!/FUN`FX`ADD,%q<act_at>,first(%i0,~),rest(%i0,~),,,u(%!/FUN`ENC`C,%q<act_at>,k)),%b,%b)); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] uses [art(%q<use_name>)] %q<use_name>[if(strlen(%q<heal_text>),. %q<heal_text> %([trim(%q<dmg_text>)]%))]. %q<use_left> left.[if(strlen(%q<use_fxline>),%b%q<use_fxline>)])
+          @include %!/INC`ENC`NEED; think setqm(use_who,if(strmatch(%q<cmd_args>,*=*),trim(before(%q<cmd_args>,=))),use_text,trim(if(strmatch(%q<cmd_args>,*=*),after(%q<cmd_args>,=),%q<cmd_args>))); think setq(act_at,if(strlen(%q<use_who>),u(%!/FUN`ENC`FIND,%q<use_who>),u(%!/FUN`ENC`MINE))); @assert strlen(%q<act_at>)=@pemit %#=notice(PF2E,if(strlen(%q<use_who>),No one in the encounter is called %q<use_who>.,You are not in the encounter. +enc/use <who>=<item> names who uses it.),warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,You use only your own things.,warn); @assert strmatch(u(%!/FUN`ENC`C,%q<act_at>,kind),pc)=@pemit %#=notice(PF2E,A creature uses what its statistics give it.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think setq(fx_on,); think if(cand(not(strlen(u(%!/FUN`ACT`MADE`FIND,%q<use_text>))),not(strlen(u({{commands}}/FUN`BUILD`GEAR`FIND,%q<use_text>))),regmatchi(%q<use_text>,^%(.+%)\\s+on\\s+%(.+?%)$,0 use_a use_b)),setqm(use_text,%q<use_a>,fx_on,%q<use_b>)); think setq(use_made,u(%!/FUN`ACT`MADE`FIND,%q<use_text>)); think setqm(use_src,if(strlen(%q<use_made>),made,gear),use_id,firstof(%q<use_made>,u({{commands}}/FUN`BUILD`GEAR`FIND,%q<use_text>))); @assert strlen(%q<use_id>)=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] has no %q<use_text> left.,warn); @assert not(strmatch(json_query(get(u({{core}}/DATA`PACK`EQUIPMENT)/ITEM`%q<use_id>`PREP),extract,$.kind),weapon))=@pemit %#=notice(PF2E,[u({{commands}}/FUN`SHOW`ITEM,equipment,%q<use_id>,)] is thrown or wielded: +enc/strike <target>=[u({{commands}}/FUN`SHOW`ITEM,equipment,%q<use_id>,)].,warn); @assert strmatch(json_query(get(u({{core}}/DATA`PACK`EQUIPMENT)/ITEM`%q<use_id>`PREP),extract,$.kind),consumable)=@pemit %#=notice(PF2E,[u({{commands}}/FUN`SHOW`ITEM,equipment,%q<use_id>,)] is not used up. Only consumables are.,warn); think setq(use_ownnote,u(%!/FUN`FX`OWNED`NOTE,%q<act_at>,u(%!/FUN`FX`LINKED,get(u({{core}}/DATA`PACK`EQUIPMENT)/ITEM`%q<use_id>`TEXT),equipment-effects))); @assert not(strlen(%q<use_ownnote>))=@pemit %#=notice(PF2E,%q<use_ownnote>,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think setqm(use_state,u({{core}}/FUN`SHEET`VALUE,%q<check_entries>,gear,%q<use_id>),use_name,u({{commands}}/FUN`SHOW`ITEM,equipment,%q<use_id>,),use_heal,u(%!/FUN`ACT`USE`HEAL,get(u({{core}}/DATA`PACK`EQUIPMENT)/ITEM`%q<use_id>`TEXT)),heal_text,,dmg_text,); think setq(use_left,dec(if(strmatch(%q<use_src>,made),json_query(%q<check_daily>,extract,$.made\["%q<use_id>"\]),first(%q<use_state>,|)))); think u(%!/FUN`ACT`CONSUME,%q<act_at>,%q<use_src>~%q<use_id>); think if(strlen(%q<use_heal>),[u(%!/FUN`ACT`DAMAGE,%q<use_heal>,0)][u(%!/FUN`ACT`HEAL,%q<act_at>,%q<dmg_total>)]); think setqm(fx_origin,u(%!/FUN`FX`ORIGIN,equipment,%q<use_id>),fx_outcome,); think setq(use_fxline,iter(u(%!/FUN`FX`LINKED,get(u({{core}}/DATA`PACK`EQUIPMENT)/ITEM`%q<use_id>`TEXT),equipment-effects),u(%!/FUN`FX`ADD,%q<act_at>,first(%i0,~),rest(%i0,~),,,u(%!/FUN`ENC`C,%q<act_at>,k)),%b,%b)); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] uses [art(%q<use_name>)] %q<use_name>[if(strlen(%q<heal_text>),. %q<heal_text> %([trim(%q<dmg_text>)]%))]. %q<use_left> left.[if(strlen(%q<use_fxline>),%b%q<use_fxline>)])
         flags: [cmdsyntax]
       # Uses up one of what a Strike or +enc/use spends, %1 source~id: gear (the encounter's copy of the
       # sheet's), made (an item made today, on the encounter's copy of the day) or res:<slug> (a resource of the day).
@@ -6483,7 +6514,8 @@ objects:
       FUN`CAST`EFFECT:
         value: |-
           @@(cast_id, arg_variant, arg_on)[
-          setqm(cast_fx,,cast_fxch,,cast_fxname,,cast_fxerr,,fx_on,%q<arg_on>)][
+          setqm(cast_fx,,cast_fxch,,cast_fxname,,cast_fxerr,,fx_on,%q<arg_on>,fx_outcome,)][
+          setq(fx_origin,u(FUN`FX`ORIGIN,spells,%q<cast_id>))][
           setq(fx_all,u({{core}}/FUN`SPELL`EFFECTS,%q<cast_id>))][
           setq(fx_fit,if(cand(gt(words(%q<fx_all>),1),strlen(%q<arg_variant>)),squish(iter(%q<fx_all>,if(strmatch(u(FUN`FX`NAME,spell-effects,%i0),*%q<arg_variant>*),%i0))),%q<fx_all>))][
           switch(1,
@@ -6587,11 +6619,13 @@ objects:
           @@(%0 index, %1 pack, %2 id, %3 level, %4 choices or nothing, %5 key; fx_on the item it is on, when named)[
           setq(fxa_item,u({{core}}/FUN`ITEM`GET,%1,%2))][
           setqm(fxa_ch,firstof(%4,json(object)),fxa_on,,fxa_note,)][
+          if(strlen(%q<fx_origin>),setq(fxa_ch,json_mod(%q<fxa_ch>,patch,json(object,_origin,json(object,options,json(string,%q<fx_origin>),outcome,firstof(%q<fx_outcome>,null))))))][
           if(strmatch(%q<fxa_item>,*"ownedItems":true*),u(FUN`FX`OWNED,%0))][
           setq(fxa_prep,get(u({{core}}/DATA`PACK`%1)/ITEM`%2`PREP))][
           setq(fxa_slug,json_query(%q<fxa_prep>,extract,$.slug))][
           setq(fxa_rounds,u(FUN`FX`ROUNDS,json_query(%q<fxa_item>,extract,$.system.duration)))][
           setq(fxa_badge,u(FUN`FX`BADGE`START,firstof(%3,json_query(%q<fxa_prep>,extract,$.level),1)))][
+          if(strmatch(%q<fxa_item>,*"parent:*),u(FUN`FX`AUTOCHOICE,%0,%1,%2))][
           setq(fxa_old,firstof(u(FUN`ENC`C,%0,fx),json(object)))][
           null(iter(json_map(%!/FUN`JSON`KEY,%q<fxa_old>,%b),if(cor(strmatch(%i0,%2),cand(member(json_query(%q<fxa_prep>,extract,$.unapplied),BattleForm),member(json_query(get(u({{core}}/DATA`PACK`[edit(json_query(%q<fxa_old>,extract,$\["%i0"\].pack),",)])/ITEM`%i0`PREP),extract,$.unapplied),BattleForm)),cand(strmatch(%q<fxa_slug>,stance-*),strmatch(json_query(get(u({{core}}/DATA`PACK`[edit(json_query(%q<fxa_old>,extract,$\["%i0"\].pack),",)])/ITEM`%i0`PREP),extract,$.slug),stance-*))),u(FUN`ENC`PATCH,%0,json(object,fx,json(object,%i0,null))))))][
           u(FUN`ENC`PATCH,%0,json(object,fx,json(object,%2,json(object,pack,json(string,%1),lvl,firstof(%3,json_query(%q<fxa_prep>,extract,$.level),1),ch,%q<fxa_ch>,badge,firstof(%q<fxa_badge>,null),end,if(gt(%q<fxa_rounds>,0),json(string,%5~%q<fxa_rounds>),null)))))][
@@ -6600,6 +6634,28 @@ objects:
           setq(fxa_temp,max(firstof(u({{core}}/FUN`CHECK`FORM`GET,tempHP),0),u(FUN`FX`TEMPHP,%q<fxa_item>)))][
           if(gt(%q<fxa_temp>,u(FUN`ENC`C,%0,temp)),u(FUN`ENC`SET,%0,temp,%q<fxa_temp>))][
           [u(FUN`ENC`C,%0,name)] gains [u(FUN`FX`NAME,%1,%2)][u(FUN`FX`BADGE`SHOW,%1,%2,%q<fxa_badge>)][if(strlen(%q<fxa_on>),%bon [itemize(%q<fxa_on>,|)])][if(%q<fxa_temp>,%band %q<fxa_temp> temporary Hit Points)][if(gt(%q<fxa_rounds>,0),%bfor %q<fxa_rounds> round[if(neq(%q<fxa_rounds>,1),s)])].[if(strlen(%q<fxa_note>),%b[trim(%q<fxa_note>)])]]
+        flags: [funsyntax]
+      # An effect's ChoiceSets whose choices test the effect's own options (its origin, the check that brought it): the
+      # one choice that holds is taken, as Foundry takes it. Sets fxa_ch.
+      FUN`FX`AUTOCHOICE:
+        value: |-
+          @@(%0 the bearer's index, %1 pack, %2 id; fxa_item, fxa_ch, fxa_badge)[
+          u(FUN`ENC`PREPARE,%0)][
+          setqm(fxp_opts,%q<check_options> [iter(u({{core}}/FUN`ITEM`PARENT,,%1,%2,%q<fxa_badge>,%q<fxa_ch>,),parent:%i0)],fxp_rules,json_query(%q<fxa_item>,extract,$.system.rules),pred_grant,,synthetic_slug,u({{core}}/FUN`ITEM`SLUG,%q<fxa_item>))][
+          null(iter(lnum(json_query(%q<fxp_rules>,size)),
+            [setq(fxp_rule,json_query(%q<fxp_rules>,extract,$\[%i0\]))][
+            setq(fxp_list,json_query(%q<fxp_rule>,get,choices))][
+            if(cand(strmatch(json_query(%q<fxp_rule>,extract,$.key),ChoiceSet),strmatch(%q<fxp_list>,\[*"parent:*),not(strlen(json_query(%q<fxa_ch>,extract,$.[setr(fxp_flag,u({{core}}/FUN`RULE`CHOICE`FLAG,%q<fxp_rule>,%i0))])))),
+              [setq(fxp_fit,iter(lnum(json_query(%q<fxp_list>,size)),if(u({{core}}/FUN`PREDICATE`TEST,firstof(json_query(json_query(%q<fxp_list>,extract,$\[%i0\]),get,predicate),json(array)),%q<fxp_opts>),%i0)))][
+              if(eq(words(%q<fxp_fit>),1),setq(fxa_ch,json_mod(%q<fxa_ch>,patch,json(object,%q<fxp_flag>,json_query(json_query(%q<fxp_list>,extract,$\[%q<fxp_fit>\]),get,value)))))])]))]
+        flags: [funsyntax]
+      # What an effect's origin gives its parent:origin: options: the item that brought it (its id, slug, type, level,
+      # traits and other tags) and the creature that used it (its level and traits), as that creature is prepared.
+      FUN`FX`ORIGIN:
+        value: |-
+          @@(%0 pack, %1 id of the item that brings the effect)[
+          setq(fxo_item,u({{core}}/FUN`ITEM`GET,%0,%1))][
+          squish(item item:id:%1 item:slug:[u({{core}}/FUN`ITEM`SLUG,%q<fxo_item>)] item:type:[json_query(%q<fxo_item>,extract,$.type)] [if(isint(setr(fxo_lvl,json_query(%q<fxo_item>,extract,$.system.level.value))),item:level:%q<fxo_lvl>)] [iter(json_map({{core}}/FUN`RULE`SELECTOR,firstof(json_query(%q<fxo_item>,extract,$.system.traits.value),json(array)),%b),item:trait:%i0)] [iter(json_map({{core}}/FUN`RULE`SELECTOR,firstof(json_query(%q<fxo_item>,extract,$.system.traits.otherTags),json(array)),%b),item:tag:%i0)] [if(isint(%q<check_level>),level:%q<check_level>)] [iter(%q<check_traits>,trait:%i0)])]
         flags: [funsyntax]
       # An effect's badge as Foundry starts it: a counter's value, or a formula's roll (Devise a Stratagem's 1d20). Empty without one.
       FUN`FX`BADGE`START:
@@ -6675,7 +6731,7 @@ objects:
       FUN`FX`ARGS:
         value: |-
           @@(%0 the text)[
-          setqm(fx_on,,fx_as,,fxs_name,%0)][
+          setqm(fx_on,,fx_as,,fxs_name,%0,fx_origin,,fx_outcome,)][
           if(not(strlen(setr(fxs_found,u(FUN`FX`FIND,%q<fxs_name>)))),
             [if(regmatchi(%q<fxs_name>,^%(.+%)\\s+on\\s+%(.+?%)$,0 fxs_a fxs_b),setqm(fxs_name,%q<fxs_a>,fx_on,%q<fxs_b>))][
             if(regmatchi(%q<fxs_name>,^%(.+?%)\\s+as\\s+%(.+%)$,0 fxs_a fxs_b),setqm(fxs_name,%q<fxs_a>,fx_as,%q<fxs_b>))][
@@ -6737,13 +6793,13 @@ objects:
       # +enc/act [<who>:]<action>: an action or feat on the sheet that brings an effect on its user, such as Rage or a stance.
       INC`ENC`ACT:
         value: |-
-          @include %!/INC`ENC`NEED; think setqm(actn_who,if(strmatch(%q<cmd_args>,*:*),trim(before(%q<cmd_args>,:))),actn_name,trim(if(strmatch(%q<cmd_args>,*:*),after(%q<cmd_args>,:),%q<cmd_args>))); think setq(act_at,if(strlen(%q<actn_who>),u(%!/FUN`ENC`FIND,%q<actn_who>),u(%!/FUN`ENC`MINE))); @assert strlen(%q<act_at>)=@pemit %#=notice(PF2E,if(strlen(%q<actn_who>),No one in the encounter is called %q<actn_who>.,You are not in the encounter.),warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,You act only for yourself.,warn); @assert strmatch(u(%!/FUN`ENC`C,%q<act_at>,kind),pc)=@pemit %#=notice(PF2E,A creature's abilities are on its statistics. +enc/effect gives it an effect.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think setq(actn_found,u(%!/FUN`FIND`ON,FUN`ACT`SELFEFFECT,%q<actn_name>)); @assert strlen(%q<actn_found>)=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] has no action called %q<actn_name> that brings an effect.[if(words(setr(actn_list,u(%!/FUN`ACT`SELFEFFECTS))),%bThose that do: [itemize(%q<actn_list>,|)].)],warn); think setq(actn_line,u(%!/FUN`FX`ADD,%q<act_at>,first(%q<actn_found>,~),elements(%q<actn_found>,2,~),%q<check_level>,,u(%!/FUN`ENC`C,%q<act_at>,k))); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] uses [last(%q<actn_found>,~)]. %q<actn_line>)
+          @include %!/INC`ENC`NEED; think setqm(actn_who,if(strmatch(%q<cmd_args>,*:*),trim(before(%q<cmd_args>,:))),actn_name,trim(if(strmatch(%q<cmd_args>,*:*),after(%q<cmd_args>,:),%q<cmd_args>))); think setq(act_at,if(strlen(%q<actn_who>),u(%!/FUN`ENC`FIND,%q<actn_who>),u(%!/FUN`ENC`MINE))); @assert strlen(%q<act_at>)=@pemit %#=notice(PF2E,if(strlen(%q<actn_who>),No one in the encounter is called %q<actn_who>.,You are not in the encounter.),warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,You act only for yourself.,warn); @assert strmatch(u(%!/FUN`ENC`C,%q<act_at>,kind),pc)=@pemit %#=notice(PF2E,A creature's abilities are on its statistics. +enc/effect gives it an effect.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think setq(actn_found,u(%!/FUN`FIND`ON,FUN`ACT`SELFEFFECT,%q<actn_name>)); @assert strlen(%q<actn_found>)=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] has no action called %q<actn_name> that brings an effect.[if(words(setr(actn_list,u(%!/FUN`ACT`SELFEFFECTS))),%bThose that do: [itemize(%q<actn_list>,|)].)],warn); think setqm(fx_origin,u(%!/FUN`FX`ORIGIN,first(%q<self_from>,~),rest(%q<self_from>,~)),fx_outcome,); think setq(actn_line,u(%!/FUN`FX`ADD,%q<act_at>,first(%q<actn_found>,~),elements(%q<actn_found>,2,~),%q<check_level>,,u(%!/FUN`ENC`C,%q<act_at>,k))); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] uses [last(%q<actn_found>,~)]. %q<actn_line>)
         flags: [cmdsyntax]
       # The sheet's grant named %0 with a selfEffect: effect pack~effect id~its name.
       FUN`ACT`SELFEFFECT:
         value: |-
           @@(%0 a name, after FUN`ENC`PREPARE)[
-          first(iter(%q<check_grants>,if(cand(strmatch(json_query(get(u({{core}}/DATA`PACK`[elements(%i0,2,~)])/ITEM`[elements(%i0,3,~)]`PREP),extract,$.name),%0*),strlen(setr(self_uuid,edit(json_query(u({{core}}/FUN`ITEM`GET,elements(%i0,2,~),elements(%i0,3,~)),extract,$.system.selfEffect.uuid),",)))),[setq(self_pack,before(after(%q<self_uuid>,Compendium.pf2e.),.Item.))][if(strlen(setr(self_id,u({{core}}/FUN`ITEM`FIND,%q<self_pack>,after(%q<self_uuid>,.Item.)))),%q<self_pack>~%q<self_id>~[json_query(get(u({{core}}/DATA`PACK`[elements(%i0,2,~)])/ITEM`[elements(%i0,3,~)]`PREP),extract,$.name)])])))]
+          first(iter(%q<check_grants>,if(cand(strmatch(json_query(get(u({{core}}/DATA`PACK`[elements(%i0,2,~)])/ITEM`[elements(%i0,3,~)]`PREP),extract,$.name),%0*),strlen(setr(self_uuid,edit(json_query(u({{core}}/FUN`ITEM`GET,elements(%i0,2,~),elements(%i0,3,~)),extract,$.system.selfEffect.uuid),",)))),[setqm(self_pack,before(after(%q<self_uuid>,Compendium.pf2e.),.Item.),self_from,elements(%i0,2 3,~,~))][if(strlen(setr(self_id,u({{core}}/FUN`ITEM`FIND,%q<self_pack>,after(%q<self_uuid>,.Item.)))),%q<self_pack>~%q<self_id>~[json_query(get(u({{core}}/DATA`PACK`[elements(%i0,2,~)])/ITEM`[elements(%i0,3,~)]`PREP),extract,$.name)])])))]
         flags: [funsyntax]
       FUN`ACT`SELFEFFECTS:
         value: |-
