@@ -45,3 +45,13 @@ Review the book's items the way the first four were reviewed, add rewordings and
 | `reports/rules.md` | Rule element kinds by count, and what the licence filter left out |
 | `corpus/predicates.txt`, `corpus/formulas.txt` | Every distinct predicate and formula, for the pf2e package's parser tests |
 | `NOTICE.md` | The ORC notice for the data |
+
+## Property runes
+
+Foundry keeps property runes in code, not in its packs. `property_runes.py` reads them from
+`src/module/item/physical/runes.ts` (with node) and writes the `DATA`RUNE`` tables on the pf2e core object:
+
+```
+git -C foundry sparse-checkout add src/module/item/physical
+python3 -I tools/pf2e-feed/property_runes.py foundry pf2e/package.yaml
+```
