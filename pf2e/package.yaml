@@ -1,7 +1,7 @@
 format: "1.16"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.9.3"
+version: "0.9.4"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -92,7 +92,7 @@ objects:
       # ledger read again costs a few hundred function calls. The key is the ledger with the package's
       # version, the books and CACHE`STAMP, which the updater and the deity table change. CACHE lists
       # the keys oldest first; past DATA`CACHE`KEEP the oldest goes.
-      DATA`CACHE`VERSION: "0.9.3"
+      DATA`CACHE`VERSION: "0.9.4"
       DATA`CACHE`KEEP: 200
       DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_itemalts check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
       # The ItemAlteration properties the core applies, by the kind of item they reach.
@@ -474,11 +474,12 @@ objects:
           @@(%0 the domains, %1 the roll options, %2 the substitution asked for, a slug or nothing)[
           setq(roll_twice,u(FUN`ROLL`TWICE,%0,%1))][
           setq(roll_sub,u(FUN`ROLL`CHOOSE,%0,%1,%2))][
-          setq(roll_effects,setunion(elements(%q<roll_sub>,4,~) [switch(%q<roll_twice>,higher,fortune,lower,misfortune)],))][
+          setq(roll_effects,setunion(elements(%q<roll_sub>,4,~) [switch(%q<roll_twice>,higher,fortune,lower,misfortune)] [if(%q<roll_hero>,fortune)],))][
           switch(1,
             eq(words(%q<roll_effects>),2), setqm(roll_sub,,roll_twice,,roll_dice,1d20,roll_tags,Fortune|Misfortune,roll_extra,fortune misfortune),
             t(strlen(%q<roll_sub>)), setqm(roll_dice,elements(%q<roll_sub>,3,~),roll_tags,[capstr(elements(%q<roll_sub>,4,~))] %([u(FUN`ROLLRULE`LABEL,elements(%q<roll_sub>,5 6 7 8 9,~,~))]%),roll_extra,%q<roll_effects> substitute:[first(%q<roll_sub>,~)]),
-            setqm(roll_dice,switch(%q<roll_twice>,higher,2d20kh1,lower,2d20kl1,1d20),roll_tags,switch(%q<roll_twice>,higher,Fortune,lower,Misfortune),roll_extra,%q<roll_effects>))]
+            setqm(roll_dice,switch(%q<roll_twice>,higher,2d20kh1,lower,2d20kl1,1d20),roll_tags,switch(%q<roll_twice>,higher,Fortune,lower,Misfortune),roll_extra,%q<roll_effects>))][
+          if(%q<roll_hero>,setq(roll_tags,Hero Point reroll[if(strlen(%q<roll_tags>),|%q<roll_tags>)]))]
         flags: [funsyntax]
       # The check's roll options: the sheet's, its domains', and the statistic's, as Foundry's Statistic adds them.
       FUN`ROLL`OPTIONS:
@@ -3137,6 +3138,18 @@ objects:
         value: |-
           &PF2E`DAILY %q<sheet_target>=%q<daily>; @set %q<sheet_target>/PF2E`DAILY=wizard
         flags: [cmdsyntax]
+      # Hero Points are hero in the day, 0 to 3, and 1 when none are recorded; +rest leaves them.
+      FUN`HERO`N:
+        value: |-
+          @@(%0 a day)[
+          if(isint(setr(hero_v,json_query(%0,extract,$.hero))),%q<hero_v>,1)]
+        flags: [funsyntax]
+      # After a roll: may a Hero Point reroll it. Not a reroll already, not a substitution such as Assurance, and
+      # no fortune effect on it, since a check takes one.
+      FUN`HERO`CAN:
+        value: |-
+          cand(not(%q<roll_hero>),not(strlen(%q<roll_sub>)),not(member(%q<roll_effects>,fortune)))
+        flags: [funsyntax]
       # Which slot, focus point or font a cast of spell %0 spends, and at what rank: pick_source (cantrip, focus, font,
       # prepared or spontaneous) and pick_rank, or pick_error saying why it cannot be cast.
       FUN`DAILY`CHOOSE:
@@ -3278,14 +3291,16 @@ objects:
         flags: [cmdsyntax]
       # A check: the statistic's modifiers stacked, a d20 rolled and kept, and against a DC its degree.
       # "with <slug>" anywhere after the statistic picks a roll substitution, such as with assurance.
+      # PF2E`LASTCHECK on the character keeps what was typed, for +hero/reroll. The table includes this too,
+      # so it names this object rather than %!.
       INC`CHECK`ROLL:
         value: |-
-          think setqm(with_at,match(%q<cmd_stat>,with),with_dc,match(%q<cmd_dc>,with)); think setqm(cmd_with,trim(if(%q<with_at>,extract(%q<cmd_stat>,inc(%q<with_at>),99),if(%q<with_dc>,extract(%q<cmd_dc>,inc(%q<with_dc>),99)))),cmd_stat,if(%q<with_at>,extract(%q<cmd_stat>,1,dec(%q<with_at>)),%q<cmd_stat>),cmd_dc,if(%q<with_dc>,extract(%q<cmd_dc>,1,dec(%q<with_dc>)),%q<cmd_dc>)); think setq(roll_stat,u(%!/FUN`COMMAND`STAT,%q<cmd_stat>)); @assert eq(words(%q<roll_stat>),1)=@pemit %#=notice(PF2E,u(%!/FUN`SHOW`STAT`MISS,%q<cmd_stat>,%q<roll_stat>),warn); @assert cor(not(strlen(%q<cmd_dc>)),isint(%q<cmd_dc>))=@pemit %#=notice(PF2E,A DC is a whole number%, such as +check athletics=20.,warn); think u(%!/FUN`CHECK`PREPARE); @assert cor(not(strlen(%q<cmd_with>)),strlen(%q<roll_sub>),strmatch(%q<roll_tags>,Fortune|Misfortune))=@pemit %#=notice(PF2E,u(%!/FUN`SHOW`SUB`MISS),warn); think u({{core}}/FUN`ROLL`CHECK,%q<roll_total>,%q<roll_domains>,%q<roll_options> %q<roll_extra>,%q<cmd_dc>); @remit %l=notice(PF2E,u(%!/FUN`SHOW`CHECK)); @include %!/INC`CHECK`GMNOTES
+          think setqm(roll_raw_stat,%q<cmd_stat>,roll_raw_dc,%q<cmd_dc>); think setqm(with_at,match(%q<cmd_stat>,with),with_dc,match(%q<cmd_dc>,with)); think setqm(cmd_with,trim(if(%q<with_at>,extract(%q<cmd_stat>,inc(%q<with_at>),99),if(%q<with_dc>,extract(%q<cmd_dc>,inc(%q<with_dc>),99)))),cmd_stat,if(%q<with_at>,extract(%q<cmd_stat>,1,dec(%q<with_at>)),%q<cmd_stat>),cmd_dc,if(%q<with_dc>,extract(%q<cmd_dc>,1,dec(%q<with_dc>)),%q<cmd_dc>)); think setq(roll_stat,u({{commands}}/FUN`COMMAND`STAT,%q<cmd_stat>)); @assert eq(words(%q<roll_stat>),1)=@pemit %#=notice(PF2E,u({{commands}}/FUN`SHOW`STAT`MISS,%q<cmd_stat>,%q<roll_stat>),warn); @assert cor(not(strlen(%q<cmd_dc>)),isint(%q<cmd_dc>))=@pemit %#=notice(PF2E,A DC is a whole number%, such as +check athletics=20.,warn); think u({{commands}}/FUN`CHECK`PREPARE); @assert cor(not(strlen(%q<cmd_with>)),strlen(%q<roll_sub>),strmatch(%q<roll_tags>,Fortune|Misfortune))=@pemit %#=notice(PF2E,u({{commands}}/FUN`SHOW`SUB`MISS),warn); think u({{core}}/FUN`ROLL`CHECK,%q<roll_total>,%q<roll_domains>,%q<roll_options> %q<roll_extra>,%q<cmd_dc>); &PF2E`LASTCHECK %q<sheet_target>=[json(object,stat,json(string,%q<roll_raw_stat>),dc,json(string,%q<roll_raw_dc>),ok,if(u({{commands}}/FUN`HERO`CAN),true,false))]; @set %q<sheet_target>/PF2E`LASTCHECK=wizard; @remit %l=notice(PF2E,u({{commands}}/FUN`SHOW`CHECK)); @include {{commands}}/INC`CHECK`GMNOTES
         flags: [cmdsyntax]
       # Notes only the GM sees go to the GM of the room's encounter, else to staff who rolled.
       INC`CHECK`GMNOTES:
         value: |-
-          think setq(gm_notes,iter(%q<roll_notes>,if(u({{core}}/FUN`ROLL`NOTE`GM,%i0),%i0))); @break not(words(%q<gm_notes>)); think setq(gm_to,firstof(json_query(get({{table}}/ENC`[edit(num(%l),#,)]),extract,$.gm),if(permission(%#,softcode.pf2e.staff),%#))); @break not(strlen(%q<gm_to>)); @pemit %q<gm_to>=notice(PF2E,GM note on [name(%q<sheet_target>)]'s [capstr(%q<roll_stat>)]:%r[iter(%q<gm_notes>,u(%!/FUN`SHOW`TEXT,regeditall(u({{core}}/FUN`ROLL`NOTE`TEXT,%i0),\[\\r\\n\]+,%b)),%b,%r)])
+          think setq(gm_notes,iter(%q<roll_notes>,if(u({{core}}/FUN`ROLL`NOTE`GM,%i0),%i0))); @break not(words(%q<gm_notes>)); think setq(gm_to,firstof(json_query(get({{table}}/ENC`[edit(num(%l),#,)]),extract,$.gm),if(permission(%#,softcode.pf2e.staff),%#))); @break not(strlen(%q<gm_to>)); @pemit %q<gm_to>=notice(PF2E,GM note on [name(%q<sheet_target>)]'s [capstr(%q<roll_stat>)]:%r[iter(%q<gm_notes>,u({{commands}}/FUN`SHOW`TEXT,regeditall(u({{core}}/FUN`ROLL`NOTE`TEXT,%i0),\[\\r\\n\]+,%b)),%b,%r)])
         flags: [cmdsyntax]
       FUN`CHECK`PREPARE:
         value: |-
@@ -4529,8 +4544,8 @@ objects:
               Attributes,iter(str dex con int wis cha,[capstr(%i0)] [u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`CHECK`ABILITY,%i0))],%b,%b%b))]%r[
             rule()]%r[
             lfields(,
-              Hit points|AC|[if(strlen(%q<check_shield>),Shield|)]Speed|Class DC[if(%q<show_spellcaster>,|Spells)][if(strlen(setr(show_senses,u(%!/FUN`SHOW`SENSES))),|Senses)][if(strlen(setr(show_defences,u(%!/FUN`SHOW`DEFENCES))),|Defences)],
-              [setq(show_day,setr(check_daily,u(%!/FUN`DAILY`OF,%q<sheet_target>)))][if(strlen(json_query(%q<show_day>,extract,$.hp)),[json_query(%q<show_day>,extract,$.hp)] of%b)][u({{core}}/FUN`CHECK`HP)][if(json_query(%q<show_day>,extract,$.wounded),%b[tone(warning,%(wounded [json_query(%q<show_day>,extract,$.wounded)]%))])]|[add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`AC)))][if(strlen(%q<check_armor>),%b[tone(muted,%([json_query(%q<check_armor>,extract,$.name)]%))])]|[if(strlen(%q<check_shield>),[u(%!/FUN`SHOW`SHIELD)]|)][u({{core}}/FUN`CHECK`SPEED)] feet[iter(u({{core}}/FUN`CHECK`SPEEDS),if(comp(first(%i0,~),land),%,%b[first(%i0,~)] [rest(%i0,~)] feet),%b,)]|[add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`CLASSDC)))][if(%q<show_spellcaster>,|attack [u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,attack)))]%, DC [add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,dc)))])][if(strlen(%q<show_senses>),|%q<show_senses>)][if(strlen(%q<show_defences>),|%q<show_defences>)],
+              Hit points|Hero points|AC|[if(strlen(%q<check_shield>),Shield|)]Speed|Class DC[if(%q<show_spellcaster>,|Spells)][if(strlen(setr(show_senses,u(%!/FUN`SHOW`SENSES))),|Senses)][if(strlen(setr(show_defences,u(%!/FUN`SHOW`DEFENCES))),|Defences)],
+              [setq(show_day,setr(check_daily,u(%!/FUN`DAILY`OF,%q<sheet_target>)))][if(strlen(json_query(%q<show_day>,extract,$.hp)),[json_query(%q<show_day>,extract,$.hp)] of%b)][u({{core}}/FUN`CHECK`HP)][if(json_query(%q<show_day>,extract,$.wounded),%b[tone(warning,%(wounded [json_query(%q<show_day>,extract,$.wounded)]%))])]|[u(%!/FUN`HERO`N,%q<show_day>)] of 3|[add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`AC)))][if(strlen(%q<check_armor>),%b[tone(muted,%([json_query(%q<check_armor>,extract,$.name)]%))])]|[if(strlen(%q<check_shield>),[u(%!/FUN`SHOW`SHIELD)]|)][u({{core}}/FUN`CHECK`SPEED)] feet[iter(u({{core}}/FUN`CHECK`SPEEDS),if(comp(first(%i0,~),land),%,%b[first(%i0,~)] [rest(%i0,~)] feet),%b,)]|[add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`CLASSDC)))][if(%q<show_spellcaster>,|attack [u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,attack)))]%, DC [add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,dc)))])][if(strlen(%q<show_senses>),|%q<show_senses>)][if(strlen(%q<show_defences>),|%q<show_defences>)],
               |)]%r[
             rule()]%r[
             ldatatable(,Statistic|Rank|>Modifier,iter(u({{core}}/FUN`SHEET`STATS),u(%!/FUN`SHOW`STATISTIC,%i0),%b,%r),%r)]%r[
@@ -4813,6 +4828,108 @@ objects:
         value: |-
           $(?is)^\+dc(?\: +(.*))?$:think setq(cmd_args,lcstr(trim(%1))); @assert words(%q<cmd_args>)=@pemit %#=notice(PF2E,+dc <level> [difficulty] [rarity]%, such as +dc 5 hard rare. Difficulties: [itemize(iter(get({{core}}/DATA`DC`ADJUST),first(%i0,~)))].,warn); @pemit %#=notice(PF2E,u(%!/FUN`DC`TEXT,%q<cmd_args>))
         flags: [regexp, cmdsyntax]
+
+      # --- Hero Points ---------------------------------------------------------------------------
+      # +hero [<player>] shows them; +hero/award <players>[=<points>] and +hero/set <players>=<points> are for staff
+      # and the GM of the encounter a character is in; +hero/reroll [<player>] spends one on a reroll that keeps the
+      # new result; +hero/recover [<player>] spends them all to stop dying. A character in an encounter spends and
+      # gains them in the encounter's copy of their day, which +enc/keep writes back.
+      CMD`HERO:
+        value: |-
+          $(?is)^\+hero(/\S*)?(?\: +(.*))?$:think setqm(cmd_switch,firstof(lcstr(after(%1,/)),show),cmd_args,trim(%2)); @assert match(show award set reroll recover,%q<cmd_switch>)=@pemit %#=notice(PF2E,There is no +hero/%q<cmd_switch>. The switches are /award%, /set%, /reroll and /recover.,warn); @include %!/INC`HERO`%q<cmd_switch>
+        flags: [regexp, cmdsyntax]
+      FUN`HERO`LOAD:
+        value: |-
+          @@(%0 a player: loads the encounter where they are; sets hero_at, their combatant there or nothing, hero_day, the day their Hero Points are in, and hero_n)[
+          u(FUN`ENC`LOAD,loc(%0))][
+          setq(hero_at,if(strlen(%q<enc>),first(squish(iter(u(FUN`ENC`INDEXES),if(strmatch(u(FUN`ENC`C,%i0,who),objid(%0)),%i0))))))][
+          setq(hero_day,if(strlen(%q<hero_at>),firstof(u(FUN`ENC`C,%q<hero_at>,daily),json(object)),u({{commands}}/FUN`DAILY`OF,%0)))][
+          setq(hero_n,u({{commands}}/FUN`HERO`N,%q<hero_day>))]
+        flags: [funsyntax]
+      FUN`HERO`TEXT:
+        value: |-
+          %0 Hero Point[if(neq(%0,1),s)]
+        flags: [funsyntax]
+      FUN`HERO`WHO:
+        value: |-
+          @@(%0 a player, %1 the verb for you, %2 for them)[
+          if(strmatch(objid(%0),objid(%#)),You %1,[name(%0)] %2)]
+        flags: [funsyntax]
+      FUN`HERO`SPEND:
+        value: |-
+          @@(after FUN`HERO`LOAD: one of hero_at's Hero Points, in enc)[
+          u(FUN`ENC`SET,%q<hero_at>,daily,json_mod(firstof(u(FUN`ENC`C,%q<hero_at>,daily),json(object)),patch,json(object,hero,dec(u({{commands}}/FUN`HERO`N,u(FUN`ENC`C,%q<hero_at>,daily))))))]
+        flags: [funsyntax]
+      # hero_new Hero Points for hero_who, after FUN`HERO`LOAD.
+      INC`HERO`PUT`ENC:
+        value: |-
+          think u(%!/FUN`ENC`SET,%q<hero_at>,daily,json_mod(%q<hero_day>,patch,json(object,hero,%q<hero_new>))); @include %!/INC`ENC`STORE
+        flags: [cmdsyntax]
+      INC`HERO`PUT`SHEET:
+        value: |-
+          think setqm(sheet_target,%q<hero_who>,daily,json_mod(%q<hero_day>,patch,json(object,hero,%q<hero_new>))); @include {{commands}}/INC`DAILY`WRITE
+        flags: [cmdsyntax]
+      INC`HERO`SHOW:
+        value: |-
+          think setq(hero_who,if(strlen(%q<cmd_args>),pmatch(%q<cmd_args>),%#)); @assert hastype(%q<hero_who>,player)=@pemit %#=notice(PF2E,There is no player called %q<cmd_args>.,warn); think u(%!/FUN`HERO`LOAD,%q<hero_who>); @assert cor(strmatch(objid(%q<hero_who>),objid(%#)),%q<enc_gm>)=@pemit %#=notice(PF2E,Only staff and the GM of their encounter see another character's Hero Points.,warn); @pemit %#=notice(PF2E,[u(%!/FUN`HERO`WHO,%q<hero_who>,have,has)] %q<hero_n> of 3 Hero Points[if(strlen(%q<hero_at>),%bin the encounter)].)
+        flags: [cmdsyntax]
+      INC`HERO`AWARD:
+        value: |-
+          think setq(hero_mode,award); @include %!/INC`HERO`GIVE
+        flags: [cmdsyntax]
+      INC`HERO`SET:
+        value: |-
+          think setq(hero_mode,set); @include %!/INC`HERO`GIVE
+        flags: [cmdsyntax]
+      INC`HERO`GIVE:
+        value: |-
+          think setqm(hero_names,trim(before(%q<cmd_args>,=)),hero_amount,trim(after(%q<cmd_args>,=))); think setq(hero_amount,if(cand(strmatch(%q<hero_mode>,award),not(strlen(%q<hero_amount>))),1,%q<hero_amount>)); @assert cand(words(%q<hero_names>),isint(%q<hero_amount>))=@pemit %#=notice(PF2E,if(strmatch(%q<hero_mode>,award),+hero/award <players>\[=<points>\]%, such as +hero/award Amiri Lini.,+hero/set <players>=<points>%, such as +hero/set Amiri Lini=1.),warn); think setq(hero_bad,squish(iter(%q<hero_names>,if(hastype(pmatch(%i0),player),,%i0)))); @assert not(words(%q<hero_bad>))=@pemit %#=notice(PF2E,There is no player called [first(%q<hero_bad>)].,warn); think setq(hero_denied,squish(iter(%q<hero_names>,[u(%!/FUN`HERO`LOAD,pmatch(%i0))][if(%q<enc_gm>,,name(pmatch(%i0)))]))); @assert not(words(%q<hero_denied>))=@pemit %#=notice(PF2E,Only staff%, and the GM of an encounter for those in it%, give Hero Points. [itemize(%q<hero_denied>)] [if(eq(words(%q<hero_denied>),1),is,are)] not in yours.,warn); @dolist/inplace %q<hero_names>={think setq(hero_who,pmatch(##)); think u(%!/FUN`HERO`LOAD,%q<hero_who>); think setq(hero_new,max(0,min(3,if(strmatch(%q<hero_mode>,award),add(%q<hero_n>,%q<hero_amount>),%q<hero_amount>)))); @include %!/INC`HERO`PUT`[if(strlen(%q<hero_at>),ENC,SHEET)]; @pemit %#=notice(PF2E,[name(%q<hero_who>)]: [u(%!/FUN`HERO`TEXT,%q<hero_new>)][if(strlen(%q<hero_at>),%bin the encounter)].,ok); @break strmatch(objid(%q<hero_who>),objid(%#)); @pemit %q<hero_who>=notice(PF2E,%N [if(strmatch(%q<hero_mode>,award),gives you [u(%!/FUN`HERO`TEXT,%q<hero_amount>)],sets your Hero Points)]: you have [u(%!/FUN`HERO`TEXT,%q<hero_new>)].,ok)}
+        flags: [cmdsyntax]
+      # +hero/reroll: in an encounter, the character's part of its last roll while nothing has happened since
+      # (%q<enc_attr>`RR, written by INC`HERO`MARK); else their last +check (PF2E`LASTCHECK).
+      INC`HERO`REROLL:
+        value: |-
+          think setq(hero_who,if(strlen(%q<cmd_args>),pmatch(%q<cmd_args>),%#)); @assert hastype(%q<hero_who>,player)=@pemit %#=notice(PF2E,There is no player called %q<cmd_args>.,warn); think u(%!/FUN`HERO`LOAD,%q<hero_who>); @assert cor(strmatch(objid(%q<hero_who>),objid(%#)),%q<enc_gm>)=@pemit %#=notice(PF2E,You spend only your own Hero Points.,warn); @assert gt(%q<hero_n>,0)=@pemit %#=notice(PF2E,[u(%!/FUN`HERO`WHO,%q<hero_who>,have,has)] no Hero Points.,warn); think setq(hero_rr,if(strlen(%q<hero_at>),get(me/%q<enc_attr>`RR))); think setq(hero_mine,cand(strlen(%q<hero_rr>),strmatch(json_query(%q<hero_rr>,extract,$.after),digest(sha1,%q<enc>)),t(member(json_query(%q<hero_rr>,extract,$.at),%q<hero_at>)))); @include %!/INC`HERO`REROLL`[if(%q<hero_mine>,ENC,LAST)]
+        flags: [cmdsyntax]
+      INC`HERO`REROLL`LAST:
+        value: |-
+          think setq(hero_last,if(hasflag(%q<hero_who>/PF2E`LASTCHECK,wizard),get(%q<hero_who>/PF2E`LASTCHECK))); @assert strlen(%q<hero_last>)=@pemit %#=notice(PF2E,There is no roll to reroll. A Hero Point rerolls the last +check%, or in an encounter the last roll there while nothing has happened since.,warn); @assert strmatch(json_query(%q<hero_last>,extract,$.ok),true)=@pemit %#=notice(PF2E,u(%!/FUN`HERO`NOT),warn); think setq(hero_new,dec(%q<hero_n>)); @include %!/INC`HERO`PUT`[if(strlen(%q<hero_at>),ENC,SHEET)]; think setqm(roll_hero,1,cmd_stat,json_query(%q<hero_last>,extract,$.stat),cmd_dc,json_query(%q<hero_last>,extract,$.dc),sheet_target,%q<hero_who>,sheet_ledger,u({{commands}}/FUN`LEDGER`OF,%q<hero_who>)); @include {{commands}}/INC`CHECK`ROLL
+        flags: [cmdsyntax]
+      FUN`HERO`NOT:
+        value: |-
+          That roll cannot take a Hero Point: it was rerolled already, had a fortune effect, or was no roll at all%, such as Assurance.
+        flags: [funsyntax]
+      INC`HERO`REROLL`ENC:
+        value: |-
+          @assert t(member(json_query(%q<hero_rr>,extract,$.ok),%q<hero_at>))=@pemit %#=notice(PF2E,u(%!/FUN`HERO`NOT),warn); @assert strmatch(num(loc(%q<hero_who>)),num(%l))=@pemit %#=notice(PF2E,Reroll from the room of the encounter.,warn); think setqm(roll_hero,1,cmd_args,json_query(%q<hero_rr>,extract,$.args)); @include %!/INC`HERO`REROLL`[json_query(%q<hero_rr>,extract,$.sw)]
+        flags: [cmdsyntax]
+      # A Strike changed the encounter: it goes back to how it was before, and the Strike is made again.
+      INC`HERO`REROLL`STRIKE:
+        value: |-
+          think setq(hero_un,json_query(%q<hero_rr>,extract,$.un)); think setq(enc,get(me/%q<enc_attr>`U`%q<hero_un>)); think setq(enc_old,%q<enc>); &%q<enc_attr>`U`%q<hero_un> me=; &%q<enc_attr>`UN me=[dec(%q<hero_un>)]; think u(%!/FUN`HERO`SPEND); @include %!/INC`ENC`STRIKE
+        flags: [cmdsyntax]
+      INC`HERO`REROLL`CHECK:
+        value: |-
+          think u(%!/FUN`HERO`SPEND); @include %!/INC`ENC`STORE; @include %!/INC`ENC`CHECK
+        flags: [cmdsyntax]
+      # A save: the character goes back to how they were before it, and rolls it again; the others' saves stand.
+      INC`HERO`REROLL`SAVE:
+        value: |-
+          think setq(hero_base,get(me/%q<enc_attr>`U`[json_query(%q<hero_rr>,extract,$.un)])); @assert strlen(%q<hero_base>)=@pemit %#=notice(PF2E,That save is too far back to reroll.,warn); think setq(enc,json_mod(%q<enc>,replace,$.c\[%q<hero_at>\],json_query(%q<hero_base>,extract,$.c\[%q<hero_at>\]))); think u(%!/FUN`HERO`SPEND); think setqm(save_stat,json_query(%q<hero_rr>,extract,$.save.stat),save_dc,json_query(%q<hero_rr>,extract,$.save.dc),save_parts,json_query(%q<hero_rr>,extract,$.save.parts),save_ok,); think setq(save_line,u(%!/FUN`ACT`SAVE,%q<hero_at>)); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,[u(%!/FUN`ENC`C,%q<hero_at>,name)] spends a Hero Point and rerolls the [u({{commands}}/FUN`SHOW`STAT,%q<save_stat>)] save:%r%q<save_line>); &%q<enc_attr>`RR me=[json_mod(%q<hero_rr>,patch,json(object,after,json(string,digest(sha1,%q<enc>)),ok,json(string,setdiff(json_query(%q<hero_rr>,extract,$.ok),%q<hero_at>))))]
+        flags: [cmdsyntax]
+      # After a Strike, check or save in an encounter: who rolled (rr_at), whose roll a Hero Point may reroll (rr_ok),
+      # the encounter's state then, so a reroll is refused once anything changes it, and its undo entry.
+      INC`HERO`MARK:
+        value: |-
+          &%q<enc_attr>`RR me=[json(object,after,json(string,digest(sha1,%q<enc>)),sw,json(string,%q<rr_sw>),args,json(string,%q<cmd_args>),un,firstof(%q<enc_un>,0),at,json(string,%q<rr_at>),ok,json(string,%q<rr_ok>),save,firstof(%q<rr_save>,null))]
+        flags: [cmdsyntax]
+      # Heroic Recovery: all the character's Hero Points, at least 1, and they are no longer dying, stable at 0 Hit Points,
+      # wounded no higher. Spent when dying rises; the encounter raises it on its own, so it is spent right after,
+      # even after the rise that killed them.
+      INC`HERO`RECOVER:
+        value: |-
+          think setq(hero_who,if(strlen(%q<cmd_args>),pmatch(%q<cmd_args>),%#)); @assert hastype(%q<hero_who>,player)=@pemit %#=notice(PF2E,There is no player called %q<cmd_args>.,warn); think u(%!/FUN`HERO`LOAD,%q<hero_who>); @assert cor(strmatch(objid(%q<hero_who>),objid(%#)),%q<enc_gm>)=@pemit %#=notice(PF2E,You spend only your own Hero Points.,warn); @assert strlen(%q<hero_at>)=@pemit %#=notice(PF2E,Heroic Recovery saves a dying character in an encounter%, and [u(%!/FUN`HERO`WHO,%q<hero_who>,are,is)] in none.,warn); @assert gt(firstof(json_query(u(%!/FUN`ENC`C,%q<hero_at>,conds),extract,$.dying),0),0)=@pemit %#=notice(PF2E,[u(%!/FUN`HERO`WHO,%q<hero_who>,are,is)] not dying.,warn); @assert gt(%q<hero_n>,0)=@pemit %#=notice(PF2E,[u(%!/FUN`HERO`WHO,%q<hero_who>,have,has)] no Hero Points.,warn); think setq(hero_name,u(%!/FUN`ENC`C,%q<hero_at>,name)); think u(%!/FUN`ENC`PATCH,%q<hero_at>,json(object,conds,json(object,dying,null),down,0,daily,json(object,hero,0))); @include %!/INC`ENC`STORE; @remit loc(%q<hero_who>)=notice(PF2E,%q<hero_name> spends [u(%!/FUN`HERO`TEXT,%q<hero_n>)] to avoid death: no longer dying%, stable at 0 Hit Points[if(json_query(u(%!/FUN`ENC`C,%q<hero_at>,conds),extract,$.wounded),%, wounded [json_query(u(%!/FUN`ENC`C,%q<hero_at>,conds),extract,$.wounded)])].,ok)
+        flags: [cmdsyntax]
 
       # --- Encounters ---------------------------------------------------------------------------
       FUN`ENC: "The encounter in a room, read into registers: enc (the JSON), enc_old (as read), enc_attr, enc_gm (1 when the enactor runs it)."
@@ -5326,9 +5443,10 @@ objects:
         flags: [funsyntax]
       FUN`ACT`SAVE:
         value: |-
-          @@(%0 a combatant's index, with save_stat, save_dc and save_parts: their save and the damage they take, as a line)[
+          @@(%0 a combatant's index, with save_stat, save_dc and save_parts: their save and the damage they take, as a line; adds %0 to save_ok when a Hero Point may reroll it)[
           u(FUN`ENC`PREPARE,%0)][
           u(FUN`ACT`CHECK,%q<save_stat>,%q<save_dc>)][
+          if(cand(strmatch(u(FUN`ENC`C,%0,kind),pc),u({{commands}}/FUN`HERO`CAN)),setq(save_ok,%q<save_ok> %0))][
           setq(save_line,[u(FUN`ENC`C,%0,name)]: [json_query(%q<roll_record>,extract,$.text)][u(FUN`ACT`TAGS)]%, [lcstr(u(FUN`ACT`DEGREE,%q<roll_degree>))][u(FUN`ACT`ADJUSTED)])][
           if(strlen(%q<save_parts>),
             if(eq(%q<roll_degree>,3),
@@ -5358,7 +5476,7 @@ objects:
       # +enc/strike <target>[=<strike>]: the one acting Strikes; the GM may name who strikes as <who>:<target>.
       INC`ENC`STRIKE:
         value: |-
-          @include %!/INC`ENC`NEED; think setqm(strike_who,if(strmatch(before(%q<cmd_args>,=),*:*),trim(before(%q<cmd_args>,:))),strike_target,trim(before(if(strmatch(before(%q<cmd_args>,=),*:*),after(%q<cmd_args>,:),%q<cmd_args>),=)),strike_name,trim(after(%q<cmd_args>,=))); think if(cand(strlen(%q<strike_name>),not(strlen(u(%!/FUN`ENC`FIND,%q<strike_target>))),strlen(u(%!/FUN`ENC`FIND,%q<strike_name>))),setqm(strike_swap,%q<strike_target>,strike_target,%q<strike_name>,strike_name,%q<strike_swap>)); think setq(act_at,if(strlen(%q<strike_who>),u(%!/FUN`ENC`FIND,%q<strike_who>),u(%!/FUN`ENC`ACTING))); @assert strlen(%q<act_at>)=@pemit %#=notice(PF2E,No one in the encounter is called %q<strike_who>.,warn); @assert gte(%q<act_at>,0)=@pemit %#=notice(PF2E,No one is acting. +enc/next starts the first turn%, or name who strikes: +enc/strike <who>:<target>.,warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,It is [u(%!/FUN`ENC`C,%q<act_at>,name)]'s turn.,warn); @assert strlen(setr(act_target,u(%!/FUN`ENC`FIND,%q<strike_target>)))=@pemit %#=notice(PF2E,No one in the encounter is called %q<strike_target>.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think setq(act_strike,u(%!/FUN`ACT`STRIKES,%q<strike_name>*)); @assert strlen(%q<act_strike>)=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] has no Strike called %q<strike_name>. The Strikes are [itemize(u(%!/FUN`ACT`STRIKE`NAMES),|)].,warn); think setq(strike_use,elements(%q<act_strike>,6,|)); think if(strlen(first(%q<strike_use>,~)),u(%!/FUN`ACT`CONSUME,%q<act_at>,%q<strike_use>)); think u(%!/FUN`ACT`STRIKE`RESOLVE); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,%q<enc_say>)
+          @include %!/INC`ENC`NEED; think setqm(strike_who,if(strmatch(before(%q<cmd_args>,=),*:*),trim(before(%q<cmd_args>,:))),strike_target,trim(before(if(strmatch(before(%q<cmd_args>,=),*:*),after(%q<cmd_args>,:),%q<cmd_args>),=)),strike_name,trim(after(%q<cmd_args>,=))); think if(cand(strlen(%q<strike_name>),not(strlen(u(%!/FUN`ENC`FIND,%q<strike_target>))),strlen(u(%!/FUN`ENC`FIND,%q<strike_name>))),setqm(strike_swap,%q<strike_target>,strike_target,%q<strike_name>,strike_name,%q<strike_swap>)); think setq(act_at,if(strlen(%q<strike_who>),u(%!/FUN`ENC`FIND,%q<strike_who>),u(%!/FUN`ENC`ACTING))); @assert strlen(%q<act_at>)=@pemit %#=notice(PF2E,No one in the encounter is called %q<strike_who>.,warn); @assert gte(%q<act_at>,0)=@pemit %#=notice(PF2E,No one is acting. +enc/next starts the first turn%, or name who strikes: +enc/strike <who>:<target>.,warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,It is [u(%!/FUN`ENC`C,%q<act_at>,name)]'s turn.,warn); @assert strlen(setr(act_target,u(%!/FUN`ENC`FIND,%q<strike_target>)))=@pemit %#=notice(PF2E,No one in the encounter is called %q<strike_target>.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think setq(act_strike,u(%!/FUN`ACT`STRIKES,%q<strike_name>*)); @assert strlen(%q<act_strike>)=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] has no Strike called %q<strike_name>. The Strikes are [itemize(u(%!/FUN`ACT`STRIKE`NAMES),|)].,warn); think setq(strike_use,elements(%q<act_strike>,6,|)); think if(strlen(first(%q<strike_use>,~)),u(%!/FUN`ACT`CONSUME,%q<act_at>,%q<strike_use>)); think u(%!/FUN`ACT`STRIKE`RESOLVE); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,%q<enc_say>); think setqm(rr_sw,strike,rr_at,if(strmatch(u(%!/FUN`ENC`C,%q<act_at>,kind),pc),%q<act_at>),rr_save,); think setq(rr_ok,if(cand(strlen(%q<rr_at>),u({{commands}}/FUN`HERO`CAN)),%q<act_at>)); @include %!/INC`HERO`MARK
         flags: [cmdsyntax]
       # act_at strikes act_target with act_strike (FUN`ACT`STRIKES): the multiple attack penalty from the
       # attacks this turn, the target's AC, the roll with the target's roll options (target:condition:off-guard
@@ -5437,13 +5555,13 @@ objects:
       # +enc/check <who>=<statistic>[ vs <DC>]: a check for a combatant, with their conditions.
       INC`ENC`CHECK:
         value: |-
-          @include %!/INC`ENC`NEED; think setqm(check_who,trim(before(%q<cmd_args>,=)),check_what,trim(after(%q<cmd_args>,=))); think setqm(act_at,if(strlen(setr(check_found,u(%!/FUN`ENC`FIND,%q<check_who>))),%q<check_found>,-1),check_stat,u({{commands}}/FUN`COMMAND`STAT,trim(before(%q<check_what>,%bvs))),check_dc,trim(after(%q<check_what>,%bvs))); @assert gte(%q<act_at>,0)=@pemit %#=notice(PF2E,No one in the encounter is called %q<check_who>.,warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,You make checks only for yourself.,warn); @assert eq(words(%q<check_stat>),1)=@pemit %#=notice(PF2E,+enc/check <who>=<statistic> [vs <DC>]%, such as +enc/check 2=reflex vs 18.,warn); @assert cor(not(strlen(%q<check_dc>)),isint(%q<check_dc>))=@pemit %#=notice(PF2E,A DC is a whole number.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think u(%!/FUN`ACT`CHECK,%q<check_stat>,%q<check_dc>); @remit %l=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] rolls [u({{commands}}/FUN`SHOW`STAT,%q<check_stat>)]: [json_query(%q<roll_record>,extract,$.text)][u(%!/FUN`ACT`TAGS)][if(strlen(%q<check_dc>),%bvs DC %q<check_dc>: [tone(strong,u(%!/FUN`ACT`DEGREE,%q<roll_degree>))][u(%!/FUN`ACT`ADJUSTED)])].[u(%!/FUN`ACT`NOTES)])
+          @include %!/INC`ENC`NEED; think setqm(check_who,trim(before(%q<cmd_args>,=)),check_what,trim(after(%q<cmd_args>,=))); think setqm(act_at,if(strlen(setr(check_found,u(%!/FUN`ENC`FIND,%q<check_who>))),%q<check_found>,-1),check_stat,u({{commands}}/FUN`COMMAND`STAT,trim(before(%q<check_what>,%bvs))),check_dc,trim(after(%q<check_what>,%bvs))); @assert gte(%q<act_at>,0)=@pemit %#=notice(PF2E,No one in the encounter is called %q<check_who>.,warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,You make checks only for yourself.,warn); @assert eq(words(%q<check_stat>),1)=@pemit %#=notice(PF2E,+enc/check <who>=<statistic> [vs <DC>]%, such as +enc/check 2=reflex vs 18.,warn); @assert cor(not(strlen(%q<check_dc>)),isint(%q<check_dc>))=@pemit %#=notice(PF2E,A DC is a whole number.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think u(%!/FUN`ACT`CHECK,%q<check_stat>,%q<check_dc>); @remit %l=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] rolls [u({{commands}}/FUN`SHOW`STAT,%q<check_stat>)]: [json_query(%q<roll_record>,extract,$.text)][u(%!/FUN`ACT`TAGS)][if(strlen(%q<check_dc>),%bvs DC %q<check_dc>: [tone(strong,u(%!/FUN`ACT`DEGREE,%q<roll_degree>))][u(%!/FUN`ACT`ADJUSTED)])].[u(%!/FUN`ACT`NOTES)]); think setqm(rr_sw,check,rr_at,if(strmatch(u(%!/FUN`ENC`C,%q<act_at>,kind),pc),%q<act_at>),rr_save,); think setq(rr_ok,if(cand(strlen(%q<rr_at>),u({{commands}}/FUN`HERO`CAN)),%q<act_at>)); @include %!/INC`HERO`MARK
         flags: [cmdsyntax]
       # +enc/save <who>=<save> vs <DC>[ <damage>]: a save for several combatants; with damage, a basic save from one
       # damage roll: none on a critical success, half on a success, double on a critical failure.
       INC`ENC`SAVE:
         value: |-
-          @include %!/INC`ENC`NEED; think setqm(save_who,trim(before(%q<cmd_args>,=)),save_what,trim(after(%q<cmd_args>,=))); think setqm(save_stat,u({{commands}}/FUN`COMMAND`STAT,trim(before(%q<save_what>,%bvs%b))),save_dc,first(after(%q<save_what>,%bvs%b)),save_formula,trim(rest(after(%q<save_what>,%bvs%b)))); @assert cand(match(fortitude reflex will,%q<save_stat>),isint(%q<save_dc>))=@pemit %#=notice(PF2E,+enc/save <who>=<save> vs <DC> <damage>%, such as +enc/save foes=reflex vs 21 6d6 fire. Name several with commas%, or foes%, characters or everyone. Without damage it is a plain save.,warn); @assert cor(%q<enc_gm>,cand(gte(u(%!/FUN`ENC`ACTING),0),u(%!/FUN`ENC`MAY,u(%!/FUN`ENC`ACTING))))=@pemit %#=notice(PF2E,Only the GM or whoever is acting calls for saves.,warn); think setq(save_at,u(%!/FUN`ENC`TARGETS,%q<save_who>)); @assert not(strlen(%q<targets_missing>))=@pemit %#=notice(PF2E,No one in the encounter is called %q<targets_missing>.,warn); @assert words(%q<save_at>)=@pemit %#=notice(PF2E,No one is left to roll.,warn); think if(strlen(%q<save_formula>),u(%!/FUN`ACT`DAMAGE,%q<save_formula>,0),setqm(dmg_parts,,dmg_text,,dmg_total,0)); @assert cand(isint(%q<dmg_total>),cor(not(strlen(%q<save_formula>)),strlen(%q<dmg_parts>)))=@pemit %#=notice(PF2E,%q<save_formula> is not damage. Give a formula such as 6d6 fire.,warn); think setqm(save_parts,%q<dmg_parts>,save_text,%q<dmg_text>,save_raw,%q<dmg_total>); think setq(save_lines,iter(%q<save_at>,u(%!/FUN`ACT`SAVE,%i0),%b,%r)); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,[if(strlen(%q<save_formula>),Basic%b)][u({{commands}}/FUN`SHOW`STAT,%q<save_stat>)] save against DC %q<save_dc>[if(strlen(%q<save_formula>),%, %q<save_text>[if(gt(words(%q<save_parts>,|),1),%b= %q<save_raw>)])]:%r%q<save_lines>)
+          @include %!/INC`ENC`NEED; think setqm(save_who,trim(before(%q<cmd_args>,=)),save_what,trim(after(%q<cmd_args>,=))); think setqm(save_stat,u({{commands}}/FUN`COMMAND`STAT,trim(before(%q<save_what>,%bvs%b))),save_dc,first(after(%q<save_what>,%bvs%b)),save_formula,trim(rest(after(%q<save_what>,%bvs%b)))); @assert cand(match(fortitude reflex will,%q<save_stat>),isint(%q<save_dc>))=@pemit %#=notice(PF2E,+enc/save <who>=<save> vs <DC> <damage>%, such as +enc/save foes=reflex vs 21 6d6 fire. Name several with commas%, or foes%, characters or everyone. Without damage it is a plain save.,warn); @assert cor(%q<enc_gm>,cand(gte(u(%!/FUN`ENC`ACTING),0),u(%!/FUN`ENC`MAY,u(%!/FUN`ENC`ACTING))))=@pemit %#=notice(PF2E,Only the GM or whoever is acting calls for saves.,warn); think setq(save_at,u(%!/FUN`ENC`TARGETS,%q<save_who>)); @assert not(strlen(%q<targets_missing>))=@pemit %#=notice(PF2E,No one in the encounter is called %q<targets_missing>.,warn); @assert words(%q<save_at>)=@pemit %#=notice(PF2E,No one is left to roll.,warn); think if(strlen(%q<save_formula>),u(%!/FUN`ACT`DAMAGE,%q<save_formula>,0),setqm(dmg_parts,,dmg_text,,dmg_total,0)); @assert cand(isint(%q<dmg_total>),cor(not(strlen(%q<save_formula>)),strlen(%q<dmg_parts>)))=@pemit %#=notice(PF2E,%q<save_formula> is not damage. Give a formula such as 6d6 fire.,warn); think setqm(save_parts,%q<dmg_parts>,save_text,%q<dmg_text>,save_raw,%q<dmg_total>,save_ok,); think setq(save_lines,iter(%q<save_at>,u(%!/FUN`ACT`SAVE,%i0),%b,%r)); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,[if(strlen(%q<save_formula>),Basic%b)][u({{commands}}/FUN`SHOW`STAT,%q<save_stat>)] save against DC %q<save_dc>[if(strlen(%q<save_formula>),%, %q<save_text>[if(gt(words(%q<save_parts>,|),1),%b= %q<save_raw>)])]:%r%q<save_lines>); think setqm(rr_sw,save,rr_at,squish(iter(%q<save_at>,if(strmatch(u(%!/FUN`ENC`C,%i0,kind),pc),%i0))),rr_ok,squish(%q<save_ok>),rr_save,json(object,stat,json(string,%q<save_stat>),dc,%q<save_dc>,parts,json(string,%q<save_parts>))); @include %!/INC`HERO`MARK
         flags: [cmdsyntax]
       # +enc/damage[/half or /double] <who>=<amount or formula>: damage from the GM, halved (rounded down) or
       # doubled before weaknesses and resistances, as Foundry's chat card applies it.
@@ -6341,6 +6459,7 @@ objects:
 
         - `+build` makes your character, one choice at a time: `+help pf2e build`.
         - `+sheet` shows it and `+check` rolls against it: `+help pf2e sheet`, `+help pf2e check`. `+toggle` turns your situational feats on and off: `+help pf2e toggle`.
+        - `+hero` spends Hero Points on a reroll or to avoid death: `+help pf2e hero`.
         - `+spells`, `+prepare` and `+cast` are for casters, `+rest` begins a new day: `+help pf2e spells`, `+help pf2e day`.
         - `+deity` lists the game's deities, which clerics and champions follow: `+help pf2e deity`.
         - `+alchemy` makes alchemical items from your formula book: `+help pf2e alchemy`.
@@ -6412,7 +6531,28 @@ objects:
         Expert +9
         ```
       SEE`PF2E`CHECK: |-
-        pf2e sheet|pf2e toggle|pf2e dc
+        pf2e sheet|pf2e toggle|pf2e hero|pf2e dc
+      HELP`PF2E`HERO: |-
+        Hero Points: you have 0 to 3, and 1 until a GM gives or sets them. `+sheet` shows them, and `+hero` on its own.
+
+        - `+hero/reroll` spends one to reroll your last `+check` and keep the new result. In an encounter it rerolls your last roll there, a Strike, a check or a save, while nothing else has happened since. A Strike is made again from the start; a save is rolled again for you alone.
+        - A reroll is a fortune effect, so a roll that had one already cannot take it, nor a roll rerolled already, nor Assurance, which is no roll. Against a misfortune effect the two cancel, and the reroll is a single d20.
+        - `+hero/recover` is Heroic Recovery: while you are dying in an encounter, it spends all your Hero Points and you are no longer dying, stable at 0 Hit Points. Your wounded value stays as it was. Since the encounter raises dying on its own, you may spend them right after the rise that would have killed you.
+        - In an encounter you spend and gain them in the encounter's copy of you, which the GM's `+enc/keep` writes back to your sheet.
+        - Staff, and the GM of an encounter for those in it, give them with `+hero/award <players>\[=<points>\]` and set them with `+hero/set <players>=<points>`, such as `+hero/set Amiri Lini=1` at the start of a session.
+
+        Example:
+
+        `+check perception=15`, then `+hero/reroll`
+
+        Output:
+
+        ```
+        \[PF2E\] Tess rolls Perception: 1d20\[6\] + 1 = 7 vs DC 15: Failure (roll 184)
+        \[PF2E\] Tess rolls Perception: 1d20\[17\] + 1 = 18 (Hero Point reroll) vs DC 15: Success (roll 185)
+        ```
+      SEE`PF2E`HERO: |-
+        pf2e check|pf2e enc
       HELP`PF2E`TOGGLE: |-
         `+toggle` lists what you can turn on and off: a feat or effect that applies only when you say so, such as Bashing Charge or a stance's choice.
 
@@ -6466,7 +6606,7 @@ objects:
         Elite Goblin Warrior #2: 1d20\[16\] + 9 = 25, success, half damage 11. Elite Goblin Warrior #2 takes 11 damage.
         ```
 
-        Damage to a dying character raises dying by 1, or 2 on a critical hit; at dying 4 they die. Healing wakes them, wounded 1 more.
+        Damage to a dying character raises dying by 1, or 2 on a critical hit; at dying 4 they die. Healing wakes them, wounded 1 more. A Hero Point avoids death: `+help pf2e hero`.
       SEE`PF2E`ENC: |-
         pf2e enc build|pf2e enc gm|pf2e recall
       HELP`PF2E`ENC`BUILD: |-
@@ -6629,6 +6769,7 @@ objects:
         - `+pf2e/award <players>=<amount> <unit> <reason>`: experience (`xp`) or money (`pp`, `gp`, `sp`, `cp`) for each player named, written to their experience or money ledger with the reason and who gave it. A negative amount takes away: `+pf2e/award Amiri Lini=80 xp Drove off the goblins`.
         - `+pf2e/level <player>/<level>`, `+pf2e/ability <player>/<attribute>=<modifier>`, `+pf2e/rank <player>/<statistic>=<rank>`, `+pf2e/grant <player>/<pack>/<item>\[=<value>\]` and `+pf2e/revoke <player>/<entry>` add entries to a ledger.
         - `+pf2e/hp <player>/<hit points>` sets Hit Points outside an encounter.
+        - `+hero/award <players>\[=<points>\]` gives Hero Points and `+hero/set <players>=<points>` sets them: `+help pf2e hero`.
         - `+pf2e/ledger <player>\[=money or xp\]` lists the sheet's ledger, or the money or experience ledger with its total.
         - `+pf2e/update` reads Foundry's content again from the feed.
         - `+deity/create`, `+deity/set`, `+deity/destroy` and `+deity/samples` keep the deity table: `+help pf2e deity staff`.
