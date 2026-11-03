@@ -1,7 +1,7 @@
 format: "1.19"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.9.16"
+version: "0.9.17"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -73,10 +73,10 @@ objects:
       DATA`CONFIG`VARIANTS: ""
       DATA`CONFIG`VARIANTS`TYPE: list
       DATA`CONFIG`VARIANTS`DEFAULT: ""
-      DATA`CONFIG`VARIANTS`CHOICES: free-archetype abp abp-fundamental gradual-boosts proficiency-without-level
+      DATA`CONFIG`VARIANTS`CHOICES: free-archetype abp abp-fundamental gradual-boosts proficiency-without-level stamina
       DATA`CONFIG`VARIANTS`LABEL: Variant rules
       DATA`CONFIG`VARIANTS`EXAMPLE: free-archetype
-      DATA`CONFIG`VARIANTS`DESCRIPTION: "The GM Core variant rules the game plays with, none by default. free-archetype: an archetype feat at every even level, beside the class feats. abp: Automatic Bonus Progression, the bonuses of fundamental runes coming from the character's level and weapons and armor carrying no runes. abp-fundamental: the same, but weapons and armor keep as many property runes as the level's potency allows. gradual-boosts: one attribute boost at each level from 2nd to 5th, 7th to 10th, 12th to 15th and 17th to 20th, in place of four at 5th, 10th, 15th and 20th. proficiency-without-level: proficiency bonuses leave out the level, and so do creatures' statistics, DCs by level and the XP table."
+      DATA`CONFIG`VARIANTS`DESCRIPTION: "The GM Core variant rules the game plays with, none by default. free-archetype: an archetype feat at every even level, beside the class feats. abp: Automatic Bonus Progression, the bonuses of fundamental runes coming from the character's level and weapons and armor carrying no runes. abp-fundamental: the same, but weapons and armor keep as many property runes as the level's potency allows. gradual-boosts: one attribute boost at each level from 2nd to 5th, 7th to 10th, 12th to 15th and 17th to 20th, in place of four at 5th, 10th, 15th and 20th. proficiency-without-level: proficiency bonuses leave out the level, and so do creatures' statistics, DCs by level and the XP table. stamina: Stamina Points beside Hit Points, taken first by damage, and Resolve Points to recover them."
       DATA`CONFIG`PROFICIENCY-BONUSES: -2 2 4 6 8
       DATA`CONFIG`PROFICIENCY-BONUSES`TYPE: list
       DATA`CONFIG`PROFICIENCY-BONUSES`DEFAULT: -2 2 4 6 8
@@ -111,7 +111,7 @@ objects:
       # ledger read again costs a few hundred function calls. The key is the ledger with the package's
       # version, the books and CACHE`STAMP, which the updater and the deity table change. CACHE lists
       # the keys oldest first; past DATA`CACHE`KEEP the oldest goes.
-      DATA`CACHE`VERSION: "0.9.16"
+      DATA`CACHE`VERSION: "0.9.17"
       DATA`CACHE`KEEP: 200
       DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_itemalts check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_shieldrules check_bulkrules check_bulk check_bulk_enc check_bulk_max check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
       # The ItemAlteration properties the core applies, by the kind of item they reach.
@@ -1059,6 +1059,10 @@ objects:
           switch(1,t(member(%q<abp_variants>,abp)),abp,t(member(%q<abp_variants>,abp-fundamental)),abp-fundamental,)]
         flags: [funsyntax]
       # Proficiency without level (GM Core), as Foundry's pwol variant: 1 when the game plays with it.
+      FUN`STAMINA:
+        value: |-
+          t(member(v(DATA`CONFIG`VARIANTS),stamina))
+        flags: [funsyntax]
       FUN`PWOL:
         value: |-
           t(member(v(DATA`CONFIG`VARIANTS),proficiency-without-level))
@@ -2768,9 +2772,26 @@ objects:
         value: |-
           @@(the maximum hit points)[
           add(firstof(json_query(u(FUN`CHECK`ITEM,%q<check_ancestry>),extract,$.system.hp),0),
-            mul(add(firstof(json_query(u(FUN`CHECK`ITEM,%q<check_class>),extract,$.system.hp),0),u(FUN`CHECK`ABILITY,con)),%q<check_level>),
+            mul(if(u(FUN`STAMINA),u(FUN`CHECK`HALFCLASSHP),add(firstof(json_query(u(FUN`CHECK`ITEM,%q<check_class>),extract,$.system.hp),0),u(FUN`CHECK`ABILITY,con))),%q<check_level>),
             u(FUN`CHECK`TOTAL,u(FUN`CHECK`MODS,,hp,)),
             mul(%q<check_level>,u(FUN`CHECK`TOTAL,u(FUN`CHECK`MODS,,hp-per-level,))))]
+        flags: [funsyntax]
+      # Stamina (GM Core): a class's Hit Points a level split in half, rounded down; the other half and the
+      # Constitution modifier are Stamina Points, and the key attribute's modifier is the Resolve Points.
+      FUN`CHECK`HALFCLASSHP:
+        value: |-
+          @@(half the class's Hit Points a level, rounded down)[
+          floor(fdiv(firstof(json_query(u(FUN`CHECK`ITEM,%q<check_class>),extract,$.system.hp),0),2))]
+        flags: [funsyntax]
+      FUN`CHECK`SP:
+        value: |-
+          @@(the maximum Stamina Points, 0 without the stamina variant)[
+          if(u(FUN`STAMINA),max(0,mul(add(u(FUN`CHECK`HALFCLASSHP),u(FUN`CHECK`ABILITY,con)),%q<check_level>)),0)]
+        flags: [funsyntax]
+      FUN`CHECK`RESOLVE:
+        value: |-
+          @@(the maximum Resolve Points, 0 without the stamina variant)[
+          if(cand(u(FUN`STAMINA),strlen(setr(resolve_key,u(FUN`CHECK`KEY)))),max(0,u(FUN`CHECK`ABILITY,%q<resolve_key>)),0)]
         flags: [funsyntax]
       FUN`CHECK`ITEM:
         value: |-
@@ -3749,7 +3770,7 @@ objects:
       # times the level, every slot, Divine Font and Focus Point back; the spells prepared stay prepared.
       CMD`REST:
         value: |-
-          $(?is)^\+rest$:think setq(cmd_target,); @include %!/INC`TARGET`VIEW; think u(%!/FUN`DAILY`PREPARE); think setq(rest_max,u({{core}}/FUN`CHECK`HP)); think setq(rest_hp,min(%q<rest_max>,add(firstof(json_query(%q<daily>,extract,$.hp),%q<rest_max>),mul(max(1,u({{core}}/FUN`CHECK`ABILITY,con)),%q<check_level>)))); think setq(daily,json_mod(%q<daily>,patch,json(object,cast,null,spent,null,font,null,focus,null,made,null,res,null,craft,null,hp,if(lt(%q<rest_hp>,%q<rest_max>),%q<rest_hp>,null),wounded,if(lt(%q<rest_hp>,%q<rest_max>),firstof(json_query(%q<daily>,extract,$.wounded),null),null)))); @include %!/INC`DAILY`WRITE; @pemit %#=notice(PF2E,You rest and make your daily preparations. Hit Points %q<rest_hp> of %q<rest_max>[if(strlen(%q<cast_kind>),%; every spell slot is back)][if(%q<cast_pool>,%; %q<cast_pool> Focus Point[if(neq(%q<cast_pool>,1),s)])].,ok); @oemit %#=notice(PF2E,%N rests.)
+          $(?is)^\+rest$:think setq(cmd_target,); @include %!/INC`TARGET`VIEW; think u(%!/FUN`DAILY`PREPARE); think setq(rest_max,u({{core}}/FUN`CHECK`HP)); think setq(rest_hp,min(%q<rest_max>,add(firstof(json_query(%q<daily>,extract,$.hp),%q<rest_max>),mul(max(1,u({{core}}/FUN`CHECK`ABILITY,con)),%q<check_level>)))); think setq(daily,json_mod(%q<daily>,patch,json(object,cast,null,spent,null,font,null,focus,null,made,null,res,null,craft,null,sp,null,resolve,null,hp,if(lt(%q<rest_hp>,%q<rest_max>),%q<rest_hp>,null),wounded,if(lt(%q<rest_hp>,%q<rest_max>),firstof(json_query(%q<daily>,extract,$.wounded),null),null)))); @include %!/INC`DAILY`WRITE; @pemit %#=notice(PF2E,You rest and make your daily preparations. Hit Points %q<rest_hp> of %q<rest_max>[if(u({{core}}/FUN`STAMINA),%; Stamina and Resolve Points full)][if(strlen(%q<cast_kind>),%; every spell slot is back)][if(%q<cast_pool>,%; %q<cast_pool> Focus Point[if(neq(%q<cast_pool>,1),s)])].,ok); @oemit %#=notice(PF2E,%N rests.)
         flags: [regexp, cmdsyntax]
       # +refocus: Refocus, 10 minutes, a Focus Point back.
       CMD`REFOCUS:
@@ -3793,6 +3814,24 @@ objects:
         value: |-
           $(?is)^\+repair$:think setq(cmd_target,); @include %!/INC`TARGET`VIEW; think u(%!/FUN`DAILY`PREPARE); @assert strlen(%q<check_shield>)=@pemit %#=notice(PF2E,You hold no shield. +build/equip <shield>=held.,warn); think setq(rep_sh,u({{core}}/FUN`CHECK`SHIELDATTR,%q<check_shield>)); think setqm(rep_id,json_query(%q<rep_sh>,extract,$.id),rep_name,json_query(%q<rep_sh>,extract,$.name),rep_max,json_query(%q<rep_sh>,extract,$.max),rep_hard,json_query(%q<rep_sh>,extract,$.hardness)); think setq(rep_dmg,firstof(json_query(%q<daily>,extract,$.shield.%q<rep_id>),0)); think setq(rep_hp,max(0,sub(json_query(%q<rep_sh>,extract,$.value),%q<rep_dmg>))); @assert gt(%q<rep_dmg>,0)=@pemit %#=notice(PF2E,%q<rep_name> is not damaged.,warn); @assert gt(%q<rep_hp>,0)=@pemit %#=notice(PF2E,%q<rep_name> is destroyed: it cannot be repaired.,warn); @assert gte(setr(rep_rank,u({{core}}/FUN`CHECK`RANK,crafting)),1)=@pemit %#=notice(PF2E,Repair needs training in Crafting.,warn); think setq(cmd_dc,add(extract(get({{core}}/DATA`DC`LEVEL),add(2,max(-1,min(25,firstof(json_query(%q<check_shield>,extract,$.system.level.value),0)))),1),firstof(after(grab(get({{core}}/DATA`DC`RARITY),firstof(json_query(%q<check_shield>,extract,$.system.traits.rarity),common)~*),~),0))); think setqm(roll_stat,crafting,cmd_with,,roll_extra,action:repair); think u(%!/FUN`CHECK`PREPARE); think u({{core}}/FUN`ROLL`CHECK,%q<roll_total>,%q<roll_domains>,%q<roll_options> %q<roll_extra>,%q<cmd_dc>); think setq(rep_change,switch(%q<roll_degree>,3,mul(-10,inc(%q<rep_rank>)),2,mul(-5,inc(%q<rep_rank>)),0,max(0,sub(die(2,6),%q<rep_hard>)),0)); think setq(rep_new,max(0,min(%q<rep_max>,add(%q<rep_dmg>,%q<rep_change>)))); think setq(daily,json_mod(%q<daily>,patch,json(object,shield,json(object,%q<rep_id>,if(%q<rep_new>,%q<rep_new>,null))))); @include %!/INC`DAILY`WRITE; think setq(rep_after,max(0,sub(json_query(%q<rep_sh>,extract,$.value),%q<rep_new>))); @remit %l=notice(PF2E,[u(%!/FUN`SHOW`CHECK)]%r[name(%q<sheet_target>)] [switch(1,lt(%q<rep_change>,0),repairs %q<rep_name>,gt(%q<rep_change>,0),damages %q<rep_name> while repairing it,fails to repair %q<rep_name>)]: Hit Points %q<rep_after> of %q<rep_max>[switch(1,eq(%q<rep_after>,0),%, destroyed,lte(%q<rep_after>,json_query(%q<rep_sh>,extract,$.bt)),%, broken)].)
         flags: [regexp, cmdsyntax]
+      # Stamina Points and Resolve Points are sp and resolve in the day, full when none are recorded.
+      FUN`STAMINA`SP:
+        value: |-
+          @@(%0 a day, after FUN`CHECK`PREPARE: the Stamina Points now)[
+          setq(stamina_max,u({{core}}/FUN`CHECK`SP))][
+          if(isint(setr(stamina_v,json_query(%0,extract,$.sp))),min(%q<stamina_v>,%q<stamina_max>),%q<stamina_max>)]
+        flags: [funsyntax]
+      FUN`STAMINA`RP:
+        value: |-
+          @@(%0 a day, after FUN`CHECK`PREPARE: the Resolve Points now)[
+          setq(resolve_max,u({{core}}/FUN`CHECK`RESOLVE))][
+          if(isint(setr(resolve_v,json_query(%0,extract,$.resolve))),min(%q<resolve_v>,%q<resolve_max>),%q<resolve_max>)]
+        flags: [funsyntax]
+      FUN`STAMINA`SHOW:
+        value: |-
+          @@(%0 a day: Stamina and Resolve Points, now and most)[
+          [u(FUN`STAMINA`SP,%0)] of %q<stamina_max>%, Resolve [u(FUN`STAMINA`RP,%0)] of %q<resolve_max>]
+        flags: [funsyntax]
       # Hero Points are hero in the day, 0 to 3, and 1 when none are recorded; +rest leaves them.
       FUN`HERO`N:
         value: |-
@@ -5239,8 +5278,8 @@ objects:
               Attributes,iter(str dex con int wis cha,[capstr(%i0)] [u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`CHECK`ABILITY,%i0))],%b,%b%b))]%r[
             rule()]%r[
             lfields(,
-              Hit points|Hero points|AC|[if(strlen(%q<check_shield>),Shield|)]Speed|Bulk|Class DC[if(%q<show_spellcaster>,|Spells)][if(strlen(setr(show_senses,u(%!/FUN`SHOW`SENSES))),|Senses)][if(strlen(setr(show_defences,u(%!/FUN`SHOW`DEFENCES))),|Defences)],
-              [setq(show_day,setr(check_daily,u(%!/FUN`DAILY`OF,%q<sheet_target>)))][if(strlen(json_query(%q<show_day>,extract,$.hp)),[json_query(%q<show_day>,extract,$.hp)] of%b)][u({{core}}/FUN`CHECK`HP)][if(json_query(%q<show_day>,extract,$.wounded),%b[tone(warning,%(wounded [json_query(%q<show_day>,extract,$.wounded)]%))])]|[u(%!/FUN`HERO`N,%q<show_day>)] of 3|[add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`AC)))][if(strlen(%q<check_armor>),%b[tone(muted,%([json_query(%q<check_armor>,extract,$.name)]%))])]|[if(strlen(%q<check_shield>),[u(%!/FUN`SHOW`SHIELD)]|)][u({{core}}/FUN`CHECK`SPEED)] feet[iter(u({{core}}/FUN`CHECK`SPEEDS),if(comp(first(%i0,~),land),%,%b[first(%i0,~)] [rest(%i0,~)] feet),%b,)]|[u(%!/FUN`SHOW`BULK)]|[add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`CLASSDC)))][if(%q<show_spellcaster>,|attack [u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,attack)))]%, DC [add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,dc)))])][if(strlen(%q<show_senses>),|%q<show_senses>)][if(strlen(%q<show_defences>),|%q<show_defences>)],
+              Hit points|[if(u({{core}}/FUN`STAMINA),Stamina|)]Hero points|AC|[if(strlen(%q<check_shield>),Shield|)]Speed|Bulk|Class DC[if(%q<show_spellcaster>,|Spells)][if(strlen(setr(show_senses,u(%!/FUN`SHOW`SENSES))),|Senses)][if(strlen(setr(show_defences,u(%!/FUN`SHOW`DEFENCES))),|Defences)],
+              [setq(show_day,setr(check_daily,u(%!/FUN`DAILY`OF,%q<sheet_target>)))][if(strlen(json_query(%q<show_day>,extract,$.hp)),[json_query(%q<show_day>,extract,$.hp)] of%b)][u({{core}}/FUN`CHECK`HP)][if(json_query(%q<show_day>,extract,$.wounded),%b[tone(warning,%(wounded [json_query(%q<show_day>,extract,$.wounded)]%))])]|[if(u({{core}}/FUN`STAMINA),[u(%!/FUN`STAMINA`SHOW,%q<show_day>)]|)][u(%!/FUN`HERO`N,%q<show_day>)] of 3|[add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`AC)))][if(strlen(%q<check_armor>),%b[tone(muted,%([json_query(%q<check_armor>,extract,$.name)]%))])]|[if(strlen(%q<check_shield>),[u(%!/FUN`SHOW`SHIELD)]|)][u({{core}}/FUN`CHECK`SPEED)] feet[iter(u({{core}}/FUN`CHECK`SPEEDS),if(comp(first(%i0,~),land),%,%b[first(%i0,~)] [rest(%i0,~)] feet),%b,)]|[u(%!/FUN`SHOW`BULK)]|[add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`CLASSDC)))][if(%q<show_spellcaster>,|attack [u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,attack)))]%, DC [add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,dc)))])][if(strlen(%q<show_senses>),|%q<show_senses>)][if(strlen(%q<show_defences>),|%q<show_defences>)],
               |)]%r[
             rule()]%r[
             ldatatable(,Statistic|Rank|>Modifier,iter(u({{core}}/FUN`SHEET`STATS),u(%!/FUN`SHOW`STATISTIC,%i0),%b,%r),%r)]%r[
@@ -5531,6 +5570,29 @@ objects:
         flags: [regexp, cmdsyntax]
       # +cast <spell>[ at <rank>][ with <n> actions][ as <variant>][=<targets>]: in an encounter you are in, on its
       # copy of you and on its combatants; elsewhere from your sheet's day, with healing onto the characters named.
+      # +steel and +breather (stamina variant): spend a Resolve Point for half the Stamina Points, or, in 10
+      # minutes outside an encounter, for all of them. In an encounter you are in, +steel changes its copy of you.
+      CMD`STAMINA:
+        value: |-
+          $(?is)^\+(steel|breather)$:think setq(st_kind,lcstr(%1)); @assert u({{core}}/FUN`STAMINA)=@pemit %#=notice(PF2E,The game does not play with Stamina Points: +help pf2e variants.,warn); think u(%!/FUN`ENC`LOAD,%l); think setq(act_at,if(strlen(%q<enc>),u(%!/FUN`ENC`MINE))); @assert cor(strmatch(%q<st_kind>,steel),not(strlen(%q<act_at>)))=@pemit %#=notice(PF2E,Taking a Breather takes 10 minutes: not in an encounter. +steel spends a Resolve Point for half your Stamina Points.,warn); @include %!/INC`STAMINA`[if(strlen(%q<act_at>),ENC,FREE)]
+        flags: [regexp, cmdsyntax]
+      INC`STAMINA`ENC:
+        value: |-
+          think setqm(st_name,u(%!/FUN`ENC`C,%q<act_at>,name),st_sp,u(%!/FUN`ENC`C,%q<act_at>,sp),st_max,u(%!/FUN`ENC`C,%q<act_at>,spmax),st_rp,u(%!/FUN`ENC`C,%q<act_at>,res),st_rpmax,u(%!/FUN`ENC`C,%q<act_at>,resmax)); @include %!/INC`STAMINA`CHECK; think u(%!/FUN`ENC`SET,%q<act_at>,sp,%q<st_to>); think u(%!/FUN`ENC`SET,%q<act_at>,res,dec(%q<st_rp>)); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,u(%!/FUN`STAMINA`LINE))
+        flags: [cmdsyntax]
+      INC`STAMINA`FREE:
+        value: |-
+          think setqm(sheet_target,%#,sheet_ledger,u({{commands}}/FUN`LEDGER`OF,%#)); think u({{commands}}/FUN`DAILY`PREPARE); think setqm(st_name,%N,st_sp,u({{commands}}/FUN`STAMINA`SP,%q<daily>),st_max,%q<stamina_max>,st_rp,u({{commands}}/FUN`STAMINA`RP,%q<daily>),st_rpmax,%q<resolve_max>); @include %!/INC`STAMINA`CHECK; think setq(daily,json_mod(%q<daily>,patch,json(object,sp,if(lt(%q<st_to>,%q<st_max>),%q<st_to>,null),resolve,dec(%q<st_rp>)))); @include {{commands}}/INC`DAILY`WRITE; @remit %l=notice(PF2E,u(%!/FUN`STAMINA`LINE))
+        flags: [cmdsyntax]
+      INC`STAMINA`CHECK:
+        value: |-
+          @assert %q<st_max>=@pemit %#=notice(PF2E,%q<st_name> has no Stamina Points.,warn); @assert lt(%q<st_sp>,%q<st_max>)=@pemit %#=notice(PF2E,%q<st_name> has every Stamina Point already.,warn); @assert gt(%q<st_rp>,0)=@pemit %#=notice(PF2E,%q<st_name> has no Resolve Points left. +rest brings them back.,warn); think setq(st_to,if(strmatch(%q<st_kind>,steel),min(%q<st_max>,add(%q<st_sp>,floor(fdiv(%q<st_max>,2)))),%q<st_max>))
+        flags: [cmdsyntax]
+      FUN`STAMINA`LINE:
+        value: |-
+          @@(the st_ registers: what +steel or +breather did)[
+          %q<st_name> [if(strmatch(%q<st_kind>,steel),steels their resolve,takes a breather)]: a Resolve Point spent%, Stamina Points %q<st_to> of %q<st_max>%, Resolve [dec(%q<st_rp>)] of %q<st_rpmax>.]
+        flags: [funsyntax]
       CMD`CAST:
         value: |-
           $(?is)^\+cast +(.+)$:think setq(cmd_args,trim(%1)); think u(%!/FUN`ENC`LOAD,%l); think setq(act_at,if(strlen(%q<enc>),u(%!/FUN`ENC`MINE))); @include %!/INC`CAST`[if(strlen(%q<act_at>),ENC,FREE)]
@@ -5844,7 +5906,8 @@ objects:
           setq(join_day,u({{commands}}/FUN`DAILY`OF,%0))][
           setq(join_now,min(%q<join_hp>,firstof(json_query(%q<join_day>,extract,$.hp),%q<join_hp>)))][
           setq(join_wounded,json_query(%q<join_day>,extract,$.wounded))][
-          u(FUN`ENC`ADDC,json(object,name,json(string,name(%0)),kind,"pc",who,json(string,objid(%0)),snap,%q<join_snap>,side,"pc",hp,%q<join_now>,max,%q<join_hp>,temp,0,init,null,daily,%q<join_day>,fx,json(object),conds,if(%q<join_wounded>,json(object,wounded,%q<join_wounded>),json(object)),dur,json(object),pers,json(object),map,0,down,0,act,json(string,firstof(get(%0/PF2E`EXPLORE),none))))]
+          setqm(join_sp,u({{commands}}/FUN`STAMINA`SP,%q<join_day>),join_rp,u({{commands}}/FUN`STAMINA`RP,%q<join_day>))][
+          u(FUN`ENC`ADDC,json(object,name,json(string,name(%0)),kind,"pc",who,json(string,objid(%0)),snap,%q<join_snap>,side,"pc",hp,%q<join_now>,max,%q<join_hp>,temp,0,sp,%q<join_sp>,spmax,%q<stamina_max>,res,%q<join_rp>,resmax,%q<resolve_max>,init,null,daily,%q<join_day>,fx,json(object),conds,if(%q<join_wounded>,json(object,wounded,%q<join_wounded>),json(object)),dur,json(object),pers,json(object),map,0,down,0,act,json(string,firstof(get(%0/PF2E`EXPLORE),none))))]
         flags: [funsyntax]
       FUN`ENC`LEDGER`N:
         value: |-
@@ -6226,7 +6289,7 @@ objects:
         value: |-
           json_query(%1,extract,$.type)
         flags: [funsyntax]
-      # Harm combatant %0 by %1: temporary hit points first; a character at 0 is dying (2 on a critical
+      # Harm combatant %0 by %1: temporary hit points first, then Stamina Points; a character at 0 is dying (2 on a critical
       # hit, %2), a creature at 0 is down. Sets enc and harm_text.
       FUN`ACT`HARM:
         value: |-
@@ -6235,6 +6298,7 @@ objects:
           setqm(harm_temp,u(FUN`ENC`C,%0,temp),harm_hp,u(FUN`ENC`C,%0,hp),harm_dying,)][
           setq(harm_left,max(0,sub(%1,%q<harm_temp>)))][
           u(FUN`ENC`SET,%0,temp,max(0,sub(%q<harm_temp>,%1)))][
+          if(u(FUN`ENC`C,%0,spmax),[setq(harm_sp,min(u(FUN`ENC`C,%0,sp),%q<harm_left>))][u(FUN`ENC`SET,%0,sp,sub(u(FUN`ENC`C,%0,sp),%q<harm_sp>))][setq(harm_left,sub(%q<harm_left>,%q<harm_sp>))])][
           u(FUN`ENC`SET,%0,hp,max(0,sub(%q<harm_hp>,%q<harm_left>)))][
           setq(harm_text,[u(FUN`ENC`C,%0,name)] takes %1 damage)][
           if(cand(gt(%q<harm_hp>,0),lte(sub(%q<harm_hp>,%q<harm_left>),0)),
@@ -6960,11 +7024,11 @@ objects:
       # the day's spells and Focus Points, and the consumables used.
       INC`ENC`KEEP:
         value: |-
-          @include %!/INC`ENC`NEEDGM; think setq(keep_at,if(strlen(%q<cmd_args>),u(%!/FUN`ENC`TARGETS,%q<cmd_args>),iter(u(%!/FUN`ENC`INDEXES),if(strmatch(u(%!/FUN`ENC`C,%i0,kind),pc),%i0)))); @assert not(strlen(%q<targets_missing>))=@pemit %#=notice(PF2E,No one in the encounter is called %q<targets_missing>.,warn); think setq(keep_at,squish(iter(%q<keep_at>,if(strmatch(u(%!/FUN`ENC`C,%i0,kind),pc),%i0)))); @assert words(%q<keep_at>)=@pemit %#=notice(PF2E,There are no characters to keep.,warn); @dolist/inplace %q<keep_at>=@include %!/INC`ENC`KEEP`ONE=##; @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,%N keeps the encounter for [itemize(iter(%q<keep_at>,u(%!/FUN`ENC`C,%i0,name),%b,|),|)]: Hit Points%, spells and consumables used are on their sheets now.,ok)
+          @include %!/INC`ENC`NEEDGM; think setq(keep_at,if(strlen(%q<cmd_args>),u(%!/FUN`ENC`TARGETS,%q<cmd_args>),iter(u(%!/FUN`ENC`INDEXES),if(strmatch(u(%!/FUN`ENC`C,%i0,kind),pc),%i0)))); @assert not(strlen(%q<targets_missing>))=@pemit %#=notice(PF2E,No one in the encounter is called %q<targets_missing>.,warn); think setq(keep_at,squish(iter(%q<keep_at>,if(strmatch(u(%!/FUN`ENC`C,%i0,kind),pc),%i0)))); @assert words(%q<keep_at>)=@pemit %#=notice(PF2E,There are no characters to keep.,warn); @dolist/inplace %q<keep_at>=@include %!/INC`ENC`KEEP`ONE=##; @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,%N keeps the encounter for [itemize(iter(%q<keep_at>,u(%!/FUN`ENC`C,%i0,name),%b,|),|)]: Hit Points[if(u({{core}}/FUN`STAMINA),%, Stamina and Resolve Points)]%, spells and consumables used are on their sheets now.,ok)
         flags: [cmdsyntax]
       INC`ENC`KEEP`ONE:
         value: |-
-          think setqm(keep_i,%0,sheet_target,u(%!/FUN`ENC`C,%0,who)); think setq(daily,json_mod(firstof(u(%!/FUN`ENC`C,%0,daily),json(object)),patch,json(object,hp,if(lt(u(%!/FUN`ENC`C,%0,hp),u(%!/FUN`ENC`C,%0,max)),max(0,u(%!/FUN`ENC`C,%0,hp)),null),wounded,firstof(json_query(u(%!/FUN`ENC`C,%0,conds),extract,$.wounded),null)))); @include {{commands}}/INC`DAILY`WRITE; think setq(keep_used,firstof(u(%!/FUN`ENC`C,%0,used),json(object))); @dolist/inplace [json_map(%!/FUN`JSON`KEY,%q<keep_used>,%b)]={think setqm(entry_json,json(object,kind,"gear",id,json(string,##),qty,first(json_query(%q<keep_used>,extract,$\["##"\]),|),where,json(string,rest(json_query(%q<keep_used>,extract,$\["##"\]),|))),entry_text,[u({{commands}}/FUN`SHOW`ITEM,equipment,##,)] x[first(json_query(%q<keep_used>,extract,$\["##"\]),|)]); @include {{commands}}/INC`ENTRY`WRITE}; think u(%!/FUN`ENC`SET,%q<keep_i>,used,json(object)); think u(%!/FUN`ENC`SET,%q<keep_i>,snap,lmax(0 [json_map(%!/FUN`ENC`LEDGER`N,u({{commands}}/FUN`LEDGER`OF,%q<sheet_target>),%b)]))
+          think setqm(keep_i,%0,sheet_target,u(%!/FUN`ENC`C,%0,who)); think setq(daily,json_mod(firstof(u(%!/FUN`ENC`C,%0,daily),json(object)),patch,json(object,hp,if(lt(u(%!/FUN`ENC`C,%0,hp),u(%!/FUN`ENC`C,%0,max)),max(0,u(%!/FUN`ENC`C,%0,hp)),null),sp,if(lt(u(%!/FUN`ENC`C,%0,sp),u(%!/FUN`ENC`C,%0,spmax)),u(%!/FUN`ENC`C,%0,sp),null),resolve,if(lt(u(%!/FUN`ENC`C,%0,res),u(%!/FUN`ENC`C,%0,resmax)),u(%!/FUN`ENC`C,%0,res),null),wounded,firstof(json_query(u(%!/FUN`ENC`C,%0,conds),extract,$.wounded),null)))); @include {{commands}}/INC`DAILY`WRITE; think setq(keep_used,firstof(u(%!/FUN`ENC`C,%0,used),json(object))); @dolist/inplace [json_map(%!/FUN`JSON`KEY,%q<keep_used>,%b)]={think setqm(entry_json,json(object,kind,"gear",id,json(string,##),qty,first(json_query(%q<keep_used>,extract,$\["##"\]),|),where,json(string,rest(json_query(%q<keep_used>,extract,$\["##"\]),|))),entry_text,[u({{commands}}/FUN`SHOW`ITEM,equipment,##,)] x[first(json_query(%q<keep_used>,extract,$\["##"\]),|)]); @include {{commands}}/INC`ENTRY`WRITE}; think u(%!/FUN`ENC`SET,%q<keep_i>,used,json(object)); think u(%!/FUN`ENC`SET,%q<keep_i>,snap,lmax(0 [json_map(%!/FUN`ENC`LEDGER`N,u({{commands}}/FUN`LEDGER`OF,%q<sheet_target>),%b)]))
         flags: [cmdsyntax]
       # --- Turns ---------------------------------------------------------------------------------
       FUN`TURN: Initiative and turns.
@@ -7262,7 +7326,7 @@ objects:
           @@(%0 a combatant's index: one row)[
           if(eq(%0,%q<show_acting>),>)][u(FUN`ENC`C,%0,k)]|[if(isnum(setr(init_v,u(FUN`ENC`C,%0,init))),%q<init_v>,if(u(FUN`ENC`C,%0,simple),hazard,-))]|[u(FUN`ENC`C,%0,name)][if(u(FUN`ENC`C,%0,down),%b[tone(muted,%(down%))])]|[
           if(cor(%q<enc_gm>,strmatch(u(FUN`ENC`C,%0,side),pc)),
-            if(u(FUN`ENC`C,%0,max),[u(FUN`ENC`C,%0,hp)]/[u(FUN`ENC`C,%0,max)][if(u(FUN`ENC`C,%0,temp),%b+[u(FUN`ENC`C,%0,temp)])],-),
+            if(u(FUN`ENC`C,%0,max),[u(FUN`ENC`C,%0,hp)]/[u(FUN`ENC`C,%0,max)][if(u(FUN`ENC`C,%0,temp),%b+[u(FUN`ENC`C,%0,temp)])][if(u(FUN`ENC`C,%0,spmax),%bSP [u(FUN`ENC`C,%0,sp)]/[u(FUN`ENC`C,%0,spmax)])],-),
             u(FUN`SHOW`HURT,u(FUN`ENC`C,%0,hp),u(FUN`ENC`C,%0,max)))]|[u(FUN`SHOW`CONDS,%0)]
         flags: [funsyntax]
       FUN`SHOW`CONDS:
@@ -7281,6 +7345,7 @@ objects:
           u(FUN`SHOW`LOOK`ROW,Level,if(strlen(%q<look_npc>),[u(FUN`ENC`LEVEL,%0)][switch(u(FUN`ENC`C,%0,adj),2,%b%(elite%),-2,%b%(weak%))],u(FUN`ENC`PCLEVEL,%0)))][
           u(FUN`SHOW`LOOK`ROW,Traits,if(strlen(%q<look_npc>),u(FUN`SHOW`LOOK`TRAITS,%q<look_npc>)))][
           u(FUN`SHOW`LOOK`ROW,HP,if(u(FUN`ENC`C,%0,max),[u(FUN`ENC`C,%0,hp)] of [u(FUN`ENC`C,%0,max)][if(u(FUN`ENC`C,%0,temp),%, [u(FUN`ENC`C,%0,temp)] temporary)],none))][
+          u(FUN`SHOW`LOOK`ROW,Stamina,if(u(FUN`ENC`C,%0,spmax),[u(FUN`ENC`C,%0,sp)] of [u(FUN`ENC`C,%0,spmax)]%, Resolve [u(FUN`ENC`C,%0,res)] of [u(FUN`ENC`C,%0,resmax)]))][
           u(FUN`SHOW`LOOK`ROW,AC,if(cor(not(%q<look_hazard>),json_query(%q<look_npc>,extract,$.system.attributes.ac.value)),u(FUN`ACT`AC)))][
           u(FUN`SHOW`LOOK`ROW,Shield,if(strlen(%q<sh>),%q<sh_name>: +%q<sh_ac> AC raised%, Hardness %q<sh_hard>[if(%q<sh_max>,%, HP %q<sh_hp> of %q<sh_max> %(BT %q<sh_bt>%))][switch(1,%q<sh_destroyed>,%b[tone(error,destroyed)],%q<sh_broken>,%b[tone(warning,broken)])]))][
           u(FUN`SHOW`LOOK`ROW,Saves,u(FUN`SHOW`LOOK`SAVES))][
@@ -7721,6 +7786,7 @@ objects:
         - `+repair`: 10 minutes to Repair the shield you hold, a Crafting check against its level's DC. Success restores 5 Hit Points plus 5 for each proficiency rank, a critical success twice that, and a critical failure deals the shield 2d6 damage less its Hardness. A destroyed shield cannot be repaired. A shield's damage stays after `+rest`.
         - `+heal \[<player>=\]<hit points or formula>`: healing outside an encounter, such as Treat Wounds: `+heal Amiri=2d8`.
         - `+sheet` shows Hit Points now beside the most.
+        - With the stamina variant (`+help pf2e variants`), `+rest` fills Stamina and Resolve Points too. `+breather`: Take a Breather, 10 minutes outside an encounter, a Resolve Point for every Stamina Point. `+steel`: Steel Your Resolve, a Resolve Point for half your most Stamina Points, in an encounter too.
 
         In an encounter the fight has its own copy of your day; the GM's `+enc/keep` writes it back.
       SEE`PF2E`DAY: |-
@@ -7833,6 +7899,7 @@ objects:
         - `abp`: Automatic Bonus Progression. A character's level gives the bonuses fundamental runes would: a potency bonus to Strikes from 2nd level, to AC from 5th, to Perception from 7th and to saves from 8th, rising to +3, and a second weapon damage die at 4th level, a third at 12th and a fourth at 19th. Weapons and armor carry no runes, and an item bonus that equipment gives does not count.
         - `abp-fundamental`: the same, but a weapon keeps as many property runes as its attack potency and armor as many as its defense potency.
         - `gradual-boosts`: one attribute boost at each level from 2nd to 5th, 7th to 10th, 12th to 15th and 17th to 20th, in place of four at 5th, 10th, 15th and 20th: `+build/boost 3=dex`. Within each group of four levels, an attribute takes one boost.
+        - `stamina`: a class's Hit Points a level are halved, rounded down, and the other half plus the Constitution modifier are Stamina Points a level. Damage takes temporary Hit Points, then Stamina Points, then Hit Points; healing restores Hit Points only. Resolve Points equal the key attribute's modifier and pay for `+breather` and `+steel` (`+help pf2e day`). `+rest` fills both.
         - `proficiency-without-level`: a proficiency bonus is -2 untrained, +2 trained, +4 expert, +6 master and +8 legendary, without the level; staff change these with `+config pf2e/proficiency-bonuses=-2 2 4 6 8`. Creatures and hazards lose their level from AC, attacks, saves, Perception, skills and DCs, a DC by level loses the level too, and XP uses GM Core's table for this variant, from seven levels below the party to seven above.
       SEE`PF2E`VARIANTS: |-
         pf2e build|pf2e staff
