@@ -1,7 +1,7 @@
 format: "1.19"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.10.1"
+version: "0.10.2"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -111,7 +111,7 @@ objects:
       # ledger read again costs a few hundred function calls. The key is the ledger with the package's
       # version, the books and CACHE`STAMP, which the updater and the deity table change. CACHE lists
       # the keys oldest first; past DATA`CACHE`KEEP the oldest goes.
-      DATA`CACHE`VERSION: "0.10.1"
+      DATA`CACHE`VERSION: "0.10.2"
       DATA`CACHE`KEEP: 200
       DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_itemalts check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_shieldrules check_bulkrules check_bulk check_bulk_enc check_bulk_max check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
       # The ItemAlteration properties the core applies, by the kind of item they reach.
@@ -6107,7 +6107,8 @@ objects:
           setq(act_domains,firstof(%2,attack attack-roll strike-attack-roll check all))][
           setq(act_options,squish(%q<check_options> [u({{core}}/FUN`ROLLOPTION`DOMAINS,%q<act_domains>)] check:type:attack-roll %3))][
           u({{core}}/FUN`ROLL`PLAN,%q<act_domains>,%q<act_options>,)][
-          u({{core}}/FUN`ROLL`CHECK,%0,%q<act_domains>,%q<act_options> %q<roll_extra>,%1)]
+          u({{core}}/FUN`ROLL`CHECK,%0,%q<act_domains>,%q<act_options> %q<roll_extra>,%1)][
+          u(FUN`FX`AFTERROLL,%q<check_who>)]
         flags: [funsyntax]
       # A statistic's check for a combatant: its RollTwice, required substitution, degree adjustments
       # and notes as +check has them, the d20's fortune or misfortune among the options its modifiers
@@ -6118,7 +6119,8 @@ objects:
           setq(act_domains,squish(u({{core}}/FUN`STAT`DOMAINS,%0) [if(%3,initiative)]))][
           setq(act_options,squish(u({{core}}/FUN`ROLL`OPTIONS,%0,%3) %4))][
           u({{core}}/FUN`ROLL`PLAN,%q<act_domains>,%q<act_options>,)][
-          u({{core}}/FUN`ROLL`CHECK,add(u({{core}}/FUN`CHECK`TOTAL,u(FUN`ACT`STAT,%0,if(%3,initiative),%q<act_options> %q<roll_extra>)),firstof(%2,0)),%q<act_domains>,%q<act_options> %q<roll_extra>,%1)]
+          u({{core}}/FUN`ROLL`CHECK,add(u({{core}}/FUN`CHECK`TOTAL,u(FUN`ACT`STAT,%0,if(%3,initiative),%q<act_options> %q<roll_extra>)),firstof(%2,0)),%q<act_domains>,%q<act_options> %q<roll_extra>,%1)][
+          u(FUN`FX`AFTERROLL,%q<check_who>)]
         flags: [funsyntax]
       # An attack is rolled with the attacker's rules after the target is prepared for its AC: HOLD keeps
       # the registers a roll and its damage read (every check_ register and these) under a name, TAKE puts them back.
@@ -6490,7 +6492,7 @@ objects:
       # +enc/check <who>=<statistic>[ vs <DC>]: a check for a combatant, with their conditions.
       INC`ENC`CHECK:
         value: |-
-          @include %!/INC`ENC`NEED; think setqm(check_who,trim(before(%q<cmd_args>,=)),check_what,trim(after(%q<cmd_args>,=))); think setqm(act_at,if(strlen(setr(check_found,u(%!/FUN`ENC`FIND,%q<check_who>))),%q<check_found>,-1),check_stat,u({{commands}}/FUN`COMMAND`STAT,trim(before(%q<check_what>,%bvs))),check_dc,trim(after(%q<check_what>,%bvs))); @assert gte(%q<act_at>,0)=@pemit %#=notice(PF2E,No one in the encounter is called %q<check_who>.,warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,You make checks only for yourself.,warn); @assert eq(words(%q<check_stat>),1)=@pemit %#=notice(PF2E,+enc/check <who>=<statistic> [vs <DC>]%, such as +enc/check 2=reflex vs 18.,warn); @assert cor(not(strlen(%q<check_dc>)),isint(%q<check_dc>))=@pemit %#=notice(PF2E,A DC is a whole number.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think u(%!/FUN`ACT`CHECK,%q<check_stat>,%q<check_dc>); @remit %l=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] rolls [u({{commands}}/FUN`SHOW`STAT,%q<check_stat>)]: [json_query(%q<roll_record>,extract,$.text)][u(%!/FUN`ACT`TAGS)][if(strlen(%q<check_dc>),%bvs DC %q<check_dc>: [tone(strong,u(%!/FUN`ACT`DEGREE,%q<roll_degree>))][u(%!/FUN`ACT`ADJUSTED)])].[u(%!/FUN`ACT`NOTES)]); think setqm(rr_sw,check,rr_at,if(strmatch(u(%!/FUN`ENC`C,%q<act_at>,kind),pc),%q<act_at>),rr_save,); think setq(rr_ok,if(cand(strlen(%q<rr_at>),u({{commands}}/FUN`HERO`CAN)),%q<act_at>)); @include %!/INC`HERO`MARK
+          @include %!/INC`ENC`NEED; think setqm(check_who,trim(before(%q<cmd_args>,=)),check_what,trim(after(%q<cmd_args>,=))); think setqm(act_at,if(strlen(setr(check_found,u(%!/FUN`ENC`FIND,%q<check_who>))),%q<check_found>,-1),check_stat,u({{commands}}/FUN`COMMAND`STAT,trim(before(%q<check_what>,%bvs))),check_dc,trim(after(%q<check_what>,%bvs))); @assert gte(%q<act_at>,0)=@pemit %#=notice(PF2E,No one in the encounter is called %q<check_who>.,warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,You make checks only for yourself.,warn); @assert eq(words(%q<check_stat>),1)=@pemit %#=notice(PF2E,+enc/check <who>=<statistic> [vs <DC>]%, such as +enc/check 2=reflex vs 18.,warn); @assert cor(not(strlen(%q<check_dc>)),isint(%q<check_dc>))=@pemit %#=notice(PF2E,A DC is a whole number.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think u(%!/FUN`ACT`CHECK,%q<check_stat>,%q<check_dc>); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] rolls [u({{commands}}/FUN`SHOW`STAT,%q<check_stat>)]: [json_query(%q<roll_record>,extract,$.text)][u(%!/FUN`ACT`TAGS)][if(strlen(%q<check_dc>),%bvs DC %q<check_dc>: [tone(strong,u(%!/FUN`ACT`DEGREE,%q<roll_degree>))][u(%!/FUN`ACT`ADJUSTED)])].[u(%!/FUN`ACT`NOTES)]); think setqm(rr_sw,check,rr_at,if(strmatch(u(%!/FUN`ENC`C,%q<act_at>,kind),pc),%q<act_at>),rr_save,); think setq(rr_ok,if(cand(strlen(%q<rr_at>),u({{commands}}/FUN`HERO`CAN)),%q<act_at>)); @include %!/INC`HERO`MARK
         flags: [cmdsyntax]
       # +enc/save <who>=<save> vs <DC>[ <damage>]: a save for several combatants; with damage, a basic save from one
       # damage roll: none on a critical success, half on a success, double on a critical failure.
@@ -6739,6 +6741,33 @@ objects:
             gt(words(%q<fx_fit>),1),setq(cast_fxerr,Name the form: [itemize(iter(%q<fx_all>,+cast [u({{commands}}/FUN`SHOW`SPELLNAME,%q<cast_id>)] as [before(after(u(FUN`FX`NAME,spell-effects,%i0),%(),%))],%b,|),|,or)].),
             not(words(%q<fx_fit>)),setq(cast_fxerr,No form of [u({{commands}}/FUN`SHOW`SPELLNAME,%q<cast_id>)] is called %q<arg_variant>.),
             [setq(cast_fx,spell-effects~%q<fx_fit>)][u(FUN`FX`CHOICE,spell-effects,%q<fx_fit>,%q<arg_variant>)])]
+        flags: [funsyntax]
+      # After a combatant's check or attack roll, as Foundry's FlatModifier afterRoll: an effect with a FlatModifier whose
+      # removeAfterRoll is true ends; if-enabled, when the modifier's selectors are among the roll's domains and its
+      # predicate holds; a predicate, when the roll's options meet it. Its name goes into roll_tags as used.
+      FUN`FX`AFTERROLL:
+        value: |-
+          @@(%0 a combatant's index; act_domains and act_options the roll's)[
+          if(isint(%0),
+            [setq(far_fx,firstof(u(FUN`ENC`C,%0,fx),json(object)))][
+            null(iter(json_map(%!/FUN`JSON`KEY,%q<far_fx>,%b),
+              [setq(far_pack,edit(json_query(%q<far_fx>,extract,$\["%i0"\].pack),",))][
+              if(u(FUN`FX`AFTERROLL`ENDS,%q<far_pack>,%i0),
+                [u(FUN`ENC`PATCH,%0,json(object,fx,json(object,%i0,null)))][
+                setq(roll_tags,[if(strlen(%q<roll_tags>),%q<roll_tags>|)][u(FUN`FX`NAME,%q<far_pack>,%i0)] used)])]))])]
+        flags: [funsyntax]
+      FUN`FX`AFTERROLL`ENDS:
+        value: |-
+          @@(%0 a pack, %1 an effect's id: 1 when it ends after this roll)[
+          setq(fae_rules,firstof(json_query(u({{core}}/FUN`ITEM`GET,%0,%1),extract,$.system.rules),json(array)))][
+          t(words(iter(if(strmatch(%q<fae_rules>,*removeAfterRoll*),lnum(json_query(%q<fae_rules>,size))),
+            [setq(fae_rule,json_query(%q<fae_rules>,extract,$\[%i0\]))][
+            setq(fae_when,json_query(%q<fae_rule>,get,removeAfterRoll))][
+            if(strmatch(json_query(%q<fae_rule>,extract,$.key),FlatModifier),
+              switch(json_query(%q<fae_when>,type),
+                boolean, if(strmatch(%q<fae_when>,true),x),
+                string, if(cand(words(setinter(lcstr(json_map({{core}}/FUN`RULE`SELECTOR,switch(json_query(json_query(%q<fae_rule>,get,selector),type),array,json_query(%q<fae_rule>,get,selector),json(array,json_query(%q<fae_rule>,get,selector))),%b)),%q<act_domains>)),u({{core}}/FUN`PREDICATE`TEST,firstof(json_query(%q<fae_rule>,get,predicate),json(array)),%q<act_options>)),x),
+                array, if(u({{core}}/FUN`PREDICATE`TEST,%q<fae_when>,%q<act_options>),x)))])))]
         flags: [funsyntax]
       FUN`FX`NAME:
         value: |-
@@ -7015,7 +7044,7 @@ objects:
       # pairs; cs, s, f and cf, what each degree does, a list of who.kind.args (t the target, s the one acting):
       # cond.<slug>.<value>.<duration> (e1 the end of this turn, e2 the end of the next, s1 the start of the next),
       # dmg.<dice>.<type>, by (the target is held by the one acting), release, free; ncs, ns, nf and ncf, a note.
-      DATA`ACTION`NAMES: create a diversion~create-a-diversion|command an animal~command-an-animal|sense motive~sense-motive|drop prone~drop-prone|take cover~take-cover|avert gaze~avert-gaze|point out~point-out|bon mot~bon-mot|interact~interact|release~release|request~request|stride~stride|sneak~sneak|stand~stand|steal~steal|crawl~crawl|step~step|seek~seek|hide~hide|leap~leap|lie~lie|tumble through~tumble-through|demoralize~demoralize|reposition~reposition|grapple~grapple|disarm~disarm|escape~escape|tumble~tumble-through|feint~feint|shove~shove|trip~trip
+      DATA`ACTION`NAMES: aid~aid|create a diversion~create-a-diversion|command an animal~command-an-animal|sense motive~sense-motive|drop prone~drop-prone|take cover~take-cover|avert gaze~avert-gaze|point out~point-out|bon mot~bon-mot|interact~interact|release~release|request~request|stride~stride|sneak~sneak|stand~stand|steal~steal|crawl~crawl|step~step|seek~seek|hide~hide|leap~leap|lie~lie|tumble through~tumble-through|demoralize~demoralize|reposition~reposition|grapple~grapple|disarm~disarm|escape~escape|tumble~tumble-through|feint~feint|shove~shove|trip~trip
       DATA`ACTION`DEMORALIZE: '{"name":"Demoralize","stat":"intimidation","dc":"will","traits":"auditory concentrate emotion fear mental","cost":1,"imm":1,"opts":"unintelligible~-4","cs":"t.cond.frightened.2","s":"t.cond.frightened.1","ncs":"","ns":"","nf":"","ncf":"","ni":"Either way, the target cannot be Demoralized by you again for 10 minutes."}'
       DATA`ACTION`FEINT: '{"name":"Feint","stat":"deception","dc":"perception","traits":"mental","cost":1,"cs":"t.cond.off-guard.0.e2","s":"t.cond.off-guard.0.e1","cf":"s.cond.off-guard.0.e2","ncs":"It is off-guard against your melee attacks.","ns":"It is off-guard against your next melee attack.","ncf":"You are off-guard against its melee attacks."}'
       DATA`ACTION`TRIP: '{"name":"Trip","stat":"athletics","dc":"reflex","traits":"attack","cost":1,"cs":"t.cond.prone t.dmg.1d6.bludgeoning","s":"t.cond.prone","cf":"s.cond.prone"}'
@@ -7029,6 +7058,7 @@ objects:
       # or every foe left up) with one roll against each DC; secret tells only the GM the roll; feat, the feat it needs.
       # More kinds: fx.<effect>.<choice> (underscores for spaces; _<pick> asks FUN`ACTION`PICK`<PICK>), uncond.<slug>,
       # unhold (frees everyone the one acting holds).
+      DATA`ACTION`AID: '{"name":"Aid","stat":"acrobatics arcana athletics crafting deception diplomacy intimidation medicine nature occultism performance religion society stealth survival thievery perception","dcfix":15,"pick":1,"traits":"","cost":0,"cs":"t.fx.Aid._aid","s":"t.fx.Aid._aid","cf":"t.fx.Aid._aid","ni":"The bonus counts on its next check or attack roll, then ends."}'
       DATA`ACTION`STRIDE: '{"name":"Stride","stat":"","tgt":"none","traits":"move","cost":1,"ns":"Move up to your Speed."}'
       DATA`ACTION`STEP: '{"name":"Step","stat":"","tgt":"none","traits":"move","cost":1,"ns":"Move 5 feet; this movement does not trigger reactions that trigger on moving."}'
       DATA`ACTION`CRAWL: '{"name":"Crawl","stat":"","tgt":"none","traits":"move","cost":1,"ns":"Move 5 feet while prone."}'
@@ -7052,7 +7082,7 @@ objects:
       DATA`ACTION`COMMAND-AN-ANIMAL: '{"name":"Command an Animal","stat":"nature","dc":"will","traits":"auditory concentrate","cost":1,"ncs":"It does as you command on its next turn.","ns":"It does as you command on its next turn.","nf":"It is hesitant or resistant, and does nothing.","ncf":"It misbehaves or misunderstands, and does something else."}'
       INC`ACTION:
         value: |-
-          @include %!/INC`ENC`NEED; think setqm(actn_who,if(strmatch(before(%q<cmd_args>,=),*:*),trim(before(%q<cmd_args>,:))),actn_rest,trim(if(strmatch(before(%q<cmd_args>,=),*:*),after(%q<cmd_args>,:),%q<cmd_args>))); think setqm(actn_opt,lcstr(trim(after(%q<actn_rest>,=))),actn_rest,trim(before(%q<actn_rest>,=))); @assert strlen(%q<actn_rest>)={@pemit %#=notice(PF2E,u(%!/FUN`ACTION`LIST))}; think setq(actn_hit,u(%!/FUN`ACTION`MATCH,%q<actn_rest>)); @assert strlen(%q<actn_hit>)={@include %!/INC`ENC`ACT}; think setqm(actn_slug,ucstr(first(%q<actn_hit>,~)),actn_target_text,trim(rest(%q<actn_hit>,~))); think setq(actn,v(DATA`ACTION`%q<actn_slug>)); think setqm(actn_name,json_query(%q<actn>,extract,$.name),actn_self,t(json_query(%q<actn>,extract,$.self)),actn_tgt,firstof(json_query(%q<actn>,extract,$.tgt),one),actn_feat,json_query(%q<actn>,extract,$.feat)); think setq(act_at,if(strlen(%q<actn_who>),u(%!/FUN`ENC`FIND,%q<actn_who>),u(%!/FUN`ENC`MINE))); @assert strlen(%q<act_at>)=@pemit %#=notice(PF2E,if(strlen(%q<actn_who>),No one in the encounter is called %q<actn_who>.,You are not in the encounter. The GM names who acts: +act <who>:[lcstr(%q<actn_name>)].),warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,You act only for yourself.,warn); @assert cor(not(strlen(%q<actn_opt>)),member(json_query(%q<actn>,extract,$.stat),%q<actn_opt>),strlen(grab(json_query(%q<actn>,extract,$.opts),%q<actn_opt>~*)))=@pemit %#=notice(PF2E,%q<actn_name> has no option %q<actn_opt>. [u(%!/FUN`ACTION`OPTIONS)],warn); @assert cor(not(strlen(%q<actn_feat>)),u(%!/FUN`ACTION`HASFEAT,%q<act_at>,%q<actn_feat>))=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] does not have the %q<actn_name> feat.,warn); think setq(act_target,switch(%q<actn_tgt>,none,%q<act_at>,many,u(%!/FUN`ACTION`MANY,%q<actn_target_text>),if(%q<actn_self>,if(cor(strlen(json_query(u(%!/FUN`ENC`C,%q<act_at>,conds),extract,$.grabbed)),strlen(json_query(u(%!/FUN`ENC`C,%q<act_at>,conds),extract,$.restrained))),u(%!/FUN`ENC`FIND,u(%!/FUN`ENC`C,%q<act_at>,by.grabbed))),u(%!/FUN`ENC`FIND,%q<actn_target_text>)))); @assert cor(not(%q<actn_self>),strlen(%q<act_target>))=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] is not grabbed or restrained by anyone in the encounter.,warn); @assert cor(%q<actn_self>,match(none many,%q<actn_tgt>),strlen(%q<actn_target_text>))=@pemit %#=notice(PF2E,%q<actn_name> needs a target: +act [lcstr(%q<actn_name>)] <target>.,warn); @assert words(%q<act_target>)=@pemit %#=notice(PF2E,if(strlen(firstof(%q<targets_missing>,%q<actn_target_text>)),No one in the encounter is called [firstof(%q<targets_missing>,%q<actn_target_text>)].,No one is there.),warn); @assert cor(match(none many,%q<actn_tgt>),neq(%q<act_target>,%q<act_at>))=@pemit %#=notice(PF2E,%q<actn_name> is used on someone else.,warn); think setq(actn_k,u(%!/FUN`ENC`C,%q<act_at>,k)); @assert cor(not(json_query(%q<actn>,extract,$.imm)),strmatch(%q<actn_tgt>,many),not(t(u(%!/FUN`ENC`C,%q<act_target>,imm.[lcstr(%q<actn_slug>)]_%q<actn_k>))))=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_target>,name)] is immune to [u(%!/FUN`ENC`C,%q<act_at>,name)]'s %q<actn_name> for 10 minutes.,warn); think u(%!/FUN`ACTION`RUN); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,%q<enc_say>); @break not(strlen(%q<actn_gmsay>)); @pemit [json_query(%q<enc>,extract,$.gm)]=notice(PF2E,Secret: %q<actn_gmsay>)
+          @include %!/INC`ENC`NEED; think setqm(actn_who,if(strmatch(before(%q<cmd_args>,=),*:*),trim(before(%q<cmd_args>,:))),actn_rest,trim(if(strmatch(before(%q<cmd_args>,=),*:*),after(%q<cmd_args>,:),%q<cmd_args>))); think setqm(actn_opt,lcstr(trim(after(%q<actn_rest>,=))),actn_rest,trim(before(%q<actn_rest>,=))); @assert strlen(%q<actn_rest>)={@pemit %#=notice(PF2E,u(%!/FUN`ACTION`LIST))}; think setq(actn_hit,u(%!/FUN`ACTION`MATCH,%q<actn_rest>)); @assert strlen(%q<actn_hit>)={@include %!/INC`ENC`ACT}; think setqm(actn_slug,ucstr(first(%q<actn_hit>,~)),actn_target_text,trim(rest(%q<actn_hit>,~))); think setq(actn,v(DATA`ACTION`%q<actn_slug>)); think setqm(actn_name,json_query(%q<actn>,extract,$.name),actn_self,t(json_query(%q<actn>,extract,$.self)),actn_tgt,firstof(json_query(%q<actn>,extract,$.tgt),one),actn_feat,json_query(%q<actn>,extract,$.feat)); think setq(act_at,if(strlen(%q<actn_who>),u(%!/FUN`ENC`FIND,%q<actn_who>),u(%!/FUN`ENC`MINE))); @assert strlen(%q<act_at>)=@pemit %#=notice(PF2E,if(strlen(%q<actn_who>),No one in the encounter is called %q<actn_who>.,You are not in the encounter. The GM names who acts: +act <who>:[lcstr(%q<actn_name>)].),warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,You act only for yourself.,warn); @assert cor(not(strlen(%q<actn_opt>)),member(json_query(%q<actn>,extract,$.stat),%q<actn_opt>),strlen(grab(json_query(%q<actn>,extract,$.opts),%q<actn_opt>~*)))=@pemit %#=notice(PF2E,%q<actn_name> has no option %q<actn_opt>. [u(%!/FUN`ACTION`OPTIONS)],warn); @assert cor(not(json_query(%q<actn>,extract,$.pick)),strlen(%q<actn_opt>))=@pemit %#=notice(PF2E,%q<actn_name> names the statistic: +act [lcstr(%q<actn_name>)] <target>=<skill>%, such as =athletics.,warn); @assert cor(not(strlen(%q<actn_feat>)),u(%!/FUN`ACTION`HASFEAT,%q<act_at>,%q<actn_feat>))=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] does not have the %q<actn_name> feat.,warn); think setq(act_target,switch(%q<actn_tgt>,none,%q<act_at>,many,u(%!/FUN`ACTION`MANY,%q<actn_target_text>),if(%q<actn_self>,if(cor(strlen(json_query(u(%!/FUN`ENC`C,%q<act_at>,conds),extract,$.grabbed)),strlen(json_query(u(%!/FUN`ENC`C,%q<act_at>,conds),extract,$.restrained))),u(%!/FUN`ENC`FIND,u(%!/FUN`ENC`C,%q<act_at>,by.grabbed))),u(%!/FUN`ENC`FIND,%q<actn_target_text>)))); @assert cor(not(%q<actn_self>),strlen(%q<act_target>))=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] is not grabbed or restrained by anyone in the encounter.,warn); @assert cor(%q<actn_self>,match(none many,%q<actn_tgt>),strlen(%q<actn_target_text>))=@pemit %#=notice(PF2E,%q<actn_name> needs a target: +act [lcstr(%q<actn_name>)] <target>.,warn); @assert words(%q<act_target>)=@pemit %#=notice(PF2E,if(strlen(firstof(%q<targets_missing>,%q<actn_target_text>)),No one in the encounter is called [firstof(%q<targets_missing>,%q<actn_target_text>)].,No one is there.),warn); @assert cor(match(none many,%q<actn_tgt>),neq(%q<act_target>,%q<act_at>))=@pemit %#=notice(PF2E,%q<actn_name> is used on someone else.,warn); think setq(actn_k,u(%!/FUN`ENC`C,%q<act_at>,k)); @assert cor(not(json_query(%q<actn>,extract,$.imm)),strmatch(%q<actn_tgt>,many),not(t(u(%!/FUN`ENC`C,%q<act_target>,imm.[lcstr(%q<actn_slug>)]_%q<actn_k>))))=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_target>,name)] is immune to [u(%!/FUN`ENC`C,%q<act_at>,name)]'s %q<actn_name> for 10 minutes.,warn); think u(%!/FUN`ACTION`RUN); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,%q<enc_say>); @break not(strlen(%q<actn_gmsay>)); @pemit [json_query(%q<enc>,extract,$.gm)]=notice(PF2E,Secret: %q<actn_gmsay>)
         flags: [cmdsyntax]
       FUN`ACTION`MATCH:
         value: |-
@@ -7112,15 +7142,15 @@ objects:
           setq(actn_map,if(%q<actn_attack>,mul(5,min(2,firstof(u(FUN`ENC`C,%q<act_at>,map),0))),0))][
           u(FUN`ACT`HOLD,by)][
           u(FUN`ENC`PREPARE,%q<act_target>)][
-          setq(actn_dc,add(10,u({{core}}/FUN`CHECK`TOTAL,u(FUN`ACT`STAT,%q<actn_dcstat>,%q<actn_dcstat>-dc))))][
+          setq(actn_dc,if(isint(setr(actn_dcfix,json_query(%q<actn>,extract,$.dcfix))),%q<actn_dcfix>,add(10,u({{core}}/FUN`CHECK`TOTAL,u(FUN`ACT`STAT,%q<actn_dcstat>,%q<actn_dcstat>-dc)))))][
           setq(act_tgtopts,u(FUN`ACT`TARGET`OPTIONS))][
           u(FUN`ACT`HOLD,on)][u(FUN`ACT`TAKE,by)][
-          u(FUN`ACT`CHECK,%q<actn_stat>,%q<actn_dc>,sub(%q<actn_add>,%q<actn_map>),,squish(action:[lcstr(%q<actn_slug>)] [iter(%q<actn_traits>,%i0 item:trait:%i0)] [if(%q<actn_attack>,trait:attack)] [if(strlen(%q<actn_optname>),action:[lcstr(%q<actn_slug>)]:%q<actn_optname>)] %q<act_tgtopts>))][
+          u(FUN`ACT`CHECK,%q<actn_stat>,%q<actn_dc>,sub(%q<actn_add>,%q<actn_map>),,squish(action:[lcstr(%q<actn_slug>)] [iter(%q<actn_traits>,%i0 item:trait:%i0)] [if(%q<actn_attack>,trait:attack)] [if(strlen(%q<actn_optname>),action:[lcstr(%q<actn_slug>)]:%q<actn_optname>)] [if(json_query(%q<actn>,extract,$.pick),action:[lcstr(%q<actn_slug>)]:%q<actn_stat>)] %q<act_tgtopts>))][
           if(%q<actn_attack>,u(FUN`ENC`SET,%q<act_at>,map,inc(firstof(u(FUN`ENC`C,%q<act_at>,map),0))))][
           setq(actn_deg,extract(cf f s cs,inc(%q<roll_degree>),1))][
           null(iter(json_query(%q<actn>,extract,$.%q<actn_deg>),u(FUN`ACTION`APPLY,%i0)))][
           if(json_query(%q<actn>,extract,$.imm),u(FUN`ENC`SET,%q<act_target>,imm,json_mod(firstof(u(FUN`ENC`C,%q<act_target>,imm),json(object)),set,$.[lcstr(%q<actn_slug>)]_%q<actn_k>,1)))][
-          setq(actn_line,[u(FUN`ENC`C,%q<act_at>,name)] uses %q<actn_name>[if(not(%q<actn_self>),%bon [u(FUN`ENC`C,%q<act_target>,name)])] with [u({{commands}}/FUN`SHOW`STAT,%q<actn_stat>)]: [json_query(%q<roll_record>,extract,$.text)][u(FUN`ACT`TAGS)][if(%q<actn_map>,%b%(MAP -%q<actn_map>%))][if(strlen(%q<actn_optname>),%b%(%q<actn_optname> [u(FUN`SHOW`SIGNED,%q<actn_add>)]%))] vs [if(%q<actn_self>,[u(FUN`ENC`C,%q<act_target>,name)]'s%b)][u({{commands}}/FUN`SHOW`STAT,%q<actn_dcstat>)] DC [if(cor(%q<enc_gm>,strmatch(u(FUN`ENC`C,%q<act_target>,kind),pc)),%q<actn_dc>,?)]: [tone(strong,u(FUN`ACT`DEGREE,%q<roll_degree>))][u(FUN`ACT`ADJUSTED)].[if(strlen(setr(actn_note,json_query(%q<actn>,extract,$.n%q<actn_deg>))),%b%q<actn_note>)]%q<actn_fx>[if(strlen(setr(actn_note,json_query(%q<actn>,extract,$.ni))),%b%q<actn_note>)][u(FUN`ACT`NOTES)])]
+          setq(actn_line,[u(FUN`ENC`C,%q<act_at>,name)] uses %q<actn_name>[if(not(%q<actn_self>),%bon [u(FUN`ENC`C,%q<act_target>,name)])] with [u({{commands}}/FUN`SHOW`STAT,%q<actn_stat>)]: [json_query(%q<roll_record>,extract,$.text)][u(FUN`ACT`TAGS)][if(%q<actn_map>,%b%(MAP -%q<actn_map>%))][if(strlen(%q<actn_optname>),%b%(%q<actn_optname> [u(FUN`SHOW`SIGNED,%q<actn_add>)]%))] vs [if(isint(%q<actn_dcfix>),DC %q<actn_dc>,[if(%q<actn_self>,[u(FUN`ENC`C,%q<act_target>,name)]'s%b)][u({{commands}}/FUN`SHOW`STAT,%q<actn_dcstat>)] DC [if(cor(%q<enc_gm>,strmatch(u(FUN`ENC`C,%q<act_target>,kind),pc)),%q<actn_dc>,?)])]: [tone(strong,u(FUN`ACT`DEGREE,%q<roll_degree>))][u(FUN`ACT`ADJUSTED)].[if(strlen(setr(actn_note,json_query(%q<actn>,extract,$.n%q<actn_deg>))),%b%q<actn_note>)]%q<actn_fx>[if(strlen(setr(actn_note,json_query(%q<actn>,extract,$.ni))),%b%q<actn_note>)][u(FUN`ACT`NOTES)])]
         flags: [funsyntax]
       # An action not rolled: what its success does.
       FUN`ACTION`AUTO:
@@ -7160,6 +7190,13 @@ objects:
           @@(%0 a combatant's index, %1 a feat's slug)[
           if(strmatch(u(FUN`ENC`C,%0,kind),pc),[u(FUN`ENC`PREPARE,%0)][t(member(%q<check_options>,feat:%1))],1)]
         flags: [funsyntax]
+      # Aid: +1 on a success, -1 on a critical failure, +2 on a critical success (+3 master, +4 legendary in the statistic).
+      FUN`ACTION`PICK`AID:
+        value: |-
+          @@(%0 the one aided; act_at the one aiding, actn_stat the statistic: the choice, and ae_show its bonus)[
+          setq(aid_n,switch(%q<roll_degree>,3,extract(2 2 2 3 4,inc(if(strlen(%q<act_npc>),2,[u(FUN`ENC`PREPARE,%q<act_at>)][u({{core}}/FUN`CHECK`RANK,%q<actn_stat>)])),1),2,1,0,-1))][
+          if(strlen(%q<aid_n>),[setq(ae_show,u(FUN`SHOW`SIGNED,%q<aid_n>))][extract(negativeone x plusone plustwo plusthree plusfour,add(%q<aid_n>,2),1)])]
+        flags: [funsyntax]
       # Take Cover: greater cover from standard cover, the prone choice when prone, standard otherwise.
       FUN`ACTION`PICK`COVER:
         value: |-
@@ -7198,10 +7235,11 @@ objects:
           @@(%0 a combatant's index, %1 an effect's name, %2 a choice, _<pick> for FUN`ACTION`PICK`<PICK>, or nothing: the effect, its choices taken from the action's degree)[
           if(strlen(setr(ae_found,u(FUN`FX`FIND,%1))),
             [setqm(cast_fxch,,cast_fxerr,,fx_on,,fx_origin,squish(action:[lcstr(%q<actn_slug>)] [iter(%q<actn_traits>,trait:%i0)]),fx_outcome,%q<roll_degree>)][
+            setq(ae_show,)][
             setq(ae_ch,if(strmatch(%2,_*),u(FUN`ACTION`PICK`[after(%2,_)],%0),%2))][
             if(strlen(%q<ae_ch>),u(FUN`FX`CHOICE,first(%q<ae_found>,~),rest(%q<ae_found>,~),%q<ae_ch>))][
             setq(ae_name,u(FUN`FX`NAME,first(%q<ae_found>,~),rest(%q<ae_found>,~)))][
-            setq(actn_fx,%q<actn_fx> [edit(u(FUN`FX`ADD,%0,first(%q<ae_found>,~),rest(%q<ae_found>,~),,%q<cast_fxch>,%q<actn_k>),%q<ae_name>,%q<ae_name>[if(strlen(%q<cast_fxname>),%b%([lcstr(%q<cast_fxname>)]%))])])][
+            setq(actn_fx,%q<actn_fx> [edit(u(FUN`FX`ADD,%0,first(%q<ae_found>,~),rest(%q<ae_found>,~),,%q<cast_fxch>,%q<actn_k>),%q<ae_name>,%q<ae_name>[if(strlen(%q<cast_fxname>),%b%([firstof(%q<ae_show>,lcstr(%q<cast_fxname>))]%))])])][
             setqm(fx_origin,,fx_outcome,)])]
         flags: [funsyntax]
       FUN`ACTION`FREE:
@@ -7978,6 +8016,7 @@ objects:
         - Hide, Sneak (Stealth against Perception) and Seek (Perception against Stealth): one secret roll against each foe still up, or the ones named, with commas.
         - Create a Diversion: Deception against each foe's Perception, or the ones named.
         - Steal (Thievery against Perception), Request (Diplomacy against Will), Command an Animal (Nature against Will): the result's note.
+        - Aid `<ally>=<skill>`: a reaction against DC 15. The Aid effect on the ally: +1 on a success, +2 on a critical success (+3 at master, +4 at legendary), -1 on a critical failure. It ends after the ally's next check or attack roll, as every effect that ends after a roll does.
 
         A secret action tells the room only that it happened; the encounter's GM gets the roll.
 
