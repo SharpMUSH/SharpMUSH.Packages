@@ -1,7 +1,7 @@
 format: "1.20"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.10.6"
+version: "0.10.7"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -113,7 +113,7 @@ objects:
       # ledger read again costs a few hundred function calls. The key is the ledger with the package's
       # version, the books and CACHE`STAMP, which the updater and the deity table change. CACHE lists
       # the keys oldest first; past DATA`CACHE`KEEP the oldest goes.
-      DATA`CACHE`VERSION: "0.10.6"
+      DATA`CACHE`VERSION: "0.10.7"
       DATA`CACHE`KEEP: 200
       DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_itemalts check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_shieldrules check_bulkrules check_bulk check_bulk_enc check_bulk_max check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
       # The ItemAlteration properties the core applies, by the kind of item they reach.
@@ -5963,15 +5963,34 @@ objects:
           @@(%0 a combatant's index)[
           setq(enc_snap,u(FUN`ENC`C,%0,snap))][
           setq(enc_conds,u(FUN`ENC`C,%0,conds))][
+          setq(enc_fxc,u(FUN`ENC`FXCONDS,%0))][
           \[[squish(trim(
             [if(strmatch(u(FUN`ENC`C,%0,kind),pc),
               json_map(%!/FUN`ENC`LEDGER`KEEP,u({{commands}}/FUN`LEDGER`OF,u(FUN`ENC`C,%0,who)),\,),
               json(object,kind,"level",level,u(FUN`ENC`LEVEL,%0),n,1))]\,[
-            iter(setunion(setr(enc_keys,json_map(%!/FUN`JSON`KEY,%q<enc_conds>,%b)) [iter(%q<enc_keys>,u(FUN`ENC`IMPLIED,%i0))],),if(strlen(setr(enc_cid,u({{core}}/FUN`ITEM`FIND,conditions,%i0))),json(object,kind,"grant",pack,"conditions",id,json(string,%q<enc_cid>),badge,if(setr(enc_badge,json_query(%q<enc_conds>,extract,$.%i0)),%q<enc_badge>,null),n,add(100000,inum(0)))),%b,\,)]\,[
+            iter(setunion(setr(enc_keys,setunion(json_map(%!/FUN`JSON`KEY,%q<enc_conds>,%b),iter(%q<enc_fxc>,first(%i0,~)))) [iter(%q<enc_keys>,u(FUN`ENC`IMPLIED,%i0))],),if(strlen(setr(enc_cid,u({{core}}/FUN`ITEM`FIND,conditions,%i0))),json(object,kind,"grant",pack,"conditions",id,json(string,%q<enc_cid>),badge,if(setr(enc_badge,firstof(json_query(%q<enc_conds>,extract,$.%i0),after(grab(%q<enc_fxc>,%i0~*),~))),%q<enc_badge>,null),n,add(100000,inum(0)))),%b,\,)]\,[
             iter(json_map(%!/FUN`JSON`KEY,setr(enc_used,firstof(u(FUN`ENC`C,%0,used),json(object))),%b),json(object,kind,"gear",id,json(string,%i0),qty,first(json_query(%q<enc_used>,extract,$.%i0),|),where,json(string,rest(json_query(%q<enc_used>,extract,$.%i0),|)),n,add(200000,inum(0))),%b,\,)]\,[
             iter(json_map(%!/FUN`JSON`KEY,setr(enc_fx,firstof(u(FUN`ENC`C,%0,fx),json(object))),%b),json(object,kind,"grant",pack,json(string,edit(json_query(%q<enc_fx>,extract,$\["%i0"\].pack),",)),id,json(string,%i0),choices,json_mod(firstof(json_query(%q<enc_fx>,extract,$\["%i0"\].ch),json(object)),patch,json(object,effectLevel,json_query(%q<enc_fx>,extract,$\["%i0"\].lvl))),badge,firstof(json_query(%q<enc_fx>,extract,$\["%i0"\].badge),null),n,add(300000,inum(0))),%b,\,)]\,[
             iter(json_map(%!/FUN`JSON`KEY,setr(enc_tg,firstof(u(FUN`ENC`C,%0,tg),json(object))),%b),json(object,kind,"toggle",domain,json(string,before(%i0,|)),option,json(string,after(%i0,|)),value,if(first(json_query(%q<enc_tg>,extract,$\["%i0"\]),|),true,false),selection,if(strlen(setr(enc_tgsel,rest(json_query(%q<enc_tg>,extract,$\["%i0"\]),|))),json(string,%q<enc_tgsel>),null),n,add(400000,inum(0))),%b,\,)]\,[
             iter(squish([if(strmatch(u(FUN`ENC`C,%0,kind),npc),self:type:[if(t(u(FUN`ENC`C,%0,hazard)),hazard,npc)])] [if(t(u(FUN`ENC`C,%0,raised)),self:shield:raised self:effect:raise-a-shield)] [if(strlen(setr(enc_shst,u(FUN`ENC`C,%0,shst))),self:shield:%q<enc_shst>)]),json(object,kind,"option",option,json(string,%i0),n,add(500000,inum(0))),%b,\,)],\,),\,)]\]]
+        flags: [funsyntax]
+      # The conditions a combatant's effects grant (GrantItem of a condition whose predicate holds for the effect's
+      # choices), each slug~badge value: Leaden Steps brings encumbered, Synesthesia on a critical failure stunned 2.
+      FUN`ENC`FXCONDS:
+        value: |-
+          @@(%0 a combatant's index)[
+          setq(efc_fx,firstof(u(FUN`ENC`C,%0,fx),json(object)))][
+          squish(iter(json_map(%!/FUN`JSON`KEY,%q<efc_fx>,%b),u(FUN`ENC`FXCONDS`ONE,edit(json_query(%q<efc_fx>,extract,$\["%i0"\].pack),",),%i0,firstof(json_query(%q<efc_fx>,extract,$\["%i0"\].ch),json(object)))))]
+        flags: [funsyntax]
+      FUN`ENC`FXCONDS`ONE:
+        value: |-
+          @@(%0 a pack, %1 an effect's id, %2 its choices)[
+          setq(efo_item,u({{core}}/FUN`ITEM`GET,%0,%1))][
+          setq(efo_rules,firstof(json_query(%q<efo_item>,extract,$.system.rules),json(array)))][
+          if(strmatch(%q<efo_rules>,*conditionitems*),
+            [setq(synthetic_slug,u({{core}}/FUN`ITEM`SLUG,%q<efo_item>))][
+            setq(efo_opts,squish(iter(lnum(json_query(%q<efo_rules>,size)),[setq(efo_r,json_query(%q<efo_rules>,extract,$\[%i0\]))][if(cand(strmatch(json_query(%q<efo_r>,extract,$.key),ChoiceSet),strlen(json_query(%q<efo_r>,extract,$.rollOption))),[json_query(%q<efo_r>,extract,$.rollOption)]:[edit(json_query(%2,extract,$\["[u({{core}}/FUN`RULE`CHOICE`FLAG,%q<efo_r>,%i0)]"\]),",)])])))][
+            squish(iter(lnum(json_query(%q<efo_rules>,size)),[setq(efo_r,json_query(%q<efo_rules>,extract,$\[%i0\]))][if(cand(strmatch(json_query(%q<efo_r>,extract,$.key),GrantItem),strmatch(json_query(%q<efo_r>,extract,$.uuid),Compendium.pf2e.conditionitems.Item.*),u({{core}}/FUN`PREDICATE`TEST,firstof(json_query(%q<efo_r>,get,predicate),json(array)),%q<efo_opts>)),[u({{core}}/FUN`ITEM`SLUGGIFY,after(json_query(%q<efo_r>,extract,$.uuid),.Item.))]~[if(cand(strmatch(json_query(%q<efo_r>,extract,$.alterations\[0\].property),badge-value),isint(setr(efo_b,json_query(%q<efo_r>,extract,$.alterations\[0\].value)))),%q<efo_b>)])]))])]
         flags: [funsyntax]
       # The conditions a condition brings with it, as Foundry grants them: off-guard with prone, blinded, off-guard and prone with unconscious.
       FUN`ENC`IMPLIED:
@@ -6777,7 +6796,7 @@ objects:
       FUN`CAST`EFFECT:
         value: |-
           @@(cast_id, arg_variant, arg_on)[
-          setqm(cast_fx,,cast_fxch,,cast_fxname,,cast_fxerr,,fx_on,%q<arg_on>,fx_outcome,)][
+          setqm(cast_fx,,cast_fxch,,cast_fxdeg,,cast_fxname,,cast_fxerr,,fx_on,%q<arg_on>,fx_outcome,)][
           setq(fx_origin,u(FUN`FX`ORIGIN,spells,%q<cast_id>))][
           setq(fx_all,u({{core}}/FUN`SPELL`EFFECTS,%q<cast_id>))][
           setq(fx_fit,if(cand(gt(words(%q<fx_all>),1),strlen(%q<arg_variant>)),squish(iter(%q<fx_all>,if(strmatch(u(FUN`FX`NAME,spell-effects,%i0),*%q<arg_variant>*),%i0))),%q<fx_all>))][
@@ -6820,17 +6839,22 @@ objects:
           trim(after(json_query(get(u({{core}}/DATA`PACK`%0)/ITEM`%1`PREP),extract,$.name),:))]
         flags: [funsyntax]
       # An effect's first ChoiceSet with its choices listed, matched to the variant by value or label: sets cast_fxch
-      # (the choices object) and cast_fxname, or cast_fxerr listing them.
+      # (the choices object) and cast_fxname, or cast_fxerr listing them. A ChoiceSet of degrees of success on a spell
+      # with a save or an attack roll, none named, sets cast_fxdeg (flag~the degrees it lists): each target's save, or
+      # the attack roll against it, picks it.
       FUN`FX`CHOICE:
         value: |-
           @@(%0 a pack, %1 an effect's id, %2 the variant asked for)[
           setq(fxc_rules,firstof(json_query(u({{core}}/FUN`ITEM`GET,%0,%1),extract,$.system.rules),json(array)))][
           setq(fxc_at,first(json_map(me/FUN`FX`CHOICESET,%q<fxc_rules>,%b)))][
           if(strlen(%q<fxc_at>),
-            [setqm(fxc_flag,edit(json_query(%q<fxc_rules>,extract,$\[%q<fxc_at>\].flag),",),fxc_list,json_query(%q<fxc_rules>,extract,$\[%q<fxc_at>\].choices))][
+            [setq(synthetic_slug,u({{core}}/FUN`ITEM`SLUG,u({{core}}/FUN`ITEM`GET,%0,%1)))][
+            setqm(fxc_flag,u({{core}}/FUN`RULE`CHOICE`FLAG,json_query(%q<fxc_rules>,extract,$\[%q<fxc_at>\]),%q<fxc_at>),fxc_list,json_query(%q<fxc_rules>,extract,$\[%q<fxc_at>\].choices))][
+            if(cand(not(strlen(%2)),cor(strlen(json_query(setr(fxc_spell,u({{core}}/FUN`ITEM`GET,spells,%q<cast_id>)),extract,$.system.defense.save.statistic)),strmatch(json_query(%q<fxc_spell>,extract,$.system.traits.value),*"attack"*)),strmatch(json_query(%q<fxc_rules>,extract,$\[%q<fxc_at>\].prompt),*DegreeOfSuccess)),setq(cast_fxdeg,%q<fxc_flag>~[iter(lnum(json_query(%q<fxc_list>,size)),edit(json_query(json_query(%q<fxc_list>,extract,$\[%i0\]),extract,$.value),",))]))][
             setq(fxc_pick,first(iter(lnum(json_query(%q<fxc_list>,size)),if(strmatch(u(FUN`FX`CHOICE`WORD,json_query(%q<fxc_list>,extract,$\[%i0\])),edit(trim(%2),%b,-)),%i0))))][
-            if(strlen(%q<fxc_pick>),
-              setqm(cast_fxch,json(object,%q<fxc_flag>,json_query(json_query(%q<fxc_list>,extract,$\[%q<fxc_pick>\]),get,value)),cast_fxname,capstr(u(FUN`FX`CHOICE`WORD,json_query(%q<fxc_list>,extract,$\[%q<fxc_pick>\])))),
+            switch(1,
+              t(strlen(%q<fxc_pick>)),setqm(cast_fxch,json(object,%q<fxc_flag>,json_query(json_query(%q<fxc_list>,extract,$\[%q<fxc_pick>\]),get,value)),cast_fxname,capstr(u(FUN`FX`CHOICE`WORD,json_query(%q<fxc_list>,extract,$\[%q<fxc_pick>\])))),
+              t(strlen(%q<cast_fxdeg>)),,
               setq(cast_fxerr,Name one: [itemize(iter(lnum(json_query(%q<fxc_list>,size)),+cast [u({{commands}}/FUN`SHOW`SPELLNAME,%q<cast_id>)] as [lcstr(u(FUN`FX`CHOICE`WORD,json_query(%q<fxc_list>,extract,$\[%i0\])))],%b,|),|,or)].))])]
         flags: [funsyntax]
       FUN`FX`CHOICESET:
@@ -6850,7 +6874,7 @@ objects:
       # A cast in the encounter, by the character you play there, on their copy of the day.
       INC`CAST`ENC:
         value: |-
-          @assert cor(%q<enc_gm>,eq(%q<act_at>,u(%!/FUN`ENC`ACTING)))=@pemit %#=notice(PF2E,It is [u(%!/FUN`ENC`C,u(%!/FUN`ENC`ACTING),name)]'s turn.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think u({{core}}/FUN`CAST`PREPARE); think u(%!/FUN`ACT`HOLD,by); think setqm(daily,firstof(u(%!/FUN`ENC`C,%q<act_at>,daily),json(object)),cast_map,u(%!/FUN`ENC`C,%q<act_at>,map),cast_side,u(%!/FUN`ENC`C,%q<act_at>,side)); @include %!/INC`CAST`PICK; @assert cor(not(u(%!/FUN`ENC`C,%q<act_at>,noshield)),comp(u({{core}}/FUN`ITEM`SLUG,u({{core}}/FUN`ITEM`GET,spells,%q<cast_id>)),shield))=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)]'s Shield blocked until it ended: it cannot be cast again for 10 minutes.,warn); think setq(cast_on,if(strlen(%q<cast_targets>),u(%!/FUN`ENC`TARGETS,%q<cast_targets>),%q<act_at>)); @assert not(strlen(%q<targets_missing>))=@pemit %#=notice(PF2E,No one in the encounter is called %q<targets_missing>.,warn); @assert words(%q<cast_on>)=@pemit %#=notice(PF2E,No one is there to cast on.,warn); think u(%!/FUN`SPELL`PREPARE,strmatch(u(%!/FUN`ENC`C,first(%q<cast_on>),side),%q<cast_side>)); @assert cor(strlen(%q<cast_targets>),strlen(%q<cast_fx>),strlen(%q<spell_heal>),not(cor(%q<spell_attack>,strlen(%q<spell_save>),strlen(%q<spell_dmg>))))=@pemit %#=notice(PF2E,Name the targets: +cast [u({{commands}}/FUN`SHOW`SPELLNAME,%q<cast_id>)]=<names>%, or foes%, characters or everyone.,warn); think u({{commands}}/FUN`DAILY`SPEND,%q<cast_id>); think u(%!/FUN`ENC`SET,%q<act_at>,daily,%q<daily>); think u(%!/FUN`CAST`ROLLS); think setq(cast_atk,sub(%q<cast_atk>,mul(min(2,%q<cast_map>),5))); think setqm(sb_at,,sb_dmg,0); think setq(cast_lines,iter(%q<cast_on>,u(%!/FUN`CAST`ON,%i0),%b,%r)); think if(%q<spell_attack>,u(%!/FUN`ENC`SET,%q<act_at>,map,inc(%q<cast_map>))); @include %!/INC`ENC`STORE; @include %!/INC`SB`MARK; @remit %l=notice(PF2E,[u(%!/FUN`CAST`HEAD)][if(strlen(%q<cast_say>),%r%q<cast_say>)][if(strlen(trim(%q<cast_lines>)),%r[trim(squish(%q<cast_lines>,%r),%r)])])
+          @assert cor(%q<enc_gm>,eq(%q<act_at>,u(%!/FUN`ENC`ACTING)))=@pemit %#=notice(PF2E,It is [u(%!/FUN`ENC`C,u(%!/FUN`ENC`ACTING),name)]'s turn.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think u({{core}}/FUN`CAST`PREPARE); think u(%!/FUN`ACT`HOLD,by); think setqm(daily,firstof(u(%!/FUN`ENC`C,%q<act_at>,daily),json(object)),cast_map,u(%!/FUN`ENC`C,%q<act_at>,map),cast_side,u(%!/FUN`ENC`C,%q<act_at>,side)); @include %!/INC`CAST`PICK; @assert cor(not(u(%!/FUN`ENC`C,%q<act_at>,noshield)),comp(u({{core}}/FUN`ITEM`SLUG,u({{core}}/FUN`ITEM`GET,spells,%q<cast_id>)),shield))=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)]'s Shield blocked until it ended: it cannot be cast again for 10 minutes.,warn); think setq(cast_on,if(strlen(%q<cast_targets>),u(%!/FUN`ENC`TARGETS,%q<cast_targets>),%q<act_at>)); @assert not(strlen(%q<targets_missing>))=@pemit %#=notice(PF2E,No one in the encounter is called %q<targets_missing>.,warn); @assert words(%q<cast_on>)=@pemit %#=notice(PF2E,No one is there to cast on.,warn); think u(%!/FUN`SPELL`PREPARE,strmatch(u(%!/FUN`ENC`C,first(%q<cast_on>),side),%q<cast_side>)); @assert cor(strlen(%q<cast_targets>),strlen(%q<cast_fx>),strlen(%q<spell_heal>),not(cor(%q<spell_attack>,strlen(%q<spell_save>),strlen(%q<spell_dmg>))))=@pemit %#=notice(PF2E,Name the targets: +cast [u({{commands}}/FUN`SHOW`SPELLNAME,%q<cast_id>)]=<names>%, or foes%, characters or everyone.,warn); think u({{commands}}/FUN`DAILY`SPEND,%q<cast_id>); think u(%!/FUN`ENC`SET,%q<act_at>,daily,%q<daily>); think u(%!/FUN`CAST`ROLLS); think setq(cast_atk,sub(%q<cast_atk>,mul(min(2,%q<cast_map>),5))); think setqm(sb_at,,sb_dmg,0); think setq(fx_sus,if(strmatch(json_query(u({{core}}/FUN`ITEM`GET,spells,%q<cast_id>),extract,$.system.duration.sustained),true),u(%!/FUN`ENC`C,%q<act_at>,k))); think setq(cast_lines,iter(%q<cast_on>,u(%!/FUN`CAST`ON,%i0),%b,%r)); think setq(fx_sus,); think if(%q<spell_attack>,u(%!/FUN`ENC`SET,%q<act_at>,map,inc(%q<cast_map>))); @include %!/INC`ENC`STORE; @include %!/INC`SB`MARK; @remit %l=notice(PF2E,[u(%!/FUN`CAST`HEAD)][if(strlen(%q<cast_say>),%r%q<cast_say>)][if(strlen(trim(%q<cast_lines>)),%r[trim(squish(%q<cast_lines>,%r),%r)])])
         flags: [cmdsyntax]
       # What the spell does to combatant %0: heals an ally it can heal, else a spell attack against AC, a save
       # against the spell DC (basic or not), or damage with neither; an ally or the caster gets the spell's effect.
@@ -6865,7 +6889,10 @@ objects:
             t(strlen(%q<spell_save>)),[setqm(save_stat,%q<spell_save>,save_dc,%q<cast_dc>,save_parts,if(%q<spell_basic>,%q<cast_dmg_parts>))][u(FUN`ACT`SAVE,%0)][if(cand(strlen(%q<spell_pers>),lte(%q<roll_degree>,1)),u(FUN`CAST`PERSIST,%0,%q<spell_pers>,0))][if(cand(not(%q<spell_basic>),strlen(%q<cast_dmg_parts>),lte(%q<roll_degree>,1)),%bThe damage on a failure is for the GM: +enc/damage.)],
             t(strlen(%q<cast_dmg_parts>)),[setqm(dmg_parts,%q<cast_dmg_parts>,dmg_raw,%q<cast_dmg_raw>,dmg_total,%q<cast_dmg_raw>)][u(FUN`ACT`IWR,%0)][u(FUN`CAST`SBMARK,%0,0)][u(FUN`ACT`HARM,%0,%q<dmg_total>,0)]%q<harm_text>[u(FUN`ACT`IWR`TEXT)].,
             ))][
-          if(cand(strlen(%q<cast_fx>),cor(%q<on_ally>,not(cor(%q<spell_attack>,strlen(%q<spell_save>))))),setq(on_line,trim(%q<on_line> [u(FUN`FX`ADD,%0,first(%q<cast_fx>,~),rest(%q<cast_fx>,~),%q<pick_rank>,%q<cast_fxch>,u(FUN`ENC`C,%q<act_at>,k))])))]%q<on_line>
+          switch(1,
+            not(strlen(%q<cast_fx>)),,
+            cand(strlen(%q<cast_fxdeg>),cor(%q<spell_attack>,strlen(%q<spell_save>))),if(member(rest(%q<cast_fxdeg>,~),setr(on_deg,extract(critical-failure failure success critical-success,inc(%q<roll_degree>),1))),setq(on_line,trim(%q<on_line> [u(FUN`FX`ADD,%0,first(%q<cast_fx>,~),rest(%q<cast_fx>,~),%q<pick_rank>,json(object,first(%q<cast_fxdeg>,~),json(string,%q<on_deg>)),u(FUN`ENC`C,%q<act_at>,k))]))),
+            cor(%q<on_ally>,not(cor(%q<spell_attack>,strlen(%q<spell_save>)))),setq(on_line,trim(%q<on_line> [u(FUN`FX`ADD,%0,first(%q<cast_fx>,~),rest(%q<cast_fx>,~),%q<pick_rank>,%q<cast_fxch>,u(FUN`ENC`C,%q<act_at>,k))])))]%q<on_line>
         flags: [funsyntax]
       # Shield Block's mark for a spell's damage to its one target: the target before the damage.
       FUN`CAST`SBMARK:
@@ -6918,12 +6945,12 @@ objects:
           if(strmatch(%q<fxa_item>,*"parent:*),u(FUN`FX`AUTOCHOICE,%0,%1,%2))][
           setq(fxa_old,firstof(u(FUN`ENC`C,%0,fx),json(object)))][
           null(iter(json_map(%!/FUN`JSON`KEY,%q<fxa_old>,%b),if(cor(strmatch(%i0,%2),cand(member(json_query(%q<fxa_prep>,extract,$.unapplied),BattleForm),member(json_query(get(u({{core}}/DATA`PACK`[edit(json_query(%q<fxa_old>,extract,$\["%i0"\].pack),",)])/ITEM`%i0`PREP),extract,$.unapplied),BattleForm)),cand(strmatch(%q<fxa_slug>,stance-*),strmatch(json_query(get(u({{core}}/DATA`PACK`[edit(json_query(%q<fxa_old>,extract,$\["%i0"\].pack),",)])/ITEM`%i0`PREP),extract,$.slug),stance-*))),u(FUN`ENC`PATCH,%0,json(object,fx,json(object,%i0,null))))))][
-          u(FUN`ENC`PATCH,%0,json(object,fx,json(object,%2,json(object,pack,json(string,%1),lvl,firstof(%3,json_query(%q<fxa_prep>,extract,$.level),1),ch,%q<fxa_ch>,badge,firstof(%q<fxa_badge>,null),end,if(gt(%q<fxa_rounds>,0),json(string,%5~%q<fxa_rounds>),null)))))][
+          u(FUN`ENC`PATCH,%0,json(object,fx,json(object,%2,json(object,pack,json(string,%1),lvl,firstof(%3,json_query(%q<fxa_prep>,extract,$.level),1),ch,%q<fxa_ch>,badge,firstof(%q<fxa_badge>,null),end,if(gt(%q<fxa_rounds>,0),json(string,%5~%q<fxa_rounds>),null),sus,if(strlen(%q<fx_sus>),json(string,%q<fx_sus>),null),susn,if(strlen(%q<fx_sus>),2,null)))))][
           if(isint(%q<fxa_badge>),if(neq(%q<fxa_badge>,setr(fxa_kept,firstof(u(FUN`FX`BADGE`CLAMP,%0,%1,%2,%q<fxa_badge>),1))),[setq(fxa_badge,%q<fxa_kept>)][u(FUN`ENC`PATCH,%0,json(object,fx,json(object,%2,json(object,badge,%q<fxa_badge>))))]))][
           u(FUN`ENC`PREPARE,%0)][
           setq(fxa_temp,max(firstof(u({{core}}/FUN`CHECK`FORM`GET,tempHP),0),u(FUN`FX`TEMPHP,%q<fxa_item>)))][
           if(gt(%q<fxa_temp>,u(FUN`ENC`C,%0,temp)),u(FUN`ENC`SET,%0,temp,%q<fxa_temp>))][
-          [u(FUN`ENC`C,%0,name)] gains [u(FUN`FX`NAME,%1,%2)][u(FUN`FX`BADGE`SHOW,%1,%2,%q<fxa_badge>)][if(strlen(%q<fxa_on>),%bon [itemize(%q<fxa_on>,|)])][if(%q<fxa_temp>,%band %q<fxa_temp> temporary Hit Points)][if(gt(%q<fxa_rounds>,0),%bfor %q<fxa_rounds> round[if(neq(%q<fxa_rounds>,1),s)])].[if(strlen(%q<fxa_note>),%b[trim(%q<fxa_note>)])]]
+          [u(FUN`ENC`C,%0,name)] gains [u(FUN`FX`NAME,%1,%2)][u(FUN`FX`BADGE`SHOW,%1,%2,%q<fxa_badge>)][if(strlen(%q<fxa_on>),%bon [itemize(%q<fxa_on>,|)])][if(%q<fxa_temp>,%band %q<fxa_temp> temporary Hit Points)][if(gt(%q<fxa_rounds>,0),%bfor %q<fxa_rounds> round[if(neq(%q<fxa_rounds>,1),s)])][if(strlen(%q<fx_sus>),%bwhile it is sustained)].[if(strlen(%q<fxa_note>),%b[trim(%q<fxa_note>)])]]
         flags: [funsyntax]
       # An effect's ChoiceSets whose choices test the effect's own options (its origin, the check that brought it): the
       # one choice that holds is taken, as Foundry takes it. Sets fxa_ch.
@@ -7089,7 +7116,7 @@ objects:
       # pairs; cs, s, f and cf, what each degree does, a list of who.kind.args (t the target, s the one acting):
       # cond.<slug>.<value>.<duration> (e1 the end of this turn, e2 the end of the next, s1 the start of the next),
       # dmg.<dice>.<type>, by (the target is held by the one acting), release, free; ncs, ns, nf and ncf, a note.
-      DATA`ACTION`NAMES: battle medicine~battle-medicine|treat disease~treat-disease|treat poison~treat-poison|treat wounds~treat-wounds|administer first aid~first-aid|maneuver in flight~maneuver-in-flight|gather information~gather-information|make an impression~make-an-impression|conceal an object~conceal-an-object|decipher writing~decipher-writing|disable a device~disable-a-device|sense direction~sense-direction|create forgery~create-forgery|palm an object~palm-an-object|stop bleeding~stop-bleeding|cover tracks~cover-tracks|impersonate~impersonate|pick a lock~pick-a-lock|force open~force-open|high jump~high-jump|long jump~long-jump|first aid~first-aid|balance~balance|squeeze~squeeze|perform~perform|subsist~subsist|coerce~coerce|climb~climb|track~track|swim~swim|improved knockdown~improved-knockdown|improved grab~improved-grab|improved push~improved-push|knockdown~knockdown|grab~grab|push~push|aid~aid|create a diversion~create-a-diversion|command an animal~command-an-animal|sense motive~sense-motive|drop prone~drop-prone|take cover~take-cover|avert gaze~avert-gaze|point out~point-out|bon mot~bon-mot|interact~interact|release~release|request~request|stride~stride|sneak~sneak|stand~stand|steal~steal|crawl~crawl|step~step|seek~seek|hide~hide|leap~leap|lie~lie|tumble through~tumble-through|demoralize~demoralize|reposition~reposition|grapple~grapple|disarm~disarm|escape~escape|tumble~tumble-through|feint~feint|shove~shove|trip~trip
+      DATA`ACTION`NAMES: sustain a spell~sustain|battle medicine~battle-medicine|treat disease~treat-disease|treat poison~treat-poison|treat wounds~treat-wounds|administer first aid~first-aid|maneuver in flight~maneuver-in-flight|gather information~gather-information|make an impression~make-an-impression|conceal an object~conceal-an-object|decipher writing~decipher-writing|disable a device~disable-a-device|sense direction~sense-direction|create forgery~create-forgery|palm an object~palm-an-object|stop bleeding~stop-bleeding|cover tracks~cover-tracks|impersonate~impersonate|pick a lock~pick-a-lock|force open~force-open|high jump~high-jump|long jump~long-jump|first aid~first-aid|balance~balance|squeeze~squeeze|perform~perform|subsist~subsist|coerce~coerce|climb~climb|track~track|swim~swim|improved knockdown~improved-knockdown|improved grab~improved-grab|improved push~improved-push|knockdown~knockdown|grab~grab|push~push|aid~aid|create a diversion~create-a-diversion|command an animal~command-an-animal|sense motive~sense-motive|drop prone~drop-prone|take cover~take-cover|avert gaze~avert-gaze|point out~point-out|bon mot~bon-mot|interact~interact|release~release|request~request|stride~stride|sneak~sneak|stand~stand|steal~steal|sustain~sustain|crawl~crawl|step~step|seek~seek|hide~hide|leap~leap|lie~lie|tumble through~tumble-through|demoralize~demoralize|reposition~reposition|grapple~grapple|disarm~disarm|escape~escape|tumble~tumble-through|feint~feint|shove~shove|trip~trip
       DATA`ACTION`DEMORALIZE: '{"name":"Demoralize","stat":"intimidation","dc":"will","traits":"auditory concentrate emotion fear mental","cost":1,"imm":1,"opts":"unintelligible~-4","cs":"t.cond.frightened.2","s":"t.cond.frightened.1","ncs":"","ns":"","nf":"","ncf":"","ni":"Either way, the target cannot be Demoralized by you again for 10 minutes."}'
       DATA`ACTION`FEINT: '{"name":"Feint","stat":"deception","dc":"perception","traits":"mental","cost":1,"cs":"t.cond.off-guard.0.e2","s":"t.cond.off-guard.0.e1","cf":"s.cond.off-guard.0.e2","ncs":"It is off-guard against your melee attacks.","ns":"It is off-guard against your next melee attack.","ncf":"You are off-guard against its melee attacks."}'
       DATA`ACTION`TRIP: '{"name":"Trip","stat":"athletics","dc":"reflex","traits":"attack","cost":1,"cs":"t.cond.prone t.dmg.1d6.bludgeoning","s":"t.cond.prone","cf":"s.cond.prone"}'
@@ -7136,6 +7163,7 @@ objects:
       DATA`ACTION`FIRST-AID: '{"tgt":"one","name":"Administer First Aid","stat":"medicine","dcfn":"FIRSTAID","need":"dying","traits":"manipulate","cost":2,"cs":"t.uncond.dying","s":"t.uncond.dying","cf":"t.inc.dying.1","ns":"It stays unconscious at 0 Hit Points."}'
       DATA`ACTION`STOP-BLEEDING: '{"tgt":"one","name":"Stop Bleeding","stat":"medicine","need":"bleed","needvs":1,"traits":"manipulate","cost":2,"cs":"t.unpers.bleed","s":"t.unpers.bleed","ncf":"It takes its persistent bleed damage at once."}'
       DATA`ACTION`STRIDE: '{"name":"Stride","stat":"","tgt":"none","traits":"move","cost":1,"ns":"Move up to your Speed."}'
+      DATA`ACTION`SUSTAIN: '{"name":"Sustain","stat":"","tgt":"none","need":"sus","traits":"concentrate","cost":1,"s":"s.sustain"}'
       DATA`ACTION`STEP: '{"name":"Step","stat":"","tgt":"none","traits":"move","cost":1,"ns":"Move 5 feet; this movement does not trigger reactions that trigger on moving."}'
       DATA`ACTION`CRAWL: '{"name":"Crawl","stat":"","tgt":"none","traits":"move","cost":1,"ns":"Move 5 feet while prone."}'
       DATA`ACTION`LEAP: '{"name":"Leap","stat":"","tgt":"none","traits":"move","cost":1,"ns":"Jump 10 feet across, 15 with a Speed of 30 feet or more, or 3 feet up and 5 feet across."}'
@@ -7158,7 +7186,7 @@ objects:
       DATA`ACTION`COMMAND-AN-ANIMAL: '{"name":"Command an Animal","stat":"nature","dc":"will","traits":"auditory concentrate","cost":1,"ncs":"It does as you command on its next turn.","ns":"It does as you command on its next turn.","nf":"It is hesitant or resistant, and does nothing.","ncf":"It misbehaves or misunderstands, and does something else."}'
       INC`ACTION:
         value: |-
-          think setqm(actn_who,if(strmatch(before(%q<cmd_args>,=),*:*),trim(before(%q<cmd_args>,:))),actn_rest,trim(if(strmatch(before(%q<cmd_args>,=),*:*),after(%q<cmd_args>,:),%q<cmd_args>))); think setqm(actn_opt,lcstr(trim(after(%q<actn_rest>,=))),actn_rest,trim(before(%q<actn_rest>,=))); @assert strlen(%q<actn_rest>)={@pemit %#=notice(PF2E,u(%!/FUN`ACTION`LIST))}; think setq(actn_hit,u(%!/FUN`ACTION`MATCH,%q<actn_rest>)); @assert strlen(%q<actn_hit>)={@include %!/INC`ENC`ACT}; think setqm(actn_slug,ucstr(first(%q<actn_hit>,~)),actn_target_text,trim(rest(%q<actn_hit>,~))); think setq(actn_vs,); think if(regmatchi(%q<actn_target_text>,v(DATA`ACTION`RX`VS),0 vs_text vs_n),setqm(actn_target_text,trim(%q<vs_text>),actn_vs,%q<vs_n>)); think setq(actn,v(DATA`ACTION`%q<actn_slug>)); think setqm(actn_name,json_query(%q<actn>,extract,$.name),actn_self,t(json_query(%q<actn>,extract,$.self)),actn_tgt,firstof(json_query(%q<actn>,extract,$.tgt),if(cand(strlen(json_query(%q<actn>,extract,$.stat)),not(strlen(json_query(%q<actn>,extract,$.dc)))),vs,one)),actn_feat,json_query(%q<actn>,extract,$.feat)); think setq(act_at,if(strlen(%q<actn_who>),u(%!/FUN`ENC`FIND,%q<actn_who>),u(%!/FUN`ENC`MINE))); @break cor(t(json_query(%q<actn>,extract,$.outside)),cand(not(strlen(%q<act_at>)),not(strlen(%q<actn_who>))))={@include %!/INC`ACTION`SHEET}; @include %!/INC`ENC`NEED; @assert strlen(%q<act_at>)=@pemit %#=notice(PF2E,if(strlen(%q<actn_who>),No one in the encounter is called %q<actn_who>.,You are not in the encounter. The GM names who acts: +act <who>:[lcstr(%q<actn_name>)].),warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,You act only for yourself.,warn); @assert cor(not(strlen(%q<actn_opt>)),member(json_query(%q<actn>,extract,$.stat),%q<actn_opt>),strlen(grab(json_query(%q<actn>,extract,$.opts),%q<actn_opt>~*)))=@pemit %#=notice(PF2E,%q<actn_name> has no option %q<actn_opt>. [u(%!/FUN`ACTION`OPTIONS)],warn); @assert cor(not(json_query(%q<actn>,extract,$.pick)),strlen(%q<actn_opt>))=@pemit %#=notice(PF2E,%q<actn_name> names the statistic: +act [lcstr(%q<actn_name>)] <target>=<skill>%, such as =athletics.,warn); @assert cor(not(t(json_query(%q<actn>,extract,$.react))),not(t(u(%!/FUN`ENC`C,%q<act_at>,react))))=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] has used a reaction this round.,warn); @assert cor(not(strlen(%q<actn_feat>)),u(%!/FUN`ACTION`HASFEAT,%q<act_at>,%q<actn_feat>))=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] does not have the %q<actn_name> feat.,warn); think setq(actn_tgt,if(cand(strlen(json_query(%q<actn>,extract,$.stat)),not(strlen(%q<actn_target_text>)),cor(strlen(%q<actn_vs>),strmatch(%q<actn_tgt>,vs))),vs,if(strmatch(%q<actn_tgt>,vs),one,%q<actn_tgt>))); think setq(act_target,switch(%q<actn_tgt>,vs,%q<act_at>,none,%q<act_at>,many,u(%!/FUN`ACTION`MANY,%q<actn_target_text>),if(%q<actn_self>,if(cor(strlen(json_query(u(%!/FUN`ENC`C,%q<act_at>,conds),extract,$.grabbed)),strlen(json_query(u(%!/FUN`ENC`C,%q<act_at>,conds),extract,$.restrained))),u(%!/FUN`ENC`FIND,u(%!/FUN`ENC`C,%q<act_at>,by.grabbed))),u(%!/FUN`ENC`FIND,%q<actn_target_text>)))); @assert cor(not(%q<actn_self>),strlen(%q<act_target>))=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] is not grabbed or restrained by anyone in the encounter.,warn); @assert cor(%q<actn_self>,match(none many vs,%q<actn_tgt>),strlen(%q<actn_target_text>))=@pemit %#=notice(PF2E,%q<actn_name> needs a target: +act [lcstr(%q<actn_name>)] <target>.,warn); @assert words(%q<act_target>)=@pemit %#=notice(PF2E,if(strlen(firstof(%q<targets_missing>,%q<actn_target_text>)),No one in the encounter is called [firstof(%q<targets_missing>,%q<actn_target_text>)].,No one is there.),warn); @assert cor(match(none many vs,%q<actn_tgt>),t(json_query(%q<actn>,extract,$.selfok)),neq(%q<act_target>,%q<act_at>))=@pemit %#=notice(PF2E,%q<actn_name> is used on someone else.,warn); think setq(actn_k,u(%!/FUN`ENC`C,%q<act_at>,k)); @assert cor(not(json_query(%q<actn>,extract,$.imm)),match(many vs,%q<actn_tgt>),not(t(u(%!/FUN`ENC`C,%q<act_target>,imm\["[lcstr(%q<actn_slug>)]_%q<actn_k>"\]))))=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_target>,name)] is immune to [u(%!/FUN`ENC`C,%q<act_at>,name)]'s %q<actn_name> [firstof(json_query(%q<actn>,extract,$.immtext),for 10 minutes)].,warn); @assert u(%!/FUN`ACTION`NEEDS,%q<act_target>,setr(actn_need,json_query(%q<actn>,extract,$.need)))=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_target>,name)] [switch(%q<actn_need>,bleed,has no persistent bleed damage,aff:*,has no [after(%q<actn_need>,:)] it is afflicted by,is not %q<actn_need>)].,warn); @assert cor(not(json_query(%q<actn>,extract,$.needvs)),strlen(%q<actn_vs>))=@pemit %#=notice(PF2E,%q<actn_name> needs the DC: +act [lcstr(%q<actn_name>)] <target> vs <DC>.,warn); think u(%!/FUN`ACTION`RUN); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,%q<enc_say>); @break not(strlen(%q<actn_gmsay>)); @pemit [json_query(%q<enc>,extract,$.gm)]=notice(PF2E,Secret: %q<actn_gmsay>)
+          think setqm(actn_who,if(strmatch(before(%q<cmd_args>,=),*:*),trim(before(%q<cmd_args>,:))),actn_rest,trim(if(strmatch(before(%q<cmd_args>,=),*:*),after(%q<cmd_args>,:),%q<cmd_args>))); think setqm(actn_opt,lcstr(trim(after(%q<actn_rest>,=))),actn_rest,trim(before(%q<actn_rest>,=))); @assert strlen(%q<actn_rest>)={@pemit %#=notice(PF2E,u(%!/FUN`ACTION`LIST))}; think setq(actn_hit,u(%!/FUN`ACTION`MATCH,%q<actn_rest>)); @assert strlen(%q<actn_hit>)={@include %!/INC`ENC`ACT}; think setqm(actn_slug,ucstr(first(%q<actn_hit>,~)),actn_target_text,trim(rest(%q<actn_hit>,~))); think setq(actn_vs,); think if(regmatchi(%q<actn_target_text>,v(DATA`ACTION`RX`VS),0 vs_text vs_n),setqm(actn_target_text,trim(%q<vs_text>),actn_vs,%q<vs_n>)); think setq(actn,v(DATA`ACTION`%q<actn_slug>)); think setqm(actn_name,json_query(%q<actn>,extract,$.name),actn_self,t(json_query(%q<actn>,extract,$.self)),actn_tgt,firstof(json_query(%q<actn>,extract,$.tgt),if(cand(strlen(json_query(%q<actn>,extract,$.stat)),not(strlen(json_query(%q<actn>,extract,$.dc)))),vs,one)),actn_feat,json_query(%q<actn>,extract,$.feat)); think setq(act_at,if(strlen(%q<actn_who>),u(%!/FUN`ENC`FIND,%q<actn_who>),u(%!/FUN`ENC`MINE))); @break cor(t(json_query(%q<actn>,extract,$.outside)),cand(not(strlen(%q<act_at>)),not(strlen(%q<actn_who>))))={@include %!/INC`ACTION`SHEET}; @include %!/INC`ENC`NEED; @assert strlen(%q<act_at>)=@pemit %#=notice(PF2E,if(strlen(%q<actn_who>),No one in the encounter is called %q<actn_who>.,You are not in the encounter. The GM names who acts: +act <who>:[lcstr(%q<actn_name>)].),warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,You act only for yourself.,warn); @assert cor(not(strlen(%q<actn_opt>)),member(json_query(%q<actn>,extract,$.stat),%q<actn_opt>),strlen(grab(json_query(%q<actn>,extract,$.opts),%q<actn_opt>~*)))=@pemit %#=notice(PF2E,%q<actn_name> has no option %q<actn_opt>. [u(%!/FUN`ACTION`OPTIONS)],warn); @assert cor(not(json_query(%q<actn>,extract,$.pick)),strlen(%q<actn_opt>))=@pemit %#=notice(PF2E,%q<actn_name> names the statistic: +act [lcstr(%q<actn_name>)] <target>=<skill>%, such as =athletics.,warn); @assert cor(not(t(json_query(%q<actn>,extract,$.react))),not(t(u(%!/FUN`ENC`C,%q<act_at>,react))))=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] has used a reaction this round.,warn); @assert cor(not(strlen(%q<actn_feat>)),u(%!/FUN`ACTION`HASFEAT,%q<act_at>,%q<actn_feat>))=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] does not have the %q<actn_name> feat.,warn); think setq(actn_tgt,if(cand(strlen(json_query(%q<actn>,extract,$.stat)),not(strlen(%q<actn_target_text>)),cor(strlen(%q<actn_vs>),strmatch(%q<actn_tgt>,vs))),vs,if(strmatch(%q<actn_tgt>,vs),one,%q<actn_tgt>))); think setq(act_target,switch(%q<actn_tgt>,vs,%q<act_at>,none,%q<act_at>,many,u(%!/FUN`ACTION`MANY,%q<actn_target_text>),if(%q<actn_self>,if(cor(strlen(json_query(u(%!/FUN`ENC`C,%q<act_at>,conds),extract,$.grabbed)),strlen(json_query(u(%!/FUN`ENC`C,%q<act_at>,conds),extract,$.restrained))),u(%!/FUN`ENC`FIND,u(%!/FUN`ENC`C,%q<act_at>,by.grabbed))),u(%!/FUN`ENC`FIND,%q<actn_target_text>)))); @assert cor(not(%q<actn_self>),strlen(%q<act_target>))=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] is not grabbed or restrained by anyone in the encounter.,warn); @assert cor(%q<actn_self>,match(none many vs,%q<actn_tgt>),strlen(%q<actn_target_text>))=@pemit %#=notice(PF2E,%q<actn_name> needs a target: +act [lcstr(%q<actn_name>)] <target>.,warn); @assert words(%q<act_target>)=@pemit %#=notice(PF2E,if(strlen(firstof(%q<targets_missing>,%q<actn_target_text>)),No one in the encounter is called [firstof(%q<targets_missing>,%q<actn_target_text>)].,No one is there.),warn); @assert cor(match(none many vs,%q<actn_tgt>),t(json_query(%q<actn>,extract,$.selfok)),neq(%q<act_target>,%q<act_at>))=@pemit %#=notice(PF2E,%q<actn_name> is used on someone else.,warn); think setq(actn_k,u(%!/FUN`ENC`C,%q<act_at>,k)); @assert cor(not(json_query(%q<actn>,extract,$.imm)),match(many vs,%q<actn_tgt>),not(t(u(%!/FUN`ENC`C,%q<act_target>,imm\["[lcstr(%q<actn_slug>)]_%q<actn_k>"\]))))=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_target>,name)] is immune to [u(%!/FUN`ENC`C,%q<act_at>,name)]'s %q<actn_name> [firstof(json_query(%q<actn>,extract,$.immtext),for 10 minutes)].,warn); @assert u(%!/FUN`ACTION`NEEDS,%q<act_target>,setr(actn_need,json_query(%q<actn>,extract,$.need)))=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_target>,name)] [switch(%q<actn_need>,bleed,has no persistent bleed damage,sus,has no spell to sustain this turn,aff:*,has no [after(%q<actn_need>,:)] it is afflicted by,is not %q<actn_need>)].,warn); @assert cor(not(json_query(%q<actn>,extract,$.needvs)),strlen(%q<actn_vs>))=@pemit %#=notice(PF2E,%q<actn_name> needs the DC: +act [lcstr(%q<actn_name>)] <target> vs <DC>.,warn); think u(%!/FUN`ACTION`RUN); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,%q<enc_say>); @break not(strlen(%q<actn_gmsay>)); @pemit [json_query(%q<enc>,extract,$.gm)]=notice(PF2E,Secret: %q<actn_gmsay>)
         flags: [cmdsyntax]
       FUN`ACTION`MATCH:
         value: |-
@@ -7315,9 +7343,10 @@ objects:
         flags: [funsyntax]
       FUN`ACTION`NEEDS:
         value: |-
-          @@(%0 a combatant's index, %1 a condition, persistent damage type or aff:<poison or disease>, or nothing: 1 when it has it)[
+          @@(%0 a combatant's index, %1 a condition, persistent damage type, aff:<poison or disease>, sus: a spell of theirs to sustain this turn, or nothing: 1 when it has it)[
           switch(1,
             not(strlen(%1)),1,
+            strmatch(%1,sus),t(words(iter(u(FUN`ENC`INDEXES),[setq(needs_fx,firstof(u(FUN`ENC`C,%i0,fx),json(object)))][iter(json_map(%!/FUN`JSON`KEY,%q<needs_fx>,%b),if(cand(strmatch(edit(json_query(%q<needs_fx>,extract,$\["%i0"\].sus),",),u(FUN`ENC`C,%0,k)),eq(json_query(%q<needs_fx>,extract,$\["%i0"\].susn),1)),%i0))]))),
             strmatch(%1,aff:*),[setq(needs_all,firstof(u(FUN`ENC`C,%0,aff),json(object)))][t(words(iter(json_map(%!/FUN`JSON`KEY,%q<needs_all>,%b),if(strmatch(json_query(%q<needs_all>,extract,$\["%i0"\].kind),after(%1,:)),%i0))))],
             t(strlen(json_query(u(FUN`ENC`C,%0,conds),extract,$\["%1"\]))),1,
             t(strlen(json_query(u(FUN`ENC`C,%0,pers),extract,$\["%1"\]))))]
@@ -7408,6 +7437,7 @@ objects:
             unhold, null(iter(u(FUN`ENC`INDEXES),if(strmatch(u(FUN`ENC`C,%i0,by.grabbed),%q<actn_k>),[u(FUN`ACTION`FREE,%i0)][setq(actn_fx,%q<actn_fx> [u(FUN`ENC`C,%i0,name)] is free.)]))),
             fx, u(FUN`ACTION`EFFECT,%q<ap_at>,edit(elements(%0,3,.),_,%b),elements(%0,4,.)),
             inc, [setq(ap_v,add(firstof(json_query(u(FUN`ENC`C,%q<ap_at>,conds),extract,$\["[elements(%0,3,.)]"\]),0),elements(%0,4,.)))][u(FUN`ENC`PATCH,%q<ap_at>,json(object,conds,json(object,elements(%0,3,.),%q<ap_v>)))][setq(actn_fx,%q<actn_fx> %q<ap_name> is [elements(%0,3,.)] %q<ap_v>.[if(cand(strmatch(elements(%0,3,.),dying),gte(%q<ap_v>,4)),%b%q<ap_name> dies.)])],
+            sustain, [setq(sus_text,u(FUN`FX`SUSTAIN,%q<actn_k>))][setq(actn_fx,%q<actn_fx> [if(strlen(%q<sus_text>),%q<ap_name> sustains %q<sus_text> to the end of %q<ap_name>'s next turn.,%q<ap_name> sustains nothing.)])],
             twheal, [u(FUN`ACTION`TW`ROLL,elements(%0,3,.))][if(gt(%q<tw_n>,0),[u(FUN`ACT`HEAL,%q<ap_at>,%q<tw_n>)][setq(actn_fx,%q<actn_fx> %q<tw_text>: %q<heal_text>.)],if(lt(%q<tw_n>,0),[u(FUN`ACT`HARM,%q<ap_at>,abs(%q<tw_n>),0)][setq(actn_fx,%q<actn_fx> Damage %q<tw_text>. %q<harm_text>.)]))],
             unpers, if(strlen(json_query(u(FUN`ENC`C,%q<ap_at>,pers),extract,$\["[elements(%0,3,.)]"\])),[u(FUN`ENC`PATCH,%q<ap_at>,json(object,pers,json(object,elements(%0,3,.),null)))][setq(actn_fx,%q<actn_fx> %q<ap_name>'s persistent [elements(%0,3,.)] damage ends.)]))])]
         flags: [funsyntax]
@@ -7694,9 +7724,28 @@ objects:
             setq(next_text,%q<next_text>%r[u(FUN`ENC`C,%0,name)] is [if(gt(%q<end_frightened>,1),now frightened [dec(%q<end_frightened>)],no longer frightened)].)])][
           u(FUN`AFF`TICK,%0)][
           setq(end_key,u(FUN`ENC`C,%0,k))][
-          null(iter(u(FUN`ENC`INDEXES),u(FUN`TURN`ENDTICK,%i0,%q<end_key>)))]
+          null(iter(u(FUN`ENC`INDEXES),u(FUN`TURN`ENDTICK,%i0,%q<end_key>)))][
+          null(iter(u(FUN`ENC`INDEXES),u(FUN`FX`SUSTICK,%i0,%q<end_key>,u(FUN`ENC`C,%0,name))))]
         flags: [funsyntax]
       # Conditions that last until the end of a turn: dur key~turns~end counts down when that key's turn ends.
+      # A sustained spell's effect (fx sus, the caster's key) lasts until the end of the caster's next turn; Sustain
+      # puts it back to two turn ends (susn), and when the count runs out the effect ends.
+      FUN`FX`SUSTICK:
+        value: |-
+          @@(%0 a combatant's index, %1 the key whose turn ends, %2 that combatant's name)[
+          setq(stk_fx,firstof(u(FUN`ENC`C,%0,fx),json(object)))][
+          null(iter(json_map(%!/FUN`JSON`KEY,%q<stk_fx>,%b),
+            if(strmatch(edit(json_query(%q<stk_fx>,extract,$\["%i0"\].sus),",),%1),
+              if(gt(json_query(%q<stk_fx>,extract,$\["%i0"\].susn),1),
+                u(FUN`ENC`PATCH,%0,json(object,fx,json(object,%i0,json(object,susn,dec(json_query(%q<stk_fx>,extract,$\["%i0"\].susn)))))),
+                [u(FUN`ENC`PATCH,%0,json(object,fx,json(object,%i0,null)))][
+                setq(next_text,%q<next_text>%r[u(FUN`ENC`C,%0,name)]'s [u(FUN`FX`NAME,edit(json_query(%q<stk_fx>,extract,$\["%i0"\].pack),",),%i0)] ends: %2 did not sustain it.)]))))]
+        flags: [funsyntax]
+      FUN`FX`SUSTAIN:
+        value: |-
+          @@(%0 the caster's key: every effect of theirs not yet sustained this turn lasts to the end of their next turn; the effects' text)[
+          itemize(squish(iter(u(FUN`ENC`INDEXES),[setq(sst_fx,firstof(u(FUN`ENC`C,%i0,fx),json(object)))][iter(json_map(%!/FUN`JSON`KEY,%q<sst_fx>,%b),if(cand(strmatch(edit(json_query(%q<sst_fx>,extract,$\["%i0"\].sus),",),%0),eq(json_query(%q<sst_fx>,extract,$\["%i0"\].susn),1)),[u(FUN`ENC`PATCH,%i1,json(object,fx,json(object,%i0,json(object,susn,2))))][u(FUN`FX`NAME,edit(json_query(%q<sst_fx>,extract,$\["%i0"\].pack),",),%i0)] on [u(FUN`ENC`C,%i1,name)]),%b,|)],%b,|),|),|)]
+        flags: [funsyntax]
       FUN`TURN`ENDTICK:
         value: |-
           @@(%0 a combatant's index, %1 the key whose turn ends)[
@@ -8001,12 +8050,13 @@ objects:
         flags: [funsyntax]
       FUN`SHOW`LOOK`SPEED:
         value: |-
-          @@(%0 a creature: its Speeds)[
-          itemize(squish([json_query(%0,extract,$.system.attributes.speed.value)] feet|[json_map(%!/FUN`SHOW`LOOK`SPEED`ONE,firstof(json_query(%0,extract,$.system.attributes.speed.otherSpeeds),json(array)),|)],|),|)]
+          @@(%0 a creature: its Speeds, with the modifiers of its conditions and effects)[
+          setq(lsp_all,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`MODS,,all-speeds speed,)))][
+          itemize(squish([max(0,add(json_query(%0,extract,$.system.attributes.speed.value),%q<lsp_all>,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`MODS,,land-speed,))))] feet|[json_map(%!/FUN`SHOW`LOOK`SPEED`ONE,firstof(json_query(%0,extract,$.system.attributes.speed.otherSpeeds),json(array)),|)],|),|)]
         flags: [funsyntax]
       FUN`SHOW`LOOK`SPEED`ONE:
         value: |-
-          [json_query(%1,extract,$.type)] [json_query(%1,extract,$.value)] feet
+          [json_query(%1,extract,$.type)] [max(0,add(json_query(%1,extract,$.value),%q<lsp_all>,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`MODS,,[json_query(%1,extract,$.type)]-speed,))))] feet
         flags: [funsyntax]
       FUN`SHOW`LOOK`STRIKE:
         value: |-
@@ -8455,7 +8505,8 @@ objects:
         - A spell attack rolls against each target's AC with your multiple attack penalty; a save is rolled for each target against your spell DC, with the damage of a basic save.
         - The damage is rolled once for every target, with what your feats and effects add to spell damage, such as a status bonus to damage.
         - Heal and Harm heal allies and harm foes. Name targets with commas, or `foes`, `characters` or `everyone`.
-        - A spell that brings an effect, such as Animal Form, Mystic Armor or Bless, gives it to an ally you name, or you. Name the form when there are several: `+cast animal form as ape`. A spell on a weapon, armor or shield, such as Runic Weapon or Precious Metals, goes on the target's item you name, or on the only one that fits: `+cast precious metals as silver on longsword=Amiri`. A battle form gives its Strikes, AC, skills and Speed until it ends.
+        - A spell that brings an effect, such as Animal Form, Mystic Armor or Bless, gives it to an ally you name, or you. Name the form when there are several: `+cast animal form as ape`. A spell on a weapon, armor or shield, such as Runic Weapon or Precious Metals, goes on the target's item you name, or on the only one that fits: `+cast precious metals as silver on longsword=Amiri`. A battle form gives its Strikes, AC, skills and Speed until it ends. A spell whose effect depends on the target's save or the spell attack roll, such as Leaden Steps or Tangle Vine, gives each target the effect for its own result; the conditions an effect brings, such as encumbered, come and go with it.
+        - A sustained spell's effect lasts until the end of your next turn. `+act sustain` (one action, once a turn, not on the turn you cast) keeps each of yours going to the end of your next turn; one not sustained ends.
         - Outside an encounter `+cast` spends from your sheet's day and heals the characters you name.
 
         Example:
