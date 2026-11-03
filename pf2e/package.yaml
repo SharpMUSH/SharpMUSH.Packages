@@ -1,7 +1,7 @@
 format: "1.19"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.10.2"
+version: "0.10.3"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -111,7 +111,7 @@ objects:
       # ledger read again costs a few hundred function calls. The key is the ledger with the package's
       # version, the books and CACHE`STAMP, which the updater and the deity table change. CACHE lists
       # the keys oldest first; past DATA`CACHE`KEEP the oldest goes.
-      DATA`CACHE`VERSION: "0.10.2"
+      DATA`CACHE`VERSION: "0.10.3"
       DATA`CACHE`KEEP: 200
       DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_itemalts check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_shieldrules check_bulkrules check_bulk check_bulk_enc check_bulk_max check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
       # The ItemAlteration properties the core applies, by the kind of item they reach.
@@ -5572,7 +5572,7 @@ objects:
     attributes:
       CMD`ENC:
         value: |-
-          $(?is)^\+enc(/\S*)?(?\: +(.*))?$:think setqm(cmd_switch,firstof(lcstr(first(after(%1,/),/)),show),cmd_sub,lcstr(after(after(%1,/),/)),cmd_args,trim(%2)); @assert match(show start add remove join init next strike check save use act effect badge raise block damage heal cond persist delay look bestiary award keep undo redo end toggle,%q<cmd_switch>)=@pemit %#=notice(PF2E,There is no +enc/%q<cmd_switch>. +help +enc lists the switches.,warn); think u(%!/FUN`ENC`LOAD,%l); @include %!/INC`ENC`%q<cmd_switch>
+          $(?is)^\+enc(/\S*)?(?\: +(.*))?$:think setqm(cmd_switch,firstof(lcstr(first(after(%1,/),/)),show),cmd_sub,lcstr(after(after(%1,/),/)),cmd_args,trim(%2)); @assert match(show start add remove join init next strike check save use act effect badge raise block damage heal cond persist afflict delay look bestiary award keep undo redo end toggle,%q<cmd_switch>)=@pemit %#=notice(PF2E,There is no +enc/%q<cmd_switch>. +help +enc lists the switches.,warn); think u(%!/FUN`ENC`LOAD,%l); @include %!/INC`ENC`%q<cmd_switch>
         flags: [regexp, cmdsyntax]
       # +act [<who>:]<action> [<target>][=<option>]: an action from the action table, in the encounter here, on its
       # copies; an action not in the table goes to +enc/act.
@@ -6405,7 +6405,8 @@ objects:
             setqm(sb_at,%q<act_target>,sb_pre,json_query(%q<enc>,extract,$.c\[%q<act_target>\]),sb_dmg,%q<dmg_total>,sb_crit,%q<strike_crit>)][
             u(FUN`ACT`HARM,%q<act_target>,%q<dmg_total>,%q<strike_crit>)][
             setq(enc_say,%q<enc_say>%r[if(gte(%q<strike_degree>,2),Damage,Splash)]: %q<dmg_text>[if(gt(words(%q<dmg_parts>,|),1),%b= %q<dmg_raw>)][u(FUN`ACT`IWR`TEXT)]. %q<harm_text>.[iter(%q<dmg_pers>,u(FUN`CAST`PERSIST,%q<act_target>,first(%i0,~),rest(%i0,~)),|,)][if(%q<dmg_splash>,%bEach other creature within 5 feet takes %q<dmg_splash> %q<dmg_splash_type> splash damage: +enc/damage.)])])][
-          setq(enc_say,%q<enc_say>[u(FUN`ACT`RUNE`NOTES,%q<strike_degree>)]%q<spend_warn>)][
+          setq(enc_say,%q<enc_say>[u(FUN`ACT`RUNE`NOTES,%q<strike_degree>)])][
+          setq(enc_say,%q<enc_say>[u(FUN`ACT`ATTACKFX,%q<strike_degree>)]%q<spend_warn>)][
           setq(dmg_ignore,)]
         flags: [funsyntax]
       # A PC's Strike's property runes after its attack roll: rune_list their slugs, rune_opts the roll options
@@ -7044,7 +7045,7 @@ objects:
       # pairs; cs, s, f and cf, what each degree does, a list of who.kind.args (t the target, s the one acting):
       # cond.<slug>.<value>.<duration> (e1 the end of this turn, e2 the end of the next, s1 the start of the next),
       # dmg.<dice>.<type>, by (the target is held by the one acting), release, free; ncs, ns, nf and ncf, a note.
-      DATA`ACTION`NAMES: aid~aid|create a diversion~create-a-diversion|command an animal~command-an-animal|sense motive~sense-motive|drop prone~drop-prone|take cover~take-cover|avert gaze~avert-gaze|point out~point-out|bon mot~bon-mot|interact~interact|release~release|request~request|stride~stride|sneak~sneak|stand~stand|steal~steal|crawl~crawl|step~step|seek~seek|hide~hide|leap~leap|lie~lie|tumble through~tumble-through|demoralize~demoralize|reposition~reposition|grapple~grapple|disarm~disarm|escape~escape|tumble~tumble-through|feint~feint|shove~shove|trip~trip
+      DATA`ACTION`NAMES: improved knockdown~improved-knockdown|improved grab~improved-grab|improved push~improved-push|knockdown~knockdown|grab~grab|push~push|aid~aid|create a diversion~create-a-diversion|command an animal~command-an-animal|sense motive~sense-motive|drop prone~drop-prone|take cover~take-cover|avert gaze~avert-gaze|point out~point-out|bon mot~bon-mot|interact~interact|release~release|request~request|stride~stride|sneak~sneak|stand~stand|steal~steal|crawl~crawl|step~step|seek~seek|hide~hide|leap~leap|lie~lie|tumble through~tumble-through|demoralize~demoralize|reposition~reposition|grapple~grapple|disarm~disarm|escape~escape|tumble~tumble-through|feint~feint|shove~shove|trip~trip
       DATA`ACTION`DEMORALIZE: '{"name":"Demoralize","stat":"intimidation","dc":"will","traits":"auditory concentrate emotion fear mental","cost":1,"imm":1,"opts":"unintelligible~-4","cs":"t.cond.frightened.2","s":"t.cond.frightened.1","ncs":"","ns":"","nf":"","ncf":"","ni":"Either way, the target cannot be Demoralized by you again for 10 minutes."}'
       DATA`ACTION`FEINT: '{"name":"Feint","stat":"deception","dc":"perception","traits":"mental","cost":1,"cs":"t.cond.off-guard.0.e2","s":"t.cond.off-guard.0.e1","cf":"s.cond.off-guard.0.e2","ncs":"It is off-guard against your melee attacks.","ns":"It is off-guard against your next melee attack.","ncf":"You are off-guard against its melee attacks."}'
       DATA`ACTION`TRIP: '{"name":"Trip","stat":"athletics","dc":"reflex","traits":"attack","cost":1,"cs":"t.cond.prone t.dmg.1d6.bludgeoning","s":"t.cond.prone","cf":"s.cond.prone"}'
@@ -7059,6 +7060,12 @@ objects:
       # More kinds: fx.<effect>.<choice> (underscores for spaces; _<pick> asks FUN`ACTION`PICK`<PICK>), uncond.<slug>,
       # unhold (frees everyone the one acting holds).
       DATA`ACTION`AID: '{"name":"Aid","stat":"acrobatics arcana athletics crafting deception diplomacy intimidation medicine nature occultism performance religion society stealth survival thievery perception","dcfix":15,"pick":1,"traits":"","cost":0,"cs":"t.fx.Aid._aid","s":"t.fx.Aid._aid","cf":"t.fx.Aid._aid","ni":"The bonus counts on its next check or attack roll, then ends."}'
+      DATA`ACTION`GRAB: '{"name":"Grab","stat":"","traits":"","cost":1,"s":"t.cond.grabbed.0.e2 t.by","ns":"After a Strike that lists Grab hits."}'
+      DATA`ACTION`IMPROVED-GRAB: '{"name":"Improved Grab","stat":"","traits":"","cost":0,"s":"t.cond.grabbed.0.e2 t.by","ns":"A free action, after a Strike that lists it hits."}'
+      DATA`ACTION`KNOCKDOWN: '{"name":"Knockdown","stat":"","traits":"","cost":1,"s":"t.cond.prone","ns":"After a Strike that lists Knockdown hits."}'
+      DATA`ACTION`IMPROVED-KNOCKDOWN: '{"name":"Improved Knockdown","stat":"","traits":"","cost":0,"s":"t.cond.prone","ns":"A free action, after a Strike that lists it hits."}'
+      DATA`ACTION`PUSH: '{"name":"Push","stat":"","traits":"","cost":1,"ns":"It is pushed 5 feet away, 10 on a critical hit; you can Stride after it."}'
+      DATA`ACTION`IMPROVED-PUSH: '{"name":"Improved Push","stat":"","traits":"","cost":0,"ns":"It is pushed 5 feet away, 10 on a critical hit; you can Stride after it."}'
       DATA`ACTION`STRIDE: '{"name":"Stride","stat":"","tgt":"none","traits":"move","cost":1,"ns":"Move up to your Speed."}'
       DATA`ACTION`STEP: '{"name":"Step","stat":"","tgt":"none","traits":"move","cost":1,"ns":"Move 5 feet; this movement does not trigger reactions that trigger on moving."}'
       DATA`ACTION`CRAWL: '{"name":"Crawl","stat":"","tgt":"none","traits":"move","cost":1,"ns":"Move 5 feet while prone."}'
@@ -7297,6 +7304,141 @@ objects:
         value: |-
           think setqm(keep_i,%0,sheet_target,u(%!/FUN`ENC`C,%0,who)); think setq(daily,json_mod(firstof(u(%!/FUN`ENC`C,%0,daily),json(object)),patch,json(object,hp,if(lt(u(%!/FUN`ENC`C,%0,hp),u(%!/FUN`ENC`C,%0,max)),max(0,u(%!/FUN`ENC`C,%0,hp)),null),sp,if(lt(u(%!/FUN`ENC`C,%0,sp),u(%!/FUN`ENC`C,%0,spmax)),u(%!/FUN`ENC`C,%0,sp),null),resolve,if(lt(u(%!/FUN`ENC`C,%0,res),u(%!/FUN`ENC`C,%0,resmax)),u(%!/FUN`ENC`C,%0,res),null),wounded,firstof(json_query(u(%!/FUN`ENC`C,%0,conds),extract,$.wounded),null)))); @include {{commands}}/INC`DAILY`WRITE; think setq(keep_used,firstof(u(%!/FUN`ENC`C,%0,used),json(object))); @dolist/inplace [json_map(%!/FUN`JSON`KEY,%q<keep_used>,%b)]={think setqm(entry_json,json(object,kind,"gear",id,json(string,##),qty,first(json_query(%q<keep_used>,extract,$\["##"\]),|),where,json(string,rest(json_query(%q<keep_used>,extract,$\["##"\]),|))),entry_text,[u({{commands}}/FUN`SHOW`ITEM,equipment,##,)] x[first(json_query(%q<keep_used>,extract,$\["##"\]),|)]); @include {{commands}}/INC`ENTRY`WRITE}; think u(%!/FUN`ENC`SET,%q<keep_i>,used,json(object)); think u(%!/FUN`ENC`SET,%q<keep_i>,snap,lmax(0 [json_map(%!/FUN`ENC`LEDGER`N,u({{commands}}/FUN`LEDGER`OF,%q<sheet_target>),%b)]))
         flags: [cmdsyntax]
+      # --- Strike attack effects and afflictions --------------------------------------------------
+      FUN`AFF: A creature Strike's attack effects; afflictions and their stages.
+      # After a creature's Strike hits: each of its attack effects. An affliction (an ability whose text has stages)
+      # is rolled at once; one that +act takes (Grab, Knockdown, Push) is named with the command; others by name.
+      FUN`ACT`ATTACKFX:
+        value: |-
+          @@(%0 the Strike's degree, after FUN`ACT`STRIKE`RESOLVE; rune_src npc:<the melee item's attribute>)[
+          if(cand(gte(%0,2),strmatch(%q<rune_src>,npc:*)),
+            [setqm(afx_store,u({{core}}/DATA`PACK`[ucstr(json_query(%q<enc>,extract,$.c\[%q<act_at>\].pack))]),afx_melee,after(%q<rune_src>,npc:))][
+            setq(afx_list,json_map(%!/FUN`JSON`ITEM,firstof(json_query(get(%q<afx_store>/%q<afx_melee>),extract,$.system.attackEffects.value),json(array)),%b))][
+            iter(%q<afx_list>,u(FUN`ACT`ATTACKFX`ONE,edit(%i0,",),before(%q<afx_melee>,`EMBED`)),%b,)])]
+        flags: [funsyntax]
+      FUN`ACT`ATTACKFX`ONE:
+        value: |-
+          @@(%0 an attack effect's slug, %1 the creature's ITEM`<id>; afx_store its pack's store)[
+          setq(afx_attr,first(iter(lattr(%q<afx_store>/%1`EMBED`*),if(strmatch(json_query(get(%q<afx_store>/%i0),extract,$.system.slug),%0),%i0))))][
+          setq(afx_json,if(strlen(%q<afx_attr>),get(%q<afx_store>/%q<afx_attr>)))][
+          setqm(afx_name,firstof(json_query(%q<afx_json>,extract,$.name),capstr(edit(%0,-,%b))),afx_text,json_query(%q<afx_json>,extract,$.system.description.value))][
+          switch(1,
+            strmatch(%q<afx_text>,*Stage 1*),%r[u(FUN`AFF`EXPOSE,%q<act_target>,%q<afx_name>,%0,u(FUN`AFF`PARSE,%q<afx_text>),json_map({{core}}/FUN`RULE`SELECTOR,firstof(json_query(%q<afx_json>,extract,$.system.traits.value),json(array)),%b))],
+            t(strlen(v(DATA`ACTION`[ucstr(%0)]))),%b%q<afx_name>: +act [u(FUN`ENC`C,%q<act_at>,name)]:[lcstr(%q<afx_name>)] [u(FUN`ENC`C,%q<act_target>,name)].,
+            %b%q<afx_name>.)]
+        flags: [funsyntax]
+      # An affliction's text as Foundry writes it: its save and DC, maximum duration and onset in rounds, and each
+      # stage's damage, conditions (slug~value, 0 for one without a value) and duration in rounds.
+      DATA`AFF`RX`DC: '@Check\[(\w+)\|dc:(\d+)'
+      DATA`AFF`RX`DC2: 'DC (\d+) (Fortitude|Reflex|Will)'
+      DATA`AFF`RX`MAX: 'Maximum Duration</strong>\s*(\d+) (round|minute|hour|day)'
+      DATA`AFF`RX`ONSET: 'Onset</strong>\s*(\d+) (round|minute|hour|day)'
+      DATA`AFF`RX`STAGE: 'Stage #N</strong>\s*(.*?)\s*(?=;?\s*<strong>|</p>|$)'
+      DATA`AFF`RX`DUR: '\((\d+) (round|minute|hour|day)s?\)\s*;?\s*$'
+      DATA`AFF`RX`DMG: '@Damage\[(\d+d\d+(?:[+-]\d+)?)\[(\w+)\]\]'
+      DATA`AFF`RX`DMG2: '(\d+d\d+(?:[+-]\d+)?) (\w+) damage'
+      DATA`AFF`RX`COND: '^\[Compendium\.pf2e\.conditionitems\.Item\.([A-Za-z-]+)\](?:\{[A-Za-z -]*?(\d+)\})?'
+      DATA`AFF`ROUNDS: round~1 minute~10 hour~600 day~14400
+      FUN`AFF`PARSE:
+        value: |-
+          @@(%0 the text: JSON save, dc, max, onset, stages)[
+          setqm(ap_save,,ap_dc,,ap_n,,ap_u,)][
+          null(if(regmatchi(%0,v(DATA`AFF`RX`DC),0 ap_save ap_dc),,regmatchi(%0,v(DATA`AFF`RX`DC2),0 ap_dc ap_save)))][
+          setq(ap_max,if(regmatchi(%0,v(DATA`AFF`RX`MAX),0 ap_n ap_u),u(FUN`AFF`ROUNDS,%q<ap_n>,%q<ap_u>)))][
+          setq(ap_onset,if(regmatchi(%0,v(DATA`AFF`RX`ONSET),0 ap_n ap_u),u(FUN`AFF`ROUNDS,%q<ap_n>,%q<ap_u>)))][
+          setq(ap_stages,json(array))][
+          null(iter(lnum(1,8),if(regmatchi(%0,edit(v(DATA`AFF`RX`STAGE),#N,%i0),0 ap_st),setq(ap_stages,json_mod(%q<ap_stages>,set,$\[[json_query(%q<ap_stages>,size)]\],u(FUN`AFF`STAGE,%q<ap_st>))))))][
+          json(object,save,json(string,lcstr(%q<ap_save>)),dc,firstof(%q<ap_dc>,null),max,firstof(%q<ap_max>,null),onset,firstof(%q<ap_onset>,null),stages,%q<ap_stages>)]
+        flags: [funsyntax]
+      FUN`AFF`ROUNDS:
+        value: |-
+          @@(%0 a number, %1 its unit)[
+          mul(%0,firstof(after(grab(v(DATA`AFF`ROUNDS),lcstr(%1)~*),~),1))]
+        flags: [funsyntax]
+      FUN`AFF`STAGE:
+        value: |-
+          @@(%0 a stage's text: its JSON)[
+          setqm(as_dice,,as_type,,as_n,,as_u,)][
+          null(if(regmatchi(%0,v(DATA`AFF`RX`DMG),0 as_dice as_type),,regmatchi(%0,v(DATA`AFF`RX`DMG2),0 as_dice as_type)))][
+          setq(as_dur,if(regmatchi(%0,v(DATA`AFF`RX`DUR),0 as_n as_u),u(FUN`AFF`ROUNDS,%q<as_n>,%q<as_u>),1))][
+          setq(as_conds,squish(iter(rest(edit(%0,@UUID,|),|),if(regmatchi(%i0,v(DATA`AFF`RX`COND),0 as_c as_v),[lcstr(%q<as_c>)]~[firstof(%q<as_v>,0)]),|,%b)))][
+          json(object,dmg,json(string,trim(%q<as_dice> [lcstr(%q<as_type>)])),conds,json(string,%q<as_conds>),dur,%q<as_dur>)]
+        flags: [funsyntax]
+      FUN`AFF`SUMMARY:
+        value: |-
+          @@(%0 a stage's JSON: what it does, in words)[
+          itemize(squish([if(strlen(setr(asm_dmg,json_query(%0,extract,$.dmg))),%q<asm_dmg> damage|)][iter(json_query(%0,extract,$.conds),[first(%i0,~)][if(rest(%i0,~),%b[rest(%i0,~)])],%b,|)],|),|)]
+        flags: [funsyntax]
+      # Exposure: the target's save against the DC. Not afflicted yet: stage 1 on a failure, 2 on a critical failure,
+      # after the onset when there is one. Already afflicted: one stage worse on a failure, two on a critical failure.
+      FUN`AFF`EXPOSE:
+        value: |-
+          @@(%0 the target's index, %1 the affliction's name, %2 its slug, %3 its JSON from FUN`AFF`PARSE, %4 its traits: a line)[
+          setqm(ae_def,%3,ae_tname,u(FUN`ENC`C,%0,name),ae_kind,first(setinter(%4,poison disease curse)))][
+          setq(ae_have,json_query(firstof(u(FUN`ENC`C,%0,aff),json(object)),extract,$\["%2"\]))][
+          switch(1,
+            cand(strlen(%q<ae_kind>),u(FUN`ACT`IMMUNE,%0,%q<ae_kind>)),%q<ae_tname> is immune to %1.,
+            not(isint(json_query(%q<ae_def>,extract,$.dc))),%1: +enc/save %q<ae_tname>=<save> vs <DC>.,
+            [u(FUN`ENC`PREPARE,%0)][
+            u(FUN`ACT`CHECK,json_query(%q<ae_def>,extract,$.save),json_query(%q<ae_def>,extract,$.dc),,,squish([iter(%4,item:trait:%i0)] [if(strlen(%q<ae_kind>),%q<ae_kind>)]))][
+            setqm(ae_stages,json_query(json_query(%q<ae_def>,get,stages),size),ae_step,switch(%q<roll_degree>,1,1,0,2,0))][
+            %q<ae_tname>'s [u({{commands}}/FUN`SHOW`STAT,json_query(%q<ae_def>,extract,$.save))] against %1: [json_query(%q<roll_record>,extract,$.text)][u(FUN`ACT`TAGS)] vs DC [json_query(%q<ae_def>,extract,$.dc)]: [tone(strong,u(FUN`ACT`DEGREE,%q<roll_degree>))].[switch(1,
+              not(%q<ae_step>),if(strlen(%q<ae_have>),,%b%q<ae_tname> is not afflicted.),
+              strlen(%q<ae_have>),u(FUN`AFF`ENTER,%0,%2,min(%q<ae_stages>,add(json_query(%q<ae_have>,extract,$.stage),%q<ae_step>))),
+              isint(json_query(%q<ae_def>,extract,$.onset)),[u(FUN`ENC`PATCH,%0,json(object,aff,json(object,%2,json(object,name,json(string,%1),def,%q<ae_def>,stage,0,pend,%q<ae_step>,next,json_query(%q<ae_def>,extract,$.onset),left,firstof(json_query(%q<ae_def>,extract,$.max),null),conds,""))))]%b%q<ae_tname> is afflicted: onset in [json_query(%q<ae_def>,extract,$.onset)] round[if(neq(json_query(%q<ae_def>,extract,$.onset),1),s)].,
+              [u(FUN`ENC`PATCH,%0,json(object,aff,json(object,%2,json(object,name,json(string,%1),def,%q<ae_def>,stage,0,next,1,left,firstof(json_query(%q<ae_def>,extract,$.max),null),conds,""))))][u(FUN`AFF`ENTER,%0,%2,min(%q<ae_stages>,%q<ae_step>))])]])]
+        flags: [funsyntax]
+      # A stage reached: the last stage's conditions off, this one's on, its damage taken; its duration until the next save.
+      FUN`AFF`ENTER:
+        value: |-
+          @@(%0 a combatant's index, %1 the affliction's slug, %2 the stage: text)[
+          setq(aen,json_query(u(FUN`ENC`C,%0,aff),extract,$\["%1"\]))][
+          setq(aen_stage,json_query(%q<aen>,extract,$.def.stages\[[dec(%2)]\]))][
+          setq(aen_name,u(FUN`ENC`C,%0,name))][
+          null(iter(json_query(%q<aen>,extract,$.conds),u(FUN`ENC`PATCH,%0,json(object,conds,json(object,first(%i0,~),null)))))][
+          null(iter(json_query(%q<aen_stage>,extract,$.conds),u(FUN`ENC`PATCH,%0,json(object,conds,json(object,first(%i0,~),max(rest(%i0,~),firstof(json_query(u(FUN`ENC`C,%0,conds),extract,$\["[first(%i0,~)]"\]),0)))))))][
+          u(FUN`ENC`PATCH,%0,json(object,aff,json(object,%1,json(object,stage,%2,next,json_query(%q<aen_stage>,extract,$.dur),pend,null,conds,json(string,json_query(%q<aen_stage>,extract,$.conds))))))][
+          %b%q<aen_name> is at stage %2 of [json_query(%q<aen>,extract,$.name)]: [u(FUN`AFF`SUMMARY,%q<aen_stage>)].[if(strlen(setr(aen_dmg,json_query(%q<aen_stage>,extract,$.dmg))),[u(FUN`ACT`DAMAGE,%q<aen_dmg>,0)][setqm(iwr_opts,item:type:affliction,dmg_ignore,)][u(FUN`ACT`IWR,%0)][u(FUN`ACT`HARM,%0,%q<dmg_total>,0)]%bDamage %q<dmg_text>[u(FUN`ACT`IWR`TEXT)]. %q<harm_text>.)]]
+        flags: [funsyntax]
+      FUN`AFF`END:
+        value: |-
+          @@(%0 a combatant's index, %1 the affliction's slug: its conditions off, and it gone)[
+          setq(aend,json_query(u(FUN`ENC`C,%0,aff),extract,$\["%1"\]))][
+          null(iter(json_query(%q<aend>,extract,$.conds),u(FUN`ENC`PATCH,%0,json(object,conds,json(object,first(%i0,~),null)))))][
+          u(FUN`ENC`PATCH,%0,json(object,aff,json(object,%1,null)))]
+        flags: [funsyntax]
+      # At the end of the afflicted one's turn: the maximum duration counts down, and when a stage's time is up its save:
+      # two stages better on a critical success, one on a success, one worse on a failure, two on a critical failure.
+      FUN`AFF`TICK:
+        value: |-
+          @@(%0 a combatant's index: adds to next_text)[
+          setq(atk_all,firstof(u(FUN`ENC`C,%0,aff),json(object)))][
+          null(iter(json_map(%!/FUN`JSON`KEY,%q<atk_all>,%b),
+            [setq(atk,json_query(%q<atk_all>,extract,$\["%i0"\]))][
+            setqm(atk_left,json_query(%q<atk>,extract,$.left),atk_next,dec(json_query(%q<atk>,extract,$.next)),atk_name,json_query(%q<atk>,extract,$.name))][
+            switch(1,
+              cand(isint(%q<atk_left>),lte(%q<atk_left>,1)),[u(FUN`AFF`END,%0,%i0)][setq(next_text,%q<next_text>%r[u(FUN`ENC`C,%0,name)]'s %q<atk_name> ends: its maximum duration is over.)],
+              gt(%q<atk_next>,0),u(FUN`ENC`PATCH,%0,json(object,aff,json(object,%i0,json(object,next,%q<atk_next>,left,if(isint(%q<atk_left>),dec(%q<atk_left>),null))))),
+              [u(FUN`ENC`PATCH,%0,json(object,aff,json(object,%i0,json(object,left,if(isint(%q<atk_left>),dec(%q<atk_left>),null)))))][
+              setq(next_text,%q<next_text>%r[u(FUN`AFF`STEP,%0,%i0)])])]))]
+        flags: [funsyntax]
+      FUN`AFF`STEP:
+        value: |-
+          @@(%0 a combatant's index, %1 an affliction's slug whose stage time is up: a line)[
+          setq(ast,json_query(u(FUN`ENC`C,%0,aff),extract,$\["%1"\]))][
+          setqm(ast_def,json_query(%q<ast>,get,def),ast_name,u(FUN`ENC`C,%0,name),ast_aff,json_query(%q<ast>,extract,$.name))][
+          if(isint(json_query(%q<ast>,extract,$.pend)),
+            %q<ast_name>'s %q<ast_aff> takes hold.[u(FUN`AFF`ENTER,%0,%1,json_query(%q<ast>,extract,$.pend))],
+            [u(FUN`ENC`PREPARE,%0)][
+            u(FUN`ACT`CHECK,json_query(%q<ast_def>,extract,$.save),json_query(%q<ast_def>,extract,$.dc))][
+            setq(ast_new,min(json_query(json_query(%q<ast_def>,get,stages),size),add(json_query(%q<ast>,extract,$.stage),extract(2 1 -1 -2,inc(%q<roll_degree>),1))))][
+            %q<ast_name>'s [u({{commands}}/FUN`SHOW`STAT,json_query(%q<ast_def>,extract,$.save))] against %q<ast_aff>: [json_query(%q<roll_record>,extract,$.text)][u(FUN`ACT`TAGS)] vs DC [json_query(%q<ast_def>,extract,$.dc)]: [tone(strong,u(FUN`ACT`DEGREE,%q<roll_degree>))].[if(lte(%q<ast_new>,0),[u(FUN`AFF`END,%0,%1)]%b%q<ast_name> recovers from %q<ast_aff>.,u(FUN`AFF`ENTER,%0,%1,%q<ast_new>))]])]
+        flags: [funsyntax]
+      # +enc/afflict <who>=<poison or disease> exposes anyone to an affliction from the game's items (the GM); =-<name> ends one.
+      INC`ENC`AFFLICT:
+        value: |-
+          @include %!/INC`ENC`NEEDGM; think setqm(aff_who,trim(before(%q<cmd_args>,=)),aff_what,trim(after(%q<cmd_args>,=))); @assert cand(strlen(%q<aff_what>),strlen(setr(act_at,u(%!/FUN`ENC`FIND,%q<aff_who>))))=@pemit %#=notice(PF2E,+enc/afflict <who>=<poison or disease> exposes them%; +enc/afflict <who>=-<name> ends one.,warn); @break strmatch(%q<aff_what>,-*)={think setq(aff_all,firstof(u(%!/FUN`ENC`C,%q<act_at>,aff),json(object))); think setq(aff_key,first(iter(json_map(%!/FUN`JSON`KEY,%q<aff_all>,%b),if(strmatch(json_query(%q<aff_all>,extract,$\["%i0"\].name),*[trim(after(%q<aff_what>,-))]*),%i0)))); @assert strlen(%q<aff_key>)=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] has no affliction called [trim(after(%q<aff_what>,-))].,warn); think setq(aff_name,json_query(%q<aff_all>,extract,$\["%q<aff_key>"\].name)); think u(%!/FUN`AFF`END,%q<act_at>,%q<aff_key>); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)]'s %q<aff_name> ends.)}; @assert strlen(setr(aff_id,u({{core}}/FUN`ITEM`FIND,equipment,%q<aff_what>)))=@pemit %#=notice(PF2E,There is no poison or disease called %q<aff_what>.,warn); think setqm(aff_store,u({{core}}/DATA`PACK`EQUIPMENT),aff_item,u({{core}}/FUN`ITEM`GET,equipment,%q<aff_id>)); think setq(aff_text,get(%q<aff_store>/ITEM`%q<aff_id>`TEXT)); @assert strmatch(%q<aff_text>,*Stage 1*)=@pemit %#=notice(PF2E,[json_query(%q<aff_item>,extract,$.name)] has no stages.,warn); think setq(aff_line,u(%!/FUN`AFF`EXPOSE,%q<act_at>,json_query(%q<aff_item>,extract,$.name),u({{core}}/FUN`ITEM`SLUG,%q<aff_item>),u(%!/FUN`AFF`PARSE,%q<aff_text>),json_map({{core}}/FUN`RULE`SELECTOR,firstof(json_query(%q<aff_item>,extract,$.system.traits.value),json(array)),%b))); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,%q<aff_line>)
+        flags: [cmdsyntax]
       # --- Turns ---------------------------------------------------------------------------------
       FUN`TURN: Initiative and turns.
       # Initiative for combatant %0 with skill %1, else what their exploration activity gives
@@ -7367,6 +7509,7 @@ objects:
           if(isnum(setr(end_frightened,json_query(u(FUN`ENC`C,%0,conds),extract,$.frightened))),
             [u(FUN`ENC`PATCH,%0,json(object,conds,json(object,frightened,if(gt(%q<end_frightened>,1),dec(%q<end_frightened>),null))))][
             setq(next_text,%q<next_text>%r[u(FUN`ENC`C,%0,name)] is [if(gt(%q<end_frightened>,1),now frightened [dec(%q<end_frightened>)],no longer frightened)].)])][
+          u(FUN`AFF`TICK,%0)][
           setq(end_key,u(FUN`ENC`C,%0,k))][
           null(iter(u(FUN`ENC`INDEXES),u(FUN`TURN`ENDTICK,%i0,%q<end_key>)))]
         flags: [funsyntax]
@@ -7616,7 +7759,7 @@ objects:
           @@(%0 a combatant's index: their conditions and persistent damage, as a list)[
           setqm(show_conds,u(FUN`ENC`C,%0,conds),show_pers,u(FUN`ENC`C,%0,pers))][
           setq(show_fx,firstof(u(FUN`ENC`C,%0,fx),json(object)))][
-          itemize(squish([if(t(u(FUN`ENC`C,%0,raised)),shield raised|)][iter(json_map(%!/FUN`JSON`KEY,%q<show_fx>,%b),[u(FUN`FX`NAME,setr(show_fxpack,edit(json_query(%q<show_fx>,extract,$\["%i0"\].pack),",)),%i0)][u(FUN`FX`BADGE`SHOW,%q<show_fxpack>,%i0,json_query(%q<show_fx>,extract,$\["%i0"\].badge))],%b,|)]|[iter(json_map(%!/FUN`JSON`KEY,%q<show_conds>,%b),%i0[if(json_query(%q<show_conds>,extract,$.%i0),%b[json_query(%q<show_conds>,extract,$.%i0)])],%b,|)]|[iter(json_map(%!/FUN`JSON`KEY,%q<show_pers>,%b),persistent [json_query(%q<show_pers>,extract,$.%i0)] %i0,%b,|)],|),|)]
+          itemize(squish([if(t(u(FUN`ENC`C,%0,raised)),shield raised|)][iter(json_map(%!/FUN`JSON`KEY,%q<show_fx>,%b),[u(FUN`FX`NAME,setr(show_fxpack,edit(json_query(%q<show_fx>,extract,$\["%i0"\].pack),",)),%i0)][u(FUN`FX`BADGE`SHOW,%q<show_fxpack>,%i0,json_query(%q<show_fx>,extract,$\["%i0"\].badge))],%b,|)]|[iter(json_map(%!/FUN`JSON`KEY,%q<show_conds>,%b),%i0[if(json_query(%q<show_conds>,extract,$.%i0),%b[json_query(%q<show_conds>,extract,$.%i0)])],%b,|)]|[iter(json_map(%!/FUN`JSON`KEY,%q<show_pers>,%b),persistent [json_query(%q<show_pers>,extract,$.%i0)] %i0,%b,|)]|[iter(json_map(%!/FUN`JSON`KEY,setr(show_aff,firstof(u(FUN`ENC`C,%0,aff),json(object))),%b),[json_query(%q<show_aff>,extract,$\["%i0"\].name)] [if(json_query(%q<show_aff>,extract,$\["%i0"\].stage),stage [json_query(%q<show_aff>,extract,$\["%i0"\].stage)],onset)],%b,|)],|),|)]
         flags: [funsyntax]
       FUN`SHOW`LOOK:
         value: |-
@@ -8016,6 +8159,7 @@ objects:
         - Hide, Sneak (Stealth against Perception) and Seek (Perception against Stealth): one secret roll against each foe still up, or the ones named, with commas.
         - Create a Diversion: Deception against each foe's Perception, or the ones named.
         - Steal (Thievery against Perception), Request (Diplomacy against Will), Command an Animal (Nature against Will): the result's note.
+        - Grab, Improved Grab, Knockdown, Improved Knockdown, Push, Improved Push `<target>`: a creature's actions after a Strike that lists them hits. Grab holds the target grabbed until the end of the creature's next turn; Knockdown knocks it prone.
         - Aid `<ally>=<skill>`: a reaction against DC 15. The Aid effect on the ally: +1 on a success, +2 on a critical success (+3 at master, +4 at legendary), -1 on a critical failure. It ends after the ally's next check or attack roll, as every effect that ends after a roll does.
 
         A secret action tells the room only that it happened; the encounter's GM gets the roll.
@@ -8057,9 +8201,10 @@ objects:
 
         - `+enc/init` rolls initiative for everyone without it, and `+enc/next` starts the next turn. At the start of a turn a creature's regeneration or fast healing heals it, unless damage of a type that stops its regeneration hit it since its last turn, and a dying character makes a recovery check. At the end of a turn persistent damage is rolled with its DC 15 flat check (lower for a creature whose rules lower it, such as a charhide goblin against fire), and frightened goes down.
         - `+enc/look <creature>` shows its statistics, Strikes and abilities, elite or weak and conditions counted. Only you see a creature's; characters use `+recall`.
-        - `+enc/strike <who>:<target>\[=<Strike>\]` Strikes for anyone, such as `+enc/strike 4:Amiri=Jaws`. A creature immune to critical hits takes a critical hit as a hit.
+        - `+enc/strike <who>:<target>\[=<Strike>\]` Strikes for anyone, such as `+enc/strike 4:Amiri=Jaws`. A creature immune to critical hits takes a critical hit as a hit. A hit brings the Strike's attack effects: an affliction, such as a venom, is saved against at once; Grab, Knockdown and Push are named with their `+act` command.
         - `+enc/damage <who>=<amount or formula>` and `+enc/heal <who>=<amount or formula>`. A typed formula such as `2d6 fire` meets weaknesses, resistances and immunities. `+enc/damage/half` halves the damage, rounded down, and `+enc/damage/double` doubles it, both before weaknesses and resistances.
         - `+enc/cond <who>=<condition>\[ <value>\]\[/<rounds>\]`, where a value of 0 takes it off, and `+enc/persist <who>=<formula> <type>`, where `0 <type>` ends it.
+        - `+enc/afflict <who>=<poison or disease>` exposes anyone to an affliction from the game's items, such as `+enc/afflict Amiri=arsenic`; `=-<name>` ends one. A failed save starts stage 1, a critical failure stage 2, after the onset. At the end of the afflicted one's turn, when the stage's time is up, they save again: two stages better on a critical success, one on a success, one worse on a failure, two on a critical failure. Each stage brings its damage and conditions; the maximum duration ends it.
         - `+enc/effect <who>=<effect>` gives anyone an effect from Foundry's effects, such as `+enc/effect Amiri=Inspire Courage`; `=-<effect>` ends it. An effect with a choice takes `as <choice>`, and one on an item `on <item>`: `+enc/effect Amiri=Precious Metals as silver on greataxe`. Without `on`, it goes on the only item that fits.
         - `+enc/badge <who>=<effect> <value>` sets an effect's badge, the number Foundry shows on it, such as Bless's aura or the hydra's heads; `+1` and `-1` move it. A counter starts at its own value and a formula, such as Devise a Stratagem's d20, is rolled when the effect starts. A counter taken below its least ends the effect. Effects end on their own when their rounds are over.
         - `+enc/keep \[<who>\]` writes characters' Hit Points, wounded, the day's spells, Focus Points and items made, and the consumables used, and the damage their shields took, back to their sheets. Without it, a fight leaves sheets as they were.
