@@ -1,7 +1,7 @@
 format: "1.16"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.8.1"
+version: "0.8.2"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -1460,7 +1460,7 @@ objects:
         flags: [funsyntax]
       FUN`SPELL: A spell as cast. FUN`SPELL`PREPARE reads one into spell_ registers.
       # %0 a spell's id, %1 the rank it is cast at, %2 how many actions (or nothing), %3 a variant's name
-      # (or nothing), %4 1 when it is cast on an ally. Sets spell_name, spell_base (its own rank),
+      # (or nothing), %4 1 when it is cast on an ally. Sets spell_id, spell_name, spell_base (its own rank),
       # spell_rank, spell_variant (the variant's name), spell_sys (its system data with the variant and
       # heightening applied), spell_traits, spell_attack (1 for a spell attack), spell_save and spell_basic,
       # spell_dmg (damage, formula and type, separated by commas), spell_pers (persistent damage),
@@ -1468,7 +1468,7 @@ objects:
       FUN`SPELL`PREPARE:
         value: |-
           @@(%0 id, %1 rank, %2 actions, %3 variant, %4 1 for an ally)[
-          setq(spell_item,u(FUN`ITEM`GET,spells,%0))][
+          setqm(spell_id,%0,spell_item,u(FUN`ITEM`GET,spells,%0))][
           setq(spell_sys,json_query(%q<spell_item>,extract,$.system))][
           setqm(spell_name,edit(json_query(%q<spell_item>,extract,$.name),",),spell_base,firstof(json_query(%q<spell_sys>,extract,$.level.value),1),spell_rank,%1,spell_variant,,spell_overlay,)][
           setq(spell_overlays,json_query(%q<spell_sys>,extract,$.overlays))][
@@ -2339,6 +2339,42 @@ objects:
             [setqm(to_value,elements(%0,4,~),to_mtype,firstof(elements(%0,9,~),untyped))][
             setq(to_kind,switch(1,cand(gte(%q<to_value>,0),not(match(ability untyped,%q<to_mtype>))),bonus,cand(lt(%q<to_value>,0),comp(%q<to_mtype>,ability)),penalty,modifier))]
             %q<to_kind>:slug:%q<to_slug> %q<to_kind>:type:%q<to_mtype> %q<to_kind>:value:%q<to_value> damage %q<to_kind>:damage [if(strlen(%q<to_type>),damage:type:%q<to_type> %q<to_kind>:damage:type:%q<to_type>)] [if(strlen(%q<to_cat>),damage:category:%q<to_cat> %q<to_kind>:damage:category:%q<to_cat>)])]
+        flags: [funsyntax]
+      # A spell's damage, after FUN`SPELL`PREPARE and the caster's FUN`CHECK`PREPARE, as Foundry's SpellPF2e.getDamage
+      # builds it: the spell's damage as base terms, then the modifiers, DamageDice and DamageAlteration rules
+      # for damage, spell-damage, <spell id>-damage, and attack-damage and attack-spell-damage for an attack.
+      FUN`DAMAGE`SPELL:
+        value: |-
+          @@(%0 the damage, formula and type, separated by commas, %1 persistent damage the same way, %2 more roll options)[
+          u(FUN`DAMAGE`RULES)][
+          setq(dmg_domains,squish(damage spell-damage [if(strlen(%q<spell_id>),[lcstr(%q<spell_id>)]-damage)] [if(%q<spell_attack>,attack-damage attack-spell-damage)]))][
+          setqm(dmg_type,firstof(last(first(%0,%,)),untyped),dmg_over,,dmg_upgraded,0,dmg_weapon,,dmg_n,0,dmg_pn,0)][
+          setq(dmg_options,setunion(%q<check_options> action:cast-a-spell self:action:slug:cast-a-spell %q<spell_traits> %q<cast_trad> [iter(json_query(get(u(DATA`PACK`SPELLS)/ITEM`%q<spell_id>`PREP),extract,$.opts),if(strmatch(%i0,item:rank:*),,%i0))] item:rank:%q<spell_rank> %2 [u(FUN`ROLLOPTION`DOMAINS,%q<dmg_domains>)],))][
+          setq(dmg_plan,trim(squish(
+            [iter(%0,u(FUN`DAMAGE`SPELL`TERMS,trim(%i0),),%,,|)]|[
+            iter(%1,u(FUN`DAMAGE`SPELL`TERMS,trim(%i0),persistent),%,,|)]|[
+            iter(u(FUN`CHECK`MODS,,%q<dmg_domains>,%q<dmg_options>),u(FUN`DAMAGE`MODTERM,%i0),%b,|)]|[
+            u(FUN`DAMAGE`RULEDICE)],|),|))][
+          u(FUN`DAMAGE`ALTER)]
+        flags: [funsyntax]
+      # One part of a spell's damage as terms: its first dice are the base (the persistent base for persistent
+      # damage), the others base-<n>; a formula Foundry's terms do not parse, such as one reading the actor, is left out.
+      FUN`DAMAGE`SPELL`TERMS:
+        value: |-
+          @@(%0 a formula and its type, %1 the category)[
+          setqm(dst_type,lcstr(last(%0)),dst_f,edit(edit(edit(edit(revwords(rest(revwords(%0))),%b,),%(,),%),),-,+-))][
+          iter(%q<dst_f>,
+            if(regmatch(%i0,^%(\\d*%)d%(\\d+%)$,0 dst_n dst_d),
+              [u(FUN`DAMAGE`SPELL`SLUG,%1)]~[firstof(%q<dst_n>,1)]~%q<dst_d>~0~%q<dst_type>~%1~n~~,
+              if(isint(%i0),[u(FUN`DAMAGE`SPELL`SLUG,%1,1)]~0~0~%i0~%q<dst_type>~%1~n~~untyped)),
+            +,|)]
+        flags: [funsyntax]
+      FUN`DAMAGE`SPELL`SLUG:
+        value: |-
+          @@(%0 the category, %1 1 for a constant)[
+          if(strmatch(%0,persistent),
+            [setq(dmg_pn,inc(%q<dmg_pn>))][if(cand(eq(%q<dmg_pn>,1),not(%1)),base,base-p%q<dmg_pn>)],
+            [setq(dmg_n,inc(%q<dmg_n>))][if(cand(eq(%q<dmg_n>,1),not(%1)),base,base-%q<dmg_n>)])]
         flags: [funsyntax]
       # The damage at a degree of success (3 a critical hit, 2 a hit, 1 a miss, which deals only splash),
       # after FUN`DAMAGE`STRIKE: the overrides that apply change the base dice, then the terms are summed by
@@ -5227,7 +5263,9 @@ objects:
         value: |-
           @@(spell_ registers)[
           setqm(cast_dmg_parts,,cast_dmg_text,,cast_heal_n,0,cast_heal_text,,cast_say,)][
-          if(strlen(%q<spell_dmg>),[u(FUN`ACT`DAMAGE,%q<spell_dmg>,0)][setqm(cast_dmg_parts,%q<dmg_parts>,cast_dmg_text,trim(%q<dmg_text>),cast_dmg_raw,%q<dmg_raw>)])][
+          if(cor(strlen(%q<spell_dmg>),strlen(%q<spell_pers>)),
+            [u({{core}}/FUN`DAMAGE`SPELL,%q<spell_dmg>,%q<spell_pers>,)][u({{core}}/FUN`DAMAGE`FORMULA,2)][u(FUN`ACT`DAMAGE`ROLL)][
+            setqm(cast_dmg_parts,%q<dmg_parts>,cast_dmg_text,trim(%q<dmg_text>),cast_dmg_raw,%q<dmg_raw>,spell_pers,iter(%q<dmg_pers>,first(%i0,~),|,%,%b))])][
           if(strlen(%q<spell_heal>),[u(FUN`ACT`DAMAGE,%q<spell_heal>,0)][setqm(cast_heal_n,%q<dmg_total>,cast_heal_text,trim(%q<dmg_text>))])][
           setq(cast_say,trim(squish([if(%q<spell_attack>,Spell attack [u(FUN`SHOW`SIGNED,%q<cast_atk>)].)] [if(strlen(%q<spell_save>),DC %q<cast_dc> [if(%q<spell_basic>,basic%b)][capstr(%q<spell_save>)].)] [if(strlen(%q<cast_dmg_text>),Damage %q<cast_dmg_text>[if(gt(words(%q<cast_dmg_parts>,|),1),%b= %q<cast_dmg_raw>)].)] [if(strlen(%q<spell_pers>),Persistent %q<spell_pers>.)] [if(strlen(%q<cast_heal_text>),Healing %q<cast_heal_text>.)])))]
         flags: [funsyntax]
@@ -6122,6 +6160,7 @@ objects:
         `+cast <spell>\[ at <rank>\]\[ with <n> actions\]\[ as <form>\]\[=<targets>\]`
 
         - A spell attack rolls against each target's AC with your multiple attack penalty; a save is rolled for each target against your spell DC, with the damage of a basic save.
+        - The damage is rolled once for every target, with what your feats and effects add to spell damage, such as a status bonus to damage.
         - Heal and Harm heal allies and harm foes. Name targets with commas, or `foes`, `characters` or `everyone`.
         - A spell that brings an effect, such as Animal Form, Mystic Armor or Bless, gives it to an ally you name, or you. Name the form when there are several: `+cast animal form as ape`. A battle form gives its Strikes, AC, skills and Speed until it ends.
         - Outside an encounter `+cast` spends from your sheet's day and heals the characters you name.
