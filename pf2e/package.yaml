@@ -1,7 +1,7 @@
 format: "1.16"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.9.1"
+version: "0.9.2"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -92,9 +92,13 @@ objects:
       # ledger read again costs a few hundred function calls. The key is the ledger with the package's
       # version, the books and CACHE`STAMP, which the updater and the deity table change. CACHE lists
       # the keys oldest first; past DATA`CACHE`KEEP the oldest goes.
-      DATA`CACHE`VERSION: "0.9.1"
+      DATA`CACHE`VERSION: "0.9.2"
       DATA`CACHE`KEEP: 200
-      DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
+      DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_itemalts check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
+      # The ItemAlteration properties the core applies, by the kind of item they reach.
+      DATA`ITEMALT`WEAPON: other-tags traits damage-type damage-dice-faces damage-dice-number runes-potency runes-striking
+      DATA`ITEMALT`ARMOR: runes-potency runes-resilient ac-bonus
+      DATA`ITEMALT`SHIELD: hardness
       # Foundry's damage types.
       DATA`DAMAGE`TYPES: acid bleed bludgeoning cold electricity fire force mental piercing poison slashing sonic spirit untyped vitality void
       # The proficiencies other than the statistics: weapon categories, armor categories, spellcasting and the class DC.
@@ -1282,7 +1286,7 @@ objects:
           setq(check_entries,u(FUN`SHEET`ENTRIES,%0))][
           setq(check_level,u(FUN`SHEET`LEVEL,%q<check_entries>))][
           setq(check_grants,u(FUN`SHEET`GRANTS,%q<check_entries>,%q<check_level>))][
-          setqm(check_options,self:level:%q<check_level>,check_conditions,,check_static,,check_dynamic,,check_names,,check_unapplied,,check_upgrades,,check_rankdyn,,check_strikes,,check_martial,,check_forms,,check_adjust,,check_rollrules,,check_dmgready,0,check_rollopts,,check_toggles,,check_domopts,,check_actortraits,,check_traits,,check_adjstrike,,check_resgrants,,check_craftgrants,,check_favoredrules,,check_ancestry,,check_heritage,,check_background,,check_class,)][
+          setqm(check_options,self:level:%q<check_level>,check_conditions,,check_static,,check_dynamic,,check_names,,check_unapplied,,check_upgrades,,check_rankdyn,,check_strikes,,check_martial,,check_forms,,check_adjust,,check_rollrules,,check_dmgready,0,check_rollopts,,check_toggles,,check_domopts,,check_actortraits,,check_traits,,check_adjstrike,,check_itemalts,,check_resgrants,,check_craftgrants,,check_favoredrules,,check_ancestry,,check_heritage,,check_background,,check_class,)][
           null(iter(%q<check_grants>,u(FUN`CHECK`GRANT,%i0)))][
           u(FUN`CHECK`DEITY)][
           null(iter(%q<check_actortraits>,u(FUN`CHECK`ACTORTRAITS,%i0)))][
@@ -1414,6 +1418,95 @@ objects:
         value: |-
           @@(json_map's callback, %1 a rule)[
           if(cand(strmatch(json_query(%1,extract,$.key),AdjustStrike),not(match(traits weapon-traits,json_query(%1,extract,$.property)))),x)]
+        flags: [funsyntax]
+      # ItemAlteration: a rule that changes another item. The core applies those on a Strike (traits, damage-type,
+      # damage-dice-faces, damage-dice-number, runes-potency, runes-striking), on the worn armor (runes-potency,
+      # runes-resilient, ac-bonus) and on the held shield (hardness). DATA`ITEMALT`<kind> lists the properties.
+      FUN`CHECK`ITEMALT`OTHER:
+        value: |-
+          @@(%0 a pack, %1 an id: 1 when one of its ItemAlteration rules is one the core does not apply)[
+          t(words(json_map(me/FUN`CHECK`ITEMALT`OTHER`ONE,firstof(json_query(u(FUN`ITEM`GET,%0,%1),extract,$.system.rules),json(array)),%b)))]
+        flags: [funsyntax]
+      FUN`CHECK`ITEMALT`OTHER`ONE:
+        value: |-
+          @@(json_map's callback, %1 a rule)[
+          if(strmatch(json_query(%1,extract,$.key),ItemAlteration),
+            if(not(member(v(DATA`ITEMALT`[switch(1,t(strlen(json_query(%1,extract,$.itemType))),json_query(%1,extract,$.itemType),strmatch(json_query(%1,extract,$.itemId),xxxxxxFISTxxxxxx),weapon,item)]),json_query(%1,extract,$.property))),x))]
+        flags: [funsyntax]
+      # Runs %3 with each ItemAlteration rule of check_itemalts that reaches an item and whose predicate holds,
+      # lowest priority first: u(%3,rule,roll data), the roll data the granting item's with the actor's. %2 gives
+      # the item's roll options again before each rule, so a tag one rule adds reaches the next.
+      FUN`ITEMALT`EACH:
+        value: |-
+          @@(%0 the item's kind: weapon, armor or shield, %1 its id, %2 the attribute giving its roll options, %3 the attribute to run)[
+          setq(alt_all,iter(%q<check_itemalts>,iter(json_map(me/FUN`CHECK`RULEKEY,firstof(json_query(u(FUN`ITEM`GET,first(%i0,~),elements(%i0,2,~)),extract,$.system.rules),json(array)),%b,ItemAlteration),[firstof(json_query(u(FUN`ITEM`GET,first(%i1,~),elements(%i1,2,~)),extract,$.system.rules\[%i0\].priority),100)]~%i1~%i0)))][
+          null(iter(iter(sort(setunion(iter(%q<alt_all>,first(%i0,~)),),n),graball(%q<alt_all>,%i0~*)),
+            [setq(alt_item,u(FUN`ITEM`GET,elements(%i0,2,~),elements(%i0,3,~)))][
+            setq(alt_rule,json_query(%q<alt_item>,extract,$.system.rules\[[last(%i0,~)]\]))][
+            setq(alt_data,json(object,actor,%q<check_actor>,item,u(FUN`ITEM`DATA,%q<alt_item>,elements(%i0,4,~),u(FUN`CHECK`CHOICES,elements(%i0,5,~)))))][
+            if(cand(cor(strmatch(json_query(%q<alt_rule>,extract,$.itemType),%0),
+                match(%1 [if(strmatch(%1,fist),xxxxxxFISTxxxxxx)],edit(u(FUN`FORMULA`INJECT,json_query(%q<alt_rule>,extract,$.itemId),%q<alt_data>),",))),
+              u(FUN`PREDICATE`TEST,firstof(json_query(%q<alt_rule>,get,predicate),json(array)),%q<check_options> [u(%2)])),
+              u(%3,%q<alt_rule>,%q<alt_data>))]))]
+        flags: [funsyntax]
+      # A number an ItemAlteration changes: upgrade keeps the larger, downgrade the smaller.
+      FUN`ITEMALT`NUMBER:
+        value: |-
+          @@(%0 the number, %1 the mode, %2 the rule's value)[
+          switch(%1,upgrade,max(%0,%2),downgrade,min(%0,%2),add,add(%0,%2),subtract,sub(%0,%2),multiply,mul(%0,%2),override,%2,%0)]
+        flags: [funsyntax]
+      # A damage die one step bigger or smaller, or the die an ItemAlteration names.
+      FUN`ITEMALT`DIE:
+        value: |-
+          @@(%0 the die, such as d6, %1 the mode, %2 the rule's value: faces, or nothing for a step)[
+          switch(%1,
+            upgrade,if(isint(%2),d[max(after(%0,d),%2)],extract(d6 d8 d10 d12 d12,match(d4 d6 d8 d10 d12,%0),1)),
+            downgrade,if(isint(%2),d[min(after(%0,d),%2)],extract(d4 d4 d6 d8 d10,match(d4 d6 d8 d10 d12,%0),1)),
+            override,if(isint(%2),d%2,%0),
+            %0)]
+        flags: [funsyntax]
+      # A Strike with the ItemAlteration rules that reach its weapon applied.
+      FUN`STRIKE`ALTER:
+        value: |-
+          @@(%0 a Strike)[
+          setq(alt_strike,%0)][
+          u(FUN`ITEMALT`EACH,weapon,json_query(%0,extract,$.id),FUN`STRIKE`ALTER`OPTIONS,FUN`STRIKE`ALTER`RULE)]%q<alt_strike>
+        flags: [funsyntax]
+      FUN`STRIKE`ALTER`OPTIONS:
+        value: |-
+          @@(alt_strike the Strike: its roll options)[
+          squish(item:type:weapon item:id:[json_query(%q<alt_strike>,extract,$.id)] item:slug:[json_query(%q<alt_strike>,extract,$.slug)] item:category:[json_query(%q<alt_strike>,extract,$.category)] item:group:[json_query(%q<alt_strike>,extract,$.group)] item:base:[json_query(%q<alt_strike>,extract,$.base)] item:damage:type:[json_query(%q<alt_strike>,extract,$.type)] item:damage:die:faces:[after(json_query(%q<alt_strike>,extract,$.die),d)] item:usage:hands:[firstof(json_query(%q<alt_strike>,extract,$.hands),1)] [if(gt(firstof(json_query(%q<alt_strike>,extract,$.range),0),0),item:ranged,item:melee)] [if(strlen(json_query(%q<alt_strike>,extract,$.where)),,item:equipped)] [iter(json_query(%q<alt_strike>,extract,$.traits),item:trait:%i0)] [iter(json_query(%q<alt_strike>,extract,$.tags),item:tag:%i0)])]
+        flags: [funsyntax]
+      FUN`STRIKE`ALTER`RULE:
+        value: |-
+          @@(%0 an ItemAlteration rule, %1 the roll data; alt_strike the Strike)[
+          setqm(alt_mode,json_query(%0,extract,$.mode),alt_value,u(FUN`FORMULA`VALUE,firstof(json_query(%0,get,value),null),%1,))][
+          switch(json_query(%0,extract,$.property),
+            other-tags,if(strmatch(%q<alt_mode>,remove),setq(alt_strike,json_mod(%q<alt_strike>,patch,json(object,tags,json(string,remove(json_query(%q<alt_strike>,extract,$.tags),%q<alt_value>))))),setq(alt_strike,json_mod(%q<alt_strike>,patch,json(object,tags,json(string,squish(setunion(json_query(%q<alt_strike>,extract,$.tags),%q<alt_value>))))))),
+            traits,setq(alt_strike,json_mod(%q<alt_strike>,patch,json(object,traits,json(string,squish(if(strmatch(%q<alt_mode>,remove),remove(json_query(%q<alt_strike>,extract,$.traits),edit(json_query(%0,get,value),",)),setunion(json_query(%q<alt_strike>,extract,$.traits),iter(u(FUN`CHECK`TRAITS`OF,if(strmatch(json_query(%0,get,value),\[*),json_query(%0,get,value),json(array,json_query(%0,get,value))),add),after(%i0,add:))))))))),
+            damage-type,if(strmatch(%q<alt_mode>,override),setq(alt_strike,json_mod(%q<alt_strike>,patch,json(object,type,json(string,%q<alt_value>))))),
+            damage-dice-faces,setq(alt_strike,json_mod(%q<alt_strike>,patch,json(object,die,json(string,u(FUN`ITEMALT`DIE,json_query(%q<alt_strike>,extract,$.die),%q<alt_mode>,%q<alt_value>))))),
+            damage-dice-number,setq(alt_strike,json_mod(%q<alt_strike>,patch,json(object,dice,u(FUN`ITEMALT`NUMBER,json_query(%q<alt_strike>,extract,$.dice),%q<alt_mode>,firstof(%q<alt_value>,1))))),
+            runes-potency,setq(alt_strike,json_mod(%q<alt_strike>,patch,json(object,potency,u(FUN`ITEMALT`NUMBER,firstof(json_query(%q<alt_strike>,extract,$.potency),0),%q<alt_mode>,firstof(%q<alt_value>,0))))),
+            runes-striking,setq(alt_strike,json_mod(%q<alt_strike>,patch,json(object,striking,u(FUN`ITEMALT`NUMBER,firstof(json_query(%q<alt_strike>,extract,$.striking),0),%q<alt_mode>,firstof(%q<alt_value>,0))))))]
+        flags: [funsyntax]
+      # The worn armor or held shield with the ItemAlteration rules that reach it applied.
+      FUN`ITEM`ALTER:
+        value: |-
+          @@(%0 an armor or shield item, %1 armor or shield)[
+          setqm(alt_gear,%0,alt_kind,%1)][
+          if(words(%q<check_itemalts>),u(FUN`ITEMALT`EACH,%1,json_query(%0,extract,$._id),FUN`ITEM`ALTER`OPTIONS,FUN`ITEM`ALTER`RULE))]%q<alt_gear>
+        flags: [funsyntax]
+      FUN`ITEM`ALTER`OPTIONS:
+        value: |-
+          @@(alt_gear the item, alt_kind its kind: its roll options)[
+          squish(item:type:%q<alt_kind> item:id:[json_query(%q<alt_gear>,extract,$._id)] item:slug:[u(FUN`ITEM`SLUG,%q<alt_gear>)] item:equipped [if(strmatch(%q<alt_kind>,armor),item:category:[json_query(%q<alt_gear>,extract,$.system.category)] armor:category:[json_query(%q<alt_gear>,extract,$.system.category)])] [iter(json_map(me/FUN`RULE`SELECTOR,firstof(json_query(%q<alt_gear>,extract,$.system.traits.value),json(array)),%b),item:trait:%i0)])]
+        flags: [funsyntax]
+      FUN`ITEM`ALTER`RULE:
+        value: |-
+          @@(%0 an ItemAlteration rule, %1 the roll data; alt_gear the item)[
+          setqm(alt_mode,json_query(%0,extract,$.mode),alt_value,u(FUN`FORMULA`VALUE,firstof(json_query(%0,get,value),null),%1,0),alt_path,switch(json_query(%0,extract,$.property),runes-potency,runes.potency,runes-resilient,runes.resilient,ac-bonus,acBonus,hardness,hardness))][
+          if(strlen(%q<alt_path>),setq(alt_gear,json_mod(%q<alt_gear>,set,$.system.%q<alt_path>,u(FUN`ITEMALT`NUMBER,firstof(json_query(%q<alt_gear>,extract,$.system.%q<alt_path>),0),%q<alt_mode>,%q<alt_value>))))]
         flags: [funsyntax]
       FUN`CHECK`RULEKEY:
         value: |-
@@ -1623,7 +1716,7 @@ objects:
         value: |-
           @@(check_gear the gear)[
           setq(shield_id,first(iter(%q<check_gear>,if(cand(strmatch(elements(%i0,3,~),held),strmatch(json_query(get(u(DATA`PACK`EQUIPMENT)/ITEM`[first(%i0,~)]`PREP),extract,$.kind),shield)),first(%i0,~)))))][
-          if(strlen(%q<shield_id>),u(FUN`ITEM`RUNED,%q<shield_id>))]
+          if(strlen(%q<shield_id>),u(FUN`ITEM`ALTER,u(FUN`ITEM`RUNED,%q<shield_id>),shield))]
         flags: [funsyntax]
       # A synthetic's type~value~slug~force when its predicate holds for the roll options, else -: a
       # prepared synthetic's flat, its predicate tested only when it has one.
@@ -1656,6 +1749,7 @@ objects:
           if(member(%q<grant_unapplied>,CraftingAbility),[setq(check_craftgrants,%q<check_craftgrants> %q<grant_pack>~%q<grant_id>)][setq(grant_unapplied,remove(%q<grant_unapplied>,CraftingAbility))])][
           if(member(%q<grant_unapplied>,ActorTraits),[setq(check_actortraits,%q<check_actortraits> %q<grant_pack>~%q<grant_id>~%q<grant_badge>~%q<grant_index>)][setq(grant_unapplied,remove(%q<grant_unapplied>,ActorTraits))])][
           if(member(%q<grant_unapplied>,AdjustStrike),[setq(check_adjstrike,%q<check_adjstrike> %q<grant_pack>~%q<grant_id>~%q<grant_badge>~%q<grant_index>)][if(not(u(FUN`CHECK`ADJSTRIKE`OTHER,%q<grant_pack>,%q<grant_id>)),setq(grant_unapplied,remove(%q<grant_unapplied>,AdjustStrike)))])][
+          if(member(%q<grant_unapplied>,ItemAlteration),[setq(check_itemalts,%q<check_itemalts> %q<grant_pack>~%q<grant_id>~%q<grant_badge>~%q<grant_index>)][if(not(u(FUN`CHECK`ITEMALT`OTHER,%q<grant_pack>,%q<grant_id>)),setq(grant_unapplied,remove(%q<grant_unapplied>,ItemAlteration)))])][
           if(member(%q<grant_unapplied>,AdjustModifier),[setq(check_adjust,squish(%q<check_adjust> [u(FUN`CHECK`ADJUSTS,%q<grant_pack>,%q<grant_id>,%q<grant_badge>,%q<grant_index>)]))][setq(grant_unapplied,remove(%q<grant_unapplied>,AdjustModifier))])][
           if(member(%q<grant_unapplied>,RollOption),[setq(check_rollopts,%q<check_rollopts> %q<grant_pack>~%q<grant_id>~%q<grant_badge>~%q<grant_index>)][setq(grant_unapplied,remove(%q<grant_unapplied>,RollOption))])][
           null(iter(Note RollTwice AdjustDegreeOfSuccess SubstituteRoll DamageDice DamageAlteration Weakness Resistance Immunity DexterityModifierCap MultipleAttackPenalty BaseSpeed Sense CreatureSize,if(member(%q<grant_unapplied>,%i0),[setq(check_rollrules,%q<check_rollrules> %i0~%q<grant_pack>~%q<grant_id>~%q<grant_badge>~%q<grant_index>)][setq(grant_unapplied,remove(%q<grant_unapplied>,%i0))])))][
@@ -1996,7 +2090,7 @@ objects:
         value: |-
           @@(check_gear the gear)[
           setq(armor_id,first(iter(%q<check_gear>,if(cand(strmatch(elements(%i0,3,~),worn),strmatch(json_query(get(u(DATA`PACK`EQUIPMENT)/ITEM`[first(%i0,~)]`PREP),extract,$.kind),armor)),first(%i0,~)))))][
-          if(strlen(%q<armor_id>),u(FUN`ITEM`RUNED,%q<armor_id>))]
+          if(strlen(%q<armor_id>),u(FUN`ITEM`ALTER,u(FUN`ITEM`RUNED,%q<armor_id>),armor))]
         flags: [funsyntax]
       # The armor's check penalty on a Strength- or Dexterity-based skill check, when the wearer's
       # Strength is below the armor's: flexible armor spares Acrobatics and Athletics, noisy armor
@@ -2088,7 +2182,8 @@ objects:
             iter(%q<check_resources>,if(cand(strlen(elements(%i0,3,~)),strmatch(json_query(get(u(DATA`PACK`EQUIPMENT)/ITEM`[elements(%i0,3,~)]`PREP),extract,$.kind),weapon),gt(setr(strike_left,sub(elements(%i0,2,~),firstof(json_query(%q<check_daily>,extract,$.res\["[first(%i0,~)]"\]),0))),0)),u(FUN`STRIKE`USE,u(FUN`STRIKE`LEVELED,u(FUN`STRIKE`WEAPON,u(FUN`ITEM`GET,equipment,elements(%i0,3,~))),elements(%i0,3,~),elements(%i0,4,~)),res:[first(%i0,~)],%q<strike_left>,elements(%i0,3,~))),%b,|)]|[
             iter(%q<check_strikes>,[setq(strike_rule,json_query(u(FUN`ITEM`GET,elements(%i0,2,~),elements(%i0,3,~)),extract,$.system.rules\[[elements(%i0,4,~)]\]))][if(cand(not(t(json_query(%q<strike_rule>,extract,$.fist))),u(FUN`PREDICATE`TEST,firstof(json_query(%q<strike_rule>,get,predicate),json(array)),%q<check_options>)),u(FUN`STRIKE`RULE,%q<strike_rule>))],%b,|)]|[
             u(FUN`STRIKE`FIST)],|),|)))][
-          if(words(%q<check_adjstrike>),iter(%q<strikes_all>,u(FUN`STRIKE`ADJUST,%i0),|,|),%q<strikes_all>)]
+          if(words(%q<check_adjstrike>),setq(strikes_all,iter(%q<strikes_all>,u(FUN`STRIKE`ADJUST,%i0),|,|)))][
+          if(words(%q<check_itemalts>),iter(%q<strikes_all>,u(FUN`STRIKE`ALTER,%i0),|,|),%q<strikes_all>)]
         flags: [funsyntax]
       # A Strike with the traits that the AdjustStrike rules of check_adjstrike add or remove, each rule
       # whose predicate holds for the character and whose definition holds for the Strike.
@@ -2165,6 +2260,7 @@ objects:
             splash,firstof(json_query(%0,extract,$.system.splashDamage.value),0),
             type,json(string,firstof(json_query(%0,extract,$.system.damage.damageType),bludgeoning)),
             range,firstof(json_query(%0,extract,$.system.range),0),
+            hands,if(strmatch(json_query(%0,extract,$.system.usage.value),*two-hands*),2,1),
             potency,firstof(json_query(%0,extract,$.system.runes.potency),0),
             striking,firstof(json_query(%0,extract,$.system.runes.striking),0))]
         flags: [funsyntax]
