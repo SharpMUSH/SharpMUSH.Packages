@@ -1,7 +1,7 @@
 format: "1.16"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.8.2"
+version: "0.9.0"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -1590,7 +1590,7 @@ objects:
           if(member(%q<grant_unapplied>,AdjustStrike),[setq(check_adjstrike,%q<check_adjstrike> %q<grant_pack>~%q<grant_id>~%q<grant_badge>~%q<grant_index>)][if(not(u(FUN`CHECK`ADJSTRIKE`OTHER,%q<grant_pack>,%q<grant_id>)),setq(grant_unapplied,remove(%q<grant_unapplied>,AdjustStrike)))])][
           if(member(%q<grant_unapplied>,AdjustModifier),[setq(check_adjust,squish(%q<check_adjust> [u(FUN`CHECK`ADJUSTS,%q<grant_pack>,%q<grant_id>,%q<grant_badge>,%q<grant_index>)]))][setq(grant_unapplied,remove(%q<grant_unapplied>,AdjustModifier))])][
           if(member(%q<grant_unapplied>,RollOption),[setq(check_rollopts,%q<check_rollopts> %q<grant_pack>~%q<grant_id>~%q<grant_badge>~%q<grant_index>)][setq(grant_unapplied,remove(%q<grant_unapplied>,RollOption))])][
-          null(iter(Note RollTwice AdjustDegreeOfSuccess SubstituteRoll DamageDice DamageAlteration,if(member(%q<grant_unapplied>,%i0),[setq(check_rollrules,%q<check_rollrules> %i0~%q<grant_pack>~%q<grant_id>~%q<grant_badge>~%q<grant_index>)][setq(grant_unapplied,remove(%q<grant_unapplied>,%i0))])))][
+          null(iter(Note RollTwice AdjustDegreeOfSuccess SubstituteRoll DamageDice DamageAlteration Weakness Resistance Immunity DexterityModifierCap MultipleAttackPenalty BaseSpeed Sense CreatureSize,if(member(%q<grant_unapplied>,%i0),[setq(check_rollrules,%q<check_rollrules> %i0~%q<grant_pack>~%q<grant_id>~%q<grant_badge>~%q<grant_index>)][setq(grant_unapplied,remove(%q<grant_unapplied>,%i0))])))][
           setq(check_options,squish(%q<check_options> %q<grant_options>[if(cand(strlen(%q<grant_badge>),match(condition effect,%q<grant_kind>)),%b[first(%q<grant_options>)]:%q<grant_badge>)] [if(words(%q<grant_choiceopts>),u(FUN`CHECK`CHOICE`OPTIONS,%q<grant_choiceopts>,u(FUN`CHECK`CHOICES,%q<grant_index>)))]))][
           if(strmatch(%q<grant_kind>,condition),setq(check_conditions,%q<check_conditions> [json_query(%q<grant_prep>,extract,$.slug)]~%q<grant_badge>))][
           if(gt(strlen(%q<grant_synth>),2),setq(check_static,[if(strlen(%q<check_static>),%q<check_static>\,)][mid(%q<grant_synth>,1,sub(strlen(%q<grant_synth>),2))]))][
@@ -1601,6 +1601,107 @@ objects:
           if(match(ancestry heritage background class,%q<grant_kind>),setq(check_%q<grant_kind>,%q<grant_pack>~%q<grant_id>~%q<grant_index>))][
           setq(check_names,[if(strlen(%q<check_names>),%q<check_names>|)]%q<grant_name>[if(strlen(%q<grant_own>),%b%q<grant_own>)])][
           if(words(%q<grant_unapplied>),setq(check_unapplied,[if(strlen(%q<check_unapplied>),%q<check_unapplied>|)]%q<grant_name> %([itemize(%q<grant_unapplied>)]%)))]
+        flags: [funsyntax]
+      # The sheet's Weakness, Resistance or Immunity rules whose predicates hold, after FUN`CHECK`PREPARE, as
+      # type~value for each of their types (value 0 for an immunity), the way a creature's statistics list them.
+      FUN`CHECK`IWR:
+        value: |-
+          @@(%0 Weakness, Resistance or Immunity)[
+          u(FUN`CHECK`RULES`EACH,%0,FUN`CHECK`IWR`ONE,)]
+        flags: [funsyntax]
+      FUN`CHECK`IWR`ONE:
+        value: |-
+          @@(%0 a rule, %1 its roll data)[
+          setq(iwro_k,json_query(%0,extract,$.key))][
+          setq(iwro_v,if(strmatch(%q<iwro_k>,Immunity),0,trunc(u(FUN`FORMULA`VALUE,json_query(%0,get,value),%1,0))))][
+          iter(u(FUN`RULE`LIST,%0,type,%1),if(cor(strmatch(%q<iwro_k>,Immunity),gt(%q<iwro_v>,0)),%i0~%q<iwro_v>))]
+        flags: [funsyntax]
+      # The sheet's rules of one key whose predicates hold with the roll options and %2, after FUN`CHECK`PREPARE:
+      # what the attribute %1 returns for each, called with the rule and its grant's roll data.
+      FUN`CHECK`RULES`EACH:
+        value: |-
+          @@(%0 a rule key, %1 an attribute of this object, %2 more roll options)[
+          squish(iter(graball(%q<check_rollrules>,%0~*),u(FUN`CHECK`RULES`GRANT,rest(%i0,~),%0,%1,%2)))]
+        flags: [funsyntax]
+      FUN`CHECK`RULES`GRANT:
+        value: |-
+          @@(%0 pack~id~badge~index, %1 the rule key, %2 the attribute, %3 more roll options)[
+          setq(rr_item,u(FUN`ITEM`GET,first(%0,~),elements(%0,2,~)))][
+          setqm(rre_rules,firstof(json_query(%q<rr_item>,extract,$.system.rules),json(array)),rre_data,u(FUN`ROLLRULE`DATA,%0))][
+          iter(json_map(me/FUN`CHECK`RULEKEY,%q<rre_rules>,%b,%1),
+            [setq(rre_rule,json_query(%q<rre_rules>,extract,$\[%i0\]))][
+            if(u(FUN`PREDICATE`TEST,u(FUN`FORMULA`INJECT,firstof(json_query(%q<rre_rule>,get,predicate),json(array)),%q<rre_data>),%q<check_options> %3),
+              u(%2,%q<rre_rule>,%q<rre_data>))])]
+        flags: [funsyntax]
+      # A rule's property that is a string or an array of them, as a space-separated list with injected properties resolved.
+      FUN`RULE`LIST:
+        value: |-
+          @@(%0 a rule, %1 a property, %2 the roll data)[
+          setq(rl_v,json_query(%0,get,%1))][
+          setdiff(u(FUN`FORMULA`INJECT,if(strmatch(left(%q<rl_v>,1),\[),json_map(me/FUN`RULE`SELECTOR,%q<rl_v>,%b),json_query(%0,extract,$.%1)),%2),null)]
+        flags: [funsyntax]
+      # DexterityModifierCap: the lowest cap the rules set, or 99.
+      FUN`CHECK`DEXCAP:
+        value: |-
+          lmin(99 [u(FUN`CHECK`RULES`EACH,DexterityModifierCap,FUN`CHECK`RULEVALUE,)])
+        flags: [funsyntax]
+      FUN`CHECK`RULEVALUE:
+        value: |-
+          @@(%0 a rule, %1 its roll data: its value)[
+          trunc(u(FUN`FORMULA`VALUE,json_query(%0,get,value),%1,0))]
+        flags: [funsyntax]
+      # The multiple attack penalty step for a Strike, after FUN`STRIKE`ATTACK: 5, or 4 when agile, or the smallest
+      # a MultipleAttackPenalty rule for the Strike's attack domains sets (its value is the second attack's penalty).
+      FUN`CHECK`MAP:
+        value: |-
+          @@(strike_ registers)[
+          lmin([if(member(%q<strike_traits>,agile),4,5)] [if(strmatch(%q<check_rollrules>,*MultipleAttackPenalty~*),u(FUN`CHECK`RULES`EACH,MultipleAttackPenalty,FUN`CHECK`MAP`ONE,%q<strike_options> %q<strike_traits> [u(FUN`ROLLOPTION`DOMAINS,%q<strike_domains>)]))])]
+        flags: [funsyntax]
+      FUN`CHECK`MAP`ONE:
+        value: |-
+          @@(%0 a rule, %1 its roll data)[
+          if(words(setinter(u(FUN`RULE`SELECTORS,%0,%1),%q<strike_domains>)),abs(trunc(u(FUN`FORMULA`VALUE,json_query(%0,get,value),%1,0))))]
+        flags: [funsyntax]
+      # BaseSpeed: type~feet for each movement type the rules give, the highest of each. A value may read the
+      # ancestry's land Speed as @actor.system.movement.speeds.land.value.
+      FUN`CHECK`SPEEDS:
+        value: |-
+          @@(after FUN`CHECK`PREPARE)[
+          setq(spd_all,u(FUN`CHECK`RULES`EACH,BaseSpeed,FUN`CHECK`SPEEDS`ONE,))][
+          iter(setunion(iter(%q<spd_all>,first(%i0,~)),),%i0~[lmax(iter(graball(%q<spd_all>,%i0~*),rest(%i0,~)))])]
+        flags: [funsyntax]
+      FUN`CHECK`SPEEDS`ONE:
+        value: |-
+          @@(%0 a rule, %1 its roll data)[
+          [before(firstof(u(FUN`FORMULA`INJECT,json_query(%0,extract,$.selector),%1),land)-speed,-speed)]~[trunc(u(FUN`FORMULA`VALUE,json_query(%0,get,value),json_mod(%1,set,$.actor.system.movement,json(object,speeds,json(object,land,json(object,value,firstof(json_query(u(FUN`CHECK`ITEM,%q<check_ancestry>),extract,$.system.speed),25))))),0))]]
+        flags: [funsyntax]
+      # Sense: the ancestry's vision and each Sense rule, as sense~acuity~range.
+      FUN`CHECK`SENSES:
+        value: |-
+          @@(after FUN`CHECK`PREPARE)[
+          setq(sns_vision,json_query(u(FUN`CHECK`ITEM,%q<check_ancestry>),extract,$.system.vision))][
+          setq(sns_all,squish([if(match(darkvision low-light-vision,%q<sns_vision>),%q<sns_vision>~precise~)] [u(FUN`CHECK`RULES`EACH,Sense,FUN`CHECK`SENSES`ONE,)]))][
+          if(cand(member(iter(%q<sns_all>,first(%i0,~)),darkvision),member(iter(%q<sns_all>,first(%i0,~)),low-light-vision)),setq(sns_all,setdiff(%q<sns_all>,graball(%q<sns_all>,low-light-vision~*))))][
+          iter(setunion(iter(%q<sns_all>,first(%i0,~)),),first(graball(%q<sns_all>,%i0~*)))]
+        flags: [funsyntax]
+      FUN`CHECK`SENSES`ONE:
+        value: |-
+          @@(%0 a rule, %1 its roll data)[
+          [u(FUN`FORMULA`INJECT,json_query(%0,extract,$.selector),%1)]~[firstof(json_query(%0,extract,$.acuity),precise)]~[if(strlen(json_query(%0,get,range)),trunc(u(FUN`FORMULA`VALUE,json_query(%0,get,range),%1,0)))]]
+        flags: [funsyntax]
+      # The character's size: the ancestry's, as CreatureSize rules set it or step it up or down.
+      FUN`CHECK`SIZE:
+        value: |-
+          @@(after FUN`CHECK`PREPARE)[
+          setq(sz_now,firstof(json_query(u(FUN`CHECK`ITEM,%q<check_ancestry>),extract,$.system.size),med))][
+          null(iter(u(FUN`CHECK`RULES`EACH,CreatureSize,FUN`CHECK`SIZE`ONE,),setq(sz_now,if(isint(%i0),extract(tiny sm med lg huge grg,max(1,min(6,add(match(tiny sm med lg huge grg,%q<sz_now>),%i0))),1),%i0))))][
+          %q<sz_now>]
+        flags: [funsyntax]
+      FUN`CHECK`SIZE`ONE:
+        value: |-
+          @@(%0 a rule, %1 its roll data: a size, or a number of steps)[
+          setq(szo_v,u(FUN`FORMULA`INJECT,json_query(%0,extract,$.value),%1))][
+          switch(%q<szo_v>,tiny,tiny,small,sm,sm,sm,medium,med,med,med,large,lg,lg,lg,huge,huge,gargantuan,grg,grg,grg,if(isint(%q<szo_v>),%q<szo_v>))]
         flags: [funsyntax]
       # The rank rules whose whole path is a selection, such as Rogue Dedication's choice of Stealth or
       # Thievery: indices FUN`CHECK`RANKRULE reads once the path is filled in.
@@ -1842,7 +1943,7 @@ objects:
         value: |-
           @@(%0 more base entries)[
           setq(ac_category,if(strlen(%q<check_armor>),firstof(json_query(%q<check_armor>,extract,$.system.category),unarmored),unarmored))][
-          setq(ac_mods,u(FUN`CHECK`MODS,ability~[min(u(FUN`CHECK`ABILITY,dex),if(strlen(%q<check_armor>),firstof(json_query(%q<check_armor>,extract,$.system.dexCap),99),99))]~dex~0 proficiency~[u(FUN`CHECK`PROFICIENCY,u(FUN`CHECK`RANK,%q<ac_category>))]~proficiency~0 [
+          setq(ac_mods,u(FUN`CHECK`MODS,ability~[min(u(FUN`CHECK`ABILITY,dex),if(strlen(%q<check_armor>),firstof(json_query(%q<check_armor>,extract,$.system.dexCap),99),99),u(FUN`CHECK`DEXCAP))]~dex~0 proficiency~[u(FUN`CHECK`PROFICIENCY,u(FUN`CHECK`RANK,%q<ac_category>))]~proficiency~0 [
             if(strlen(%q<check_armor>),item~[add(firstof(json_query(%q<check_armor>,extract,$.system.acBonus),0),firstof(json_query(%q<check_armor>,extract,$.system.runes.potency),0))]~[json_query(%q<check_armor>,extract,$.system.slug)]~0)] %0,ac all dex-based,))][
           setq(ac_form,u(FUN`CHECK`FORM`GET,armorClass.modifier))][
           if(strlen(%q<ac_form>),setq(ac_form,sub(u(FUN`FORMULA`TEXT,%q<ac_form>,json(object,actor,%q<check_actor>),10),10)))][
@@ -1891,7 +1992,7 @@ objects:
           setq(speed_form,u(FUN`CHECK`FORM`GET,speeds.land))][
           setq(speed_penalty,if(cand(strlen(%q<check_armor>),not(isint(%q<speed_form>))),firstof(json_query(%q<check_armor>,extract,$.system.speedPenalty),0),0))][
           if(cand(lt(%q<speed_penalty>,0),gte(u(FUN`CHECK`ABILITY,str),firstof(json_query(%q<check_armor>,extract,$.system.strength),99))),setq(speed_penalty,min(0,add(%q<speed_penalty>,5))))][
-          add(if(isint(%q<speed_form>),%q<speed_form>,firstof(json_query(u(FUN`CHECK`ITEM,%q<check_ancestry>),extract,$.system.speed),25)),%q<speed_penalty>,u(FUN`CHECK`TOTAL,u(FUN`CHECK`MODS,,land-speed all-speeds speed,)))]
+          add(if(isint(%q<speed_form>),%q<speed_form>,max(firstof(json_query(u(FUN`CHECK`ITEM,%q<check_ancestry>),extract,$.system.speed),25),firstof(rest(first(graball(u(FUN`CHECK`SPEEDS),land~*)),~),0))),%q<speed_penalty>,u(FUN`CHECK`TOTAL,u(FUN`CHECK`MODS,,land-speed all-speeds speed,)))]
         flags: [funsyntax]
       # The character's Strikes, one JSON object each: each weapon held, then each weapon carried or
       # worn (with where, as Foundry lists every weapon), each Strike a granted item adds whose predicate
@@ -2090,14 +2191,14 @@ objects:
           @@(json_map's callback, %1 a rule: its rank when it is a MartialProficiency whose definition holds for the Strike, or same:<category>:<cap> when the rank is another category's)[
           if(strmatch(json_query(%1,extract,$.key),MartialProficiency),if(u(FUN`PREDICATE`TEST,u(FUN`FORMULA`INJECT,firstof(json_query(%1,get,definition),json(array)),%q<martial_data>),%q<strike_options>),firstof(json_query(%1,extract,$.value),if(strlen(json_query(%1,get,sameAs)),same:[edit(json_query(%1,get,sameAs),",)]:[if(strlen(json_query(%1,get,maxRank)),dec(match(untrained trained expert master legendary,edit(json_query(%1,get,maxRank),",))),4)]),0)))]
         flags: [funsyntax]
-      # Name|attack|second|third|damage|traits for a Strike: the multiple attack penalty is 5 a step, 4 when agile,
+      # Name|attack|second|third|damage|traits for a Strike: the multiple attack penalty is 5 a step, 4 when agile or a rule's,
       # and the damage a hit deals (FUN`DAMAGE`TEXT).
       # A weapon that is not held says where it is, after its name.
       FUN`STRIKE`LINE:
         value: |-
           @@(%0 a Strike)[
           setq(strike_bonus,u(FUN`CHECK`TOTAL,u(FUN`STRIKE`ATTACK,%0)))][
-          setq(strike_map,if(member(%q<strike_traits>,agile),4,5))][
+          setq(strike_map,u(FUN`CHECK`MAP))][
           u(FUN`DAMAGE`STRIKE,%0,)][u(FUN`DAMAGE`FORMULA,2)][
           json_query(%0,extract,$.name)][if(strlen(setr(strike_left,json_query(%0,extract,$.left))),%bx%q<strike_left>)][if(strlen(setr(strike_where,json_query(%0,extract,$.where))),%b%(%q<strike_where>%))]|%q<strike_bonus>|[sub(%q<strike_bonus>,%q<strike_map>)]|[sub(%q<strike_bonus>,mul(2,%q<strike_map>))]|[u(FUN`DAMAGE`TEXT)]|%q<strike_traits>
         flags: [funsyntax]
@@ -4187,11 +4288,12 @@ objects:
               Background,firstof(u(%!/FUN`SHOW`GRANTED,%q<check_background>),tone(muted,none)),
               Class,[firstof(u(%!/FUN`SHOW`GRANTED,%q<check_class>),tone(muted,none))][if(strlen(%q<check_deity>),%, follows [json_query(u({{core}}/FUN`DEITY`GET,%q<check_deity>),extract,$.name)][if(strlen(setr(show_sanct,after(first(setdiff(graball(%q<check_options>,sanctification:*),sanctification:none)),:))),%b%(%q<show_sanct>%))])],
               Traits,firstof(itemize(%q<check_traits>),tone(muted,none)),
+              Size,switch(u({{core}}/FUN`CHECK`SIZE),tiny,Tiny,sm,Small,lg,Large,huge,Huge,grg,Gargantuan,Medium),
               Attributes,iter(str dex con int wis cha,[capstr(%i0)] [u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`CHECK`ABILITY,%i0))],%b,%b%b))]%r[
             rule()]%r[
             lfields(,
-              Hit points|AC|[if(strlen(%q<check_shield>),Shield|)]Speed|Class DC[if(%q<show_spellcaster>,|Spells)],
-              [setq(show_day,setr(check_daily,u(%!/FUN`DAILY`OF,%q<sheet_target>)))][if(strlen(json_query(%q<show_day>,extract,$.hp)),[json_query(%q<show_day>,extract,$.hp)] of%b)][u({{core}}/FUN`CHECK`HP)][if(json_query(%q<show_day>,extract,$.wounded),%b[tone(warning,%(wounded [json_query(%q<show_day>,extract,$.wounded)]%))])]|[add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`AC)))][if(strlen(%q<check_armor>),%b[tone(muted,%([json_query(%q<check_armor>,extract,$.name)]%))])]|[if(strlen(%q<check_shield>),[u(%!/FUN`SHOW`SHIELD)]|)][u({{core}}/FUN`CHECK`SPEED)] feet|[add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`CLASSDC)))][if(%q<show_spellcaster>,|attack [u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,attack)))]%, DC [add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,dc)))])],
+              Hit points|AC|[if(strlen(%q<check_shield>),Shield|)]Speed|Class DC[if(%q<show_spellcaster>,|Spells)][if(strlen(setr(show_senses,u(%!/FUN`SHOW`SENSES))),|Senses)][if(strlen(setr(show_defences,u(%!/FUN`SHOW`DEFENCES))),|Defences)],
+              [setq(show_day,setr(check_daily,u(%!/FUN`DAILY`OF,%q<sheet_target>)))][if(strlen(json_query(%q<show_day>,extract,$.hp)),[json_query(%q<show_day>,extract,$.hp)] of%b)][u({{core}}/FUN`CHECK`HP)][if(json_query(%q<show_day>,extract,$.wounded),%b[tone(warning,%(wounded [json_query(%q<show_day>,extract,$.wounded)]%))])]|[add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`AC)))][if(strlen(%q<check_armor>),%b[tone(muted,%([json_query(%q<check_armor>,extract,$.name)]%))])]|[if(strlen(%q<check_shield>),[u(%!/FUN`SHOW`SHIELD)]|)][u({{core}}/FUN`CHECK`SPEED)] feet[iter(u({{core}}/FUN`CHECK`SPEEDS),if(comp(first(%i0,~),land),%,%b[first(%i0,~)] [rest(%i0,~)] feet),%b,)]|[add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`CLASSDC)))][if(%q<show_spellcaster>,|attack [u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,attack)))]%, DC [add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,dc)))])][if(strlen(%q<show_senses>),|%q<show_senses>)][if(strlen(%q<show_defences>),|%q<show_defences>)],
               |)]%r[
             rule()]%r[
             ldatatable(,Statistic|Rank|>Modifier,iter(setunion(get({{core}}/DATA`STATISTICS) [iter(%q<check_stats>,if(strmatch(%i0,*-lore),%i0))],),u(%!/FUN`SHOW`STATISTIC,%i0),%b,%r),%r)]%r[
@@ -4204,6 +4306,18 @@ objects:
               |)][
             u(%!/FUN`SHOW`UNAPPLIED)],
             name(%q<sheet_target>))]
+        flags: [funsyntax]
+      # The character's senses, as words: darkvision, scent (imprecise) 30 feet.
+      FUN`SHOW`SENSES:
+        value: |-
+          itemize(iter(u({{core}}/FUN`CHECK`SENSES),[edit(first(%i0,~),-,%b)][if(comp(elements(%i0,2,~),precise),%b%([elements(%i0,2,~)]%))][if(strlen(elements(%i0,3,~)),%b[elements(%i0,3,~)] feet)],%b,|),|)
+        flags: [funsyntax]
+      # The character's weaknesses, resistances and immunities from their rules, as words, or nothing.
+      FUN`SHOW`DEFENCES:
+        value: |-
+          @@(after the core's FUN`CHECK`PREPARE)[
+          setqm(def_w,u({{core}}/FUN`CHECK`IWR,Weakness),def_r,u({{core}}/FUN`CHECK`IWR,Resistance),def_i,u({{core}}/FUN`CHECK`IWR,Immunity))][
+          squish(trim([if(words(%q<def_w>),Weak to [itemize(iter(%q<def_w>,[edit(first(%i0,~),-,%b)] [rest(%i0,~)],%b,|),|)].)] [if(words(%q<def_r>),Resists [itemize(iter(%q<def_r>,[edit(first(%i0,~),-,%b)] [rest(%i0,~)],%b,|),|)].)] [if(words(%q<def_i>),Immune to [itemize(iter(%q<def_i>,edit(first(%i0,~),-,%b),%b,|),|)].)]))]
         flags: [funsyntax]
       # The spells on the sheet by rank: cantrips, each rank, then focus spells.
       FUN`SHOW`SPELLS:
@@ -4704,7 +4818,8 @@ objects:
           setq(act_adj,if(strlen(%q<act_npc>),firstof(u(FUN`ENC`C,%0,adj),0),0))][
           setq(act_raised,t(u(FUN`ENC`C,%0,raised)))][
           setq(check_daily,firstof(u(FUN`ENC`C,%0,daily),json(object)))][
-          u({{core}}/FUN`CHECK`PREPARE,u(FUN`ENC`LEDGER,%0))]
+          u({{core}}/FUN`CHECK`PREPARE,u(FUN`ENC`LEDGER,%0))][
+          setq(check_who,%0)]
         flags: [funsyntax]
 
       # --- Checks and Strikes, after FUN`ENC`PREPARE ----------------------------------------------
@@ -4734,7 +4849,7 @@ objects:
               u({{core}}/FUN`CHECK`MODS,untyped~[add(%q<act_adj>,sub(firstof(json_query(%q<act_npc>,extract,$.system.attributes.ac.value),10),10))]~base~0,ac all dex-based,),
               u({{core}}/FUN`CHECK`AC,if(cand(%q<act_raised>,strlen(%q<check_shield>)),circumstance~[firstof(json_query(%q<check_shield>,extract,$.system.acBonus),0)]~raised-shield~0)))))]
         flags: [funsyntax]
-      # The Strikes: name|attack|damage|traits|agile|use~use id|left|||source for each, separated by ^: the source
+      # The Strikes: name|attack|damage|traits|MAP step|use~use id|left|||source for each, separated by ^: the source
       # the Strike's JSON for a character, npc:<attribute> for a creature's melee item. The damage is a hit's, as text.
       # %0 a name pattern: only the first Strike whose name matches it, all of them when empty.
       FUN`ACT`STRIKES:
@@ -4768,7 +4883,7 @@ objects:
           @@(%0 a Strike from the core)[
           setq(strike_attack,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`STRIKE`ATTACK,%0)))][
           u({{core}}/FUN`DAMAGE`STRIKE,%0,)][u({{core}}/FUN`DAMAGE`FORMULA,2)][
-          json_query(%0,extract,$.name)]|%q<strike_attack>|[u({{core}}/FUN`DAMAGE`TEXT)]|%q<strike_traits>|[t(member(%q<strike_traits>,agile))]|[json_query(%0,extract,$.use)]~[json_query(%0,extract,$.useid)]|[json_query(%0,extract,$.left)]|||%0
+          json_query(%0,extract,$.name)]|%q<strike_attack>|[u({{core}}/FUN`DAMAGE`TEXT)]|%q<strike_traits>|[u({{core}}/FUN`CHECK`MAP)]|[json_query(%0,extract,$.use)]~[json_query(%0,extract,$.useid)]|[json_query(%0,extract,$.left)]|||%0
         flags: [funsyntax]
       FUN`ACT`NPC`MELEE:
         value: |-
@@ -4784,7 +4899,7 @@ objects:
           setq(strike_ranged,regmatch(%q<strike_traits>,\\brange))][
           setq(strike_attack,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`MODS,untyped~[add(%q<act_adj>,firstof(json_query(%q<strike_item>,extract,$.system.bonus.value),0))]~base~0,attack attack-roll strike-attack-roll all check [if(%q<strike_ranged>,ranged,melee)]-strike-attack-roll,)))][
           u({{core}}/FUN`DAMAGE`NPC,%q<strike_item>,,%q<act_adj>)][u({{core}}/FUN`DAMAGE`FORMULA,2)][
-          json_query(%q<strike_item>,extract,$.name)]|%q<strike_attack>|[u({{core}}/FUN`DAMAGE`TEXT)]|%q<strike_traits>|[t(member(%q<strike_traits>,agile))]|||||npc:%0
+          json_query(%q<strike_item>,extract,$.name)]|%q<strike_attack>|[u({{core}}/FUN`DAMAGE`TEXT)]|%q<strike_traits>|[if(member(%q<strike_traits>,agile),4,5)]|||||npc:%0
         flags: [funsyntax]
       # A d20 check of total %0 against DC %1: sets roll_record, roll_face, roll_result and roll_degree (0 to 3, empty without a DC).
       FUN`ACT`ROLL:
@@ -4859,8 +4974,9 @@ objects:
         value: |-
           @@(%0 the target's index, using dmg_parts, type~amount~kind each: sets dmg_total and dmg_iwr, what changed it, and turns regeneration off for a turn when a type deactivates it)[
           setqm(iwr_item,if(strmatch(u(FUN`ENC`C,%0,kind),npc),u(FUN`ENC`ITEM,%0)),dmg_iwr,,iwr_weak,0,iwr_weak_type,)][
-          if(strlen(%q<iwr_item>),
-            [setqm(iwr_w,u(FUN`ACT`IWR`LIST,json_query(%q<iwr_item>,extract,$.system.attributes.weaknesses)),iwr_r,u(FUN`ACT`IWR`LIST,json_query(%q<iwr_item>,extract,$.system.attributes.resistances)),iwr_i,u(FUN`ACT`IWR`LIST,json_query(%q<iwr_item>,extract,$.system.attributes.immunities)))][
+          u(FUN`ACT`IWR`RULES,%0)][
+          if(cor(strlen(%q<iwr_item>),words(%q<iwr_rw> %q<iwr_rr> %q<iwr_ri>)),
+            [setqm(iwr_w,squish([u(FUN`ACT`IWR`LIST,json_query(%q<iwr_item>,extract,$.system.attributes.weaknesses))] %q<iwr_rw>),iwr_r,squish([u(FUN`ACT`IWR`LIST,json_query(%q<iwr_item>,extract,$.system.attributes.resistances))] %q<iwr_rr>),iwr_i,squish([u(FUN`ACT`IWR`LIST,json_query(%q<iwr_item>,extract,$.system.attributes.immunities))] %q<iwr_ri>))][
             setq(iwr_keys,setunion(iter(%q<dmg_parts>,[first(%i0,~)]~[if(strmatch(elements(%i0,3,~),persistent),persistent)],|,%b),))][
             setq(dmg_total,ladd(0 [iter(%q<iwr_keys>,[setq(iwr_k,%i0)][u(FUN`ACT`IWR`PART,first(%i0,~),u(FUN`ACT`IWR`SUM,%q<iwr_k>,*),u(FUN`ACT`IWR`SUM,%q<iwr_k>,precision))])]))][
             if(%q<iwr_weak>,[setq(dmg_total,add(%q<dmg_total>,%q<iwr_weak>))][setq(dmg_iwr,%q<dmg_iwr>|weakness to [edit(%q<iwr_weak_type>,-,%b)] +%q<iwr_weak>)])][
@@ -4868,6 +4984,19 @@ objects:
             setq(iwr_off,edit(edit(before(after(lcstr(json_query(%q<iwr_item>,extract,$.system.attributes.hp.details)),deactivated by%b),%)),cold iron,cold-iron),%bor%b,%b))][
             if(words(iter(%q<dmg_parts>,if(cand(member(%q<iwr_off>,first(%i0,~)),gt(elements(%i0,2,~),0)),x),|)),u(FUN`ENC`SET,%0,regoff,1))][
             setq(dmg_iwr,trim(%q<dmg_iwr>,|,l))])]
+        flags: [funsyntax]
+      # The target's own Weakness, Resistance and Immunity rules, from its sheet and effects: iwr_rw, iwr_rr and
+      # iwr_ri. The target is prepared for them when it is not already, and the registers put back after.
+      FUN`ACT`IWR`RULES:
+        value: |-
+          @@(%0 the target's index)[
+          if(strmatch(%q<check_who>,%0),
+            u(FUN`ACT`IWR`READ),
+            [u(FUN`ACT`HOLD,iwr)][u(FUN`ENC`PREPARE,%0)][u(FUN`ACT`IWR`READ)][u(FUN`ACT`TAKE,iwr)])]
+        flags: [funsyntax]
+      FUN`ACT`IWR`READ:
+        value: |-
+          setqm(iwr_rw,u({{core}}/FUN`CHECK`IWR,Weakness),iwr_rr,u({{core}}/FUN`CHECK`IWR,Resistance),iwr_ri,u({{core}}/FUN`CHECK`IWR,Immunity))
         flags: [funsyntax]
       FUN`ACT`IWR`LIST:
         value: |-
@@ -5000,7 +5129,7 @@ objects:
       FUN`ACT`STRIKE`RESOLVE:
         value: |-
           @@(sets enc and enc_say)[
-          setq(strike_map,mul(min(2,u(FUN`ENC`C,%q<act_at>,map)),if(elements(%q<act_strike>,5,|),4,5)))][
+          setq(strike_map,mul(min(2,u(FUN`ENC`C,%q<act_at>,map)),firstof(elements(%q<act_strike>,5,|),5)))][
           setq(strike_total,sub(elements(%q<act_strike>,2,|),%q<strike_map>))][
           u(FUN`ACT`HOLD,by)][
           u(FUN`ENC`PREPARE,%q<act_target>)][
@@ -5830,9 +5959,9 @@ objects:
         flags: [funsyntax]
       FUN`SHOW`LOOK`STRIKE:
         value: |-
-          @@(%0 a Strike, name|attack|damage|traits|agile: as a line, with the attack after each multiple attack penalty)[
+          @@(%0 a Strike, name|attack|damage|traits|MAP step: as a line, with the attack after each multiple attack penalty)[
           setq(look_attack,elements(%0,2,|))][
-          [first(%0,|)][if(elements(%0,7,|),%bx[elements(%0,7,|)])] [u(FUN`SHOW`SIGNED,%q<look_attack>)]/[u(FUN`SHOW`SIGNED,sub(%q<look_attack>,if(elements(%0,5,|),4,5)))]/[u(FUN`SHOW`SIGNED,sub(%q<look_attack>,if(elements(%0,5,|),8,10)))][if(words(elements(%0,4,|)),%b%([itemize(elements(%0,4,|))]%))]%, [elements(%0,3,|)]]
+          [first(%0,|)][if(elements(%0,7,|),%bx[elements(%0,7,|)])] [u(FUN`SHOW`SIGNED,%q<look_attack>)]/[u(FUN`SHOW`SIGNED,sub(%q<look_attack>,firstof(elements(%0,5,|),5)))]/[u(FUN`SHOW`SIGNED,sub(%q<look_attack>,mul(2,firstof(elements(%0,5,|),5))))][if(words(elements(%0,4,|)),%b%([itemize(elements(%0,4,|))]%))]%, [elements(%0,3,|)]]
         flags: [funsyntax]
       FUN`SHOW`BESTIARY:
         value: |-
@@ -6017,7 +6146,7 @@ objects:
       SEE`PF2E`BUILD: |-
         pf2e sheet|pf2e advance
       HELP`PF2E`SHEET: |-
-        `+sheet` shows your character: level and experience, ancestry, background, class and deity, attributes, hit points, AC with the armor worn, the shield held, Speed, class DC, spell attack and DC, every skill and save with its rank and modifier, Lores, Strikes, languages, money, gear, spells by rank, feats and features, actions and conditions.
+        `+sheet` shows your character: level and experience, ancestry, background, class and deity, traits, size, attributes, hit points, AC with the armor worn, the shield held, Speed and other movement, class DC, spell attack and DC, senses, weaknesses, resistances and immunities, every skill and save with its rank and modifier, Lores, Strikes, languages, money, gear, spells by rank, feats and features, actions and conditions.
 
         - Every weapon has a Strike, held ones first; one that is carried says so, because you draw it before you Strike with it.
         - `+sheet` shows your own; staff add a name: `+sheet Amiri`.
