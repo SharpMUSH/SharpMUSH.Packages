@@ -5970,7 +5970,7 @@ objects:
               json(object,kind,"level",level,u(FUN`ENC`LEVEL,%0),n,1))]\,[
             iter(setunion(setr(enc_keys,setunion(json_map(%!/FUN`JSON`KEY,%q<enc_conds>,%b),iter(%q<enc_fxc>,first(%i0,~)))) [iter(%q<enc_keys>,u(FUN`ENC`IMPLIED,%i0))],),if(strlen(setr(enc_cid,u({{core}}/FUN`ITEM`FIND,conditions,%i0))),json(object,kind,"grant",pack,"conditions",id,json(string,%q<enc_cid>),badge,if(setr(enc_badge,firstof(json_query(%q<enc_conds>,extract,$.%i0),after(grab(%q<enc_fxc>,%i0~*),~))),%q<enc_badge>,null),n,add(100000,inum(0)))),%b,\,)]\,[
             iter(json_map(%!/FUN`JSON`KEY,setr(enc_used,firstof(u(FUN`ENC`C,%0,used),json(object))),%b),json(object,kind,"gear",id,json(string,%i0),qty,first(json_query(%q<enc_used>,extract,$.%i0),|),where,json(string,rest(json_query(%q<enc_used>,extract,$.%i0),|)),n,add(200000,inum(0))),%b,\,)]\,[
-            iter(json_map(%!/FUN`JSON`KEY,setr(enc_fx,firstof(u(FUN`ENC`C,%0,fx),json(object))),%b),json(object,kind,"grant",pack,json(string,edit(json_query(%q<enc_fx>,extract,$\["%i0"\].pack),",)),id,json(string,%i0),choices,json_mod(firstof(json_query(%q<enc_fx>,extract,$\["%i0"\].ch),json(object)),patch,json(object,effectLevel,json_query(%q<enc_fx>,extract,$\["%i0"\].lvl))),badge,firstof(json_query(%q<enc_fx>,extract,$\["%i0"\].badge),null),n,add(300000,inum(0))),%b,\,)]\,[
+            iter(u(FUN`FX`LIVE,setr(enc_fx,firstof(u(FUN`ENC`C,%0,fx),json(object)))),json(object,kind,"grant",pack,json(string,edit(json_query(%q<enc_fx>,extract,$\["%i0"\].pack),",)),id,json(string,%i0),choices,json_mod(firstof(json_query(%q<enc_fx>,extract,$\["%i0"\].ch),json(object)),patch,json(object,effectLevel,json_query(%q<enc_fx>,extract,$\["%i0"\].lvl))),badge,firstof(json_query(%q<enc_fx>,extract,$\["%i0"\].badge),null),n,add(300000,inum(0))),%b,\,)]\,[
             iter(json_map(%!/FUN`JSON`KEY,setr(enc_tg,firstof(u(FUN`ENC`C,%0,tg),json(object))),%b),json(object,kind,"toggle",domain,json(string,before(%i0,|)),option,json(string,after(%i0,|)),value,if(first(json_query(%q<enc_tg>,extract,$\["%i0"\]),|),true,false),selection,if(strlen(setr(enc_tgsel,rest(json_query(%q<enc_tg>,extract,$\["%i0"\]),|))),json(string,%q<enc_tgsel>),null),n,add(400000,inum(0))),%b,\,)]\,[
             iter(squish([if(strmatch(u(FUN`ENC`C,%0,kind),npc),self:type:[if(t(u(FUN`ENC`C,%0,hazard)),hazard,npc)])] [if(t(u(FUN`ENC`C,%0,raised)),self:shield:raised self:effect:raise-a-shield)] [if(strlen(setr(enc_shst,u(FUN`ENC`C,%0,shst))),self:shield:%q<enc_shst>)]),json(object,kind,"option",option,json(string,%i0),n,add(500000,inum(0))),%b,\,)],\,),\,)]\]]
         flags: [funsyntax]
@@ -5980,7 +5980,7 @@ objects:
         value: |-
           @@(%0 a combatant's index)[
           setq(efc_fx,firstof(u(FUN`ENC`C,%0,fx),json(object)))][
-          squish(iter(json_map(%!/FUN`JSON`KEY,%q<efc_fx>,%b),u(FUN`ENC`FXCONDS`ONE,edit(json_query(%q<efc_fx>,extract,$\["%i0"\].pack),",),%i0,firstof(json_query(%q<efc_fx>,extract,$\["%i0"\].ch),json(object)))))]
+          squish(iter(u(FUN`FX`LIVE,%q<efc_fx>),u(FUN`ENC`FXCONDS`ONE,edit(json_query(%q<efc_fx>,extract,$\["%i0"\].pack),",),%i0,firstof(json_query(%q<efc_fx>,extract,$\["%i0"\].ch),json(object)))))]
         flags: [funsyntax]
       FUN`ENC`FXCONDS`ONE:
         value: |-
@@ -6918,7 +6918,7 @@ objects:
           switch(1,
             not(strlen(%q<ctr_key>%q<ctr_akey>%q<ctr_cond>)),setq(ctr_err,%q<ctr_tname> has no effect%, affliction or condition called %q<ctr_on>.),
             cand(strlen(%q<ctr_list>),not(member(%q<ctr_list>,%q<ctr_cond>))),setq(ctr_err,[u({{commands}}/FUN`SHOW`SPELLNAME,%q<cast_id>)] at rank %q<pick_rank> counteracts an effect imposing [itemize(%q<ctr_list>,%b,or)].),
-            t(strlen(%q<ctr_key>)),[setqm(ctr_what,u(FUN`FX`NAME,edit(json_query(%q<ctr_fx>,extract,$\["%q<ctr_key>"\].pack),",),%q<ctr_key>),ctr_rank,firstof(json_query(%q<ctr_fx>,extract,$\["%q<ctr_key>"\].lvl),1))][setq(ctr_dc,firstof(json_query(%q<ctr_fx>,extract,$\["%q<ctr_key>"\].dc),extract(%q<ctr_levels>,min(words(%q<ctr_levels>),add(mul(2,%q<ctr_rank>),1)),1)))],
+            t(strlen(%q<ctr_key>)),[setqm(ctr_pack,edit(json_query(%q<ctr_fx>,extract,$\["%q<ctr_key>"\].pack),",),ctr_lvl,firstof(json_query(%q<ctr_fx>,extract,$\["%q<ctr_key>"\].lvl),1))][setqm(ctr_what,u(FUN`FX`NAME,%q<ctr_pack>,%q<ctr_key>),ctr_rank,if(strmatch(%q<ctr_pack>,spell-effects),%q<ctr_lvl>,max(1,ceil(fdiv(%q<ctr_lvl>,2)))))][setq(ctr_dc,firstof(json_query(%q<ctr_fx>,extract,$\["%q<ctr_key>"\].dc),extract(%q<ctr_levels>,max(1,min(words(%q<ctr_levels>),if(strmatch(%q<ctr_pack>,spell-effects),add(mul(2,%q<ctr_rank>),1),add(%q<ctr_lvl>,2)))),1)))],
             t(strlen(%q<ctr_akey>)),[setqm(ctr_what,edit(json_query(%q<ctr_aff>,extract,$\["%q<ctr_akey>"\].name),",),ctr_dc,firstof(json_query(%q<ctr_aff>,extract,$\["%q<ctr_akey>"\].def.dc),extract(%q<ctr_levels>,3,1)),ctr_kind,edit(json_query(%q<ctr_aff>,extract,$\["%q<ctr_akey>"\].kind),",),ctr_stage,json_query(%q<ctr_aff>,extract,$\["%q<ctr_akey>"\].stage))][
               if(strlen(%q<ctr_data>),setqm(ctr_reduce,cand(json_query(%q<ctr_data>,extract,$.reduce),gt(%q<ctr_stage>,1),not(t(json_query(%q<ctr_aff>,extract,$\["%q<ctr_akey>"\].reduced)))),ctr_roll,t(member(last(squish(iter(json_map(%!/FUN`JSON`KEY,json_query(%q<ctr_data>,get,kinds),%b),if(lte(%i0,%q<pick_rank>),json_query(%q<ctr_data>,extract,$.kinds\["%i0"\])),%b,|),|),|),%q<ctr_kind>))))][
               if(not(cor(%q<ctr_reduce>,%q<ctr_roll>)),setq(ctr_err,[u({{commands}}/FUN`SHOW`SPELLNAME,%q<cast_id>)] at rank %q<pick_rank> does nothing to %q<ctr_tname>'s %q<ctr_what>[if(%q<ctr_stage>,%b at stage %q<ctr_stage>)].))][
@@ -6939,8 +6939,24 @@ objects:
               setq(ctr_ok,cand(gt(%q<ctr_degree>,0),lte(%q<ctr_rank>,%q<ctr_max>)))][
               Counteract %q<ctr_what> on %q<ctr_tname> (rank %q<ctr_rank>, DC %q<ctr_dc>): 1d20\[%q<ctr_face>\] [if(lt(%q<ctr_mod>,0),-,+)] [abs(%q<ctr_mod>)] = [add(%q<ctr_face>,%q<ctr_mod>)], [lcstr(u(FUN`ACT`DEGREE,%q<ctr_degree>))]. [switch(1,
                 %q<ctr_ok>,[switch(1,t(strlen(%q<ctr_key>)),u(FUN`ENC`PATCH,%0,json(object,fx,json(object,%q<ctr_key>,null))),t(strlen(%q<ctr_akey>)),u(FUN`AFF`END,%0,%q<ctr_akey>),u(FUN`ENC`PATCH,%0,json(object,conds,json(object,%q<ctr_cond>,null),dur,json(object,%q<ctr_cond>,null))))][capstr(%q<ctr_what>)] ends.,
-                cand(strlen(%q<ctr_list>),gt(%q<ctr_degree>,0),lte(sub(%q<ctr_rank>,2),%q<ctr_max>)),[capstr(%q<ctr_what>)] is suppressed until the start of [u(FUN`ENC`C,%q<act_at>,name)]'s next turn.,
+                cand(strlen(%q<ctr_list>),gt(%q<ctr_degree>,0),lte(sub(%q<ctr_rank>,2),%q<ctr_max>)),[u(FUN`CAST`SUPPRESS,%0,u(FUN`ENC`C,%q<act_at>,k))][capstr(%q<ctr_what>)] is suppressed until the start of [u(FUN`ENC`C,%q<act_at>,name)]'s next turn.,
                 [capstr(%q<ctr_what>)] stays.)]])])]
+        flags: [funsyntax]
+      # Suppression until the start of key %1's next turn (FUN`TURN`TICK lifts it): an effect is marked supp and gives
+      # nothing meanwhile; a condition no effect grants moves to supc, value~key.
+      FUN`CAST`SUPPRESS:
+        value: |-
+          @@(%0 a target's index, %1 the caster's key; ctr_key or ctr_cond)[
+          if(strlen(%q<ctr_key>),
+            u(FUN`ENC`PATCH,%0,json(object,fx,json(object,%q<ctr_key>,json(object,supp,json(string,%1))))),
+            [setq(sup_value,json_query(firstof(u(FUN`ENC`C,%0,conds),json(object)),extract,$\["%q<ctr_cond>"\]))][
+            u(FUN`ENC`PATCH,%0,json(object,conds,json(object,%q<ctr_cond>,null),supc,json(object,%q<ctr_cond>,json(string,firstof(%q<sup_value>,true)~%1))))])]
+        flags: [funsyntax]
+      # The keys of effects %0 (a combatant's fx) that are not suppressed.
+      FUN`FX`LIVE:
+        value: |-
+          @@(%0 a combatant's fx)[
+          squish(iter(json_map(%!/FUN`JSON`KEY,%0,%b),if(strlen(json_query(%0,extract,$\["%i0"\].supp)),,%i0)))]
         flags: [funsyntax]
       # The conditions the spell's text gives the target for its degree of success (its save, or the spell attack roll
       # against it) when the spell brings no effect: each condition linked in that degree's paragraph, its value from the
@@ -7874,6 +7890,10 @@ objects:
       FUN`TURN`TICK:
         value: |-
           @@(%0 a combatant's index, %1 the key whose turn starts)[
+          setq(tick_fx,firstof(u(FUN`ENC`C,%0,fx),json(object)))][
+          null(iter(json_map(%!/FUN`JSON`KEY,%q<tick_fx>,%b),if(strmatch(edit(json_query(%q<tick_fx>,extract,$\["%i0"\].supp),",),%1),u(FUN`ENC`PATCH,%0,json(object,fx,json(object,%i0,json(object,supp,null))))))))][
+          setq(tick_supc,firstof(u(FUN`ENC`C,%0,supc),json(object)))][
+          null(iter(json_map(%!/FUN`JSON`KEY,%q<tick_supc>,%b),if(strmatch(rest(setr(tick_value,edit(json_query(%q<tick_supc>,extract,$\["%i0"\]),",)),~),%1),u(FUN`ENC`PATCH,%0,json(object,supc,json(object,%i0,null),conds,json(object,%i0,first(%q<tick_value>,~)))))))][
           setq(tick_dur,u(FUN`ENC`C,%0,dur))][
           null(iter(json_map(%!/FUN`JSON`KEY,%q<tick_dur>,%b),
             if(cand(strmatch(first(setr(tick_value,json_query(%q<tick_dur>,extract,$\["%i0"\])),~),%1),not(strmatch(last(%q<tick_value>,~),end))),
@@ -8078,7 +8098,7 @@ objects:
           @@(%0 a combatant's index: their conditions and persistent damage, as a list)[
           setqm(show_conds,u(FUN`ENC`C,%0,conds),show_pers,u(FUN`ENC`C,%0,pers))][
           setq(show_fx,firstof(u(FUN`ENC`C,%0,fx),json(object)))][
-          itemize(squish([if(t(u(FUN`ENC`C,%0,raised)),shield raised|)][iter(json_map(%!/FUN`JSON`KEY,%q<show_fx>,%b),[u(FUN`FX`NAME,setr(show_fxpack,edit(json_query(%q<show_fx>,extract,$\["%i0"\].pack),",)),%i0)][u(FUN`FX`BADGE`SHOW,%q<show_fxpack>,%i0,json_query(%q<show_fx>,extract,$\["%i0"\].badge))],%b,|)]|[iter(json_map(%!/FUN`JSON`KEY,%q<show_conds>,%b),%i0[if(json_query(%q<show_conds>,extract,$.%i0),%b[json_query(%q<show_conds>,extract,$.%i0)])],%b,|)]|[iter(json_map(%!/FUN`JSON`KEY,%q<show_pers>,%b),persistent [json_query(%q<show_pers>,extract,$.%i0)] %i0,%b,|)]|[iter(json_map(%!/FUN`JSON`KEY,setr(show_aff,firstof(u(FUN`ENC`C,%0,aff),json(object))),%b),[json_query(%q<show_aff>,extract,$\["%i0"\].name)] [if(json_query(%q<show_aff>,extract,$\["%i0"\].stage),stage [json_query(%q<show_aff>,extract,$\["%i0"\].stage)],onset)],%b,|)],|),|)]
+          itemize(squish([if(t(u(FUN`ENC`C,%0,raised)),shield raised|)][iter(json_map(%!/FUN`JSON`KEY,%q<show_fx>,%b),[u(FUN`FX`NAME,setr(show_fxpack,edit(json_query(%q<show_fx>,extract,$\["%i0"\].pack),",)),%i0)][u(FUN`FX`BADGE`SHOW,%q<show_fxpack>,%i0,json_query(%q<show_fx>,extract,$\["%i0"\].badge))][if(strlen(json_query(%q<show_fx>,extract,$\["%i0"\].supp)),%b%(suppressed%))],%b,|)]|[iter(json_map(%!/FUN`JSON`KEY,%q<show_conds>,%b),%i0[if(json_query(%q<show_conds>,extract,$.%i0),%b[json_query(%q<show_conds>,extract,$.%i0)])],%b,|)]|[iter(json_map(%!/FUN`JSON`KEY,setr(show_supc,firstof(u(FUN`ENC`C,%0,supc),json(object))),%b),%i0[if(isint(setr(show_sv,first(edit(json_query(%q<show_supc>,extract,$\["%i0"\]),",),~))),%b%q<show_sv>)] %(suppressed%),%b,|)]|[iter(json_map(%!/FUN`JSON`KEY,%q<show_pers>,%b),persistent [json_query(%q<show_pers>,extract,$.%i0)] %i0,%b,|)]|[iter(json_map(%!/FUN`JSON`KEY,setr(show_aff,firstof(u(FUN`ENC`C,%0,aff),json(object))),%b),[json_query(%q<show_aff>,extract,$\["%i0"\].name)] [if(json_query(%q<show_aff>,extract,$\["%i0"\].stage),stage [json_query(%q<show_aff>,extract,$\["%i0"\].stage)],onset)],%b,|)],|),|)]
         flags: [funsyntax]
       FUN`SHOW`LOOK:
         value: |-
