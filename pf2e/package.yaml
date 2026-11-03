@@ -1,7 +1,7 @@
 format: "1.16"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.9.6"
+version: "0.9.7"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -92,9 +92,9 @@ objects:
       # ledger read again costs a few hundred function calls. The key is the ledger with the package's
       # version, the books and CACHE`STAMP, which the updater and the deity table change. CACHE lists
       # the keys oldest first; past DATA`CACHE`KEEP the oldest goes.
-      DATA`CACHE`VERSION: "0.9.6"
+      DATA`CACHE`VERSION: "0.9.7"
       DATA`CACHE`KEEP: 200
-      DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_itemalts check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
+      DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_itemalts check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_shieldrules check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
       # The ItemAlteration properties the core applies, by the kind of item they reach.
       DATA`ITEMALT`WEAPON: other-tags traits damage-type damage-dice-faces damage-dice-number runes-potency runes-striking description name
       DATA`ITEMALT`ARMOR: runes-potency runes-resilient ac-bonus description name
@@ -295,6 +295,8 @@ objects:
       # Foundry's NON_DAMAGE_WEAKNESSES: added once to the whole damage when any instance fits.
       DATA`IWR`NONDAMAGE: arcane divine occult primal air earth ghost-touch holy metal plant radiation salt-water salt spells unholy water wood
       DATA`DAMAGE`PHYSICAL: bludgeoning piercing slashing bleed
+      # Foundry's FUNDAMENTAL_SHIELD_RUNE_DATA reinforcing 1 to 6: Hardness increase~maximum~Hit Points increase~maximum.
+      DATA`RUNE`REINFORCING: 3~8~44~64 3~10~52~80 3~13~64~104 5~15~80~120 5~17~84~136 7~20~108~160
       DATA`DAMAGE`ENERGY: acid cold electricity fire sonic vitality void force
       # The proficiencies other than the statistics: weapon categories, armor categories, spellcasting and the class DC.
       DATA`PROFICIENCIES: simple martial advanced unarmed unarmored light medium heavy spellcasting classdc
@@ -969,7 +971,8 @@ objects:
             choice, [json_query(%1,extract,$.entry)]|[json_query(%1,extract,$.flag)],
             rune, [ucstr(json_query(%1,extract,$.id))]|[json_query(%1,extract,$.rune)],
             language, json_query(%1,extract,$.name),
-            toggle, [json_query(%1,extract,$.domain)]|[json_query(%1,extract,$.option)])]~[switch(%q<sheet_kind>,
+            toggle, [json_query(%1,extract,$.domain)]|[json_query(%1,extract,$.option)],
+            option, json_query(%1,extract,$.option))]~[switch(%q<sheet_kind>,
             level, json_query(%1,extract,$.level),
             ability, json_query(%1,extract,$.mod),
             rank, json_query(%1,extract,$.rank),
@@ -1030,7 +1033,7 @@ objects:
         value: |-
           @@(%0 entries, %1 an item of gear's id: its runes as Foundry's system.runes, from the rune entries for it; a property entry's value is the slugs joined by dots)[
           setq(runes_out,json(object))][
-          null(iter(potency striking resilient,if(strlen(setr(runes_one,u(FUN`SHEET`VALUE,%0,rune,[ucstr(%1)]|%i0))),setq(runes_out,json_mod(%q<runes_out>,patch,json(object,%i0,%q<runes_one>))))))][
+          null(iter(potency striking resilient reinforcing,if(strlen(setr(runes_one,u(FUN`SHEET`VALUE,%0,rune,[ucstr(%1)]|%i0))),setq(runes_out,json_mod(%q<runes_out>,patch,json(object,%i0,%q<runes_one>))))))][
           if(strlen(setr(runes_one,u(FUN`SHEET`VALUE,%0,rune,[ucstr(%1)]|property))),setq(runes_out,json_mod(%q<runes_out>,patch,json(object,property,\[[iter(%q<runes_one>,"%i0",.,\,)]\]))))]%q<runes_out>
         flags: [funsyntax]
       # An item of gear as the sheet has it: the equipment item with the runes etched onto it since.
@@ -1276,6 +1279,13 @@ objects:
             system,json(object,abilities,%q<actor_abilities>,skills,%q<actor_ranks>,details,json(object,class,json(object,trait,json(string,u(FUN`ACTOR`SLUG,%q<check_class>))),ancestry,json(object,trait,json(string,u(FUN`ACTOR`SLUG,%q<check_ancestry>))),level,json(object,value,%1))),
             conditions,fold(me/FUN`ACTOR`CONDITION,%2,json(object)))]
         flags: [funsyntax]
+      # The actor's system.attributes.shield, as Foundry's roll data has it: the shield held, or a spell's.
+      FUN`ACTOR`SHIELD:
+        value: |-
+          @@(check_shield the shield)[
+          setq(as_sh,u(FUN`CHECK`SHIELDATTR,%q<check_shield>))][
+          json(object,itemId,if(strlen(%q<as_sh>),json(string,json_query(%q<as_sh>,extract,$.id)),null),ac,firstof(json_query(%q<as_sh>,extract,$.ac),0),hardness,firstof(json_query(%q<as_sh>,extract,$.hardness),0),brokenThreshold,firstof(json_query(%q<as_sh>,extract,$.bt),0),hp,json(object,max,firstof(json_query(%q<as_sh>,extract,$.max),0),value,firstof(json_query(%q<as_sh>,extract,$.value),0)))]
+        flags: [funsyntax]
       FUN`ACTOR`SLUG:
         value: |-
           @@(%0 pack~id~index of a granted item: its slug)[
@@ -1483,7 +1493,9 @@ objects:
           setq(check_entries,u(FUN`SHEET`ENTRIES,%0))][
           setq(check_level,u(FUN`SHEET`LEVEL,%q<check_entries>))][
           setq(check_grants,u(FUN`SHEET`GRANTS,%q<check_entries>,%q<check_level>))][
-          setqm(check_options,self:level:%q<check_level>,check_conditions,,check_static,,check_dynamic,,check_names,,check_unapplied,,check_upgrades,,check_rankdyn,,check_strikes,,check_martial,,check_forms,,check_adjust,,check_rollrules,,check_dmgready,0,check_rollopts,,check_toggles,,check_domopts,,check_actortraits,,check_traits,,check_adjstrike,,check_itemalts,,check_resgrants,,check_craftgrants,,check_favoredrules,,check_ancestry,,check_heritage,,check_background,,check_class,)][
+          setqm(check_options,self:level:%q<check_level>,check_conditions,,check_static,,check_dynamic,,check_names,,check_unapplied,,check_upgrades,,check_rankdyn,,check_strikes,,check_martial,,check_forms,,check_adjust,,check_rollrules,,check_dmgready,0,check_rollopts,,check_toggles,,check_domopts,,check_actortraits,,check_traits,,check_adjstrike,,check_itemalts,,check_resgrants,,check_craftgrants,,check_favoredrules,,check_shieldrules,,check_ancestry,,check_heritage,,check_background,,check_class,)][
+          setq(check_gear,u(FUN`SHEET`GEAR,%q<check_entries>))][
+          setq(check_options,squish(%q<check_options> [iter(graball(%q<check_entries>,option~*),elements(%i0,2,~))] [if(not(strlen(graball(%q<check_entries>,option~self:type:*))),self:type:character)] [if(strlen(u(FUN`CHECK`SHIELDID)),self:shield:equipped)]))][
           null(iter(%q<check_grants>,u(FUN`CHECK`GRANT,%i0)))][
           u(FUN`CHECK`DEITY)][
           null(iter(%q<check_actortraits>,u(FUN`CHECK`ACTORTRAITS,%i0)))][
@@ -1494,16 +1506,16 @@ objects:
           setq(check_form,u(FUN`CHECK`FORM))][
           setq(check_stats,setunion([v(DATA`STATISTICS)] [v(DATA`PROFICIENCIES)] [iter(graball(%q<check_entries>,rank~*),elements(%i0,2,~))] [iter(%q<check_upgrades>,first(%i0,~))],))][
           setq(check_actor,u(FUN`ACTOR`DATA,%q<check_entries>,%q<check_level>,%q<check_conditions>,%q<check_stats>))][
+          setq(check_shield,u(FUN`CHECK`SHIELD))][
+          setq(check_actor,json_mod(%q<check_actor>,patch,json(object,system,json(object,attributes,json(object,shield,u(FUN`ACTOR`SHIELD))))))][
           if(%1,setqm(check_synthetics,json(array),check_index,,check_flats,),
             [setq(check_synthetics,u(FUN`SYNTHETICS`MODIFIERS,%q<check_actor>,%q<check_static>,%q<check_dynamic>))][
             setq(check_index,u(FUN`SYNTHETICS`INDEX,%q<check_synthetics>))][
             setq(check_flats,iter(lnum(json_query(%q<check_synthetics>,size)),u(FUN`CHECK`FLAT,%i0,%q<check_options>)))])][
-          setq(check_gear,u(FUN`SHEET`GEAR,%q<check_entries>))][
           setq(check_formulas,iter(graball(%q<check_entries>,formula~*),elements(%i0,2,~)))][
           setq(check_resources,setunion(iter(%q<check_resgrants>,u(FUN`CHECK`RESOURCES,first(%i0,~),rest(%i0,~))),))][
           setq(check_crafting,iter(setr(craft_all,iter(%q<check_craftgrants>,u(FUN`CHECK`CRAFTING,first(%i0,~),rest(%i0,~)))),firstof(first(graball(%q<craft_all>,%i0~*~*~?*)),first(graball(%q<craft_all>,%i0~*)))))][setq(check_crafting,iter(setunion(iter(%q<craft_all>,first(%i0,~)),),firstof(first(graball(%q<craft_all>,%i0~*~*~?*)),first(graball(%q<craft_all>,%i0~*)))))][
-          setq(check_armor,u(FUN`CHECK`ARMOR))][
-          setq(check_shield,u(FUN`CHECK`SHIELD))]
+          setq(check_armor,u(FUN`CHECK`ARMOR))]
         flags: [funsyntax]
       # Keeps the registers FUN`CHECK`PREPARE`BUILD set under CACHE`<check_key>, the key itself last so a
       # half-written entry is never read, and drops the oldest key past DATA`CACHE`KEEP.
@@ -1948,8 +1960,65 @@ objects:
       FUN`CHECK`SHIELD:
         value: |-
           @@(check_gear the gear)[
-          setq(shield_id,first(iter(%q<check_gear>,if(cand(strmatch(elements(%i0,3,~),held),strmatch(json_query(get(u(DATA`PACK`EQUIPMENT)/ITEM`[first(%i0,~)]`PREP),extract,$.kind),shield)),first(%i0,~)))))][
-          if(strlen(%q<shield_id>),u(FUN`ITEM`ALTER,u(FUN`ITEM`RUNED,%q<shield_id>),shield))]
+          setq(shield_id,u(FUN`CHECK`SHIELDID))][
+          if(strlen(%q<shield_id>),u(FUN`ITEM`ALTER,u(FUN`SHIELD`REINFORCED,u(FUN`ITEM`RUNED,%q<shield_id>)),shield))]
+        flags: [funsyntax]
+      FUN`CHECK`SHIELDID:
+        value: |-
+          @@(check_gear the gear: the id of the shield held, or nothing)[
+          first(iter(%q<check_gear>,if(cand(strmatch(elements(%i0,3,~),held),strmatch(json_query(get(u(DATA`PACK`EQUIPMENT)/ITEM`[first(%i0,~)]`PREP),extract,$.kind),shield)),first(%i0,~))))]
+        flags: [funsyntax]
+      # A shield with its reinforcing rune, as Foundry's ShieldPF2e.prepareBaseData: the rune's increase to Hardness
+      # and Hit Points, no higher than its maximum unless the shield's own is higher; the magical trait.
+      FUN`SHIELD`REINFORCED:
+        value: |-
+          @@(%0 a shield item)[
+          if(gt(setr(reinf_n,firstof(json_query(%0,extract,$.system.runes.reinforcing),0)),0),
+            [setq(reinf,extract(v(DATA`RUNE`REINFORCING),%q<reinf_n>,1))][
+            json_mod(%0,patch,json(object,system,json(object,
+              hardness,u(FUN`SHIELD`REINFORCE,firstof(json_query(%0,extract,$.system.hardness),0),elements(%q<reinf>,1,~),elements(%q<reinf>,2,~)),
+              hp,json(object,max,setr(reinf_hp,u(FUN`SHIELD`REINFORCE,firstof(json_query(%0,extract,$.system.hp.max),0),elements(%q<reinf>,3,~),elements(%q<reinf>,4,~))),value,%q<reinf_hp>),
+              traits,json(object,value,\[[iter(setunion(json_map(me/FUN`RULE`SELECTOR,firstof(json_query(%0,extract,$.system.traits.value),json(array)),%b) [if(words(setinter(json_map(me/FUN`RULE`SELECTOR,firstof(json_query(%0,extract,$.system.traits.value),json(array)),%b),arcane divine occult primal)),,magical)],),json(string,%i0),%b,\,)]\]))))],
+            %0)]
+        flags: [funsyntax]
+      FUN`SHIELD`REINFORCE:
+        value: |-
+          @@(%0 the base, %1 the increase, %2 the maximum)[
+          if(gt(add(%0,%1),%2),max(%0,%2),add(%0,%1))]
+        flags: [funsyntax]
+      # Foundry's actor shield (system.attributes.shield), %0 a shield item or nothing: the held shield, then the
+      # ActiveEffectLike rules on system.attributes.shield of the grants in check_shieldrules, in priority order,
+      # as a spell's shield. JSON: id, name, ac, hardness, max, value, bt, raised, fx (the effect's grant id when
+      # the shield is an effect's).
+      FUN`CHECK`SHIELDATTR:
+        value: |-
+          @@(%0 a shield item or nothing)[
+          setq(sha,if(strlen(%0),json(object,id,json(string,ucstr(json_query(%0,extract,$._id))),name,json(string,json_query(%0,extract,$.name)),ac,firstof(json_query(%0,extract,$.system.acBonus),0),hardness,firstof(json_query(%0,extract,$.system.hardness),0),max,setr(sha_max,firstof(json_query(%0,extract,$.system.hp.max),0)),value,%q<sha_max>,bt,div(%q<sha_max>,2),raised,false,fx,null)))][
+          setq(sha_rules,sort(iter(%q<check_shieldrules>,[setq(sha_g,%i0)][json_map(me/FUN`CHECK`SHIELDATTR`RULE,firstof(json_query(u(FUN`ITEM`GET,first(%i0,~),elements(%i0,2,~)),extract,$.system.rules),json(array)),%b,%i0)]),n))][
+          null(iter(%q<sha_rules>,u(FUN`CHECK`SHIELDATTR`APPLY,%i0)))]%q<sha>
+        flags: [funsyntax]
+      # json_map's callback: priority~grant~rule index for each ActiveEffectLike on the actor's shield whose predicate holds.
+      FUN`CHECK`SHIELDATTR`RULE:
+        value: |-
+          @@(%1 a rule, %2 its index, %3 its grant pack~id~badge~index)[
+          if(cand(strmatch(json_query(%1,extract,$.key),ActiveEffectLike),strmatch(json_query(%1,extract,$.path),system.attributes.shield*),u(FUN`PREDICATE`TEST,firstof(json_query(%1,get,predicate),json(array)),%q<check_options>)),
+            [firstof(json_query(%1,extract,$.priority),switch(json_query(%1,extract,$.mode),multiply,10,add,20,subtract,20,downgrade,30,upgrade,40,50))]~[edit(%3,~,^)]~%2)]
+        flags: [funsyntax]
+      FUN`CHECK`SHIELDATTR`APPLY:
+        value: |-
+          @@(%0 priority~grant~rule index, the grant's ~ written as ^)[
+          setqm(shr_g,tr(elements(%0,2,~),^,~),shr_i,elements(%0,3,~))][
+          setq(rr_item,u(FUN`ITEM`GET,first(%q<shr_g>,~),elements(%q<shr_g>,2,~)))][
+          setq(shr_rule,json_query(%q<rr_item>,extract,$.system.rules\[%q<shr_i>\]))][
+          setq(shr_data,u(FUN`ROLLRULE`DATA,%q<shr_g>))][
+          if(isnum(setr(shr_lvl,json_query(u(FUN`CHECK`CHOICES,elements(%q<shr_g>,4,~)),extract,$.effectLevel))),setq(shr_data,json_mod(%q<shr_data>,set,$.item.level,%q<shr_lvl>)))][
+          setqm(shr_path,after(json_query(%q<shr_rule>,extract,$.path),system.attributes.shield),shr_mode,json_query(%q<shr_rule>,extract,$.mode))][
+          if(strlen(%q<shr_path>),
+            [setq(shr_field,switch(rest(%q<shr_path>,.),max,max,value,value,brokenThreshold,bt,hp.max,max,hp.value,value,rest(%q<shr_path>,.)))][
+            setq(shr_v,u(FUN`FORMULA`VALUE,json_query(%q<shr_rule>,get,value),%q<shr_data>,0))][
+            setq(sha,json_mod(firstof(%q<sha>,json(object,id,null,name,"",ac,0,hardness,0,max,0,value,0,bt,0,raised,false,fx,null)),set,$.%q<shr_field>,if(strmatch(%q<shr_field>,raised),if(t(%q<shr_v>),true,false),floor(u(FUN`DAMAGE`MODE,%q<shr_mode>,firstof(json_query(%q<sha>,extract,$.%q<shr_field>),0),%q<shr_v>)))))],
+            [setq(shr_o,json_query(%q<shr_rule>,get,value))][
+            setq(sha,json(object,id,json(string,ucstr(elements(%q<shr_g>,2,~))),name,json(string,edit(edit(json_query(%q<rr_item>,extract,$.name),Spell Effect:%b,),Effect:%b,)),ac,firstof(json_query(%q<shr_o>,extract,$.ac),0),hardness,firstof(json_query(%q<shr_o>,extract,$.hardness),0),max,firstof(json_query(%q<shr_o>,extract,$.hp.max),0),value,firstof(json_query(%q<shr_o>,extract,$.hp.value),0),bt,firstof(json_query(%q<shr_o>,extract,$.brokenThreshold),0),raised,if(strmatch(json_query(%q<shr_o>,extract,$.raised),true),true,false),fx,json(string,elements(%q<shr_g>,2,~))))])]
         flags: [funsyntax]
       # A synthetic's type~value~slug~force when its predicate holds for the roll options, else -: a
       # prepared synthetic's flat, its predicate tested only when it has one.
@@ -1975,6 +2044,7 @@ objects:
           setqm(grant_kind,json_query(%q<grant_prep>,extract,$.kind),grant_options,json_query(%q<grant_prep>,extract,$.options),grant_name,json_query(%q<grant_prep>,extract,$.name),grant_synth,json_query(%q<grant_prep>,get,synth),grant_dynamic,json_query(%q<grant_prep>,extract,$.dynamic),grant_unapplied,json_query(%q<grant_prep>,extract,$.unapplied))][
           setqm(grant_ranks,json_query(%q<grant_prep>,extract,$.ranks),grant_rankdyn,json_query(%q<grant_prep>,extract,$.rankdyn),grant_choiceopts,json_query(%q<grant_prep>,extract,$.choiceopts),grant_strikes,json_query(%q<grant_prep>,extract,$.strikes))][
           setq(grant_badge,firstof(%q<grant_own>,json_query(%q<grant_prep>,extract,$.valued)))][
+          if(cand(member(%q<grant_unapplied>,ActiveEffectLike),strmatch(get(u(DATA`PACK`%q<grant_pack>)/ITEM`%q<grant_id>),*"path":"system.attributes.shield*)),setq(check_shieldrules,%q<check_shieldrules> %q<grant_pack>~%q<grant_id>~%q<grant_own>~%q<grant_index>))][
           if(member(%q<grant_unapplied>,ActiveEffectLike),[setq(grant_rankdyn,setunion(%q<grant_rankdyn>,u(FUN`CHECK`RANKCHOSEN,%q<grant_pack>,%q<grant_id>)))][setq(check_favoredrules,%q<check_favoredrules> [u(FUN`CHECK`FAVOREDRULES,%q<grant_pack>,%q<grant_id>)])])][
           if(member(%q<grant_unapplied>,MartialProficiency),[setq(check_martial,%q<check_martial> %q<grant_pack>~%q<grant_id>~%q<grant_badge>~%q<grant_index>)][setq(grant_unapplied,remove(%q<grant_unapplied>,MartialProficiency))])][
           if(member(%q<grant_unapplied>,BattleForm),[setq(check_forms,%q<check_forms> %q<grant_pack>~%q<grant_id>~%q<grant_badge>~%q<grant_index>)][setq(grant_unapplied,remove(%q<grant_unapplied>,BattleForm))])][
@@ -3463,6 +3533,13 @@ objects:
         value: |-
           &PF2E`DAILY %q<sheet_target>=%q<daily>; @set %q<sheet_target>/PF2E`DAILY=wizard
         flags: [cmdsyntax]
+      # +repair: Repair your shield, 10 minutes with a repair toolkit: a Crafting check against the shield's level DC
+      # restores 5 Hit Points plus 5 a proficiency rank, twice that on a critical success; a critical failure deals it
+      # 2d6 damage, less its Hardness. A destroyed shield cannot be repaired. The damage is kept in the day, shield.
+      CMD`REPAIR:
+        value: |-
+          $(?is)^\+repair$:think setq(cmd_target,); @include %!/INC`TARGET`VIEW; think u(%!/FUN`DAILY`PREPARE); @assert strlen(%q<check_shield>)=@pemit %#=notice(PF2E,You hold no shield. +build/equip <shield>=held.,warn); think setq(rep_sh,u({{core}}/FUN`CHECK`SHIELDATTR,%q<check_shield>)); think setqm(rep_id,json_query(%q<rep_sh>,extract,$.id),rep_name,json_query(%q<rep_sh>,extract,$.name),rep_max,json_query(%q<rep_sh>,extract,$.max),rep_hard,json_query(%q<rep_sh>,extract,$.hardness)); think setq(rep_dmg,firstof(json_query(%q<daily>,extract,$.shield.%q<rep_id>),0)); think setq(rep_hp,max(0,sub(json_query(%q<rep_sh>,extract,$.value),%q<rep_dmg>))); @assert gt(%q<rep_dmg>,0)=@pemit %#=notice(PF2E,%q<rep_name> is not damaged.,warn); @assert gt(%q<rep_hp>,0)=@pemit %#=notice(PF2E,%q<rep_name> is destroyed: it cannot be repaired.,warn); @assert gte(setr(rep_rank,u({{core}}/FUN`CHECK`RANK,crafting)),1)=@pemit %#=notice(PF2E,Repair needs training in Crafting.,warn); think setq(cmd_dc,add(extract(get({{core}}/DATA`DC`LEVEL),add(2,max(-1,min(25,firstof(json_query(%q<check_shield>,extract,$.system.level.value),0)))),1),firstof(after(grab(get({{core}}/DATA`DC`RARITY),firstof(json_query(%q<check_shield>,extract,$.system.traits.rarity),common)~*),~),0))); think setqm(roll_stat,crafting,cmd_with,,roll_extra,action:repair); think u(%!/FUN`CHECK`PREPARE); think u({{core}}/FUN`ROLL`CHECK,%q<roll_total>,%q<roll_domains>,%q<roll_options> %q<roll_extra>,%q<cmd_dc>); think setq(rep_change,switch(%q<roll_degree>,3,mul(-10,inc(%q<rep_rank>)),2,mul(-5,inc(%q<rep_rank>)),0,max(0,sub(die(2,6),%q<rep_hard>)),0)); think setq(rep_new,max(0,min(%q<rep_max>,add(%q<rep_dmg>,%q<rep_change>)))); think setq(daily,json_mod(%q<daily>,patch,json(object,shield,json(object,%q<rep_id>,if(%q<rep_new>,%q<rep_new>,null))))); @include %!/INC`DAILY`WRITE; think setq(rep_after,max(0,sub(json_query(%q<rep_sh>,extract,$.value),%q<rep_new>))); @remit %l=notice(PF2E,[u(%!/FUN`SHOW`CHECK)]%r[name(%q<sheet_target>)] [switch(1,lt(%q<rep_change>,0),repairs %q<rep_name>,gt(%q<rep_change>,0),damages %q<rep_name> while repairing it,fails to repair %q<rep_name>)]: Hit Points %q<rep_after> of %q<rep_max>[switch(1,eq(%q<rep_after>,0),%, destroyed,lte(%q<rep_after>,json_query(%q<rep_sh>,extract,$.bt)),%, broken)].)
+        flags: [regexp, cmdsyntax]
       # Hero Points are hero in the day, 0 to 3, and 1 when none are recorded; +rest leaves them.
       FUN`HERO`N:
         value: |-
@@ -4034,10 +4111,10 @@ objects:
       # a property rune goes to INC`BUILD`PROPERTY.
       INC`BUILD`UPGRADE:
         value: |-
-          think setqm(build_id,u(%!/FUN`BUILD`GEAR`FIND,before(%q<cmd_rest>,=)),build_rune,u(%!/FUN`BUILD`RUNE`TYPED,after(%q<cmd_rest>,=))); @assert strlen(%q<build_id>)=@pemit %#=notice(PF2E,There is no [trim(before(%q<cmd_rest>,=))] in the sheet's gear.,warn); think setq(build_kind,json_query(get(u({{core}}/DATA`PACK`EQUIPMENT)/ITEM`%q<build_id>`PREP),extract,$.kind)); @assert match(weapon armor,%q<build_kind>)=@pemit %#=notice(PF2E,Runes go on weapons and armor.,warn); @break not(strlen(%q<build_rune>))={@include %!/INC`BUILD`PROPERTY}; think setq(build_slug,last(grab(v(DATA`RUNES),[first(%q<build_rune>,~)]~[last(%q<build_rune>,~)]~%q<build_kind>~*),~)); @assert strlen(%q<build_slug>)=@pemit %#=notice(PF2E,u(%!/FUN`BUILD`RUNE`ASK,%q<build_kind>),warn); think setqm(build_old,firstof(json_query(u({{core}}/FUN`ITEM`RUNED,%q<build_id>),extract,$.system.runes.[first(%q<build_rune>,~)]),0),build_rune_item,u({{core}}/FUN`ITEM`GET,equipment,u({{core}}/FUN`ITEM`FIND,equipment,%q<build_slug>))); @assert gt(last(%q<build_rune>,~),%q<build_old>)=@pemit %#=notice(PF2E,[u(%!/FUN`SHOW`ITEM,equipment,%q<build_id>,)] already has [u(%!/FUN`SHOW`RUNE,first(%q<build_rune>,~),%q<build_old>)].,warn); @assert lte(json_query(%q<build_rune_item>,extract,$.system.level.value),%q<check_level>)=@pemit %#=notice(PF2E,[json_query(%q<build_rune_item>,extract,$.name)] is level [json_query(%q<build_rune_item>,extract,$.system.level.value)]%, above yours.,warn); think setq(build_cost,max(0,sub(u(%!/FUN`BUILD`PRICE,%q<build_rune_item>),if(%q<build_old>,u(%!/FUN`BUILD`PRICE,u({{core}}/FUN`ITEM`GET,equipment,u({{core}}/FUN`ITEM`FIND,equipment,last(grab(v(DATA`RUNES),[first(%q<build_rune>,~)]~%q<build_old>~%q<build_kind>~*),~)))),0)))); @assert lte(%q<build_cost>,u(%!/FUN`PURSE`TOTAL,%q<sheet_target>,money))=@pemit %#=notice(PF2E,It costs [u(%!/FUN`SHOW`MONEY,%q<build_cost>)]%, and the sheet has [u(%!/FUN`SHOW`MONEY,u(%!/FUN`PURSE`TOTAL,%q<sheet_target>,money))].,warn); @include %!/INC`BUILD`BEGIN; think setq(entry_json,json(object,kind,"rune",id,json(string,%q<build_id>),rune,json(string,first(%q<build_rune>,~)),value,last(%q<build_rune>,~),step,"gear")); @include %!/INC`BUILD`PUT; think setqm(purse_kind,money,purse_amount,mul(-1,%q<build_cost>),purse_reason,[u(%!/FUN`SHOW`RUNE,first(%q<build_rune>,~),last(%q<build_rune>,~))] rune on [u(%!/FUN`SHOW`ITEM,equipment,%q<build_id>,)]); @include %!/INC`PURSE`PUT; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)][u(%!/FUN`SHOW`ITEM,equipment,%q<build_id>,)] has [u(%!/FUN`SHOW`RUNE,first(%q<build_rune>,~),last(%q<build_rune>,~))] now%, for [u(%!/FUN`SHOW`MONEY,%q<build_cost>)].,ok)
+          think setqm(build_id,u(%!/FUN`BUILD`GEAR`FIND,before(%q<cmd_rest>,=)),build_rune,u(%!/FUN`BUILD`RUNE`TYPED,after(%q<cmd_rest>,=))); @assert strlen(%q<build_id>)=@pemit %#=notice(PF2E,There is no [trim(before(%q<cmd_rest>,=))] in the sheet's gear.,warn); think setq(build_kind,json_query(get(u({{core}}/DATA`PACK`EQUIPMENT)/ITEM`%q<build_id>`PREP),extract,$.kind)); @assert match(weapon armor shield,%q<build_kind>)=@pemit %#=notice(PF2E,Runes go on weapons%, armor and shields.,warn); @break cand(not(strlen(%q<build_rune>)),comp(%q<build_kind>,shield))={@include %!/INC`BUILD`PROPERTY}; think setq(build_slug,last(grab(v(DATA`RUNES),[first(%q<build_rune>,~)]~[last(%q<build_rune>,~)]~%q<build_kind>~*),~)); @assert strlen(%q<build_slug>)=@pemit %#=notice(PF2E,u(%!/FUN`BUILD`RUNE`ASK,%q<build_kind>),warn); think setqm(build_old,firstof(json_query(u({{core}}/FUN`ITEM`RUNED,%q<build_id>),extract,$.system.runes.[first(%q<build_rune>,~)]),0),build_rune_item,u({{core}}/FUN`ITEM`GET,equipment,u({{core}}/FUN`ITEM`FIND,equipment,%q<build_slug>))); @assert gt(last(%q<build_rune>,~),%q<build_old>)=@pemit %#=notice(PF2E,[u(%!/FUN`SHOW`ITEM,equipment,%q<build_id>,)] already has [u(%!/FUN`SHOW`RUNE,first(%q<build_rune>,~),%q<build_old>)].,warn); @assert lte(json_query(%q<build_rune_item>,extract,$.system.level.value),%q<check_level>)=@pemit %#=notice(PF2E,[json_query(%q<build_rune_item>,extract,$.name)] is level [json_query(%q<build_rune_item>,extract,$.system.level.value)]%, above yours.,warn); think setq(build_cost,max(0,sub(u(%!/FUN`BUILD`PRICE,%q<build_rune_item>),if(%q<build_old>,u(%!/FUN`BUILD`PRICE,u({{core}}/FUN`ITEM`GET,equipment,u({{core}}/FUN`ITEM`FIND,equipment,last(grab(v(DATA`RUNES),[first(%q<build_rune>,~)]~%q<build_old>~%q<build_kind>~*),~)))),0)))); @assert lte(%q<build_cost>,u(%!/FUN`PURSE`TOTAL,%q<sheet_target>,money))=@pemit %#=notice(PF2E,It costs [u(%!/FUN`SHOW`MONEY,%q<build_cost>)]%, and the sheet has [u(%!/FUN`SHOW`MONEY,u(%!/FUN`PURSE`TOTAL,%q<sheet_target>,money))].,warn); @include %!/INC`BUILD`BEGIN; think setq(entry_json,json(object,kind,"rune",id,json(string,%q<build_id>),rune,json(string,first(%q<build_rune>,~)),value,last(%q<build_rune>,~),step,"gear")); @include %!/INC`BUILD`PUT; think setqm(purse_kind,money,purse_amount,mul(-1,%q<build_cost>),purse_reason,[u(%!/FUN`SHOW`RUNE,first(%q<build_rune>,~),last(%q<build_rune>,~))] rune on [u(%!/FUN`SHOW`ITEM,equipment,%q<build_id>,)]); @include %!/INC`PURSE`PUT; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)][u(%!/FUN`SHOW`ITEM,equipment,%q<build_id>,)] has [u(%!/FUN`SHOW`RUNE,first(%q<build_rune>,~),last(%q<build_rune>,~))] now%, for [u(%!/FUN`SHOW`MONEY,%q<build_cost>)].,ok)
         flags: [cmdsyntax]
       # Each fundamental rune: rune~value~what it goes on~the equipment slug of the rune.
-      DATA`RUNES: potency~1~weapon~weapon-potency-1 potency~2~weapon~weapon-potency-2 potency~3~weapon~weapon-potency-3 striking~1~weapon~striking striking~2~weapon~striking-greater striking~3~weapon~striking-major potency~1~armor~armor-potency-1 potency~2~armor~armor-potency-2 potency~3~armor~armor-potency-3 resilient~1~armor~resilient resilient~2~armor~resilient-greater resilient~3~armor~resilient-major
+      DATA`RUNES: potency~1~weapon~weapon-potency-1 potency~2~weapon~weapon-potency-2 potency~3~weapon~weapon-potency-3 striking~1~weapon~striking striking~2~weapon~striking-greater striking~3~weapon~striking-major potency~1~armor~armor-potency-1 potency~2~armor~armor-potency-2 potency~3~armor~armor-potency-3 resilient~1~armor~resilient resilient~2~armor~resilient-greater resilient~3~armor~resilient-major reinforcing~1~shield~reinforcing-rune-minor reinforcing~2~shield~reinforcing-rune-lesser reinforcing~3~shield~reinforcing-rune-moderate reinforcing~4~shield~reinforcing-rune-greater reinforcing~5~shield~reinforcing-rune-major reinforcing~6~shield~reinforcing-rune-supreme
       FUN`BUILD`RUNE`TYPED:
         value: |-
           @@(%0 a rune as typed, such as +1, striking or greater resilient: rune~value)[
@@ -4046,12 +4123,13 @@ objects:
             +?, potency~[rest(%q<rune_text>,+)],
             *striking, striking~[switch(first(%q<rune_text>),greater,2,major,3,1)],
             *resilient, resilient~[switch(first(%q<rune_text>),greater,2,major,3,1)],
+            *reinforcing, reinforcing~[firstof(match(minor lesser moderate greater major supreme,first(%q<rune_text>)),1)],
             )]
         flags: [funsyntax]
       FUN`BUILD`RUNE`ASK:
         value: |-
-          @@(%0 weapon or armor)[
-          +build/upgrade <item>=<rune>. [if(strmatch(%0,weapon),A weapon takes +1%, +2 or +3 and striking%, greater striking or major striking.,Armor takes +1%, +2 or +3 and resilient%, greater resilient or major resilient.)] Property runes go in the slots potency gives: +help pf2e runes.]
+          @@(%0 weapon, armor or shield)[
+          +build/upgrade <item>=<rune>. [switch(%0,weapon,A weapon takes +1%, +2 or +3 and striking%, greater striking or major striking. Property runes go in the slots potency gives: +help pf2e runes.,armor,Armor takes +1%, +2 or +3 and resilient%, greater resilient or major resilient. Property runes go in the slots potency gives: +help pf2e runes.,A shield takes a reinforcing rune: minor%, lesser%, moderate%, greater%, major or supreme reinforcing.)]]
         flags: [funsyntax]
       # A property rune: one slot for each point of potency. A greater rune of a family replaces the lesser, paying the
       # difference; remove <rune> takes one off, paying nothing back. Staff etch uncommon and rare ones.
@@ -4962,8 +5040,11 @@ objects:
       # The shield held: how much it adds to AC raised, its Hardness, Hit Points and Broken Threshold.
       FUN`SHOW`SHIELD:
         value: |-
-          @@(check_shield the shield)[
-          json_query(%q<check_shield>,extract,$.name)]: +[firstof(json_query(%q<check_shield>,extract,$.system.acBonus),0)] AC raised%, Hardness [firstof(json_query(%q<check_shield>,extract,$.system.hardness),0)]%, HP [setr(shield_hp,firstof(json_query(%q<check_shield>,extract,$.system.hp.max),0))] %(BT [div(%q<shield_hp>,2)]%)
+          @@(check_shield the shield, check_daily the day: the shield as its runes and effects make it, with the damage it has taken)[
+          setq(ssh,u({{core}}/FUN`CHECK`SHIELDATTR,%q<check_shield>))][
+          setqm(ssh_max,json_query(%q<ssh>,extract,$.max),ssh_bt,json_query(%q<ssh>,extract,$.bt))][
+          setq(ssh_hp,max(0,sub(json_query(%q<ssh>,extract,$.value),firstof(json_query(%q<check_daily>,extract,$.shield.[json_query(%q<ssh>,extract,$.id)]),0))))][
+          json_query(%q<ssh>,extract,$.name)]: +[json_query(%q<ssh>,extract,$.ac)] AC raised%, Hardness [json_query(%q<ssh>,extract,$.hardness)]%, HP [if(lt(%q<ssh_hp>,%q<ssh_max>),%q<ssh_hp> of%b)]%q<ssh_max> %(BT %q<ssh_bt>%)[switch(1,cand(gt(%q<ssh_max>,0),eq(%q<ssh_hp>,0)),%b[tone(error,destroyed)],cand(gt(%q<ssh_max>,0),lte(%q<ssh_hp>,%q<ssh_bt>)),%b[tone(warning,broken)])]
         flags: [funsyntax]
       FUN`SHOW`GRANTS:
         value: |-
@@ -5036,7 +5117,7 @@ objects:
       FUN`SHOW`RUNE:
         value: |-
           @@(%0 potency, striking, resilient or property, %1 its value: for property the slugs joined by dots)[
-          switch(%0,potency,+%1 potency,property,firstof(itemize(iter(%1,u(%!/FUN`SHOW`PROPERTY,%i0),.,|),|),no property),[switch(%1,2,Greater%b,3,Major%b)][capstr(%0)])]
+          switch(%0,potency,+%1 potency,reinforcing,[extract(Minor Lesser Moderate Greater Major Supreme,%1,1)] reinforcing,property,firstof(itemize(iter(%1,u(%!/FUN`SHOW`PROPERTY,%i0),.,|),|),no property),[switch(%1,2,Greater%b,3,Major%b)][capstr(%0)])]
         flags: [funsyntax]
       FUN`SHOW`PROPERTY:
         value: |-
@@ -5048,7 +5129,7 @@ objects:
         value: |-
           @@(%0 an equipment id; check_entries)[
           setq(show_runes,json_query(u({{core}}/FUN`ITEM`RUNED,%0),extract,$.system.runes))][
-          squish([if(json_query(%q<show_runes>,extract,$.potency),+[json_query(%q<show_runes>,extract,$.potency)])] [lcstr(trim(iter(striking resilient,if(setr(show_r,json_query(%q<show_runes>,extract,$.%i0)),[switch(%q<show_r>,2,greater%b,3,major%b)]%i0))))] [lcstr(iter(json_map({{core}}/FUN`RULE`SELECTOR,firstof(json_query(%q<show_runes>,extract,$.property),json(array)),%b),u(%!/FUN`SHOW`PROPERTY,%i0),%b,%b))])]
+          squish([if(json_query(%q<show_runes>,extract,$.potency),+[json_query(%q<show_runes>,extract,$.potency)])] [lcstr(trim(iter(striking resilient,if(setr(show_r,json_query(%q<show_runes>,extract,$.%i0)),[switch(%q<show_r>,2,greater%b,3,major%b)]%i0))))] [if(setr(show_r,json_query(%q<show_runes>,extract,$.reinforcing)),lcstr(extract(Minor Lesser Moderate Greater Major Supreme,%q<show_r>,1)) reinforcing)] [lcstr(iter(json_map({{core}}/FUN`RULE`SELECTOR,firstof(json_query(%q<show_runes>,extract,$.property),json(array)),%b),u(%!/FUN`SHOW`PROPERTY,%i0),%b,%b))])]
         flags: [funsyntax]
       FUN`SHOW`RANK:
         value: |-
@@ -5157,7 +5238,7 @@ objects:
     attributes:
       CMD`ENC:
         value: |-
-          $(?is)^\+enc(/\S*)?(?\: +(.*))?$:think setqm(cmd_switch,firstof(lcstr(first(after(%1,/),/)),show),cmd_sub,lcstr(after(after(%1,/),/)),cmd_args,trim(%2)); @assert match(show start add remove join init next strike check save use act effect raise damage heal cond persist delay look bestiary award keep undo redo end toggle,%q<cmd_switch>)=@pemit %#=notice(PF2E,There is no +enc/%q<cmd_switch>. +help +enc lists the switches.,warn); think u(%!/FUN`ENC`LOAD,%l); @include %!/INC`ENC`%q<cmd_switch>
+          $(?is)^\+enc(/\S*)?(?\: +(.*))?$:think setqm(cmd_switch,firstof(lcstr(first(after(%1,/),/)),show),cmd_sub,lcstr(after(after(%1,/),/)),cmd_args,trim(%2)); @assert match(show start add remove join init next strike check save use act effect raise block damage heal cond persist delay look bestiary award keep undo redo end toggle,%q<cmd_switch>)=@pemit %#=notice(PF2E,There is no +enc/%q<cmd_switch>. +help +enc lists the switches.,warn); think u(%!/FUN`ENC`LOAD,%l); @include %!/INC`ENC`%q<cmd_switch>
         flags: [regexp, cmdsyntax]
       # +cast <spell>[ at <rank>][ with <n> actions][ as <variant>][=<targets>]: in an encounter you are in, on its
       # copy of you and on its combatants; elsewhere from your sheet's day, with healing onto the characters named.
@@ -5486,7 +5567,8 @@ objects:
           if(lte(json_query(%1,extract,$.n),%q<enc_snap>),%1)]
         flags: [funsyntax]
       # The ledger a combatant's checks are made from: a character's up to when they joined, a
-      # creature's just its level; each with the combatant's conditions granted on top.
+      # creature's just its level; each with the combatant's conditions, effects, toggles and shield's
+      # state (self:shield:raised, self:shield:broken, self:shield:destroyed) on top.
       FUN`ENC`LEDGER:
         value: |-
           @@(%0 a combatant's index)[
@@ -5499,7 +5581,8 @@ objects:
             iter(setunion(setr(enc_keys,json_map(%!/FUN`JSON`KEY,%q<enc_conds>,%b)) [iter(%q<enc_keys>,u(FUN`ENC`IMPLIED,%i0))],),if(strlen(setr(enc_cid,u({{core}}/FUN`ITEM`FIND,conditions,%i0))),json(object,kind,"grant",pack,"conditions",id,json(string,%q<enc_cid>),badge,if(setr(enc_badge,json_query(%q<enc_conds>,extract,$.%i0)),%q<enc_badge>,null),n,add(100000,inum(0)))),%b,\,)]\,[
             iter(json_map(%!/FUN`JSON`KEY,setr(enc_used,firstof(u(FUN`ENC`C,%0,used),json(object))),%b),json(object,kind,"gear",id,json(string,%i0),qty,first(json_query(%q<enc_used>,extract,$.%i0),|),where,json(string,rest(json_query(%q<enc_used>,extract,$.%i0),|)),n,add(200000,inum(0))),%b,\,)]\,[
             iter(json_map(%!/FUN`JSON`KEY,setr(enc_fx,firstof(u(FUN`ENC`C,%0,fx),json(object))),%b),json(object,kind,"grant",pack,json(string,edit(json_query(%q<enc_fx>,extract,$\["%i0"\].pack),",)),id,json(string,%i0),choices,json_mod(firstof(json_query(%q<enc_fx>,extract,$\["%i0"\].ch),json(object)),patch,json(object,effectLevel,json_query(%q<enc_fx>,extract,$\["%i0"\].lvl))),n,add(300000,inum(0))),%b,\,)]\,[
-            iter(json_map(%!/FUN`JSON`KEY,setr(enc_tg,firstof(u(FUN`ENC`C,%0,tg),json(object))),%b),json(object,kind,"toggle",domain,json(string,before(%i0,|)),option,json(string,after(%i0,|)),value,if(first(json_query(%q<enc_tg>,extract,$\["%i0"\]),|),true,false),selection,if(strlen(setr(enc_tgsel,rest(json_query(%q<enc_tg>,extract,$\["%i0"\]),|))),json(string,%q<enc_tgsel>),null),n,add(400000,inum(0))),%b,\,)],\,),\,)]\]]
+            iter(json_map(%!/FUN`JSON`KEY,setr(enc_tg,firstof(u(FUN`ENC`C,%0,tg),json(object))),%b),json(object,kind,"toggle",domain,json(string,before(%i0,|)),option,json(string,after(%i0,|)),value,if(first(json_query(%q<enc_tg>,extract,$\["%i0"\]),|),true,false),selection,if(strlen(setr(enc_tgsel,rest(json_query(%q<enc_tg>,extract,$\["%i0"\]),|))),json(string,%q<enc_tgsel>),null),n,add(400000,inum(0))),%b,\,)]\,[
+            iter(squish([if(strmatch(u(FUN`ENC`C,%0,kind),npc),self:type:[if(t(u(FUN`ENC`C,%0,hazard)),hazard,npc)])] [if(t(u(FUN`ENC`C,%0,raised)),self:shield:raised self:effect:raise-a-shield)] [if(strlen(setr(enc_shst,u(FUN`ENC`C,%0,shst))),self:shield:%q<enc_shst>)]),json(object,kind,"option",option,json(string,%i0),n,add(500000,inum(0))),%b,\,)],\,),\,)]\]]
         flags: [funsyntax]
       # The conditions a condition brings with it, as Foundry grants them: off-guard with prone, blinded, off-guard and prone with unconscious.
       FUN`ENC`IMPLIED:
@@ -5550,11 +5633,55 @@ objects:
         flags: [funsyntax]
       FUN`ACT`AC:
         value: |-
-          @@(the AC, with its modifiers: a character's raised shield adds its circumstance bonus)[
+          @@(the AC, with its modifiers: a raised shield that is neither broken nor destroyed adds its circumstance bonus)[
+          u(FUN`ACT`SHIELD,%q<check_who>)][
+          setq(ac_raised,if(%q<sh_raised>,circumstance~%q<sh_ac>~raised-shield~0))][
           add(10,u({{core}}/FUN`CHECK`TOTAL,
             if(strlen(%q<act_npc>),
-              u({{core}}/FUN`CHECK`MODS,untyped~[add(%q<act_adj>,sub(firstof(json_query(%q<act_npc>,extract,$.system.attributes.ac.value),10),10))]~base~0,ac all dex-based,),
-              u({{core}}/FUN`CHECK`AC,if(cand(%q<act_raised>,strlen(%q<check_shield>)),circumstance~[firstof(json_query(%q<check_shield>,extract,$.system.acBonus),0)]~raised-shield~0)))))]
+              u({{core}}/FUN`CHECK`MODS,untyped~[add(%q<act_adj>,sub(firstof(json_query(%q<act_npc>,extract,$.system.attributes.ac.value),10),10))]~base~0 %q<ac_raised>,ac all dex-based,),
+              u({{core}}/FUN`CHECK`AC,%q<ac_raised>))))]
+        flags: [funsyntax]
+      # The prepared combatant's shield, as Foundry's actor shield: a character's held shield, a creature's own, or a
+      # spell's (FUN`CHECK`SHIELDATTR), with the damage it has taken: a character's held shield's in the day's
+      # shield, a creature's in sdmg, an effect's in its fx entry. Sets sh (the JSON), sh_id, sh_fx, sh_name, sh_ac,
+      # sh_hard, sh_max, sh_hp, sh_bt, sh_dmg, sh_broken, sh_destroyed and sh_raised (raised, and neither).
+      FUN`ACT`SHIELD:
+        value: |-
+          @@(%0 the combatant's index, after FUN`ENC`PREPARE of it)[
+          setq(sh,u({{core}}/FUN`CHECK`SHIELDATTR,if(strlen(%q<act_npc>),u(FUN`ACT`NPC`SHIELD),%q<check_shield>)))][
+          setqm(sh_id,edit(json_query(%q<sh>,extract,$.id),null,),sh_fx,edit(json_query(%q<sh>,extract,$.fx),null,),sh_name,json_query(%q<sh>,extract,$.name),sh_ac,firstof(json_query(%q<sh>,extract,$.ac),0),sh_hard,firstof(json_query(%q<sh>,extract,$.hardness),0),sh_max,firstof(json_query(%q<sh>,extract,$.max),0),sh_bt,firstof(json_query(%q<sh>,extract,$.bt),0))][
+          setq(sh_dmg,firstof(switch(1,
+            t(strlen(%q<sh_fx>)),json_query(u(FUN`ENC`C,%0,fx),extract,$\["%q<sh_fx>"\].sdmg),
+            t(strlen(%q<act_npc>)),json_query(u(FUN`ENC`C,%0,sdmg),extract,$.%q<sh_id>),
+            json_query(%q<check_daily>,extract,$.shield.%q<sh_id>)),0))][
+          setq(sh_value,firstof(json_query(%q<sh>,extract,$.value),%q<sh_max>))][
+          setq(sh_hp,max(0,sub(%q<sh_value>,%q<sh_dmg>)))][
+          setqm(sh_destroyed,cand(gt(%q<sh_max>,0),eq(%q<sh_hp>,0)),sh_broken,cand(gt(%q<sh_max>,0),gt(%q<sh_hp>,0),lte(%q<sh_hp>,%q<sh_bt>)))][
+          setq(sh_raised,cand(strlen(%q<sh>),cor(t(u(FUN`ENC`C,%0,raised)),strmatch(json_query(%q<sh>,extract,$.raised),true)),not(%q<sh_broken>),not(%q<sh_destroyed>)))]
+        flags: [funsyntax]
+      # A creature's own shield: the first shield among its items.
+      FUN`ACT`NPC`SHIELD:
+        value: |-
+          @@(act_npc the creature's item, npc_store its pack's object)[
+          setq(npcs_store,u({{core}}/DATA`PACK`[ucstr(json_query(%q<enc>,extract,$.c\[%q<check_who>\].pack))]))][
+          setq(npcs_attr,first(iter(lattr(%q<npcs_store>/ITEM`[ucstr(json_query(%q<act_npc>,extract,$._id))]`EMBED`*),if(strmatch(json_query(get(%q<npcs_store>/%i0),extract,$.type),shield),%i0))))][
+          if(strlen(%q<npcs_attr>),get(%q<npcs_store>/%q<npcs_attr>))]
+        flags: [funsyntax]
+      # Shield Block, as Foundry's applyDamage: the shield's Hardness takes up to that much of the damage, the shield
+      # takes the rest, up to its Hit Points, and the combatant takes all but what the Hardness took.
+      FUN`ACT`SHIELD`HURT:
+        value: |-
+          @@(%0 the combatant's index, %1 the damage the shield takes, after FUN`ACT`SHIELD: sets shhurt_text)[
+          setq(shhurt_dmg,add(%q<sh_dmg>,%1))][
+          switch(1,
+            t(strlen(%q<sh_fx>)),u(FUN`ENC`PATCH,%0,json(object,fx,json(object,%q<sh_fx>,json(object,sdmg,%q<shhurt_dmg>)))),
+            t(strlen(%q<act_npc>)),u(FUN`ENC`PATCH,%0,json(object,sdmg,json(object,%q<sh_id>,%q<shhurt_dmg>))),
+            u(FUN`ENC`SET,%0,daily,json_mod(%q<check_daily>,patch,json(object,shield,json(object,%q<sh_id>,%q<shhurt_dmg>)))))][
+          setq(sh_hp,max(0,sub(%q<sh_value>,%q<shhurt_dmg>)))][
+          setqm(sh_destroyed,cand(gt(%q<sh_max>,0),eq(%q<sh_hp>,0)),sh_broken,cand(gt(%q<sh_max>,0),gt(%q<sh_hp>,0),lte(%q<sh_hp>,%q<sh_bt>)))][
+          if(cor(%q<sh_broken>,%q<sh_destroyed>),u(FUN`ENC`SET,%0,raised,0))][
+          u(FUN`ENC`SET,%0,shst,json(string,if(%q<sh_destroyed>,destroyed,if(%q<sh_broken>,broken))))][
+          setq(shhurt_text,if(gt(%q<sh_max>,0),%, and the shield takes %1 %(Hit Points %q<sh_hp> of %q<sh_max>%)[switch(1,%q<sh_destroyed>,%, destroyed,%q<sh_broken>,%, broken)]))]
         flags: [funsyntax]
       # The Strikes: name|attack|damage|traits|MAP step|use~use id|left|||source for each, separated by ^: the source
       # the Strike's JSON for a character, npc:<attribute> for a creature's melee item. The damage is a hit's, as text.
@@ -5878,7 +6005,7 @@ objects:
       # +enc/strike <target>[=<strike>]: the one acting Strikes; the GM may name who strikes as <who>:<target>.
       INC`ENC`STRIKE:
         value: |-
-          @include %!/INC`ENC`NEED; think setqm(strike_who,if(strmatch(before(%q<cmd_args>,=),*:*),trim(before(%q<cmd_args>,:))),strike_target,trim(before(if(strmatch(before(%q<cmd_args>,=),*:*),after(%q<cmd_args>,:),%q<cmd_args>),=)),strike_name,trim(after(%q<cmd_args>,=))); think if(cand(strlen(%q<strike_name>),not(strlen(u(%!/FUN`ENC`FIND,%q<strike_target>))),strlen(u(%!/FUN`ENC`FIND,%q<strike_name>))),setqm(strike_swap,%q<strike_target>,strike_target,%q<strike_name>,strike_name,%q<strike_swap>)); think setq(act_at,if(strlen(%q<strike_who>),u(%!/FUN`ENC`FIND,%q<strike_who>),u(%!/FUN`ENC`ACTING))); @assert strlen(%q<act_at>)=@pemit %#=notice(PF2E,No one in the encounter is called %q<strike_who>.,warn); @assert gte(%q<act_at>,0)=@pemit %#=notice(PF2E,No one is acting. +enc/next starts the first turn%, or name who strikes: +enc/strike <who>:<target>.,warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,It is [u(%!/FUN`ENC`C,%q<act_at>,name)]'s turn.,warn); @assert strlen(setr(act_target,u(%!/FUN`ENC`FIND,%q<strike_target>)))=@pemit %#=notice(PF2E,No one in the encounter is called %q<strike_target>.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think setq(act_strike,u(%!/FUN`ACT`STRIKES,%q<strike_name>*)); @assert strlen(%q<act_strike>)=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] has no Strike called %q<strike_name>. The Strikes are [itemize(u(%!/FUN`ACT`STRIKE`NAMES),|)].,warn); think setq(strike_use,elements(%q<act_strike>,6,|)); think if(strlen(first(%q<strike_use>,~)),u(%!/FUN`ACT`CONSUME,%q<act_at>,%q<strike_use>)); think u(%!/FUN`ACT`STRIKE`RESOLVE); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,%q<enc_say>); think setqm(rr_sw,strike,rr_at,if(strmatch(u(%!/FUN`ENC`C,%q<act_at>,kind),pc),%q<act_at>),rr_save,); think setq(rr_ok,if(cand(strlen(%q<rr_at>),u({{commands}}/FUN`HERO`CAN)),%q<act_at>)); @include %!/INC`HERO`MARK
+          @include %!/INC`ENC`NEED; think setqm(strike_who,if(strmatch(before(%q<cmd_args>,=),*:*),trim(before(%q<cmd_args>,:))),strike_target,trim(before(if(strmatch(before(%q<cmd_args>,=),*:*),after(%q<cmd_args>,:),%q<cmd_args>),=)),strike_name,trim(after(%q<cmd_args>,=))); think if(cand(strlen(%q<strike_name>),not(strlen(u(%!/FUN`ENC`FIND,%q<strike_target>))),strlen(u(%!/FUN`ENC`FIND,%q<strike_name>))),setqm(strike_swap,%q<strike_target>,strike_target,%q<strike_name>,strike_name,%q<strike_swap>)); think setq(act_at,if(strlen(%q<strike_who>),u(%!/FUN`ENC`FIND,%q<strike_who>),u(%!/FUN`ENC`ACTING))); @assert strlen(%q<act_at>)=@pemit %#=notice(PF2E,No one in the encounter is called %q<strike_who>.,warn); @assert gte(%q<act_at>,0)=@pemit %#=notice(PF2E,No one is acting. +enc/next starts the first turn%, or name who strikes: +enc/strike <who>:<target>.,warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,It is [u(%!/FUN`ENC`C,%q<act_at>,name)]'s turn.,warn); @assert strlen(setr(act_target,u(%!/FUN`ENC`FIND,%q<strike_target>)))=@pemit %#=notice(PF2E,No one in the encounter is called %q<strike_target>.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think setq(act_strike,u(%!/FUN`ACT`STRIKES,%q<strike_name>*)); @assert strlen(%q<act_strike>)=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] has no Strike called %q<strike_name>. The Strikes are [itemize(u(%!/FUN`ACT`STRIKE`NAMES),|)].,warn); think setq(strike_use,elements(%q<act_strike>,6,|)); think if(strlen(first(%q<strike_use>,~)),u(%!/FUN`ACT`CONSUME,%q<act_at>,%q<strike_use>)); think u(%!/FUN`ACT`STRIKE`RESOLVE); @include %!/INC`ENC`STORE; @include %!/INC`SB`MARK; @remit %l=notice(PF2E,%q<enc_say>); think setqm(rr_sw,strike,rr_at,if(strmatch(u(%!/FUN`ENC`C,%q<act_at>,kind),pc),%q<act_at>),rr_save,); think setq(rr_ok,if(cand(strlen(%q<rr_at>),u({{commands}}/FUN`HERO`CAN)),%q<act_at>)); @include %!/INC`HERO`MARK
         flags: [cmdsyntax]
       # act_at strikes act_target with act_strike (FUN`ACT`STRIKES): the multiple attack penalty from the
       # attacks this turn, the target's AC, the roll with the target's roll options (target:condition:off-guard
@@ -5904,6 +6031,7 @@ objects:
           u(FUN`ACT`TAKE,on)][
           if(cor(words(%q<dmg_parts>,|),words(%q<dmg_pers>,|)),
             [setq(iwr_opts,%q<dmg_options>)][u(FUN`ACT`IWR,%q<act_target>)][
+            setqm(sb_at,%q<act_target>,sb_pre,json_query(%q<enc>,extract,$.c\[%q<act_target>\]),sb_dmg,%q<dmg_total>,sb_crit,%q<strike_crit>)][
             u(FUN`ACT`HARM,%q<act_target>,%q<dmg_total>,%q<strike_crit>)][
             setq(enc_say,%q<enc_say>%r[if(gte(%q<strike_degree>,2),Damage,Splash)]: %q<dmg_text>[if(gt(words(%q<dmg_parts>,|),1),%b= %q<dmg_raw>)][u(FUN`ACT`IWR`TEXT)]. %q<harm_text>.[iter(%q<dmg_pers>,u(FUN`CAST`PERSIST,%q<act_target>,first(%i0,~),rest(%i0,~)),|,)][if(%q<dmg_splash>,%bEach other creature within 5 feet takes %q<dmg_splash> %q<dmg_splash_type> splash damage: +enc/damage.)])])][
           setq(enc_say,%q<enc_say>[u(FUN`ACT`RUNE`NOTES,%q<strike_degree>)])][
@@ -6005,7 +6133,7 @@ objects:
       # doubled before weaknesses and resistances, as Foundry's chat card applies it.
       INC`ENC`DAMAGE:
         value: |-
-          @include %!/INC`ENC`NEEDGM; think setqm(dmg_who,trim(before(%q<cmd_args>,=)),dmg_what,trim(after(%q<cmd_args>,=))); @assert strlen(setr(act_at,u(%!/FUN`ENC`FIND,%q<dmg_who>)))=@pemit %#=notice(PF2E,No one in the encounter is called %q<dmg_who>.,warn); @assert strlen(%q<dmg_what>)=@pemit %#=notice(PF2E,+enc/damage <who>=<amount or formula>%, such as +enc/damage 3=2d6 fire.,warn); @assert cor(not(strlen(%q<cmd_sub>)),match(half double,%q<cmd_sub>))=@pemit %#=notice(PF2E,+enc/damage/half and +enc/damage/double are the only kinds.,warn); think if(isint(%q<dmg_what>),setqm(dmg_total,%q<dmg_what>,dmg_raw,%q<dmg_what>,dmg_text,%q<dmg_what>,dmg_parts,untyped~%q<dmg_what>~main),u(%!/FUN`ACT`DAMAGE,%q<dmg_what>,0)); @assert cand(isint(%q<dmg_total>),gte(%q<dmg_total>,0))=@pemit %#=notice(PF2E,%q<dmg_what> is not damage. Give a number or a formula such as 2d6 fire.,warn); think if(strlen(%q<cmd_sub>),[setq(dmg_parts,iter(%q<dmg_parts>,[first(%i0,~)]~[if(strmatch(%q<cmd_sub>,half),div(elements(%i0,2,~),2),mul(elements(%i0,2,~),2))]~[elements(%i0,3,~)],|,|))][setq(dmg_total,ladd(0 [iter(%q<dmg_parts>,elements(%i0,2,~),|,%b)]))][setq(dmg_text,%q<dmg_text>%, [if(strmatch(%q<cmd_sub>,half),halved,doubled)] to %q<dmg_total>)]); think setqm(iwr_opts,,dmg_ignore,); think u(%!/FUN`ACT`IWR,%q<act_at>); think u(%!/FUN`ACT`HARM,%q<act_at>,%q<dmg_total>,0); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,%q<harm_text>[if(cor(not(isint(%q<dmg_what>)),strlen(%q<dmg_iwr>),strlen(%q<cmd_sub>)),%b%([trim(%q<dmg_text>)][if(strlen(%q<dmg_iwr>),%, with [itemize(%q<dmg_iwr>,|)])]%))].)
+          @include %!/INC`ENC`NEEDGM; think setqm(dmg_who,trim(before(%q<cmd_args>,=)),dmg_what,trim(after(%q<cmd_args>,=))); @assert strlen(setr(act_at,u(%!/FUN`ENC`FIND,%q<dmg_who>)))=@pemit %#=notice(PF2E,No one in the encounter is called %q<dmg_who>.,warn); @assert strlen(%q<dmg_what>)=@pemit %#=notice(PF2E,+enc/damage <who>=<amount or formula>%, such as +enc/damage 3=2d6 fire.,warn); @assert cor(not(strlen(%q<cmd_sub>)),match(half double,%q<cmd_sub>))=@pemit %#=notice(PF2E,+enc/damage/half and +enc/damage/double are the only kinds.,warn); think if(isint(%q<dmg_what>),setqm(dmg_total,%q<dmg_what>,dmg_raw,%q<dmg_what>,dmg_text,%q<dmg_what>,dmg_parts,untyped~%q<dmg_what>~main),u(%!/FUN`ACT`DAMAGE,%q<dmg_what>,0)); @assert cand(isint(%q<dmg_total>),gte(%q<dmg_total>,0))=@pemit %#=notice(PF2E,%q<dmg_what> is not damage. Give a number or a formula such as 2d6 fire.,warn); think if(strlen(%q<cmd_sub>),[setq(dmg_parts,iter(%q<dmg_parts>,[first(%i0,~)]~[if(strmatch(%q<cmd_sub>,half),div(elements(%i0,2,~),2),mul(elements(%i0,2,~),2))]~[elements(%i0,3,~)],|,|))][setq(dmg_total,ladd(0 [iter(%q<dmg_parts>,elements(%i0,2,~),|,%b)]))][setq(dmg_text,%q<dmg_text>%, [if(strmatch(%q<cmd_sub>,half),halved,doubled)] to %q<dmg_total>)]); think setqm(iwr_opts,,dmg_ignore,); think u(%!/FUN`ACT`IWR,%q<act_at>); think setqm(sb_at,%q<act_at>,sb_pre,json_query(%q<enc>,extract,$.c\[%q<act_at>\]),sb_dmg,%q<dmg_total>,sb_crit,0); think u(%!/FUN`ACT`HARM,%q<act_at>,%q<dmg_total>,0); @include %!/INC`ENC`STORE; @include %!/INC`SB`MARK; @remit %l=notice(PF2E,%q<harm_text>[if(cor(not(isint(%q<dmg_what>)),strlen(%q<dmg_iwr>),strlen(%q<cmd_sub>)),%b%([trim(%q<dmg_text>)][if(strlen(%q<dmg_iwr>),%, with [itemize(%q<dmg_iwr>,|)])]%))].)
         flags: [cmdsyntax]
       # +enc/use [<who>=]<item>: a consumable from the combatant's gear, used up in the encounter's copy only; a healing item heals.
       INC`ENC`USE:
@@ -6044,11 +6172,31 @@ objects:
           @include %!/INC`ENC`NEEDGM; think setqm(heal_who,trim(before(%q<cmd_args>,=)),heal_what,trim(after(%q<cmd_args>,=))); @assert strlen(setr(act_at,u(%!/FUN`ENC`FIND,%q<heal_who>)))=@pemit %#=notice(PF2E,No one in the encounter is called %q<heal_who>.,warn); think if(isint(%q<heal_what>),setqm(dmg_total,%q<heal_what>,dmg_text,),u(%!/FUN`ACT`DAMAGE,%q<heal_what>,0)); @assert cand(isint(%q<dmg_total>),gt(%q<dmg_total>,0))=@pemit %#=notice(PF2E,+enc/heal <who>=<amount or formula>%, such as +enc/heal 2=1d8+4.,warn); think u(%!/FUN`ACT`HEAL,%q<act_at>,%q<dmg_total>); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,%q<heal_text>[if(strlen(%q<dmg_text>),%b%([trim(%q<dmg_text>)]%))].)
         flags: [cmdsyntax]
       # +enc/cond <who>=<condition>[ <value>][/<rounds>]; a value of 0 takes it off.
+      # +enc/block [<who>]: Shield Block, the reaction to the damage just dealt to a combatant with a raised shield.
+      # The hit's mark (ENC`<room>`SB) keeps the combatant as it was before the damage; the block puts it back and
+      # deals the damage again, less the shield's Hardness. A spell's shield with no Hit Points ends; after the
+      # Shield spell's, it cannot be cast again in the encounter.
+      INC`ENC`BLOCK:
+        value: |-
+          @include %!/INC`ENC`NEED; think setq(sb,get(me/%q<enc_attr>`SB)); @assert cand(strlen(%q<sb>),strmatch(json_query(%q<sb>,extract,$.after),digest(sha1,%q<enc>)))=@pemit %#=notice(PF2E,Shield Block answers damage just dealt%, before anything else happens in the encounter.,warn); think setq(act_at,json_query(%q<sb>,extract,$.at)); think setq(block_name,u(%!/FUN`ENC`C,%q<act_at>,name)); @assert cor(not(strlen(%q<cmd_args>)),strmatch(u(%!/FUN`ENC`FIND,%q<cmd_args>),%q<act_at>))=@pemit %#=notice(PF2E,The damage just dealt was to %q<block_name>.,warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,Only %q<block_name> or the GM can Shield Block for %q<block_name>.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think u(%!/FUN`ACT`SHIELD,%q<act_at>); @assert strlen(%q<sh>)=@pemit %#=notice(PF2E,%q<block_name> has no shield.,warn); @assert not(%q<sh_destroyed>)=@pemit %#=notice(PF2E,%q<block_name>'s %q<sh_name> is destroyed.,warn); @assert not(%q<sh_broken>)=@pemit %#=notice(PF2E,%q<block_name>'s %q<sh_name> is broken.,warn); @assert %q<sh_raised>=@pemit %#=notice(PF2E,%q<block_name>'s shield is not raised. Raise a Shield first: +enc/raise.,warn); @assert cor(strlen(%q<sh_fx>),member(%q<check_options>,feat:shield-block),u(%!/FUN`ACT`NPC`HAS,shield-block))=@pemit %#=notice(PF2E,%q<block_name> does not have Shield Block.,warn); think setq(block_quick,cand(u(%!/FUN`ENC`C,%q<act_at>,react),member(%q<check_options>,feat:quick-shield-block),not(u(%!/FUN`ENC`C,%q<act_at>,qsb)))); @assert cor(not(u(%!/FUN`ENC`C,%q<act_at>,react)),%q<block_quick>)=@pemit %#=notice(PF2E,%q<block_name> has used a reaction this round.,warn); think setqm(block_dmg,json_query(%q<sb>,extract,$.dmg),block_pers,u(%!/FUN`ENC`C,%q<act_at>,pers)); think setqm(block_abs,min(%q<sh_hard>,%q<block_dmg>),block_sh,min(%q<sh_hp>,sub(%q<block_dmg>,min(%q<sh_hard>,%q<block_dmg>)))); think setq(enc,json_mod(%q<enc>,replace,$.c\[%q<act_at>\],json_query(%q<sb>,get,pre))); think if(strlen(%q<block_pers>),u(%!/FUN`ENC`SET,%q<act_at>,pers,%q<block_pers>)); think u(%!/FUN`ACT`HARM,%q<act_at>,sub(%q<block_dmg>,%q<block_abs>),json_query(%q<sb>,extract,$.crit)); think u(%!/FUN`ENC`SET,%q<act_at>,if(%q<block_quick>,qsb,react),1); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think u(%!/FUN`ACT`SHIELD`HURT,%q<act_at>,%q<block_sh>); think setq(block_end,cand(strlen(%q<sh_fx>),not(%q<sh_max>))); think if(%q<block_end>,[u(%!/FUN`ENC`PATCH,%q<act_at>,json(object,fx,json(object,%q<sh_fx>,null)))][if(strmatch(u({{core}}/FUN`ITEM`SLUG,u({{core}}/FUN`ITEM`GET,spell-effects,%q<sh_fx>)),spell-effect-shield),u(%!/FUN`ENC`SET,%q<act_at>,noshield,1))]); &%q<enc_attr>`SB me=; @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,%q<block_name> Shield Blocks with %q<sh_name>[if(%q<block_quick>,%b%(Quick Shield Block%))]: Hardness %q<sh_hard> takes %q<block_abs>%q<shhurt_text>. %q<harm_text>.[if(%q<block_end>,%b%q<sh_name> ends[if(u(%!/FUN`ENC`C,%q<act_at>,noshield),%; Shield cannot be cast again for 10 minutes)].)])
+        flags: [cmdsyntax]
+      # Whether the prepared creature has an ability with the slug %0.
+      FUN`ACT`NPC`HAS:
+        value: |-
+          @@(%0 a slug; act_npc)[
+          if(strlen(%q<act_npc>),[setq(nh_store,u({{core}}/DATA`PACK`[ucstr(json_query(%q<enc>,extract,$.c\[%q<check_who>\].pack))]))][t(words(iter(lattr(%q<nh_store>/ITEM`[ucstr(json_query(%q<act_npc>,extract,$._id))]`EMBED`*),if(strmatch(json_query(get(%q<nh_store>/%i0),extract,$.system.slug),%0),x))))],0)]
+        flags: [funsyntax]
+      # The mark Shield Block reads: the combatant hit (sb_at), as it was before the damage (sb_pre), the damage and
+      # whether it was a critical hit, and the encounter after the hit, so a block answers only that hit.
+      INC`SB`MARK:
+        value: |-
+          &%q<enc_attr>`SB me=[if(cand(strlen(%q<sb_at>),gt(%q<sb_dmg>,0)),json(object,after,json(string,digest(sha1,%q<enc>)),at,%q<sb_at>,pre,%q<sb_pre>,dmg,%q<sb_dmg>,crit,if(%q<sb_crit>,1,0)))]
+        flags: [cmdsyntax]
       # +enc/raise [<who>]: Raise a Shield. The character's held shield adds its circumstance bonus to AC
       # until the start of their next turn.
       INC`ENC`RAISE:
         value: |-
-          @include %!/INC`ENC`NEED; think setq(act_at,if(strlen(%q<cmd_args>),u(%!/FUN`ENC`FIND,%q<cmd_args>),u(%!/FUN`ENC`ACTING))); @assert cand(strlen(%q<act_at>),gte(%q<act_at>,0))=@pemit %#=notice(PF2E,if(strlen(%q<cmd_args>),No one in the encounter is called %q<cmd_args>.,No one is acting. Name who raises a shield: +enc/raise <who>.),warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,It is [u(%!/FUN`ENC`C,%q<act_at>,name)]'s turn.,warn); @assert strmatch(u(%!/FUN`ENC`C,%q<act_at>,kind),pc)=@pemit %#=notice(PF2E,A creature's shield is part of its AC already.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); @assert cor(%q<enc_gm>,eq(%q<act_at>,u(%!/FUN`ENC`ACTING)),member(%q<check_options>,feat:reactive-shield))=@pemit %#=notice(PF2E,Raise a Shield is an action on [u(%!/FUN`ENC`C,%q<act_at>,name)]'s own turn%, or a reaction with Reactive Shield.,warn); @assert strlen(%q<check_shield>)=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] holds no shield. +build/equip <shield>=held.,warn); think u(%!/FUN`ENC`SET,%q<act_at>,raised,1); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] raises [json_query(%q<check_shield>,extract,$.name)]: +[firstof(json_query(%q<check_shield>,extract,$.system.acBonus),0)] AC until [u(%!/FUN`ENC`C,%q<act_at>,name)]'s next turn starts.)
+          @include %!/INC`ENC`NEED; think setq(act_at,if(strlen(%q<cmd_args>),u(%!/FUN`ENC`FIND,%q<cmd_args>),if(strlen(setr(raise_mine,u(%!/FUN`ENC`MINE))),%q<raise_mine>,u(%!/FUN`ENC`ACTING)))); @assert cand(strlen(%q<act_at>),gte(%q<act_at>,0))=@pemit %#=notice(PF2E,if(strlen(%q<cmd_args>),No one in the encounter is called %q<cmd_args>.,No one is acting. Name who raises a shield: +enc/raise <who>.),warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,It is [u(%!/FUN`ENC`C,%q<act_at>,name)]'s turn.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think u(%!/FUN`ACT`SHIELD,%q<act_at>); think setqm(raise_name,u(%!/FUN`ENC`C,%q<act_at>,name),raise_own,eq(%q<act_at>,u(%!/FUN`ENC`ACTING))); @assert strlen(%q<sh>)=@pemit %#=notice(PF2E,%q<raise_name> holds no shield.[if(strmatch(u(%!/FUN`ENC`C,%q<act_at>,kind),pc),%b+build/equip <shield>=held.)],warn); @assert not(%q<sh_destroyed>)=@pemit %#=notice(PF2E,%q<raise_name>'s %q<sh_name> is destroyed.,warn); @assert not(%q<sh_broken>)=@pemit %#=notice(PF2E,%q<raise_name>'s %q<sh_name> is broken: it gives no AC until it is repaired.,warn); @assert cor(%q<enc_gm>,%q<raise_own>,member(%q<check_options>,feat:reactive-shield))=@pemit %#=notice(PF2E,Raise a Shield is an action on %q<raise_name>'s own turn%, or a reaction with Reactive Shield.,warn); think setq(raise_react,cand(not(%q<raise_own>),member(%q<check_options>,feat:reactive-shield))); @assert cor(not(%q<raise_react>),not(u(%!/FUN`ENC`C,%q<act_at>,react)))=@pemit %#=notice(PF2E,%q<raise_name> has used a reaction this round.,warn); think u(%!/FUN`ENC`SET,%q<act_at>,raised,1); think if(%q<raise_react>,u(%!/FUN`ENC`SET,%q<act_at>,react,1)); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,%q<raise_name> raises %q<sh_name>[if(%q<raise_react>,%bwith Reactive Shield)]: +%q<sh_ac> AC until %q<raise_name>'s next turn starts.)
         flags: [cmdsyntax]
       INC`ENC`COND:
         value: |-
@@ -6258,7 +6406,7 @@ objects:
       # A cast in the encounter, by the character you play there, on their copy of the day.
       INC`CAST`ENC:
         value: |-
-          @assert cor(%q<enc_gm>,eq(%q<act_at>,u(%!/FUN`ENC`ACTING)))=@pemit %#=notice(PF2E,It is [u(%!/FUN`ENC`C,u(%!/FUN`ENC`ACTING),name)]'s turn.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think u({{core}}/FUN`CAST`PREPARE); think u(%!/FUN`ACT`HOLD,by); think setqm(daily,firstof(u(%!/FUN`ENC`C,%q<act_at>,daily),json(object)),cast_map,u(%!/FUN`ENC`C,%q<act_at>,map),cast_side,u(%!/FUN`ENC`C,%q<act_at>,side)); @include %!/INC`CAST`PICK; think setq(cast_on,if(strlen(%q<cast_targets>),u(%!/FUN`ENC`TARGETS,%q<cast_targets>),%q<act_at>)); @assert not(strlen(%q<targets_missing>))=@pemit %#=notice(PF2E,No one in the encounter is called %q<targets_missing>.,warn); @assert words(%q<cast_on>)=@pemit %#=notice(PF2E,No one is there to cast on.,warn); think u(%!/FUN`SPELL`PREPARE,strmatch(u(%!/FUN`ENC`C,first(%q<cast_on>),side),%q<cast_side>)); @assert cor(strlen(%q<cast_targets>),strlen(%q<cast_fx>),strlen(%q<spell_heal>),not(cor(%q<spell_attack>,strlen(%q<spell_save>),strlen(%q<spell_dmg>))))=@pemit %#=notice(PF2E,Name the targets: +cast [u({{commands}}/FUN`SHOW`SPELLNAME,%q<cast_id>)]=<names>%, or foes%, characters or everyone.,warn); think u({{commands}}/FUN`DAILY`SPEND,%q<cast_id>); think u(%!/FUN`ENC`SET,%q<act_at>,daily,%q<daily>); think u(%!/FUN`CAST`ROLLS); think setq(cast_atk,sub(%q<cast_atk>,mul(min(2,%q<cast_map>),5))); think setq(cast_lines,iter(%q<cast_on>,u(%!/FUN`CAST`ON,%i0),%b,%r)); think if(%q<spell_attack>,u(%!/FUN`ENC`SET,%q<act_at>,map,inc(%q<cast_map>))); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,[u(%!/FUN`CAST`HEAD)][if(strlen(%q<cast_say>),%r%q<cast_say>)][if(strlen(trim(%q<cast_lines>)),%r[trim(squish(%q<cast_lines>,%r),%r)])])
+          @assert cor(%q<enc_gm>,eq(%q<act_at>,u(%!/FUN`ENC`ACTING)))=@pemit %#=notice(PF2E,It is [u(%!/FUN`ENC`C,u(%!/FUN`ENC`ACTING),name)]'s turn.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think u({{core}}/FUN`CAST`PREPARE); think u(%!/FUN`ACT`HOLD,by); think setqm(daily,firstof(u(%!/FUN`ENC`C,%q<act_at>,daily),json(object)),cast_map,u(%!/FUN`ENC`C,%q<act_at>,map),cast_side,u(%!/FUN`ENC`C,%q<act_at>,side)); @include %!/INC`CAST`PICK; @assert cor(not(u(%!/FUN`ENC`C,%q<act_at>,noshield)),comp(u({{core}}/FUN`ITEM`SLUG,u({{core}}/FUN`ITEM`GET,spells,%q<cast_id>)),shield))=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)]'s Shield blocked until it ended: it cannot be cast again for 10 minutes.,warn); think setq(cast_on,if(strlen(%q<cast_targets>),u(%!/FUN`ENC`TARGETS,%q<cast_targets>),%q<act_at>)); @assert not(strlen(%q<targets_missing>))=@pemit %#=notice(PF2E,No one in the encounter is called %q<targets_missing>.,warn); @assert words(%q<cast_on>)=@pemit %#=notice(PF2E,No one is there to cast on.,warn); think u(%!/FUN`SPELL`PREPARE,strmatch(u(%!/FUN`ENC`C,first(%q<cast_on>),side),%q<cast_side>)); @assert cor(strlen(%q<cast_targets>),strlen(%q<cast_fx>),strlen(%q<spell_heal>),not(cor(%q<spell_attack>,strlen(%q<spell_save>),strlen(%q<spell_dmg>))))=@pemit %#=notice(PF2E,Name the targets: +cast [u({{commands}}/FUN`SHOW`SPELLNAME,%q<cast_id>)]=<names>%, or foes%, characters or everyone.,warn); think u({{commands}}/FUN`DAILY`SPEND,%q<cast_id>); think u(%!/FUN`ENC`SET,%q<act_at>,daily,%q<daily>); think u(%!/FUN`CAST`ROLLS); think setq(cast_atk,sub(%q<cast_atk>,mul(min(2,%q<cast_map>),5))); think setqm(sb_at,,sb_dmg,0); think setq(cast_lines,iter(%q<cast_on>,u(%!/FUN`CAST`ON,%i0),%b,%r)); think if(%q<spell_attack>,u(%!/FUN`ENC`SET,%q<act_at>,map,inc(%q<cast_map>))); @include %!/INC`ENC`STORE; @include %!/INC`SB`MARK; @remit %l=notice(PF2E,[u(%!/FUN`CAST`HEAD)][if(strlen(%q<cast_say>),%r%q<cast_say>)][if(strlen(trim(%q<cast_lines>)),%r[trim(squish(%q<cast_lines>,%r),%r)])])
         flags: [cmdsyntax]
       # What the spell does to combatant %0: heals an ally it can heal, else a spell attack against AC, a save
       # against the spell DC (basic or not), or damage with neither; an ally or the caster gets the spell's effect.
@@ -6271,9 +6419,15 @@ objects:
             cand(%q<cast_heal_n>,cor(%q<on_ally>,not(%q<spell_both>))),[u(FUN`ACT`HEAL,%0,%q<cast_heal_n>)]%q<heal_text>.,
             t(%q<spell_attack>),u(FUN`CAST`ATTACK,%0),
             t(strlen(%q<spell_save>)),[setqm(save_stat,%q<spell_save>,save_dc,%q<cast_dc>,save_parts,if(%q<spell_basic>,%q<cast_dmg_parts>))][u(FUN`ACT`SAVE,%0)][if(cand(strlen(%q<spell_pers>),lte(%q<roll_degree>,1)),u(FUN`CAST`PERSIST,%0,%q<spell_pers>,0))][if(cand(not(%q<spell_basic>),strlen(%q<cast_dmg_parts>),lte(%q<roll_degree>,1)),%bThe damage on a failure is for the GM: +enc/damage.)],
-            t(strlen(%q<cast_dmg_parts>)),[setqm(dmg_parts,%q<cast_dmg_parts>,dmg_raw,%q<cast_dmg_raw>,dmg_total,%q<cast_dmg_raw>)][u(FUN`ACT`IWR,%0)][u(FUN`ACT`HARM,%0,%q<dmg_total>,0)]%q<harm_text>[u(FUN`ACT`IWR`TEXT)].,
+            t(strlen(%q<cast_dmg_parts>)),[setqm(dmg_parts,%q<cast_dmg_parts>,dmg_raw,%q<cast_dmg_raw>,dmg_total,%q<cast_dmg_raw>)][u(FUN`ACT`IWR,%0)][u(FUN`CAST`SBMARK,%0,0)][u(FUN`ACT`HARM,%0,%q<dmg_total>,0)]%q<harm_text>[u(FUN`ACT`IWR`TEXT)].,
             ))][
           if(cand(strlen(%q<cast_fx>),cor(%q<on_ally>,not(cor(%q<spell_attack>,strlen(%q<spell_save>))))),setq(on_line,trim(%q<on_line> [u(FUN`FX`ADD,%0,first(%q<cast_fx>,~),rest(%q<cast_fx>,~),%q<pick_rank>,%q<cast_fxch>,u(FUN`ENC`C,%q<act_at>,k))])))]%q<on_line>
+        flags: [funsyntax]
+      # Shield Block's mark for a spell's damage to its one target: the target before the damage.
+      FUN`CAST`SBMARK:
+        value: |-
+          @@(%0 a target's index, %1 1 on a critical hit)[
+          if(eq(words(%q<cast_on>),1),setqm(sb_at,%0,sb_pre,json_query(%q<enc>,extract,$.c\[%0\]),sb_dmg,%q<dmg_total>,sb_crit,%1))]
         flags: [funsyntax]
       FUN`CAST`ATTACK:
         value: |-
@@ -6290,6 +6444,7 @@ objects:
             setq(dmg_raw,ladd(0 [iter(%q<dmg_parts>,elements(%i0,2,~),|,%b)]))][
             setq(dmg_total,%q<dmg_raw>)][
             u(FUN`ACT`IWR,%0)][
+            u(FUN`CAST`SBMARK,%0,%q<on_crit>)][
             u(FUN`ACT`HARM,%0,%q<dmg_total>,%q<on_crit>)]%, [if(%q<on_crit>,double%b)]damage %q<dmg_raw>[u(FUN`ACT`IWR`TEXT)]. %q<harm_text>[if(strlen(%q<spell_pers>),u(FUN`CAST`PERSIST,%0,%q<spell_pers>,%q<on_crit>))])].]
         flags: [funsyntax]
       FUN`CAST`PERSIST:
@@ -6469,6 +6624,8 @@ objects:
           @@(%0 a combatant's index: adds to next_text)[
           u(FUN`ENC`SET,%0,map,0)][
           u(FUN`ENC`SET,%0,raised,0)][
+          u(FUN`ENC`SET,%0,react,0)][
+          u(FUN`ENC`SET,%0,qsb,0)][
           setq(start_key,u(FUN`ENC`C,%0,k))][
           null(iter(u(FUN`ENC`INDEXES),u(FUN`TURN`TICK,%i0,%q<start_key>)))][
           u(FUN`TURN`HEALING,%0)][
@@ -6705,6 +6862,7 @@ objects:
           u(FUN`SHOW`LOOK`ROW,Traits,if(strlen(%q<look_npc>),u(FUN`SHOW`LOOK`TRAITS,%q<look_npc>)))][
           u(FUN`SHOW`LOOK`ROW,HP,if(u(FUN`ENC`C,%0,max),[u(FUN`ENC`C,%0,hp)] of [u(FUN`ENC`C,%0,max)][if(u(FUN`ENC`C,%0,temp),%, [u(FUN`ENC`C,%0,temp)] temporary)],none))][
           u(FUN`SHOW`LOOK`ROW,AC,if(cor(not(%q<look_hazard>),json_query(%q<look_npc>,extract,$.system.attributes.ac.value)),u(FUN`ACT`AC)))][
+          u(FUN`SHOW`LOOK`ROW,Shield,if(strlen(%q<sh>),%q<sh_name>: +%q<sh_ac> AC raised%, Hardness %q<sh_hard>[if(%q<sh_max>,%, HP %q<sh_hp> of %q<sh_max> %(BT %q<sh_bt>%))][switch(1,%q<sh_destroyed>,%b[tone(error,destroyed)],%q<sh_broken>,%b[tone(warning,broken)])]))][
           u(FUN`SHOW`LOOK`ROW,Saves,u(FUN`SHOW`LOOK`SAVES))][
           u(FUN`SHOW`LOOK`ROW,Perception,if(not(%q<look_hazard>),[u(FUN`SHOW`SIGNED,u({{core}}/FUN`CHECK`TOTAL,u(FUN`ACT`STAT,perception)))][if(strlen(%q<look_npc>),u(FUN`SHOW`LOOK`SENSES,%q<look_npc>))]))][
           u(FUN`SHOW`LOOK`ROW,Stealth,if(%q<look_hazard>,DC [add(10,u({{core}}/FUN`CHECK`TOTAL,u(FUN`ACT`STAT,stealth)))] [u({{commands}}/FUN`SHOW`TEXT,json_query(%q<look_npc>,extract,$.system.attributes.stealth.details))]))][
@@ -7036,7 +7194,8 @@ objects:
         - Bombs and versatile vials are Strikes: `+enc/strike <target>=<bomb>` throws one and uses it up. A hit adds the splash and persistent damage; a failure still splashes the target.
         - `+cast <spell>=<targets>` casts from the encounter's copy of your day: `+help pf2e spells`.
         - `+enc/act <action>`: an action that brings an effect, such as Rage or a stance. `+enc/act` on its own lists yours. `+enc/effect <your name>=-<effect>` ends one early.
-        - `+enc/raise`: Raise a Shield on your turn, or as a reaction with Reactive Shield. The shield you hold adds its bonus to your AC until your next turn starts.
+        - `+enc/raise \[<who>\]`: Raise a Shield on your turn, or as a reaction with Reactive Shield. The shield you hold adds its bonus to your AC until your next turn starts. A creature with a shield raises it the same way. A broken or destroyed shield cannot be raised.
+        - `+enc/block`: Shield Block, the reaction to damage just dealt to you while your shield is raised, with the Shield Block feat, the Shield spell or a creature's Shield Block. The shield's Hardness takes that much of the damage and the shield takes the rest, up to its Hit Points; you take all but what the Hardness took. A shield at its Broken Threshold or below is broken, at 0 Hit Points destroyed. Quick Shield Block gives a second block each round. The Shield spell ends when it blocks, and cannot be cast again for 10 minutes.
         - `+enc/delay` waits until after the next in line, and `+enc/next` ends your turn.
 
         Example:
@@ -7086,7 +7245,7 @@ objects:
         - `+enc/damage <who>=<amount or formula>` and `+enc/heal <who>=<amount or formula>`. A typed formula such as `2d6 fire` meets weaknesses, resistances and immunities. `+enc/damage/half` halves the damage, rounded down, and `+enc/damage/double` doubles it, both before weaknesses and resistances.
         - `+enc/cond <who>=<condition>\[ <value>\]\[/<rounds>\]`, where a value of 0 takes it off, and `+enc/persist <who>=<formula> <type>`, where `0 <type>` ends it.
         - `+enc/effect <who>=<effect>` gives anyone an effect from Foundry's effects, such as `+enc/effect Amiri=Inspire Courage`; `=-<effect>` ends it. Effects end on their own when their rounds are over.
-        - `+enc/keep \[<who>\]` writes characters' Hit Points, wounded, the day's spells, Focus Points and items made, and the consumables used, back to their sheets. Without it, a fight leaves sheets as they were.
+        - `+enc/keep \[<who>\]` writes characters' Hit Points, wounded, the day's spells, Focus Points and items made, and the consumables used, and the damage their shields took, back to their sheets. Without it, a fight leaves sheets as they were.
         - `+enc/undo` and `+enc/redo` step through the last 20 changes.
         - `+enc/award \[<XP>\] \[<reason>\]` writes the encounter's XP into each character's XP ledger, once: what the creatures and hazards are worth scaled to four characters, as GM Core does for other party sizes, or the amount given.
         - `+enc/end` ends the encounter, and tells you when no XP was given.
@@ -7134,6 +7293,7 @@ objects:
 
         - `+rest`: a night's rest and your daily preparations. You regain Hit Points equal to your Constitution modifier (at least 1) times your level, every spell slot and Focus Point comes back, and what alchemy made yesterday is gone.
         - `+refocus`: 10 minutes to regain a Focus Point.
+        - `+repair`: 10 minutes to Repair the shield you hold, a Crafting check against its level's DC. Success restores 5 Hit Points plus 5 for each proficiency rank, a critical success twice that, and a critical failure deals the shield 2d6 damage less its Hardness. A destroyed shield cannot be repaired. A shield's damage stays after `+rest`.
         - `+heal \[<player>=\]<hit points or formula>`: healing outside an encounter, such as Treat Wounds: `+heal Amiri=2d8`.
         - `+sheet` shows Hit Points now beside the most.
 
@@ -7196,7 +7356,7 @@ objects:
         Experience and money come from staff, and you spend them.
 
         - `+build/level`: a new level, for 1000 XP. The XP is spent, and `+build` then lists what the level brings: feats, boosts, skill increases.
-        - `+build/upgrade <item>=<rune>`: a rune on a weapon or armor, fundamental or property (`+help pf2e runes`). A weapon takes `+1`, `+2` or `+3` and `striking`, `greater striking` or `major striking`; armor takes `+1`, `+2` or `+3` and `resilient`, `greater resilient` or `major resilient`. You pay the new rune's price less the old one's, and a rune above your level is refused.
+        - `+build/upgrade <item>=<rune>`: a rune on a weapon or armor, fundamental or property (`+help pf2e runes`). A weapon takes `+1`, `+2` or `+3` and `striking`, `greater striking` or `major striking`; armor takes `+1`, `+2` or `+3` and `resilient`, `greater resilient` or `major resilient`; a shield takes a reinforcing rune. You pay the new rune's price less the old one's, and a rune above your level is refused.
         - `+build/buy` and `+build/sell` keep working after the sheet is finished.
 
         `+sheet` shows your XP beside your level. Every award, purchase and level is in your money or experience ledger with its reason: `+pf2e/ledger xp`, `+pf2e/ledger money`.
@@ -7216,6 +7376,7 @@ objects:
         - A greater rune replaces the lesser one of its family, and you pay the difference: `+build/upgrade longsword=greater flaming`.
         - `+build/upgrade <item>=remove <rune>` takes a property rune off. Nothing is paid back.
         - A rune above your level is refused. Staff etch uncommon and rare runes.
+        - A shield takes a reinforcing rune, `minor reinforcing` up to `supreme reinforcing`: `+build/upgrade steel shield=minor reinforcing`. It raises the shield's Hardness and Hit Points, up to the rune's most, and makes the shield magical.
         - `+sheet` lists each item's runes beside it.
 
         A weapon's property runes work in every Strike, as Foundry's pf2e system applies them: extra damage dice (flaming's fire, and its persistent fire on a critical hit), the resistances they ignore, the traits they give (holy, unholy, trip from hooked, nonlethal from merciful), Keen's critical hit on a 19, and their notes after the Strike. What a rune does beyond that, such as Impossible's range, is the GM's to apply. Armor's property runes take their slots, and the GM applies what they do.
