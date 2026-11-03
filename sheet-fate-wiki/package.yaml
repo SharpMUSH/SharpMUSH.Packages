@@ -1,7 +1,7 @@
-format: "1.16"
+format: "1.20"
 package: sheet-fate-wiki
 title: "Fate rules"
-version: 1.1.0
+version: 1.1.1
 wiki_landing_page: category:fate_start_here
 wiki_collection_name: Fate
 authors: [SharpMUSH]
@@ -9,7 +9,8 @@ description: "Rules reference for Fate as wiki pages: the ladder and the dice, a
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [fate, rules, wiki, character-creation]
-category: Characters
+category: Game System
+subcategory: Fate
 requires_server: ">=0.1"
 
 # A content pack: wiki pages only. It reads nothing from the sheet and the sheet reads nothing from it, so it

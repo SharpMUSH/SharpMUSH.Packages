@@ -1,13 +1,15 @@
-format: "1.16"
+format: "1.20"
 package: sheet-salvage-union-help
 title: "Salvage Union sheet: +help topics"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Puts the Salvage Union sheet topics into +help: registers the sheet-salvage-union package's help with the +help librarian, and points its messages at +help."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, salvage-union, help, bridge]
-category: Characters
+category: Game System
+subcategory: Salvage Union
+bridge: true
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. sheet-salvage-union keeps its topics on its own

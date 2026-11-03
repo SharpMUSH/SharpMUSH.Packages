@@ -1,13 +1,15 @@
-format: "1.16"
+format: "1.20"
 package: sheet-salvage-union-config
 title: "Salvage Union sheet: +config settings"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Puts the Salvage Union sheet settings into +config: registers them with the +config registry, so staff see and change them with +config salvage."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, salvage-union, config, bridge]
-category: Characters
+category: Game System
+subcategory: Salvage Union
+bridge: true
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. sheet-salvage-union declares its settings as

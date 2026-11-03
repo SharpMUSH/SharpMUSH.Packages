@@ -1,13 +1,15 @@
-format: "1.16"
+format: "1.20"
 package: atomic-robo-help
 title: "Atomic Robo: +help topics"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Puts the Atomic Robo topics (modes, mega-stunts, machines, inventions, brainstorms) into +help: registers the atomic-robo package's help with the +help librarian, and points its messages at +help."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, fate, help, bridge]
-category: Characters
+category: Game System
+subcategory: Fate
+bridge: true
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. atomic-robo keeps its topics on its

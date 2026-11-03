@@ -1,13 +1,14 @@
-format: "1.16"
+format: "1.20"
 package: sheet-charge
 title: "Charge sheet"
-version: 1.2.0
+version: 1.2.1
 authors: [SharpMUSH]
 description: "A Charge character sheet: details, twelve actions rated in dots, momentum, a stress clock with a condition, milestones and talents built up on a ledger, encounters that keep their own copy of each sheet, with threats, danger clocks and consequences, plus progress clocks. +check rolls an action's dice against a risk for the room and gains momentum; push yourself, add tension, assist a friend, and make determination and fortune rolls. Based on the Charge SRD under CC BY 4.0 and Blades in the Dark under CC BY 3.0."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, charge, forged in the dark, dice, momentum]
-category: Characters
+category: Game System
+subcategory: Charge
 requires_server: ">=0.1"
 
 # One permission, for the people who keep sheets: change any character's sheet at any time, read every sheet,

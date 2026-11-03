@@ -1,13 +1,14 @@
-format: "1.16"
+format: "1.20"
 package: sheet-ironsworn
 title: "Ironsworn sheet"
-version: 2.2.1
+version: 2.2.2
 authors: [SharpMUSH]
 description: "An Ironsworn character sheet: five stats and assets built from a ledger, health, spirit, supply and momentum, experience spent on new assets and their abilities, with its own audited ledger, companion health, iron vows with progress tracks, and encounters that play from copies of the sheets. +check makes an action roll, a six-sided die plus a stat against two ten-sided challenge dice, for the room; +vow swears, marks and fulfils vows. Based on the Ironsworn SRD under CC BY 4.0."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, ironsworn, vows, assets, dice]
-category: Characters
+category: Game System
+subcategory: Ironsworn
 requires_server: ">=0.1"
 
 # One permission, for the people who keep sheets: change any character's sheet and vows at any time, read every

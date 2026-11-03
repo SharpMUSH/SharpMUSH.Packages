@@ -1,13 +1,15 @@
-format: "1.16"
+format: "1.20"
 package: duties-brp
 title: "Duties: percentile (BRP) rolls"
-version: 1.0.2
+version: 1.0.3
 authors: [SharpMUSH]
 description: "Lets Duties roll on the percentile (BRP) sheet: a roll provider called brp, so a duty's checks roll 1d100 under a skill or characteristic roll, doubled or halved for difficulty, with help making a roll one step easier, and skill gains or healing as rewards. Pick it with +config duties/system=brp."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [duties, brp, sheet, dice, bridge]
-category: Characters
+category: Game System
+subcategory: Percentile (BRP)
+bridge: true
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. Duties asks the game's one active roll

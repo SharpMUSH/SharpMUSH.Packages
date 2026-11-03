@@ -1,13 +1,15 @@
-format: "1.16"
+format: "1.20"
 package: duties-pbta
 title: "Duties: PbtA sheet rolls"
-version: 1.0.2
+version: 1.0.3
 authors: [SharpMUSH]
 description: "Lets Duties roll on the PbtA sheet: a roll provider called pbta, so a duty's checks make a move or roll a stat, 2d6 plus the stat, with aid from helpers, forward and ongoing, and XP as a reward. Pick it with +config duties/system=pbta."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [duties, pbta, sheet, dice, bridge]
-category: Characters
+category: Game System
+subcategory: PbtA
+bridge: true
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. Duties asks the game's one active roll

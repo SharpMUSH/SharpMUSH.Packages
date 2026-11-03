@@ -1,13 +1,15 @@
-format: "1.16"
+format: "1.20"
 package: sheet-ironsworn-chargen
 title: "Ironsworn sheet: character applications"
-version: 1.1.0
+version: 1.1.1
 authors: [SharpMUSH]
 description: "Joins the Ironsworn sheet to character applications: a player changes their sheet only while their +app application is theirs to change, reviewers read the sheets of the characters they review, and the sheet's messages point at +app."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, ironsworn, chargen, approval, bridge]
-category: Characters
+category: Game System
+subcategory: Ironsworn
+bridge: true
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. sheet-ironsworn lets a player fill in their own

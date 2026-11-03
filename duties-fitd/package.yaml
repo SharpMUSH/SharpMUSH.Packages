@@ -1,13 +1,15 @@
-format: "1.16"
+format: "1.20"
 package: duties-fitd
 title: "Duties: Forged in the Dark rolls"
-version: 1.0.1
+version: 1.0.2
 authors: [SharpMUSH]
 description: "Lets Duties roll on the Forged in the Dark sheet: a roll provider called fitd, so a duty's checks roll an action's dice against a position, with assists and pushes paid in stress, and coin or stress relief as rewards. Pick it with +config duties/system=fitd."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [duties, fitd, sheet, dice, bridge]
-category: Characters
+category: Game System
+subcategory: Forged in the Dark
+bridge: true
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. Duties asks the game's one active roll
