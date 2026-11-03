@@ -1,7 +1,7 @@
 format: "1.16"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.9.7"
+version: "0.9.8"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -92,9 +92,9 @@ objects:
       # ledger read again costs a few hundred function calls. The key is the ledger with the package's
       # version, the books and CACHE`STAMP, which the updater and the deity table change. CACHE lists
       # the keys oldest first; past DATA`CACHE`KEEP the oldest goes.
-      DATA`CACHE`VERSION: "0.9.7"
+      DATA`CACHE`VERSION: "0.9.8"
       DATA`CACHE`KEEP: 200
-      DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_itemalts check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_shieldrules check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
+      DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_itemalts check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_shieldrules check_bulkrules check_bulk check_bulk_enc check_bulk_max check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
       # The ItemAlteration properties the core applies, by the kind of item they reach.
       DATA`ITEMALT`WEAPON: other-tags traits damage-type damage-dice-faces damage-dice-number runes-potency runes-striking description name
       DATA`ITEMALT`ARMOR: runes-potency runes-resilient ac-bonus description name
@@ -974,6 +974,7 @@ objects:
             toggle, [json_query(%1,extract,$.domain)]|[json_query(%1,extract,$.option)],
             option, json_query(%1,extract,$.option))]~[switch(%q<sheet_kind>,
             level, json_query(%1,extract,$.level),
+            coins, json_query(%1,extract,$.cp),
             ability, json_query(%1,extract,$.mod),
             rank, json_query(%1,extract,$.rank),
             grant, json_query(%1,extract,$.badge),
@@ -1493,10 +1494,12 @@ objects:
           setq(check_entries,u(FUN`SHEET`ENTRIES,%0))][
           setq(check_level,u(FUN`SHEET`LEVEL,%q<check_entries>))][
           setq(check_grants,u(FUN`SHEET`GRANTS,%q<check_entries>,%q<check_level>))][
-          setqm(check_options,self:level:%q<check_level>,check_conditions,,check_static,,check_dynamic,,check_names,,check_unapplied,,check_upgrades,,check_rankdyn,,check_strikes,,check_martial,,check_forms,,check_adjust,,check_rollrules,,check_dmgready,0,check_rollopts,,check_toggles,,check_domopts,,check_actortraits,,check_traits,,check_adjstrike,,check_itemalts,,check_resgrants,,check_craftgrants,,check_favoredrules,,check_shieldrules,,check_ancestry,,check_heritage,,check_background,,check_class,)][
+          setqm(check_options,self:level:%q<check_level>,check_conditions,,check_static,,check_dynamic,,check_names,,check_unapplied,,check_upgrades,,check_rankdyn,,check_strikes,,check_martial,,check_forms,,check_adjust,,check_rollrules,,check_dmgready,0,check_rollopts,,check_toggles,,check_domopts,,check_actortraits,,check_traits,,check_adjstrike,,check_itemalts,,check_resgrants,,check_craftgrants,,check_favoredrules,,check_shieldrules,,check_bulkrules,,check_ancestry,,check_heritage,,check_background,,check_class,)][
           setq(check_gear,u(FUN`SHEET`GEAR,%q<check_entries>))][
           setq(check_options,squish(%q<check_options> [iter(graball(%q<check_entries>,option~*),elements(%i0,2,~))] [if(not(strlen(graball(%q<check_entries>,option~self:type:*))),self:type:character)] [if(strlen(u(FUN`CHECK`SHIELDID)),self:shield:equipped)]))][
           null(iter(%q<check_grants>,u(FUN`CHECK`GRANT,%i0)))][
+          u(FUN`CHECK`BULK)][
+          u(FUN`CHECK`ENCUMBER)][
           u(FUN`CHECK`DEITY)][
           null(iter(%q<check_actortraits>,u(FUN`CHECK`ACTORTRAITS,%i0)))][
           setq(check_options,squish(%q<check_options> [iter(%q<check_traits>,self:trait:%i0)]))][
@@ -1516,6 +1519,15 @@ objects:
           setq(check_resources,setunion(iter(%q<check_resgrants>,u(FUN`CHECK`RESOURCES,first(%i0,~),rest(%i0,~))),))][
           setq(check_crafting,iter(setr(craft_all,iter(%q<check_craftgrants>,u(FUN`CHECK`CRAFTING,first(%i0,~),rest(%i0,~)))),firstof(first(graball(%q<craft_all>,%i0~*~*~?*)),first(graball(%q<craft_all>,%i0~*)))))][setq(check_crafting,iter(setunion(iter(%q<craft_all>,first(%i0,~)),),firstof(first(graball(%q<craft_all>,%i0~*~*~?*)),first(graball(%q<craft_all>,%i0~*)))))][
           setq(check_armor,u(FUN`CHECK`ARMOR))]
+        flags: [funsyntax]
+      # Foundry imposes the encumbered condition, which grants clumsy 1, on an actor carrying more than it may unencumbered.
+      FUN`CHECK`ENCUMBER:
+        value: |-
+          @@(after the grants: grants encumbered and clumsy 1 when check_bulk is past check_bulk_enc)[
+          if(cand(gt(div(%q<check_bulk>,10),%q<check_bulk_enc>),not(words(graball(%q<check_conditions>,encumbered~*)))),
+            [setq(bulk_grants,900001~conditions~[u(FUN`ITEM`FIND,conditions,encumbered)]~~ 900002~conditions~[u(FUN`ITEM`FIND,conditions,clumsy)]~1~)][
+            setq(check_grants,%q<check_grants> %q<bulk_grants>)][
+            null(iter(%q<bulk_grants>,u(FUN`CHECK`GRANT,%i0)))])]
         flags: [funsyntax]
       # Keeps the registers FUN`CHECK`PREPARE`BUILD set under CACHE`<check_key>, the key itself last so a
       # half-written entry is never read, and drops the oldest key past DATA`CACHE`KEEP.
@@ -1963,6 +1975,71 @@ objects:
           setq(shield_id,u(FUN`CHECK`SHIELDID))][
           if(strlen(%q<shield_id>),u(FUN`ITEM`ALTER,u(FUN`SHIELD`REINFORCED,u(FUN`ITEM`RUNED,%q<shield_id>)),shield))]
         flags: [funsyntax]
+      # Bulk as Foundry counts it, in light units (a light item 1, one Bulk 10): an item equipped counts its Bulk, one held
+      # or stowed its heldOrStowed (armor one step more), scaled to the actor's size; a stack group (arrows, coins) counts
+      # once per its size of the items together. check_bulk the light units carried, check_bulk_enc and check_bulk_max
+      # the Bulk past which the actor is encumbered and the most it can carry.
+      DATA`BULK`STACKS: bolts~10 arrows~10 slingBullets~10 blowgunDarts~10 woodenTaws~10 rounds5~5 rounds10~10 coins~1000 gems~2000
+      FUN`CHECK`BULK:
+        value: |-
+          @@(after FUN`CHECK`PREPARE's grants: sets check_bulk, check_bulk_enc, check_bulk_max)[
+          setqm(bulk_size,u(FUN`CHECK`SIZE),bulk_lu,0,bulk_stacks,)][
+          setq(bulk_alter,t(words(iter(%q<check_itemalts>,if(strmatch(get(u(DATA`PACK`[first(%i0,~)])/ITEM`[elements(%i0,2,~)]),*"property":"bulk"*),1)))))][
+          null(iter(%q<check_gear>,u(FUN`CHECK`BULK`ONE,%i0)))][
+          setq(bulk_cp,firstof(elements(first(graball(%q<check_entries>,coins~*)),3,~),0))][
+          setq(bulk_stacks,%q<bulk_stacks> ^1000^10|[add(div(%q<bulk_cp>,100),mod(div(%q<bulk_cp>,10),10),mod(%q<bulk_cp>,10))])][
+          setq(check_bulk,add(%q<bulk_lu>,ladd(0 [iter(setunion(iter(%q<bulk_stacks>,first(%i0,|)),),mul(last(%i0,^),div(ladd(0 [iter(graball(%q<bulk_stacks>,%i0|*),rest(%i0,|))]),elements(%i0,2,^))))])))][
+          setqm(bulk_enc,0,bulk_max,0)][
+          null(iter(%q<check_bulkrules>,u(FUN`CHECK`BULK`RULES,%i0)))][
+          setq(bulk_str,u(FUN`SHEET`ABILITY,%q<check_entries>,str))][
+          setqm(check_bulk_enc,floor(add(%q<bulk_str>,5,%q<bulk_enc>)),check_bulk_max,floor(add(%q<bulk_str>,10,%q<bulk_max>)))]
+        flags: [funsyntax]
+      FUN`CHECK`BULK`ONE:
+        value: |-
+          @@(%0 a gear entry id~qty~where: adds its Bulk to bulk_lu, or its stack to bulk_stacks as base^per^light units|qty)[
+          setq(bo_item,u(FUN`ITEM`GET,equipment,first(%0,~)))][
+          if(strlen(%q<bo_item>),
+            [if(%q<bulk_alter>,setq(bo_item,u(FUN`ITEM`ALTER,%q<bo_item>)))][
+            setqm(bo_qty,elements(%0,2,~),bo_where,elements(%0,3,~),bo_type,json_query(%q<bo_item>,extract,$.type),bo_v,u(FUN`BULK`LU,firstof(json_query(%q<bo_item>,extract,$.system.bulk.value),0)),bo_usage,edit(json_query(%q<bo_item>,extract,$.system.usage.value),null,))][
+            setq(bo_on,switch(1,cor(not(strlen(%q<bo_usage>)),strmatch(%q<bo_usage>,carried)),1,strmatch(%q<bo_usage>,held*),strmatch(%q<bo_where>,held),strmatch(%q<bo_usage>,attached*),0,strmatch(%q<bo_where>,worn)))][
+            if(not(%q<bo_on>),setq(bo_v,if(strmatch(%q<bo_type>,armor),u(FUN`BULK`UP,%q<bo_v>),if(isnum(setr(bo_hs,json_query(%q<bo_item>,extract,$.system.bulk.heldOrStowed))),u(FUN`BULK`LU,%q<bo_hs>),%q<bo_v>))))][
+            setq(bo_v,u(FUN`BULK`SIZE,%q<bo_v>,edit(firstof(json_query(%q<bo_item>,extract,$.system.size),med),null,med),%q<bulk_size>))][
+            setqm(bo_per,firstof(after(grab(v(DATA`BULK`STACKS),edit(json_query(%q<bo_item>,extract,$.system.stackGroup),null,-)~*),~),1),bo_base,edit(json_query(%q<bo_item>,extract,$.system.baseItem),null,))][
+            if(cor(strmatch(%q<bo_type>,backpack),cand(eq(%q<bo_per>,1),strlen(%q<bo_base>))),
+              setq(bulk_lu,add(%q<bulk_lu>,mul(%q<bo_v>,div(%q<bo_qty>,%q<bo_per>)))),
+              setq(bulk_stacks,%q<bulk_stacks> %q<bo_base>^%q<bo_per>^%q<bo_v>|%q<bo_qty>))])]
+        flags: [funsyntax]
+      FUN`BULK`LU:
+        value: |-
+          @@(%0 a Bulk value, light 0.1: its light units)[
+          round(mul(max(%0,0),10),0)]
+        flags: [funsyntax]
+      FUN`BULK`UP:
+        value: |-
+          @@(%0 light units: one step more, negligible to light, light to 1, then 1 more)[
+          switch(1,eq(%0,0),1,lt(%0,10),10,add(%0,10))]
+        flags: [funsyntax]
+      FUN`BULK`SIZE:
+        value: |-
+          @@(%0 light units, %1 the item's size, %2 the actor's: doubled each size the item is larger, halved each it is smaller)[
+          setqm(bs_v,%0,bs_d,sub(match(tiny med lg huge grg,switch(%1,sm,med,%1)),match(tiny med lg huge grg,switch(%2,sm,med,%2))))][
+          if(%q<bs_d>,null(iter(lnum(abs(%q<bs_d>)),setq(bs_v,if(gt(%q<bs_d>,0),switch(1,eq(%q<bs_v>,0),1,lt(%q<bs_v>,10),10,mul(%q<bs_v>,2)),switch(1,lt(%q<bs_v>,10),0,eq(%q<bs_v>,10),1,round(div(%q<bs_v>,2),0)))))))]%q<bs_v>
+        flags: [funsyntax]
+      # The ActiveEffectLike rules on inventory.bulk.encumberedAfterAddend and maxAddend whose predicates hold.
+      FUN`CHECK`BULK`RULES:
+        value: |-
+          @@(%0 pack~id~badge~index of a grant)[
+          setq(rr_item,u(FUN`ITEM`GET,first(%0,~),elements(%0,2,~)))][
+          setq(br_data,u(FUN`ROLLRULE`DATA,%0))][
+          json_map(me/FUN`CHECK`BULK`RULE,firstof(json_query(%q<rr_item>,extract,$.system.rules),json(array)),%b)]
+        flags: [funsyntax]
+      FUN`CHECK`BULK`RULE:
+        value: |-
+          @@(%1 a rule)[
+          if(cand(strmatch(json_query(%1,extract,$.key),ActiveEffectLike),match(inventory.bulk.encumberedAfterAddend inventory.bulk.maxAddend,json_query(%1,extract,$.path)),match(add subtract,json_query(%1,extract,$.mode)),u(FUN`PREDICATE`TEST,firstof(json_query(%1,get,predicate),json(array)),%q<check_options>)),
+            [setq(br_v,mul(if(strmatch(json_query(%1,extract,$.mode),subtract),-1,1),u(FUN`FORMULA`VALUE,json_query(%1,get,value),%q<br_data>,0)))][
+            if(strmatch(json_query(%1,extract,$.path),*max*),setq(bulk_max,add(%q<bulk_max>,%q<br_v>)),setq(bulk_enc,add(%q<bulk_enc>,%q<br_v>)))])]
+        flags: [funsyntax]
       FUN`CHECK`SHIELDID:
         value: |-
           @@(check_gear the gear: the id of the shield held, or nothing)[
@@ -2045,6 +2122,7 @@ objects:
           setqm(grant_ranks,json_query(%q<grant_prep>,extract,$.ranks),grant_rankdyn,json_query(%q<grant_prep>,extract,$.rankdyn),grant_choiceopts,json_query(%q<grant_prep>,extract,$.choiceopts),grant_strikes,json_query(%q<grant_prep>,extract,$.strikes))][
           setq(grant_badge,firstof(%q<grant_own>,json_query(%q<grant_prep>,extract,$.valued)))][
           if(cand(member(%q<grant_unapplied>,ActiveEffectLike),strmatch(get(u(DATA`PACK`%q<grant_pack>)/ITEM`%q<grant_id>),*"path":"system.attributes.shield*)),setq(check_shieldrules,%q<check_shieldrules> %q<grant_pack>~%q<grant_id>~%q<grant_own>~%q<grant_index>))][
+          if(cand(member(%q<grant_unapplied>,ActiveEffectLike),strmatch(get(u(DATA`PACK`%q<grant_pack>)/ITEM`%q<grant_id>),*"path":"inventory.bulk.*)),setq(check_bulkrules,%q<check_bulkrules> %q<grant_pack>~%q<grant_id>~%q<grant_badge>~%q<grant_index>))][
           if(member(%q<grant_unapplied>,ActiveEffectLike),[setq(grant_rankdyn,setunion(%q<grant_rankdyn>,u(FUN`CHECK`RANKCHOSEN,%q<grant_pack>,%q<grant_id>)))][setq(check_favoredrules,%q<check_favoredrules> [u(FUN`CHECK`FAVOREDRULES,%q<grant_pack>,%q<grant_id>)])])][
           if(member(%q<grant_unapplied>,MartialProficiency),[setq(check_martial,%q<check_martial> %q<grant_pack>~%q<grant_id>~%q<grant_badge>~%q<grant_index>)][setq(grant_unapplied,remove(%q<grant_unapplied>,MartialProficiency))])][
           if(member(%q<grant_unapplied>,BattleForm),[setq(check_forms,%q<check_forms> %q<grant_pack>~%q<grant_id>~%q<grant_badge>~%q<grant_index>)][setq(grant_unapplied,remove(%q<grant_unapplied>,BattleForm))])][
@@ -4913,7 +4991,7 @@ objects:
       FUN`LEDGER: The ledger. %0 a character.
       FUN`LEDGER`OF:
         value: |-
-          @@(%0 a character: their ledger as a JSON array, oldest entry first; entries without the wizard flag left out)\[[iter(sort(iter(lattr(%0/PF2E`LEDGER`*),if(hasflag(%0/%i0,wizard),last(%i0,`))),n),get(%0/PF2E`LEDGER`%i0),%b,\,)]\]
+          @@(%0 a character, %1 1 to leave out the coins: their ledger as a JSON array, oldest entry first; entries without the wizard flag left out; then, for a ledger with entries, the coins they carry, which have Bulk, as a coins entry numbered 0)\[[setr(lo_list,iter(sort(iter(lattr(%0/PF2E`LEDGER`*),if(hasflag(%0/%i0,wizard),last(%i0,`))),n),get(%0/PF2E`LEDGER`%i0),%b,\,))][if(cand(strlen(%q<lo_list>),not(%1),gt(setr(lo_cp,u(%!/FUN`PURSE`TOTAL,%0,money)),0)),\,[json(object,kind,"coins",cp,%q<lo_cp>,n,0)])]\]
         flags: [funsyntax]
       FUN`COMMAND: Reading what was typed.
       FUN`COMMAND`ABILITY:
@@ -4958,8 +5036,8 @@ objects:
               Attributes,iter(str dex con int wis cha,[capstr(%i0)] [u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`CHECK`ABILITY,%i0))],%b,%b%b))]%r[
             rule()]%r[
             lfields(,
-              Hit points|Hero points|AC|[if(strlen(%q<check_shield>),Shield|)]Speed|Class DC[if(%q<show_spellcaster>,|Spells)][if(strlen(setr(show_senses,u(%!/FUN`SHOW`SENSES))),|Senses)][if(strlen(setr(show_defences,u(%!/FUN`SHOW`DEFENCES))),|Defences)],
-              [setq(show_day,setr(check_daily,u(%!/FUN`DAILY`OF,%q<sheet_target>)))][if(strlen(json_query(%q<show_day>,extract,$.hp)),[json_query(%q<show_day>,extract,$.hp)] of%b)][u({{core}}/FUN`CHECK`HP)][if(json_query(%q<show_day>,extract,$.wounded),%b[tone(warning,%(wounded [json_query(%q<show_day>,extract,$.wounded)]%))])]|[u(%!/FUN`HERO`N,%q<show_day>)] of 3|[add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`AC)))][if(strlen(%q<check_armor>),%b[tone(muted,%([json_query(%q<check_armor>,extract,$.name)]%))])]|[if(strlen(%q<check_shield>),[u(%!/FUN`SHOW`SHIELD)]|)][u({{core}}/FUN`CHECK`SPEED)] feet[iter(u({{core}}/FUN`CHECK`SPEEDS),if(comp(first(%i0,~),land),%,%b[first(%i0,~)] [rest(%i0,~)] feet),%b,)]|[add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`CLASSDC)))][if(%q<show_spellcaster>,|attack [u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,attack)))]%, DC [add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,dc)))])][if(strlen(%q<show_senses>),|%q<show_senses>)][if(strlen(%q<show_defences>),|%q<show_defences>)],
+              Hit points|Hero points|AC|[if(strlen(%q<check_shield>),Shield|)]Speed|Bulk|Class DC[if(%q<show_spellcaster>,|Spells)][if(strlen(setr(show_senses,u(%!/FUN`SHOW`SENSES))),|Senses)][if(strlen(setr(show_defences,u(%!/FUN`SHOW`DEFENCES))),|Defences)],
+              [setq(show_day,setr(check_daily,u(%!/FUN`DAILY`OF,%q<sheet_target>)))][if(strlen(json_query(%q<show_day>,extract,$.hp)),[json_query(%q<show_day>,extract,$.hp)] of%b)][u({{core}}/FUN`CHECK`HP)][if(json_query(%q<show_day>,extract,$.wounded),%b[tone(warning,%(wounded [json_query(%q<show_day>,extract,$.wounded)]%))])]|[u(%!/FUN`HERO`N,%q<show_day>)] of 3|[add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`AC)))][if(strlen(%q<check_armor>),%b[tone(muted,%([json_query(%q<check_armor>,extract,$.name)]%))])]|[if(strlen(%q<check_shield>),[u(%!/FUN`SHOW`SHIELD)]|)][u({{core}}/FUN`CHECK`SPEED)] feet[iter(u({{core}}/FUN`CHECK`SPEEDS),if(comp(first(%i0,~),land),%,%b[first(%i0,~)] [rest(%i0,~)] feet),%b,)]|[u(%!/FUN`SHOW`BULK)]|[add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`CLASSDC)))][if(%q<show_spellcaster>,|attack [u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,attack)))]%, DC [add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,dc)))])][if(strlen(%q<show_senses>),|%q<show_senses>)][if(strlen(%q<show_defences>),|%q<show_defences>)],
               |)]%r[
             rule()]%r[
             ldatatable(,Statistic|Rank|>Modifier,iter(u({{core}}/FUN`SHEET`STATS),u(%!/FUN`SHOW`STATISTIC,%i0),%b,%r),%r)]%r[
@@ -5038,6 +5116,13 @@ objects:
             Rank %0|[sub(%q<book_slots>,firstof(u(%!/FUN`DAILY`AT,spent,%0),0))] of %q<book_slots>|[firstof(itemize(trim(squish(iter(%q<cast_known>,if(cand(not(member(json_query(get(u({{core}}/DATA`PACK`SPELLS)/ITEM`[first(%i0,~)]`PREP),extract,$.opts),item:trait:cantrip)),eq(firstof(elements(%i0,2,~),json_query(get(u({{core}}/DATA`PACK`SPELLS)/ITEM`[first(%i0,~)]`PREP),extract,$.level)),%0)),[u(%!/FUN`SHOW`SPELLNAME,first(%i0,~))][if(words(graball(%q<check_entries>,signature~[first(%i0,~)]~*)),%b%(signature%))]),%b,|),|),|),|),tone(muted,none))])]
         flags: [funsyntax]
       # The shield held: how much it adds to AC raised, its Hardness, Hit Points and Broken Threshold.
+      # The Bulk carried, as Foundry writes it (3, L, 2L, 3 and 4L), with the limits; encumbered past the first.
+      FUN`SHOW`BULK:
+        value: |-
+          @@(check_bulk, check_bulk_enc, check_bulk_max)[
+          setqm(bk_n,div(%q<check_bulk>,10),bk_l,mod(%q<check_bulk>,10))][
+          switch(1,not(%q<check_bulk>),negligible,not(%q<bk_l>),%q<bk_n>,not(%q<bk_n>),[if(gt(%q<bk_l>,1),%q<bk_l>)]L,%q<bk_n> and [if(gt(%q<bk_l>,1),%q<bk_l>)]L)][switch(1,gt(%q<bk_n>,%q<check_bulk_max>),%,%b[tone(error,more than you can carry)],gt(%q<bk_n>,%q<check_bulk_enc>),%,%b[tone(warning,encumbered)])][tone(muted,%b%(encumbered past %q<check_bulk_enc> Bulk%, at most %q<check_bulk_max>%))]
+        flags: [funsyntax]
       FUN`SHOW`SHIELD:
         value: |-
           @@(check_shield the shield, check_daily the day: the shield as its runes and effects make it, with the damage it has taken)[
@@ -5185,7 +5270,7 @@ objects:
       FUN`SHOW`LEDGER:
         value: |-
           @@(the ledger: every entry, oldest first, with who made it)[
-          box(if(json_query(%q<sheet_ledger>,size),ldatatable(,>#|Entry|By,json_map(%!/FUN`SHOW`ENTRY,%q<sheet_ledger>,%r),%r),tone(muted,No entries yet.)),[name(%q<sheet_target>)]'s ledger)]
+          box(if(json_query(setr(show_ledger,u(%!/FUN`LEDGER`OF,%q<sheet_target>,1)),size),ldatatable(,>#|Entry|By,json_map(%!/FUN`SHOW`ENTRY,%q<show_ledger>,%r),%r),tone(muted,No entries yet.)),[name(%q<sheet_target>)]'s ledger)]
         flags: [funsyntax]
       FUN`SHOW`PURSE:
         value: |-
@@ -7105,10 +7190,12 @@ objects:
       SEE`PF2E`BUILD: |-
         pf2e sheet|pf2e advance
       HELP`PF2E`SHEET: |-
-        `+sheet` shows your character: level and experience, ancestry, background, class and deity, traits, size, attributes, hit points, AC with the armor worn, the shield held, Speed and other movement, class DC, spell attack and DC, senses, weaknesses, resistances and immunities, every skill and save with its rank and modifier, Lores, Strikes, languages, money, gear, spells by rank, feats and features, actions and conditions.
+        `+sheet` shows your character: level and experience, ancestry, background, class and deity, traits, size, attributes, hit points, AC with the armor worn, the shield held, Speed and other movement, Bulk, class DC, spell attack and DC, senses, weaknesses, resistances and immunities, every skill and save with its rank and modifier, Lores, Strikes, languages, money, gear, spells by rank, feats and features, actions and conditions.
 
         - Every weapon has a Strike, held ones first; one that is carried says so, because you draw it before you Strike with it.
         - `+sheet` shows your own; staff add a name: `+sheet Amiri`.
+        - Bulk is counted as Foundry counts it. Gear held or worn counts its Bulk; carried gear counts what it weighs stowed, and armor that is not worn counts one step more. Ten light items are 1 Bulk, ammunition counts by its bundle, and 1,000 coins are 1 Bulk.
+        - You are encumbered past 5 plus your Strength modifier and can carry at most 10 plus it; feats, items and effects such as Hefty Hauler and Ant Haul raise both. Past the first you have the encumbered condition, which makes you clumsy 1 and takes 10 feet off your Speeds, in checks and encounters too.
         - Rules the game does not apply yet are listed at the end, so a sheet never looks finished when it is not.
       SEE`PF2E`SHEET: |-
         pf2e check|pf2e build
