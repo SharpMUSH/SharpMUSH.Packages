@@ -1,7 +1,7 @@
 format: "1.16"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.9.11"
+version: "0.9.12"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -67,6 +67,13 @@ objects:
       DATA`CONFIG`BOOKS`DEFAULT: pc1 pc2 gmc mc
       DATA`CONFIG`BOOKS`LABEL: Source books
       DATA`CONFIG`BOOKS`DESCRIPTION: The books whose rules the game uses, by the feed's book slug. An item from a book not listed is left out of lookups, sheets and the builder.
+      DATA`CONFIG`VARIANTS: ""
+      DATA`CONFIG`VARIANTS`TYPE: list
+      DATA`CONFIG`VARIANTS`DEFAULT: ""
+      DATA`CONFIG`VARIANTS`CHOICES: free-archetype
+      DATA`CONFIG`VARIANTS`LABEL: Variant rules
+      DATA`CONFIG`VARIANTS`EXAMPLE: free-archetype
+      DATA`CONFIG`VARIANTS`DESCRIPTION: "The GM Core variant rules the game plays with, none by default. free-archetype: an archetype feat at every even level, beside the class feats."
       DATA`CONFIG`REPOSITORY: SharpMUSH/SharpMUSH.Packages
       DATA`CONFIG`REPOSITORY`TYPE: text
       DATA`CONFIG`REPOSITORY`DEFAULT: SharpMUSH/SharpMUSH.Packages
@@ -92,7 +99,7 @@ objects:
       # ledger read again costs a few hundred function calls. The key is the ledger with the package's
       # version, the books and CACHE`STAMP, which the updater and the deity table change. CACHE lists
       # the keys oldest first; past DATA`CACHE`KEEP the oldest goes.
-      DATA`CACHE`VERSION: "0.9.11"
+      DATA`CACHE`VERSION: "0.9.12"
       DATA`CACHE`KEEP: 200
       DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_itemalts check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_shieldrules check_bulkrules check_bulk check_bulk_enc check_bulk_max check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
       # The ItemAlteration properties the core applies, by the kind of item they reach.
@@ -1510,7 +1517,7 @@ objects:
       FUN`CHECK`PREPARE:
         value: |-
           @@(%0 the ledger, %1 1 to leave out the synthetics, for the builder)[
-          setq(check_key,left(digest(sha1,%0|%1|[v(DATA`CACHE`VERSION)]|[v(DATA`CONFIG`BOOKS)]|[v(CACHE`STAMP)]),20))][
+          setq(check_key,left(digest(sha1,%0|%1|[v(DATA`CACHE`VERSION)]|[v(DATA`CONFIG`BOOKS)]|[v(DATA`CONFIG`VARIANTS)]|[v(CACHE`STAMP)]),20))][
           if(hasattr(me,CACHE`%q<check_key>),
             [setqm(check_ledger,%0,check_dmgready,0)][null(iter(v(DATA`CACHE`REGISTERS),setq(%i0,v(CACHE`%q<check_key>`%i0))))],
             [u(FUN`CHECK`PREPARE`BUILD,%0,%1)][u(FUN`CACHE`SAVE)])]
@@ -4124,7 +4131,7 @@ objects:
         value: |-
           @assert strlen(%q<check_ancestry>)=@pemit %#=notice(PF2E,Choose an ancestry first.,warn); think setqm(build_step,languages,build_picked,u(%!/FUN`BUILD`LANGUAGES`PICKED),build_need,u(%!/FUN`BUILD`LANGUAGES`NEED),build_offer,u(%!/FUN`BUILD`LANGUAGES`OFFER)); @assert strlen(trim(%q<cmd_rest>))=@pemit %#=notice(PF2E,[if(words(%q<build_picked>),Chosen: [itemize(iter(%q<build_picked>,capstr(%i0),%b,|),|)].%b)][if(gt(%q<build_need>,words(%q<build_picked>)),[sub(%q<build_need>,words(%q<build_picked>))] more to choose from [itemize(iter(setdiff(%q<build_offer>,%q<build_picked>),capstr(%i0),%b,|),|,or)].,Nothing more to choose. +build/undo languages chooses again.)]); think setq(build_typed,setdiff(lcstr(squish(%q<cmd_rest>)),%q<build_picked>)); @assert words(%q<build_typed>)=@pemit %#=notice(PF2E,Chosen already.,warn); @assert not(words(setdiff(%q<build_typed>,%q<build_offer>)))=@pemit %#=notice(PF2E,You can choose from [itemize(iter(setdiff(%q<build_offer>,%q<build_picked>),capstr(%i0),%b,|),|,or)].,warn); @assert lte(add(words(%q<build_picked>),words(%q<build_typed>)),%q<build_need>)=@pemit %#=notice(PF2E,[if(gt(%q<build_need>,words(%q<build_picked>)),Only [sub(%q<build_need>,words(%q<build_picked>))] more to choose%, not [words(%q<build_typed>)].,All %q<build_need> are chosen.)] +build/undo languages chooses again.,warn); @include %!/INC`BUILD`BEGIN; @dolist/inplace %q<build_typed>={think setq(entry_json,json(object,kind,"language",name,"##",step,"languages",parent,[elements(u(%!/FUN`BUILD`GRANT`OF,ancestry),1,~)])); @include %!/INC`BUILD`PUT}; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)]Languages: [itemize(iter(setunion(u(%!/FUN`BUILD`LANGUAGES`OWN) %q<build_picked> %q<build_typed>,),capstr(%i0),%b,|),|)].,ok); @wait 0={think u(%!/FUN`BUILD`LOAD); @pemit %#=u(%!/FUN`BUILD`NEXT)}
         flags: [cmdsyntax]
-      # +build/feat <slot>=<feat>: slots are ancestry-<level>, class-<level>, skill-<level> and general-<level>.
+      # +build/feat <slot>=<feat>: slots are ancestry-<level>, class-<level>, skill-<level>, general-<level> and, with Free Archetype, archetype-<level>.
       INC`BUILD`FEAT:
         value: |-
           think setqm(build_slot,lcstr(trim(before(%q<cmd_rest>,=))),build_name,trim(after(%q<cmd_rest>,=))); @assert member(u(%!/FUN`BUILD`SLOTS),%q<build_slot>)=@pemit %#=notice(PF2E,[if(words(setr(build_slots,u(%!/FUN`BUILD`SLOTS))),Your feat slots are [itemize(%q<build_slots>)]: +build/feat [first(%q<build_slots>)]=<feat>.,Choose a class first.)],warn); think setq(build_step,feat-%q<build_slot>); @include %!/INC`BUILD`GUARD; think setq(build_id,u({{core}}/FUN`ITEM`FIND,feats,%q<build_name>)); @assert strlen(%q<build_id>)=@pemit %#=notice(PF2E,There is no feat called %q<build_name> from a book the game uses.,warn); think setq(build_why,u(%!/FUN`BUILD`FEAT`WHY,%q<build_slot>,%q<build_id>)); @assert not(strlen(%q<build_why>))=@pemit %#=notice(PF2E,%q<build_why>,warn); @include %!/INC`BUILD`BEGIN; @include/nobreak %!/INC`BUILD`CLEAR; think setqm(grant_pack,feats,grant_id,%q<build_id>,grant_choices,,grant_parent,u(%!/FUN`BUILD`FEAT`PARENT,%q<build_slot>),grant_step,%q<build_step>,grant_level,last(%q<build_slot>,-),grant_depth,0); @include %!/INC`BUILD`GRANT; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)][capstr(first(%q<build_slot>,-))] feat at level [last(%q<build_slot>,-)]: [u(%!/FUN`SHOW`ITEM,feats,%q<build_id>,)].[if(strlen(setr(build_notes,u(%!/FUN`BUILD`PREREQ`NOTES,%q<build_id>))),%bCheck with staff: %q<build_notes>.)],ok); @wait 0={think u(%!/FUN`BUILD`LOAD); @pemit %#=u(%!/FUN`BUILD`NEXT)}
@@ -4545,12 +4552,12 @@ objects:
         value: |-
           max(0,add(firstof(json_query(%q<build_ancestry_item>,extract,$.system.additionalLanguages.count),0),u({{core}}/FUN`CHECK`ABILITY,int)))
         flags: [funsyntax]
-      # The feat slots up to the character's level, <kind>-<level>.
+      # The feat slots up to the character's level, <kind>-<level>. Free Archetype adds archetype-<level> at even levels.
       FUN`BUILD`SLOTS:
         value: |-
           @@(the registers of FUN`BUILD`LOAD)[
           if(strlen(%q<build_class_item>),
-            squish(iter(ancestry class skill general,iter(u(%!/FUN`BUILD`LEVELS,%i0FeatLevels),if(lte(%i0,%q<check_level>),%i1-%i0)))),
+            squish([iter(ancestry class skill general,iter(u(%!/FUN`BUILD`LEVELS,%i0FeatLevels),if(lte(%i0,%q<check_level>),%i1-%i0)))] [if(member(get({{core}}/DATA`CONFIG`VARIANTS),free-archetype),iter(lnum(2,%q<check_level>),if(not(mod(%i0,2)),archetype-%i0)))]),
             if(strlen(%q<check_ancestry>),ancestry-1))]
         flags: [funsyntax]
       FUN`BUILD`FEAT`PARENT:
@@ -4579,6 +4586,7 @@ objects:
           switch(%0,
             ancestry, cand(strmatch(%q<fits_category>,ancestry),words(setinter(iter(%q<fits_opts>,if(strmatch(%i0,item:trait:*),after(%i0,item:trait:))),u(%!/FUN`BUILD`ANCESTRY`TRAITS)))),
             class, cand(strmatch(%q<fits_category>,class),cor(member(%q<fits_opts>,item:trait:%q<build_class_slug>),member(%q<fits_opts>,item:trait:archetype)),cor(not(member(%q<fits_opts>,item:trait:dedication)),cand(u(%!/FUN`BUILD`DEDICATION`OPEN),comp(json_query(%1,extract,$.slug),%q<build_class_slug>-dedication)))),
+            archetype, cand(strmatch(%q<fits_category>,class),member(%q<fits_opts>,item:trait:archetype),cor(not(member(%q<fits_opts>,item:trait:dedication)),cand(u(%!/FUN`BUILD`DEDICATION`OPEN),comp(json_query(%1,extract,$.slug),%q<build_class_slug>-dedication)))),
             skill, strmatch(%q<fits_category>,skill),
             general, match(general skill,%q<fits_category>),
             0)]
@@ -4989,6 +4997,7 @@ objects:
             setq(list_ids,switch(%q<list_kind>,
               ancestry, iter(u(%!/FUN`BUILD`ANCESTRY`TRAITS),get(%q<list_store>/OPT`TRAIT`[ucstr(%i0)])),
               class, setunion(get(%q<list_store>/OPT`TRAIT`[ucstr(u({{core}}/FUN`ITEM`SLUG,%q<build_class_item>))]),get(%q<list_store>/OPT`TRAIT`ARCHETYPE)),
+              archetype, get(%q<list_store>/OPT`TRAIT`ARCHETYPE),
               skill, get(%q<list_store>/OPT`CATEGORY`SKILL),
               general, setunion(get(%q<list_store>/OPT`CATEGORY`GENERAL),get(%q<list_store>/OPT`CATEGORY`SKILL))))][
             iter(sort(iter(setunion(%q<list_ids>,),
@@ -7365,7 +7374,7 @@ objects:
         - `+build/boost ancestry=<attributes>`, `+build/boost background=<attributes>`, `+build/boost class=<attribute>`, `+build/boost 1=<four attributes>`. Type a set on its own, such as `+build/boost background`, to see what it asks for.
         - `+build/skills <skill> <skill> ...`: every skill your class lets you choose, in one line. The skills you are already trained in show on `+build/list skills`.
         - `+build/language <name> ...`: your extra languages, in one line.
-        - `+build/feat <slot>=<name>`: a feat for a slot, such as `+build/feat class-1=Sudden Charge`. `+build/list feats class-1` lists only the feats whose prerequisites you meet.
+        - `+build/feat <slot>=<name>`: a feat for a slot, such as `+build/feat class-1=Sudden Charge`. `+build/list feats class-1` lists only the feats whose prerequisites you meet. With Free Archetype (`+help pf2e variants`) every even level has an `archetype-<level>` slot as well.
         - `+build/choose <number or name>=<option>`: a choice a feature asks for, such as `+build/choose instinct=giant` or `+build/choose deity=Solenne` (`+help pf2e deity`). `+build/list choice instinct` lists the options.
         - `+build/spell <name>`, `+build/unspell <name>`: the spells a spontaneous caster, a wizard or a witch knows, and focus spells. `+build/list spells 1` lists the rank 1 spells of your tradition, `+build/list spells cantrips` the cantrips, `+build/list spells 1 any` every tradition's. A spontaneous caster learns as many spells of a rank as they have slots, a wizard's spellbook and a witch's familiar hold 10 cantrips and 5 spells plus 2 a level. A cleric or druid learns none: they prepare any common spell of their tradition.
         - `+build/signature <spell>\[ at <rank>\]`: a signature spell, with the Signature Spells feature.
@@ -7683,8 +7692,15 @@ objects:
         - `+pf2e/ledger <player>\[=money or xp\]` lists the sheet's ledger, or the money or experience ledger with its total.
         - `+pf2e/update` reads Foundry's content again from the feed.
         - `+deity/create`, `+deity/set`, `+deity/destroy` and `+deity/samples` keep the deity table: `+help pf2e deity staff`.
+        - `+config pf2e/variants=<rules>` turns on GM Core variant rules: `+help pf2e variants`.
       SEE`PF2E`STAFF: |-
-        pf2e advance|pf2e deity staff|pf2e
+        pf2e advance|pf2e deity staff|pf2e variants|pf2e
+      HELP`PF2E`VARIANTS: |-
+        GM Core's variant rules are off until staff turn them on with the `variants` setting, a list of their names: `+config pf2e/variants=free-archetype`. `+config pf2e/variants=` turns them all off.
+
+        - `free-archetype`: an archetype feat at every even level, beside the class feats. Its slots are `archetype-2`, `archetype-4` and so on: `+build/feat archetype-2=Medic Dedication`. They take archetype feats only, and the second dedication waits for two other feats from the first archetype, as a class feat slot does.
+      SEE`PF2E`VARIANTS: |-
+        pf2e build|pf2e staff
       HELP`PF2E`DEITY: |-
         `+deity` lists the game's deities. `+deity <name>` shows one: Divine Font, sanctification, domains, favored weapon, divine skill and cleric spells.
 

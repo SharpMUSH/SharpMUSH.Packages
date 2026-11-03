@@ -187,13 +187,18 @@ packages:
   - path: pf2e/
     name: Pathfinder 2e rules
     package: pf2e
-    version: 0.9.11
+    version: 0.9.12
     description: Pathfinder Second Edition rules read the way Foundry VTT's pf2e system reads them, with ledger character sheets, a character builder, spellcasting, a deity table the game fills, alchemy, encounters with a bestiary, hazards, effects and GM tools, exploration, skill challenges, audited awards and levels (ORC License)
   - path: pf2e-help/
     name: Pathfinder 2e help
     package: pf2e-help
     version: 1.0.0
     description: Puts the Pathfinder 2e topics into +help
+  - path: pf2e-config/
+    name: Pathfinder 2e settings
+    package: pf2e-config
+    version: 1.0.0
+    description: Puts the Pathfinder 2e settings into +config
   - path: sheet-fitd/
     name: FitD Sheet
     package: sheet-fitd
