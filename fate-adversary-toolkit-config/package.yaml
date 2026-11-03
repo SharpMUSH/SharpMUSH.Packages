@@ -1,13 +1,15 @@
-format: "1.16"
+format: "1.20"
 package: fate-adversary-toolkit-config
 title: "Fate Adversary Toolkit: +config settings"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Puts the Fate Adversary Toolkit settings and its adversary and obstacle libraries into +config: registers them with the +config registry, so staff see and change them with +config adversary."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, fate, config, bridge]
-category: Characters
+category: Game System
+subcategory: Fate
+bridge: true
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. fate-adversary-toolkit declares its settings

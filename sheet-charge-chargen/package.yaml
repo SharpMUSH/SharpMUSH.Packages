@@ -1,13 +1,15 @@
-format: "1.16"
+format: "1.20"
 package: sheet-charge-chargen
 title: "Charge sheet: character applications"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Joins the Charge sheet to character applications: a player gives out their action dots only while their +app application is theirs to change, reviewers read the sheets of the characters they review, and the sheet's messages point at +app."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, charge, chargen, approval, bridge]
-category: Characters
+category: Game System
+subcategory: Charge
+bridge: true
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. sheet-charge lets a player give out their action

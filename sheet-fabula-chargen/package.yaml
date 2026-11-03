@@ -1,13 +1,15 @@
-format: "1.16"
+format: "1.20"
 package: sheet-fabula-chargen
 title: "JRPG sheet: character applications"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Joins the JRPG sheet to character applications: a player changes their sheet only while their +app application is theirs to change, reviewers read the sheets of the characters they review, and the sheet's messages point at +app."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, fabula, chargen, approval, bridge]
-category: Characters
+category: Game System
+subcategory: JRPG
+bridge: true
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. sheet-fabula lets a player fill in their own

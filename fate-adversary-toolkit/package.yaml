@@ -1,13 +1,14 @@
-format: "1.16"
+format: "1.20"
 package: fate-adversary-toolkit
 title: "Fate Adversary Toolkit (unofficial)"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Opposition for the Fate sheet, after the Fate Adversary Toolkit: a library of ready adversaries (threats, hitters, bosses and fillers) that +adversary/make copies into +npc at your game's power level, +adversary/build to make one by type from its skills, filler mobs that thin as they take stress, hazards, blocks and distractions in an encounter with +obstacle, countdowns with +countdown, and resistances and limitations on any NPC. Based on the Fate Adversary Toolkit SRD under CC BY 3.0. An unofficial fan package, not affiliated with or endorsed by Evil Hat Productions."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, fate, npc, encounters, adversaries]
-category: Characters
+category: Game System
+subcategory: Fate
 requires_server: ">=0.1"
 
 # It builds opposition in the Fate sheet's +npc store, runs obstacles inside the sheet's encounters, and thins a

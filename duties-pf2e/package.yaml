@@ -1,13 +1,15 @@
-format: "1.16"
+format: "1.20"
 package: duties-pf2e
 title: "Duties: Pathfinder 2e rolls"
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Lets Duties roll on the Pathfinder 2e sheet: a roll provider called pf2e, so a duty's checks roll a skill, Perception or a save against a DC for the roller's level, with Pathfinder's four degrees of success. Pick it with +config duties/system=pf2e."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [duties, pf2e, pathfinder, dice, bridge]
-category: Characters
+category: Game System
+subcategory: Pathfinder 2e
+bridge: true
 requires_server: ">=1.0"
 
 # A bridge: it joins two packages that do not know about each other. Duties asks the game's one active roll
