@@ -1,7 +1,7 @@
 format: "1.16"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.9.9"
+version: "0.9.10"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -92,7 +92,7 @@ objects:
       # ledger read again costs a few hundred function calls. The key is the ledger with the package's
       # version, the books and CACHE`STAMP, which the updater and the deity table change. CACHE lists
       # the keys oldest first; past DATA`CACHE`KEEP the oldest goes.
-      DATA`CACHE`VERSION: "0.9.9"
+      DATA`CACHE`VERSION: "0.9.10"
       DATA`CACHE`KEEP: 200
       DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_itemalts check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_shieldrules check_bulkrules check_bulk check_bulk_enc check_bulk_max check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
       # The ItemAlteration properties the core applies, by the kind of item they reach.
@@ -1654,7 +1654,7 @@ objects:
           if(strmatch(json_query(%1,extract,$.key),ItemAlteration),
             if(not(member(v(DATA`ITEMALT`[switch(1,t(strlen(json_query(%1,extract,$.itemType))),json_query(%1,extract,$.itemType),strmatch(json_query(%1,extract,$.itemId),xxxxxxFISTxxxxxx),weapon,item)]),json_query(%1,extract,$.property))),x))]
         flags: [funsyntax]
-      DATA`ITEMALT`ITEM: other-tags traits damage-type damage-dice-faces damage-dice-number runes-potency runes-striking runes-resilient ac-bonus hardness material-type description name
+      DATA`ITEMALT`ITEM: other-tags traits damage-type damage-dice-faces damage-dice-number runes-potency runes-striking runes-resilient ac-bonus hardness material-type description name badge-max
       # The DC of the flat check that ends persistent damage of a type: 15, or what the ItemAlteration rules on the
       # persistent-damage condition (Charhide Goblin's fire) make it.
       FUN`CHECK`PDDC:
@@ -5359,7 +5359,7 @@ objects:
     attributes:
       CMD`ENC:
         value: |-
-          $(?is)^\+enc(/\S*)?(?\: +(.*))?$:think setqm(cmd_switch,firstof(lcstr(first(after(%1,/),/)),show),cmd_sub,lcstr(after(after(%1,/),/)),cmd_args,trim(%2)); @assert match(show start add remove join init next strike check save use act effect raise block damage heal cond persist delay look bestiary award keep undo redo end toggle,%q<cmd_switch>)=@pemit %#=notice(PF2E,There is no +enc/%q<cmd_switch>. +help +enc lists the switches.,warn); think u(%!/FUN`ENC`LOAD,%l); @include %!/INC`ENC`%q<cmd_switch>
+          $(?is)^\+enc(/\S*)?(?\: +(.*))?$:think setqm(cmd_switch,firstof(lcstr(first(after(%1,/),/)),show),cmd_sub,lcstr(after(after(%1,/),/)),cmd_args,trim(%2)); @assert match(show start add remove join init next strike check save use act effect badge raise block damage heal cond persist delay look bestiary award keep undo redo end toggle,%q<cmd_switch>)=@pemit %#=notice(PF2E,There is no +enc/%q<cmd_switch>. +help +enc lists the switches.,warn); think u(%!/FUN`ENC`LOAD,%l); @include %!/INC`ENC`%q<cmd_switch>
         flags: [regexp, cmdsyntax]
       # +cast <spell>[ at <rank>][ with <n> actions][ as <variant>][=<targets>]: in an encounter you are in, on its
       # copy of you and on its combatants; elsewhere from your sheet's day, with healing onto the characters named.
@@ -5701,7 +5701,7 @@ objects:
               json(object,kind,"level",level,u(FUN`ENC`LEVEL,%0),n,1))]\,[
             iter(setunion(setr(enc_keys,json_map(%!/FUN`JSON`KEY,%q<enc_conds>,%b)) [iter(%q<enc_keys>,u(FUN`ENC`IMPLIED,%i0))],),if(strlen(setr(enc_cid,u({{core}}/FUN`ITEM`FIND,conditions,%i0))),json(object,kind,"grant",pack,"conditions",id,json(string,%q<enc_cid>),badge,if(setr(enc_badge,json_query(%q<enc_conds>,extract,$.%i0)),%q<enc_badge>,null),n,add(100000,inum(0)))),%b,\,)]\,[
             iter(json_map(%!/FUN`JSON`KEY,setr(enc_used,firstof(u(FUN`ENC`C,%0,used),json(object))),%b),json(object,kind,"gear",id,json(string,%i0),qty,first(json_query(%q<enc_used>,extract,$.%i0),|),where,json(string,rest(json_query(%q<enc_used>,extract,$.%i0),|)),n,add(200000,inum(0))),%b,\,)]\,[
-            iter(json_map(%!/FUN`JSON`KEY,setr(enc_fx,firstof(u(FUN`ENC`C,%0,fx),json(object))),%b),json(object,kind,"grant",pack,json(string,edit(json_query(%q<enc_fx>,extract,$\["%i0"\].pack),",)),id,json(string,%i0),choices,json_mod(firstof(json_query(%q<enc_fx>,extract,$\["%i0"\].ch),json(object)),patch,json(object,effectLevel,json_query(%q<enc_fx>,extract,$\["%i0"\].lvl))),n,add(300000,inum(0))),%b,\,)]\,[
+            iter(json_map(%!/FUN`JSON`KEY,setr(enc_fx,firstof(u(FUN`ENC`C,%0,fx),json(object))),%b),json(object,kind,"grant",pack,json(string,edit(json_query(%q<enc_fx>,extract,$\["%i0"\].pack),",)),id,json(string,%i0),choices,json_mod(firstof(json_query(%q<enc_fx>,extract,$\["%i0"\].ch),json(object)),patch,json(object,effectLevel,json_query(%q<enc_fx>,extract,$\["%i0"\].lvl))),badge,firstof(json_query(%q<enc_fx>,extract,$\["%i0"\].badge),null),n,add(300000,inum(0))),%b,\,)]\,[
             iter(json_map(%!/FUN`JSON`KEY,setr(enc_tg,firstof(u(FUN`ENC`C,%0,tg),json(object))),%b),json(object,kind,"toggle",domain,json(string,before(%i0,|)),option,json(string,after(%i0,|)),value,if(first(json_query(%q<enc_tg>,extract,$\["%i0"\]),|),true,false),selection,if(strlen(setr(enc_tgsel,rest(json_query(%q<enc_tg>,extract,$\["%i0"\]),|))),json(string,%q<enc_tgsel>),null),n,add(400000,inum(0))),%b,\,)]\,[
             iter(squish([if(strmatch(u(FUN`ENC`C,%0,kind),npc),self:type:[if(t(u(FUN`ENC`C,%0,hazard)),hazard,npc)])] [if(t(u(FUN`ENC`C,%0,raised)),self:shield:raised self:effect:raise-a-shield)] [if(strlen(setr(enc_shst,u(FUN`ENC`C,%0,shst))),self:shield:%q<enc_shst>)]),json(object,kind,"option",option,json(string,%i0),n,add(500000,inum(0))),%b,\,)],\,),\,)]\]]
         flags: [funsyntax]
@@ -6591,13 +6591,67 @@ objects:
           setq(fxa_prep,get(u({{core}}/DATA`PACK`%1)/ITEM`%2`PREP))][
           setq(fxa_slug,json_query(%q<fxa_prep>,extract,$.slug))][
           setq(fxa_rounds,u(FUN`FX`ROUNDS,json_query(%q<fxa_item>,extract,$.system.duration)))][
+          setq(fxa_badge,u(FUN`FX`BADGE`START,firstof(%3,json_query(%q<fxa_prep>,extract,$.level),1)))][
           setq(fxa_old,firstof(u(FUN`ENC`C,%0,fx),json(object)))][
           null(iter(json_map(%!/FUN`JSON`KEY,%q<fxa_old>,%b),if(cor(strmatch(%i0,%2),cand(member(json_query(%q<fxa_prep>,extract,$.unapplied),BattleForm),member(json_query(get(u({{core}}/DATA`PACK`[edit(json_query(%q<fxa_old>,extract,$\["%i0"\].pack),",)])/ITEM`%i0`PREP),extract,$.unapplied),BattleForm)),cand(strmatch(%q<fxa_slug>,stance-*),strmatch(json_query(get(u({{core}}/DATA`PACK`[edit(json_query(%q<fxa_old>,extract,$\["%i0"\].pack),",)])/ITEM`%i0`PREP),extract,$.slug),stance-*))),u(FUN`ENC`PATCH,%0,json(object,fx,json(object,%i0,null))))))][
-          u(FUN`ENC`PATCH,%0,json(object,fx,json(object,%2,json(object,pack,json(string,%1),lvl,firstof(%3,json_query(%q<fxa_prep>,extract,$.level),1),ch,%q<fxa_ch>,end,if(gt(%q<fxa_rounds>,0),json(string,%5~%q<fxa_rounds>),null)))))][
+          u(FUN`ENC`PATCH,%0,json(object,fx,json(object,%2,json(object,pack,json(string,%1),lvl,firstof(%3,json_query(%q<fxa_prep>,extract,$.level),1),ch,%q<fxa_ch>,badge,firstof(%q<fxa_badge>,null),end,if(gt(%q<fxa_rounds>,0),json(string,%5~%q<fxa_rounds>),null)))))][
+          if(isint(%q<fxa_badge>),if(neq(%q<fxa_badge>,setr(fxa_kept,firstof(u(FUN`FX`BADGE`CLAMP,%0,%1,%2,%q<fxa_badge>),1))),[setq(fxa_badge,%q<fxa_kept>)][u(FUN`ENC`PATCH,%0,json(object,fx,json(object,%2,json(object,badge,%q<fxa_badge>))))]))][
           u(FUN`ENC`PREPARE,%0)][
           setq(fxa_temp,max(firstof(u({{core}}/FUN`CHECK`FORM`GET,tempHP),0),u(FUN`FX`TEMPHP,%q<fxa_item>)))][
           if(gt(%q<fxa_temp>,u(FUN`ENC`C,%0,temp)),u(FUN`ENC`SET,%0,temp,%q<fxa_temp>))][
-          [u(FUN`ENC`C,%0,name)] gains [u(FUN`FX`NAME,%1,%2)][if(strlen(%q<fxa_on>),%bon [itemize(%q<fxa_on>,|)])][if(%q<fxa_temp>,%band %q<fxa_temp> temporary Hit Points)][if(gt(%q<fxa_rounds>,0),%bfor %q<fxa_rounds> round[if(neq(%q<fxa_rounds>,1),s)])].[if(strlen(%q<fxa_note>),%b[trim(%q<fxa_note>)])]]
+          [u(FUN`ENC`C,%0,name)] gains [u(FUN`FX`NAME,%1,%2)][u(FUN`FX`BADGE`SHOW,%1,%2,%q<fxa_badge>)][if(strlen(%q<fxa_on>),%bon [itemize(%q<fxa_on>,|)])][if(%q<fxa_temp>,%band %q<fxa_temp> temporary Hit Points)][if(gt(%q<fxa_rounds>,0),%bfor %q<fxa_rounds> round[if(neq(%q<fxa_rounds>,1),s)])].[if(strlen(%q<fxa_note>),%b[trim(%q<fxa_note>)])]]
+        flags: [funsyntax]
+      # An effect's badge as Foundry starts it: a counter's value, or a formula's roll (Devise a Stratagem's 1d20). Empty without one.
+      FUN`FX`BADGE`START:
+        value: |-
+          @@(%0 the effect's level; fxa_item the effect)[
+          switch(json_query(%q<fxa_item>,extract,$.system.badge.type),
+            counter,if(isint(setr(fxb_value,json_query(%q<fxa_item>,extract,$.system.badge.value))),%q<fxb_value>,1),
+            formula,[setq(fxb_formula,edit(edit(edit(json_query(%q<fxa_item>,extract,$.system.badge.value),@item.level,%0),%(,),%),))][switch(1,regmatch(%q<fxb_formula>,^%(\\d+%)d%(\\d+%)$,0 fxb_n fxb_d),die(%q<fxb_n>,%q<fxb_d>),isint(%q<fxb_formula>),%q<fxb_formula>,)],
+            )]
+        flags: [funsyntax]
+      # A badge kept within a counter's bounds: its least (1 unless it names one) and its most (from the effect's own
+      # badge-max rule, the number of its labels, or its max). A counter that loops goes round; one that goes below its
+      # least gives nothing, and the effect ends. A formula's badge is kept as it is.
+      FUN`FX`BADGE`CLAMP:
+        value: |-
+          @@(%0 the bearer's index, %1 pack, %2 id, %3 a value)[
+          setq(fxk_item,u({{core}}/FUN`ITEM`GET,%1,%2))][
+          if(strmatch(json_query(%q<fxk_item>,extract,$.system.badge.type),counter),
+            [setqm(fxk_min,if(isint(setr(fxk_v,json_query(%q<fxk_item>,extract,$.system.badge.min))),%q<fxk_v>,1),fxk_labels,json_query(%q<fxk_item>,extract,$.system.badge.labels),fxk_loop,strmatch(json_query(%q<fxk_item>,extract,$.system.badge.loop),true))][
+            setq(fxk_max,firstof(u(FUN`FX`BADGE`MAX,%0,%1,%2),if(strmatch(left(%q<fxk_labels>,1),\[),json_query(%q<fxk_labels>,size)),if(isint(setr(fxk_v,json_query(%q<fxk_item>,extract,$.system.badge.max))),%q<fxk_v>)))][
+            switch(1,
+              lt(%3,%q<fxk_min>),if(cand(%q<fxk_loop>,isint(%q<fxk_max>)),%q<fxk_max>),
+              cand(isint(%q<fxk_max>),gt(%3,%q<fxk_max>)),if(%q<fxk_loop>,%q<fxk_min>,%q<fxk_max>),
+              %3)],
+            %3)]
+        flags: [funsyntax]
+      # The most an effect's badge may be by its own ItemAlteration badge-max rules (Remaining Air: 5 plus the bearer's
+      # Constitution), worked out on its bearer; empty without one.
+      FUN`FX`BADGE`MAX:
+        value: |-
+          @@(%0 the bearer's index, %1 pack, %2 id)[
+          setq(fxm_item,u({{core}}/FUN`ITEM`GET,%1,%2))][
+          if(strmatch(%q<fxm_item>,*"badge-max"*),
+            [u(FUN`ENC`PREPARE,%0)][
+            setqm(fxm_rules,json_query(%q<fxm_item>,extract,$.system.rules),fxm_data,json(object,actor,%q<check_actor>,item,u({{core}}/FUN`ITEM`DATA,%q<fxm_item>,,json(object))))][
+            first(iter(lnum(json_query(%q<fxm_rules>,size)),
+              if(cand(strmatch(json_query(%q<fxm_rules>,extract,$\[%i0\].key),ItemAlteration),strmatch(json_query(%q<fxm_rules>,extract,$\[%i0\].property),badge-max)),
+                [setq(fxm_value,edit(json_query(%q<fxm_rules>,extract,$\[%i0\].value),",))][
+                if(strmatch(%q<fxm_value>,@actor.flags.system.*),
+                  lmax(0 [iter(json_map(me/FUN`FX`FLAG`RULE,%q<fxm_rules>,%b,after(%q<fxm_value>,@actor.)),u({{core}}/FUN`FORMULA`VALUE,json_query(json_query(%q<fxm_rules>,extract,$\[%i0\]),get,value),%q<fxm_data>,0))]),
+                  u({{core}}/FUN`FORMULA`VALUE,json_query(json_query(%q<fxm_rules>,extract,$\[%i0\]),get,value),%q<fxm_data>,))])))])]
+        flags: [funsyntax]
+      # An effect's badge as the encounter shows it: its label (Bless's 25 ft.) or its number, in brackets.
+      FUN`FX`BADGE`SHOW:
+        value: |-
+          @@(%0 pack, %1 id, %2 the badge)[
+          if(isint(%2),%b%([u(FUN`FX`BADGE`TEXT,%0,%1,%2)]%))]
+        flags: [funsyntax]
+      FUN`FX`BADGE`TEXT:
+        value: |-
+          @@(%0 pack, %1 id, %2 the badge: its label, else the number)[
+          firstof(edit(json_query(u({{core}}/FUN`ITEM`GET,%0,%1),extract,$.system.badge.labels\[[dec(%2)]\]),",),%2)]
         flags: [funsyntax]
       # An effect's ChoiceSets of its bearer's own items (Runic Weapon's weapon): each picks the item fx_on names, or
       # the only one that fits. Sets fxa_ch, fxa_on the names picked, and fxa_note when an item is still to be named.
@@ -6652,7 +6706,7 @@ objects:
       FUN`FX`TEMPHP:
         value: |-
           @@(%0 the effect)[
-          setqm(fxt_rules,firstof(json_query(%0,extract,$.system.rules),json(array)),fxt_data,json(object,actor,%q<check_actor>))][
+          setqm(fxt_rules,firstof(json_query(%0,extract,$.system.rules),json(array)),fxt_data,json(object,actor,%q<check_actor>,item,u({{core}}/FUN`ITEM`DATA,%0,%q<fxa_badge>,json(object))))][
           lmax(0 [iter(json_map(me/FUN`FX`TEMPHP`RULE,%q<fxt_rules>,%b),
             [setq(fxt_value,edit(json_query(%q<fxt_rules>,extract,$\[%i0\].value),",))][setq(fxt_json,json_query(json_query(%q<fxt_rules>,extract,$\[%i0\]),get,value))][
             if(strmatch(%q<fxt_value>,@actor.flags.system.*),
@@ -6696,6 +6750,12 @@ objects:
           @@(the names of the sheet's grants with a selfEffect, separated by |)[
           trim(squish(iter(setunion(iter(%q<check_grants>,[elements(%i0,2,~)]~[elements(%i0,3,~)]),),if(strlen(json_query(u({{core}}/FUN`ITEM`GET,first(%i0,~),rest(%i0,~)),extract,$.system.selfEffect.uuid)),json_query(get(u({{core}}/DATA`PACK`[first(%i0,~)])/ITEM`[rest(%i0,~)]`PREP),extract,$.name)),%b,|),|),|)]
         flags: [funsyntax]
+      # +enc/badge <who>=<effect> <value>: sets an effect's badge, or moves it by +n or -n (the GM, or a character for
+      # their own effects). A counter kept below its least ends the effect.
+      INC`ENC`BADGE:
+        value: |-
+          @include %!/INC`ENC`NEED; think setqm(bdg_who,trim(before(%q<cmd_args>,=)),bdg_rest,trim(after(%q<cmd_args>,=))); think setqm(bdg_value,last(%q<bdg_rest>),bdg_what,trim(revwords(rest(revwords(%q<bdg_rest>))))); @assert cand(strlen(%q<bdg_what>),regmatch(%q<bdg_value>,^\[+-\]?\\d+$))=@pemit %#=notice(PF2E,+enc/badge <who>=<effect> <value>%, such as +enc/badge Amiri=Bless 2%, or +1 and -1 to move it.,warn); @assert strlen(setr(act_at,u(%!/FUN`ENC`FIND,%q<bdg_who>)))=@pemit %#=notice(PF2E,No one in the encounter is called %q<bdg_who>.,warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,You change only your own effects.,warn); think setq(bdg_have,firstof(u(%!/FUN`ENC`C,%q<act_at>,fx),json(object))); think setq(bdg_key,first(iter(json_map(%!/FUN`JSON`KEY,%q<bdg_have>,%b),if(strmatch(u(%!/FUN`FX`NAME,edit(json_query(%q<bdg_have>,extract,$\["%i0"\].pack),",),%i0),*%q<bdg_what>*),%i0)))); @assert strlen(%q<bdg_key>)=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] has no effect called %q<bdg_what>.,warn); think setqm(bdg_pack,edit(json_query(%q<bdg_have>,extract,$\["%q<bdg_key>"\].pack),",),bdg_old,json_query(%q<bdg_have>,extract,$\["%q<bdg_key>"\].badge)); think setq(bdg_name,u(%!/FUN`FX`NAME,%q<bdg_pack>,%q<bdg_key>)); @assert isint(%q<bdg_old>)=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)]'s %q<bdg_name> has no badge.,warn); think setq(bdg_new,u(%!/FUN`FX`BADGE`CLAMP,%q<act_at>,%q<bdg_pack>,%q<bdg_key>,if(regmatch(%q<bdg_value>,^\[+-\]),add(%q<bdg_old>,%q<bdg_value>),%q<bdg_value>))); think u(%!/FUN`ENC`PATCH,%q<act_at>,json(object,fx,json(object,%q<bdg_key>,if(strlen(%q<bdg_new>),json(object,badge,%q<bdg_new>),null)))); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)]'s %q<bdg_name> [if(strlen(%q<bdg_new>),is now [u(%!/FUN`FX`BADGE`TEXT,%q<bdg_pack>,%q<bdg_key>,%q<bdg_new>)],ends)].)
+        flags: [cmdsyntax]
       # +enc/effect <who>=<effect>[ as <choice>][ on <item>][/<rounds>] gives an effect (the GM); +enc/effect <who>=-<effect> ends one (the GM,
       # or a character ending their own).
       INC`ENC`EFFECT:
@@ -7016,7 +7076,7 @@ objects:
           @@(%0 a combatant's index: their conditions and persistent damage, as a list)[
           setqm(show_conds,u(FUN`ENC`C,%0,conds),show_pers,u(FUN`ENC`C,%0,pers))][
           setq(show_fx,firstof(u(FUN`ENC`C,%0,fx),json(object)))][
-          itemize(squish([if(t(u(FUN`ENC`C,%0,raised)),shield raised|)][iter(json_map(%!/FUN`JSON`KEY,%q<show_fx>,%b),u(FUN`FX`NAME,edit(json_query(%q<show_fx>,extract,$\["%i0"\].pack),",),%i0),%b,|)]|[iter(json_map(%!/FUN`JSON`KEY,%q<show_conds>,%b),%i0[if(json_query(%q<show_conds>,extract,$.%i0),%b[json_query(%q<show_conds>,extract,$.%i0)])],%b,|)]|[iter(json_map(%!/FUN`JSON`KEY,%q<show_pers>,%b),persistent [json_query(%q<show_pers>,extract,$.%i0)] %i0,%b,|)],|),|)]
+          itemize(squish([if(t(u(FUN`ENC`C,%0,raised)),shield raised|)][iter(json_map(%!/FUN`JSON`KEY,%q<show_fx>,%b),[u(FUN`FX`NAME,setr(show_fxpack,edit(json_query(%q<show_fx>,extract,$\["%i0"\].pack),",)),%i0)][u(FUN`FX`BADGE`SHOW,%q<show_fxpack>,%i0,json_query(%q<show_fx>,extract,$\["%i0"\].badge))],%b,|)]|[iter(json_map(%!/FUN`JSON`KEY,%q<show_conds>,%b),%i0[if(json_query(%q<show_conds>,extract,$.%i0),%b[json_query(%q<show_conds>,extract,$.%i0)])],%b,|)]|[iter(json_map(%!/FUN`JSON`KEY,%q<show_pers>,%b),persistent [json_query(%q<show_pers>,extract,$.%i0)] %i0,%b,|)],|),|)]
         flags: [funsyntax]
       FUN`SHOW`LOOK:
         value: |-
@@ -7412,7 +7472,8 @@ objects:
         - `+enc/strike <who>:<target>\[=<Strike>\]` Strikes for anyone, such as `+enc/strike 4:Amiri=Jaws`. A creature immune to critical hits takes a critical hit as a hit.
         - `+enc/damage <who>=<amount or formula>` and `+enc/heal <who>=<amount or formula>`. A typed formula such as `2d6 fire` meets weaknesses, resistances and immunities. `+enc/damage/half` halves the damage, rounded down, and `+enc/damage/double` doubles it, both before weaknesses and resistances.
         - `+enc/cond <who>=<condition>\[ <value>\]\[/<rounds>\]`, where a value of 0 takes it off, and `+enc/persist <who>=<formula> <type>`, where `0 <type>` ends it.
-        - `+enc/effect <who>=<effect>` gives anyone an effect from Foundry's effects, such as `+enc/effect Amiri=Inspire Courage`; `=-<effect>` ends it. An effect with a choice takes `as <choice>`, and one on an item `on <item>`: `+enc/effect Amiri=Precious Metals as silver on greataxe`. Without `on`, it goes on the only item that fits. Effects end on their own when their rounds are over.
+        - `+enc/effect <who>=<effect>` gives anyone an effect from Foundry's effects, such as `+enc/effect Amiri=Inspire Courage`; `=-<effect>` ends it. An effect with a choice takes `as <choice>`, and one on an item `on <item>`: `+enc/effect Amiri=Precious Metals as silver on greataxe`. Without `on`, it goes on the only item that fits.
+        - `+enc/badge <who>=<effect> <value>` sets an effect's badge, the number Foundry shows on it, such as Bless's aura or the hydra's heads; `+1` and `-1` move it. A counter starts at its own value and a formula, such as Devise a Stratagem's d20, is rolled when the effect starts. A counter taken below its least ends the effect. Effects end on their own when their rounds are over.
         - `+enc/keep \[<who>\]` writes characters' Hit Points, wounded, the day's spells, Focus Points and items made, and the consumables used, and the damage their shields took, back to their sheets. Without it, a fight leaves sheets as they were.
         - `+enc/undo` and `+enc/redo` step through the last 20 changes.
         - `+enc/award \[<XP>\] \[<reason>\]` writes the encounter's XP into each character's XP ledger, once: what the creatures and hazards are worth scaled to four characters, as GM Core does for other party sizes, or the amount given.
