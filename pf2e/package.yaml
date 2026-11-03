@@ -1,7 +1,7 @@
 format: "1.20"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.10.7"
+version: "0.10.8"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -113,7 +113,7 @@ objects:
       # ledger read again costs a few hundred function calls. The key is the ledger with the package's
       # version, the books and CACHE`STAMP, which the updater and the deity table change. CACHE lists
       # the keys oldest first; past DATA`CACHE`KEEP the oldest goes.
-      DATA`CACHE`VERSION: "0.10.7"
+      DATA`CACHE`VERSION: "0.10.8"
       DATA`CACHE`KEEP: 200
       DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_itemalts check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_shieldrules check_bulkrules check_bulk check_bulk_enc check_bulk_max check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
       # The ItemAlteration properties the core applies, by the kind of item they reach.
@@ -6878,6 +6878,29 @@ objects:
         flags: [cmdsyntax]
       # What the spell does to combatant %0: heals an ally it can heal, else a spell attack against AC, a save
       # against the spell DC (basic or not), or damage with neither; an ally or the caster gets the spell's effect.
+      # The conditions the spell's text gives the target for its degree of success (its save, or the spell attack roll
+      # against it) when the spell brings no effect: each condition linked in that degree's paragraph, its value from the
+      # link's label (Frightened 2); one without a value lasts N rounds, a minute, or until the start or end of the caster's
+      # next turn when the paragraph says so. Fear makes the target frightened 2 on a failure, frightened 3 and fleeing
+      # for 1 round on a critical failure.
+      FUN`CAST`TEXTCONDS:
+        value: |-
+          @@(%0 a target's index; roll_degree and the cast_ registers)[
+          setq(tc_para,before(after(get(u({{core}}/DATA`PACK`SPELLS)/ITEM`%q<cast_id>`TEXT),<strong>[extract(Critical Failure|Failure|Success|Critical Success,inc(%q<roll_degree>),1,|)]</strong>),</p>))][
+          if(strmatch(%q<tc_para>,*conditionitems.Item.*),
+            [setqm(actn_k,u(FUN`ENC`C,%q<act_at>,k),actn_fx,,tc_n,first(after(%q<tc_para>,%bfor%b)))][
+            setq(tc_dur,switch(1,
+              cand(isint(%q<tc_n>),strmatch(%q<tc_para>,*for %q<tc_n> round*)),r%q<tc_n>,
+              strmatch(%q<tc_para>,*for 1 minute*),r10,
+              strmatch(%q<tc_para>,*until the end of your next turn*),e2,
+              strmatch(%q<tc_para>,*until the end of your turn*),e1,
+              strmatch(%q<tc_para>,*until the start of your next turn*),s1,))][
+            null(iter(rest(edit(%q<tc_para>,@UUID\[Compendium.pf2e.conditionitems.Item.,^),^),
+              [setq(tc_label,if(strmatch(after(%i0,\]),\{*),before(after(%i0,\]\{),\}),before(%i0,\])))][
+              setq(tc_slug,u({{core}}/FUN`ITEM`SLUGGIFY,before(%i0,\])))][
+              if(strlen(u({{core}}/FUN`ITEM`FIND,conditions,%q<tc_slug>)),u(FUN`ACTION`COND,%0,%q<tc_slug>,if(isint(last(%q<tc_label>)),last(%q<tc_label>),0),if(isint(last(%q<tc_label>)),,%q<tc_dur>)))],^))][
+            trim(%q<actn_fx>)])]
+        flags: [funsyntax]
       FUN`CAST`ON:
         value: |-
           @@(%0 a target's index; cast_ and spell_ registers)[
@@ -6890,7 +6913,7 @@ objects:
             t(strlen(%q<cast_dmg_parts>)),[setqm(dmg_parts,%q<cast_dmg_parts>,dmg_raw,%q<cast_dmg_raw>,dmg_total,%q<cast_dmg_raw>)][u(FUN`ACT`IWR,%0)][u(FUN`CAST`SBMARK,%0,0)][u(FUN`ACT`HARM,%0,%q<dmg_total>,0)]%q<harm_text>[u(FUN`ACT`IWR`TEXT)].,
             ))][
           switch(1,
-            not(strlen(%q<cast_fx>)),,
+            not(strlen(%q<cast_fx>)),if(cor(%q<spell_attack>,strlen(%q<spell_save>)),setq(on_line,trim(%q<on_line> [u(FUN`CAST`TEXTCONDS,%0)]))),
             cand(strlen(%q<cast_fxdeg>),cor(%q<spell_attack>,strlen(%q<spell_save>))),if(member(rest(%q<cast_fxdeg>,~),setr(on_deg,extract(critical-failure failure success critical-success,inc(%q<roll_degree>),1))),setq(on_line,trim(%q<on_line> [u(FUN`FX`ADD,%0,first(%q<cast_fx>,~),rest(%q<cast_fx>,~),%q<pick_rank>,json(object,first(%q<cast_fxdeg>,~),json(string,%q<on_deg>)),u(FUN`ENC`C,%q<act_at>,k))]))),
             cor(%q<on_ally>,not(cor(%q<spell_attack>,strlen(%q<spell_save>)))),setq(on_line,trim(%q<on_line> [u(FUN`FX`ADD,%0,first(%q<cast_fx>,~),rest(%q<cast_fx>,~),%q<pick_rank>,%q<cast_fxch>,u(FUN`ENC`C,%q<act_at>,k))])))]%q<on_line>
         flags: [funsyntax]
@@ -7443,12 +7466,12 @@ objects:
         flags: [funsyntax]
       FUN`ACTION`COND:
         value: |-
-          @@(%0 a combatant's index, %1 a condition, %2 its value or 0, %3 e1, e2, s1 or nothing)[
+          @@(%0 a combatant's index, %1 a condition, %2 its value or 0, %3 e1, e2, s1, r<rounds> or nothing)[
           setq(cond_was,json_query(u(FUN`ENC`C,%0,conds),extract,$\["%1"\]))][
           setq(cond_v,if(%2,max(%2,firstof(%q<cond_was>,0)),0))][
           if(strmatch(%1,restrained),u(FUN`ENC`PATCH,%0,json(object,conds,json(object,grabbed,null),dur,json(object,grabbed,null))))][
-          u(FUN`ENC`PATCH,%0,json(object,conds,json(object,%1,%q<cond_v>),dur,json(object,%1,switch(%3,e1,json(string,%q<actn_k>~1~end),e2,json(string,%q<actn_k>~2~end),s1,json(string,%q<actn_k>~1),null))))][
-          setq(actn_fx,%q<actn_fx> [u(FUN`ENC`C,%0,name)] is %1[if(%2,%b%q<cond_v>)][switch(%3,e1,%buntil the end of [u(FUN`ENC`C,%q<act_at>,name)]'s turn,e2,%buntil the end of [u(FUN`ENC`C,%q<act_at>,name)]'s next turn,s1,%buntil [u(FUN`ENC`C,%q<act_at>,name)]'s next turn starts)].)]
+          u(FUN`ENC`PATCH,%0,json(object,conds,json(object,%1,%q<cond_v>),dur,json(object,%1,switch(%3,e1,json(string,%q<actn_k>~1~end),e2,json(string,%q<actn_k>~2~end),s1,json(string,%q<actn_k>~1),r*,json(string,%q<actn_k>~[after(%3,r)]),null))))][
+          setq(actn_fx,%q<actn_fx> [u(FUN`ENC`C,%0,name)] is %1[if(%2,%b%q<cond_v>)][switch(%3,e1,%buntil the end of [u(FUN`ENC`C,%q<act_at>,name)]'s turn,e2,%buntil the end of [u(FUN`ENC`C,%q<act_at>,name)]'s next turn,s1,%buntil [u(FUN`ENC`C,%q<act_at>,name)]'s next turn starts,r1,%bfor 1 round,r*,%bfor [after(%3,r)] rounds)].)]
         flags: [funsyntax]
       FUN`ACTION`EFFECT:
         value: |-
@@ -8505,7 +8528,7 @@ objects:
         - A spell attack rolls against each target's AC with your multiple attack penalty; a save is rolled for each target against your spell DC, with the damage of a basic save.
         - The damage is rolled once for every target, with what your feats and effects add to spell damage, such as a status bonus to damage.
         - Heal and Harm heal allies and harm foes. Name targets with commas, or `foes`, `characters` or `everyone`.
-        - A spell that brings an effect, such as Animal Form, Mystic Armor or Bless, gives it to an ally you name, or you. Name the form when there are several: `+cast animal form as ape`. A spell on a weapon, armor or shield, such as Runic Weapon or Precious Metals, goes on the target's item you name, or on the only one that fits: `+cast precious metals as silver on longsword=Amiri`. A battle form gives its Strikes, AC, skills and Speed until it ends. A spell whose effect depends on the target's save or the spell attack roll, such as Leaden Steps or Tangle Vine, gives each target the effect for its own result; the conditions an effect brings, such as encumbered, come and go with it.
+        - A spell that brings an effect, such as Animal Form, Mystic Armor or Bless, gives it to an ally you name, or you. Name the form when there are several: `+cast animal form as ape`. A spell on a weapon, armor or shield, such as Runic Weapon or Precious Metals, goes on the target's item you name, or on the only one that fits: `+cast precious metals as silver on longsword=Amiri`. A battle form gives its Strikes, AC, skills and Speed until it ends. A spell whose effect depends on the target's save or the spell attack roll, such as Leaden Steps or Tangle Vine, gives each target the effect for its own result; the conditions an effect brings, such as encumbered, come and go with it. A spell that brings no effect gives the target the conditions its text names for the result: Fear makes a target that fails frightened 2.
         - A sustained spell's effect lasts until the end of your next turn. `+act sustain` (one action, once a turn, not on the turn you cast) keeps each of yours going to the end of your next turn; one not sustained ends.
         - Outside an encounter `+cast` spends from your sheet's day and heals the characters you name.
 
