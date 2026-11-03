@@ -1,7 +1,7 @@
 format: "1.16"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.9.12"
+version: "0.9.13"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -70,10 +70,10 @@ objects:
       DATA`CONFIG`VARIANTS: ""
       DATA`CONFIG`VARIANTS`TYPE: list
       DATA`CONFIG`VARIANTS`DEFAULT: ""
-      DATA`CONFIG`VARIANTS`CHOICES: free-archetype
+      DATA`CONFIG`VARIANTS`CHOICES: free-archetype abp abp-fundamental
       DATA`CONFIG`VARIANTS`LABEL: Variant rules
       DATA`CONFIG`VARIANTS`EXAMPLE: free-archetype
-      DATA`CONFIG`VARIANTS`DESCRIPTION: "The GM Core variant rules the game plays with, none by default. free-archetype: an archetype feat at every even level, beside the class feats."
+      DATA`CONFIG`VARIANTS`DESCRIPTION: "The GM Core variant rules the game plays with, none by default. free-archetype: an archetype feat at every even level, beside the class feats. abp: Automatic Bonus Progression, the bonuses of fundamental runes coming from the character's level and weapons and armor carrying no runes. abp-fundamental: the same, but weapons and armor keep as many property runes as the level's potency allows."
       DATA`CONFIG`REPOSITORY: SharpMUSH/SharpMUSH.Packages
       DATA`CONFIG`REPOSITORY`TYPE: text
       DATA`CONFIG`REPOSITORY`DEFAULT: SharpMUSH/SharpMUSH.Packages
@@ -99,7 +99,7 @@ objects:
       # ledger read again costs a few hundred function calls. The key is the ledger with the package's
       # version, the books and CACHE`STAMP, which the updater and the deity table change. CACHE lists
       # the keys oldest first; past DATA`CACHE`KEEP the oldest goes.
-      DATA`CACHE`VERSION: "0.9.12"
+      DATA`CACHE`VERSION: "0.9.13"
       DATA`CACHE`KEEP: 200
       DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_itemalts check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_shieldrules check_bulkrules check_bulk check_bulk_enc check_bulk_max check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
       # The ItemAlteration properties the core applies, by the kind of item they reach.
@@ -1039,6 +1039,70 @@ objects:
           @@(%0 entries, %1 the character's level: n~pack~id~badge~index for each grant from that level or below or from no level, badge empty when it has none)[
           iter(graball(%0,grant~*),if(cor(not(strlen(elements(%i0,6,~))),lte(elements(%i0,6,~),%1)),[elements(%i0,4,~)]~[edit(elements(%i0,2,~),|,~)]~[elements(%i0,3,~)]~[elements(%i0,7,~)]))]
         flags: [funsyntax]
+      # Automatic Bonus Progression (GM Core), as Foundry's AutomaticBonusProgression: abp or abp-fundamental when
+      # the game plays with it, else nothing. Only characters have it.
+      FUN`ABP`MODE:
+        value: |-
+          [setq(abp_variants,v(DATA`CONFIG`VARIANTS))][
+          switch(1,t(member(%q<abp_variants>,abp)),abp,t(member(%q<abp_variants>,abp-fundamental)),abp-fundamental,)]
+        flags: [funsyntax]
+      FUN`ABP`ATTACK:
+        value: |-
+          @@(%0 a level: the attack potency)[
+          switch(1,lt(%0,2),0,lt(%0,10),1,lt(%0,16),2,3)]
+        flags: [funsyntax]
+      FUN`ABP`DEFENSE:
+        value: |-
+          @@(%0 a level: the defense potency)[
+          switch(1,lt(%0,5),0,lt(%0,11),1,lt(%0,18),2,3)]
+        flags: [funsyntax]
+      FUN`ABP`STRIKING:
+        value: |-
+          @@(%0 a level: the extra weapon damage dice)[
+          switch(1,lt(%0,4),0,lt(%0,12),1,lt(%0,19),2,3)]
+        flags: [funsyntax]
+      # The potency bonus a statistic gets: perception from 7th level, saves from 8th; nothing without ABP.
+      FUN`ABP`STAT:
+        value: |-
+          @@(%0 a statistic; check_level)[
+          if(strlen(u(FUN`ABP`MODE)),
+            switch(%0,
+              perception, if(gte(%q<check_level>,7),potency~[switch(1,lt(%q<check_level>,13),1,lt(%q<check_level>,19),2,3)]~perception-potency~0),
+              fortitude, u(FUN`ABP`SAVE),
+              reflex, u(FUN`ABP`SAVE),
+              will, u(FUN`ABP`SAVE),
+              ))]
+        flags: [funsyntax]
+      FUN`ABP`SAVE:
+        value: |-
+          @@(check_level)[
+          if(gte(%q<check_level>,8),potency~[switch(1,lt(%q<check_level>,14),1,lt(%q<check_level>,20),2,3)]~save-potency~0)]
+        flags: [funsyntax]
+      FUN`ABP`AC:
+        value: |-
+          @@(check_level)[
+          if(cand(strlen(u(FUN`ABP`MODE)),t(setr(abp_n,u(FUN`ABP`DEFENSE,%q<check_level>)))),potency~%q<abp_n>~defense-potency~0)]
+        flags: [funsyntax]
+      # A weapon's or armor's runes under ABP: no fundamental runes, and property runes only with
+      # abp-fundamental, as many as the attack or defense potency of the character's level.
+      FUN`ABP`RUNES:
+        value: |-
+          @@(%0 an item, %1 the mode; check_level)[
+          setq(abp_slots,if(strmatch(%1,abp-fundamental),add(u(FUN`ABP`[if(strmatch(json_query(%0,extract,$.type),weapon),ATTACK,DEFENSE)],%q<check_level>),if(strmatch(json_query(%0,extract,$.system.material.type),orichalcum),1,0)),0))][
+          setq(abp_property,firstof(json_query(%0,extract,$.system.runes.property),json(array)))][
+          json_mod(%0,patch,json(object,system,json(object,runes,json(object,potency,0,striking,0,resilient,0,property,\[[iter(lnum(min(%q<abp_slots>,json_query(%q<abp_property>,size))),json(string,json_query(%q<abp_property>,extract,$\[%i0\])),%b,\,)]\]))))]
+        flags: [funsyntax]
+      # A synthetic that ABP sets aside: an item bonus of 0 or more from equipment (Foundry's suppressRuleElement).
+      FUN`ABP`KEEP:
+        value: |-
+          @@(%1 a synthetic)[
+          if(cand(strmatch(json_query(%1,extract,$.modifier.type),item),gte(firstof(json_query(%1,extract,$.modifier.modifier),0),0)),,%1)]
+        flags: [funsyntax]
+      FUN`ABP`FILTER:
+        value: |-
+          @@(%0 a JSON array of synthetics)[
+          \[[edit(trim(squish(json_map(me/FUN`ABP`KEEP,%0,|),|),b,|),|,\,)]\]]
+        flags: [funsyntax]
       FUN`SHEET`RUNES:
         value: |-
           @@(%0 entries, %1 an item of gear's id: its runes as Foundry's system.runes, from the rune entries for it; a property entry's value is the slugs joined by dots)[
@@ -1051,7 +1115,8 @@ objects:
         value: |-
           @@(%0 an equipment id; check_entries)[
           setqm(runed_item,u(FUN`ITEM`GET,equipment,%0),runed_runes,u(FUN`SHEET`RUNES,%q<check_entries>,%0))][
-          if(strmatch(%q<runed_runes>,{}),%q<runed_item>,json_mod(%q<runed_item>,patch,json(object,system,json(object,runes,%q<runed_runes>))))]
+          setq(runed_item,if(strmatch(%q<runed_runes>,{}),%q<runed_item>,json_mod(%q<runed_item>,patch,json(object,system,json(object,runes,%q<runed_runes>)))))][
+          if(cand(match(weapon armor,json_query(%q<runed_item>,extract,$.type)),strlen(setr(runed_abp,u(FUN`ABP`MODE)))),u(FUN`ABP`RUNES,%q<runed_item>,%q<runed_abp>),%q<runed_item>)]
         flags: [funsyntax]
       FUN`SHEET`GEAR:
         value: |-
@@ -1487,7 +1552,7 @@ objects:
       FUN`SYNTHETICS`DYNAMIC:
         value: |-
           @@(%0 the synthetics so far, %1 pack~id~badge~rules~index)[
-          setq(synthetic_item,u(FUN`ITEM`GET,elements(%1,1,~),elements(%1,2,~)))][
+          setqm(synthetic_item,u(FUN`ITEM`GET,elements(%1,1,~),elements(%1,2,~)),synthetic_pack,elements(%1,1,~))][
           setqm(synthetic_rules,edit(json_query(%q<synthetic_item>,extract,$.system.rules),"parent:,"parent~[elements(%1,5,~)]:),synthetic_slug,u(FUN`ITEM`SLUG,%q<synthetic_item>))][
           setq(synthetic_data,json(object,actor,%q<synthetic_actor>,item,u(FUN`ITEM`DATA,%q<synthetic_item>,elements(%1,3,~),u(FUN`CHECK`CHOICES,elements(%1,5,~)))))][
           fold(me/FUN`SYNTHETICS`RULE,edit(elements(%1,4,~),.,%b),%0)]
@@ -1498,6 +1563,7 @@ objects:
           setq(synthetic_rule,json_query(%q<synthetic_rules>,extract,$\[%1\]))][
           setq(synthetic_new,switch(json_query(%q<synthetic_rule>,extract,$.key),
             FlatModifier, u(FUN`RULE`FLATMODIFIER,%q<synthetic_rule>,json_mod(%q<synthetic_data>,set,$.rule,%q<synthetic_rule>),%q<synthetic_slug>)))][
+          if(cand(strlen(%q<synthetic_new>),strmatch(%q<synthetic_pack>,equipment),strlen(u(FUN`ABP`MODE))),setq(synthetic_new,u(FUN`ABP`KEEP,,%q<synthetic_new>)))][
           if(strlen(%q<synthetic_new>),json_mod(%0,set,$\[[json_query(%0,size)]\],%q<synthetic_new>),%0)]
         flags: [funsyntax]
       # selector~<index> for each selector of each synthetic, so that a check finds its modifiers by its domains.
@@ -2189,6 +2255,7 @@ objects:
           setq(grant_parent,)][if(strmatch(get(u(DATA`PACK`%q<grant_pack>)/ITEM`%q<grant_id>),*"parent:*),u(FUN`CHECK`PARENT`GRANT))][
           setqm(grant_kind,json_query(%q<grant_prep>,extract,$.kind),grant_options,json_query(%q<grant_prep>,extract,$.options),grant_name,json_query(%q<grant_prep>,extract,$.name),grant_synth,json_query(%q<grant_prep>,get,synth),grant_dynamic,json_query(%q<grant_prep>,extract,$.dynamic),grant_unapplied,json_query(%q<grant_prep>,extract,$.unapplied))][
           if(strlen(%q<grant_parent>),setq(grant_synth,edit(%q<grant_synth>,"parent:,"parent~%q<grant_index>:)))][
+          if(cand(strmatch(%q<grant_pack>,equipment),gt(strlen(%q<grant_synth>),2),strlen(u(FUN`ABP`MODE))),setq(grant_synth,u(FUN`ABP`FILTER,%q<grant_synth>)))][
           setqm(grant_ranks,json_query(%q<grant_prep>,extract,$.ranks),grant_rankdyn,json_query(%q<grant_prep>,extract,$.rankdyn),grant_choiceopts,json_query(%q<grant_prep>,extract,$.choiceopts),grant_strikes,json_query(%q<grant_prep>,extract,$.strikes))][
           setq(grant_badge,firstof(%q<grant_own>,json_query(%q<grant_prep>,extract,$.valued)))][
           if(cand(member(%q<grant_unapplied>,ActiveEffectLike),strmatch(get(u(DATA`PACK`%q<grant_pack>)/ITEM`%q<grant_id>),*"path":"system.attributes.shield*)),setq(check_shieldrules,%q<check_shieldrules> %q<grant_pack>~%q<grant_id>~%q<grant_own>~%q<grant_index>))][
@@ -2602,7 +2669,7 @@ objects:
         value: |-
           @@(%0 a statistic, %1 more domains, %2 more roll options)[
           setq(chosen_attribute,u(FUN`STAT`ATTRIBUTE,%0))][
-          setq(chosen_mods,u(FUN`CHECK`MODS,ability~[u(FUN`CHECK`ABILITY,%q<chosen_attribute>)]~%q<chosen_attribute>~0 proficiency~[u(FUN`CHECK`PROFICIENCY,u(FUN`CHECK`RANK,%0))]~proficiency~0 [u(FUN`CHECK`ARMOR`PENALTY,%0,%q<chosen_attribute>)] [u(FUN`CHECK`RESILIENT,%0)],u(FUN`STAT`DOMAINS,%0) %1,%2))][
+          setq(chosen_mods,u(FUN`CHECK`MODS,ability~[u(FUN`CHECK`ABILITY,%q<chosen_attribute>)]~%q<chosen_attribute>~0 proficiency~[u(FUN`CHECK`PROFICIENCY,u(FUN`CHECK`RANK,%0))]~proficiency~0 [u(FUN`CHECK`ARMOR`PENALTY,%0,%q<chosen_attribute>)] [u(FUN`CHECK`RESILIENT,%0)] [u(FUN`ABP`STAT,%0)],u(FUN`STAT`DOMAINS,%0) %1,%2))][
           setq(chosen_form,u(FUN`CHECK`FORM`GET,skills.%0.modifier))][
           if(cand(isint(%q<chosen_form>),gt(%q<chosen_form>,u(FUN`CHECK`TOTAL,%q<chosen_mods>))),
             u(FUN`CHECK`FORMONLY,u(FUN`CHECK`MODS,untyped~%q<chosen_form>~battle-form~0,u(FUN`STAT`DOMAINS,%0) %1,%2),status circumstance),
@@ -2640,7 +2707,7 @@ objects:
           @@(%0 more base entries)[
           setq(ac_category,if(strlen(%q<check_armor>),firstof(json_query(%q<check_armor>,extract,$.system.category),unarmored),unarmored))][
           setq(ac_mods,u(FUN`CHECK`MODS,ability~[min(u(FUN`CHECK`ABILITY,dex),if(strlen(%q<check_armor>),firstof(json_query(%q<check_armor>,extract,$.system.dexCap),99),99),u(FUN`CHECK`DEXCAP))]~dex~0 proficiency~[u(FUN`CHECK`PROFICIENCY,u(FUN`CHECK`RANK,%q<ac_category>))]~proficiency~0 [
-            if(strlen(%q<check_armor>),item~[add(firstof(json_query(%q<check_armor>,extract,$.system.acBonus),0),firstof(json_query(%q<check_armor>,extract,$.system.runes.potency),0))]~[json_query(%q<check_armor>,extract,$.system.slug)]~0)] %0,ac all dex-based,))][
+            if(strlen(%q<check_armor>),item~[add(firstof(json_query(%q<check_armor>,extract,$.system.acBonus),0),firstof(json_query(%q<check_armor>,extract,$.system.runes.potency),0))]~[json_query(%q<check_armor>,extract,$.system.slug)]~0)] [u(FUN`ABP`AC)] %0,ac all dex-based,))][
           setq(ac_form,u(FUN`CHECK`FORM`GET,armorClass.modifier))][
           if(strlen(%q<ac_form>),setq(ac_form,sub(u(FUN`FORMULA`TEXT,%q<ac_form>,json(object,actor,%q<check_actor>),10),10)))][
           if(cand(isint(%q<ac_form>),gt(%q<ac_form>,u(FUN`CHECK`TOTAL,%q<ac_mods>))),
@@ -2711,8 +2778,15 @@ objects:
             iter(%q<check_resources>,if(cand(strlen(elements(%i0,3,~)),strmatch(json_query(get(u(DATA`PACK`EQUIPMENT)/ITEM`[elements(%i0,3,~)]`PREP),extract,$.kind),weapon),gt(setr(strike_left,sub(elements(%i0,2,~),firstof(json_query(%q<check_daily>,extract,$.res\["[first(%i0,~)]"\]),0))),0)),u(FUN`STRIKE`USE,u(FUN`STRIKE`LEVELED,u(FUN`STRIKE`WEAPON,u(FUN`ITEM`GET,equipment,elements(%i0,3,~))),elements(%i0,3,~),elements(%i0,4,~)),res:[first(%i0,~)],%q<strike_left>,elements(%i0,3,~))),%b,|)]|[
             iter(%q<check_strikes>,[setq(strike_rule,json_query(u(FUN`ITEM`GET,elements(%i0,2,~),elements(%i0,3,~)),extract,$.system.rules\[[elements(%i0,4,~)]\]))][if(cand(not(t(json_query(%q<strike_rule>,extract,$.fist))),u(FUN`PREDICATE`TEST,firstof(json_query(%q<strike_rule>,get,predicate),json(array)),%q<check_options>)),u(FUN`STRIKE`RULE,%q<strike_rule>))],%b,|)]|[
             u(FUN`STRIKE`FIST)],|),|)))][
+          if(cand(strlen(u(FUN`ABP`MODE)),not(strlen(u(FUN`CHECK`FORM`GET,strikes)))),setq(strikes_all,iter(%q<strikes_all>,u(FUN`STRIKE`ABP,%i0),|,|)))][
           if(words(%q<check_adjstrike>),setq(strikes_all,iter(%q<strikes_all>,u(FUN`STRIKE`ADJUST,%i0),|,|)))][
           if(words(%q<check_itemalts>),iter(%q<strikes_all>,u(FUN`STRIKE`ALTER,%i0),|,|),%q<strikes_all>)]
+        flags: [funsyntax]
+      # A Strike under ABP: no potency of its own, and the level's extra damage dice when it deals one die.
+      FUN`STRIKE`ABP:
+        value: |-
+          @@(%0 a Strike; check_level)[
+          json_mod(%0,patch,json(object,potency,0,striking,if(eq(firstof(json_query(%0,extract,$.dice),0),1),u(FUN`ABP`STRIKING,%q<check_level>),0)))]
         flags: [funsyntax]
       # A Strike with the traits that the AdjustStrike rules of check_adjstrike add or remove, each rule
       # whose predicate holds for the character and whose definition holds for the Strike.
@@ -2864,7 +2938,7 @@ objects:
           setq(strike_options,squish(item:slug:%q<strike_slug> item:category:%q<strike_category> item:group:[json_query(%0,extract,$.group)] item:base:[json_query(%0,extract,$.base)] [if(member(%q<check_deity_weapons>,json_query(%0,extract,$.base)),item:deity-favored)] [if(%q<strike_ranged>,item:ranged,item:melee)] item:damage:type:[firstof(json_query(%0,extract,$.type),bludgeoning)] [iter(%q<strike_traits>,item:trait:%i0)] [if(strlen(json_query(%0,extract,$.material)),item:material:[json_query(%0,extract,$.material)])] [if(cor(member(%q<strike_traits>,magical),gt(json_query(%0,extract,$.potency),0),gt(json_query(%0,extract,$.striking),0),words(json_query(%0,extract,$.property))),item:magical)] [iter(json_query(%0,extract,$.property),item:rune:property:[u(FUN`RUNE`KEBAB,%i0)])]))][
           setq(strike_rank,max(u(FUN`CHECK`RANK,%q<strike_category>),u(FUN`CHECK`RANK,weapon-base-[json_query(%0,extract,$.base)]),u(FUN`STRIKE`MARTIAL),if(member(%q<strike_options>,item:deity-favored),%q<check_favored>,0)))][
           setq(strike_domains,attack attack-roll strike-attack-roll mundane-attack [if(%q<strike_ranged>,ranged,melee)]-strike-attack-roll [if(strmatch(%q<strike_category>,unarmed),unarmed-attack-roll)] %q<strike_attribute>-attack %q<strike_slug>-attack all check)][
-          setq(strike_mods,u(FUN`CHECK`MODS,ability~[u(FUN`CHECK`ABILITY,%q<strike_attribute>)]~%q<strike_attribute>~0 proficiency~[u(FUN`CHECK`PROFICIENCY,%q<strike_rank>)]~proficiency~0 [if(gt(json_query(%0,extract,$.potency),0),item~[json_query(%0,extract,$.potency)]~potency~0)],%q<strike_domains>,%q<strike_options>))][
+          setq(strike_mods,u(FUN`CHECK`MODS,ability~[u(FUN`CHECK`ABILITY,%q<strike_attribute>)]~%q<strike_attribute>~0 proficiency~[u(FUN`CHECK`PROFICIENCY,%q<strike_rank>)]~proficiency~0 [if(gt(json_query(%0,extract,$.potency),0),item~[json_query(%0,extract,$.potency)]~potency~0)] [if(cand(strlen(u(FUN`ABP`MODE)),t(setr(strike_abp,u(FUN`ABP`ATTACK,%q<check_level>)))),potency~%q<strike_abp>~attack-potency~0)],%q<strike_domains>,%q<strike_options>))][
           if(cand(isint(setr(strike_form,json_query(%0,extract,$.form))),gt(%q<strike_form>,u(FUN`CHECK`TOTAL,%q<strike_mods>))),
             u(FUN`CHECK`FORMONLY,u(FUN`CHECK`MODS,untyped~%q<strike_form>~battle-form~0,%q<strike_domains>,%q<strike_options>),status circumstance),
             %q<strike_mods>)]
@@ -7699,6 +7773,8 @@ objects:
         GM Core's variant rules are off until staff turn them on with the `variants` setting, a list of their names: `+config pf2e/variants=free-archetype`. `+config pf2e/variants=` turns them all off.
 
         - `free-archetype`: an archetype feat at every even level, beside the class feats. Its slots are `archetype-2`, `archetype-4` and so on: `+build/feat archetype-2=Medic Dedication`. They take archetype feats only, and the second dedication waits for two other feats from the first archetype, as a class feat slot does.
+        - `abp`: Automatic Bonus Progression. A character's level gives the bonuses fundamental runes would: a potency bonus to Strikes from 2nd level, to AC from 5th, to Perception from 7th and to saves from 8th, rising to +3, and a second weapon damage die at 4th level, a third at 12th and a fourth at 19th. Weapons and armor carry no runes, and an item bonus that equipment gives does not count.
+        - `abp-fundamental`: the same, but a weapon keeps as many property runes as its attack potency and armor as many as its defense potency.
       SEE`PF2E`VARIANTS: |-
         pf2e build|pf2e staff
       HELP`PF2E`DEITY: |-
