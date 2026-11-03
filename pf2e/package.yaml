@@ -1,7 +1,7 @@
 format: "1.16"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.8.0"
+version: "0.8.1"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -86,7 +86,9 @@ objects:
       DATA`CHECK`DOMAINS: acrobatics acrobatics-check all arcana arcana-check athletics athletics-check cha-based cha-skill-check check con-based crafting crafting-check deception deception-check dex-based dex-skill-check diplomacy diplomacy-check fortitude fortitude-check int-based int-skill-check intimidation intimidation-check medicine medicine-check nature nature-check occultism occultism-check perception perception-check performance performance-check reflex reflex-check religion religion-check saving-throw skill-check society society-check stealth stealth-check str-based str-skill-check survival survival-check thievery thievery-check will will-check wis-based wis-skill-check lore-skill-check ac hp hp-per-level land-speed all-speeds speed initiative class class-dc spell-attack spell-attack-roll spell-dc attack attack-roll strike-attack-roll melee-strike-attack-roll ranged-strike-attack-roll unarmed-attack-roll str-attack dex-attack mundane-attack damage strike-damage attack-damage melee-strike-damage melee-damage ranged-strike-damage unarmed-damage
       # Which shape of ITEM`<id>`PREP the core reads. The updater prepares an item again when its PREP
       # was made for another shape.
-      DATA`PREP`VERSION: 3
+      DATA`PREP`VERSION: 4
+      # Foundry's damage types.
+      DATA`DAMAGE`TYPES: acid bleed bludgeoning cold electricity fire force mental piercing poison slashing sonic spirit untyped vitality void
       # The proficiencies other than the statistics: weapon categories, armor categories, spellcasting and the class DC.
       DATA`PROFICIENCIES: simple martial advanced unarmed unarmored light medium heavy spellcasting classdc
       # GM Core's DC for each level, from level -1 to 25, and how much each difficulty moves it.
@@ -318,8 +320,8 @@ objects:
         flags: [funsyntax]
       FUN`MODIFIER`ENTRY:
         value: |-
-          @@(%0 one modifier object: type~value~slug~force)[
-          u(FUN`MODIFIER`TYPE,json_query(%0,extract,$.type))]~[add(0,json_query(%0,extract,$.modifier))]~[firstof(json_query(%0,extract,$.slug),modifier)]~[t(json_query(%0,extract,$.force))]
+          @@(%0 one modifier object: type~value~slug~force~damage type~damage category~critical, critical y, f or n for true, false or none)[
+          u(FUN`MODIFIER`TYPE,json_query(%0,extract,$.type))]~[add(0,json_query(%0,extract,$.modifier))]~[firstof(json_query(%0,extract,$.slug),modifier)]~[t(json_query(%0,extract,$.force))]~[json_query(%0,extract,$.damageType)]~[json_query(%0,extract,$.damageCategory)]~[switch(json_query(%0,extract,$.critical),true,y,false,f,n)]
         flags: [funsyntax]
       FUN`MODIFIER`TYPE:
         value: |-
@@ -367,7 +369,7 @@ objects:
             1, max(0,dec(%q<degree_base>)),
             %q<degree_base>)]
         flags: [funsyntax]
-      FUN`ROLL: A check's d20 as Foundry's Check.roll makes it. FUN`CHECK`GRANT collects the roll rules (Note, RollTwice, AdjustDegreeOfSuccess, SubstituteRoll) in check_rollrules as kind~pack~id~badge~index.
+      FUN`ROLL: A check's d20 as Foundry's Check.roll makes it. FUN`CHECK`GRANT collects the roll rules (Note, RollTwice, AdjustDegreeOfSuccess, SubstituteRoll, and DamageDice and DamageAlteration for FUN`DAMAGE) in check_rollrules as kind~pack~id~badge~index.
       # The rules of one kind that apply to a check: each one's selectors meet the domains and its
       # predicate holds. pack~id~badge~index~rule for each, rule its index in the item's rules.
       FUN`ROLLRULE`MATCHING:
@@ -458,7 +460,7 @@ objects:
           switch(1,
             eq(words(%q<roll_effects>),2), setqm(roll_sub,,roll_twice,,roll_dice,1d20,roll_tags,Fortune|Misfortune,roll_extra,fortune misfortune),
             t(strlen(%q<roll_sub>)), setqm(roll_dice,elements(%q<roll_sub>,3,~),roll_tags,[capstr(elements(%q<roll_sub>,4,~))] %([u(FUN`ROLLRULE`LABEL,elements(%q<roll_sub>,5 6 7 8 9,~,~))]%),roll_extra,%q<roll_effects> substitute:[first(%q<roll_sub>,~)]),
-            setqm(roll_dice,switch(%q<roll_twice>,higher,2d20kh,lower,2d20kl,1d20),roll_tags,switch(%q<roll_twice>,higher,Fortune,lower,Misfortune),roll_extra,%q<roll_effects>))]
+            setqm(roll_dice,switch(%q<roll_twice>,higher,2d20kh1,lower,2d20kl1,1d20),roll_tags,switch(%q<roll_twice>,higher,Fortune,lower,Misfortune),roll_extra,%q<roll_effects>))]
         flags: [funsyntax]
       # The check's roll options: the sheet's, its domains', and the statistic's, as Foundry's Statistic adds them.
       FUN`ROLL`OPTIONS:
@@ -813,8 +815,8 @@ objects:
         flags: [funsyntax]
       FUN`SHEET`GRANTS:
         value: |-
-          @@(%0 entries, %1 the character's level: n~pack~id~badge~index for each grant from that level or below, badge empty when it has none)[
-          iter(graball(%0,grant~*),if(lte(firstof(elements(%i0,6,~),0),%1),[elements(%i0,4,~)]~[edit(elements(%i0,2,~),|,~)]~[elements(%i0,3,~)]~[elements(%i0,7,~)]))]
+          @@(%0 entries, %1 the character's level: n~pack~id~badge~index for each grant from that level or below or from no level, badge empty when it has none)[
+          iter(graball(%0,grant~*),if(cor(not(strlen(elements(%i0,6,~))),lte(elements(%i0,6,~),%1)),[elements(%i0,4,~)]~[edit(elements(%i0,2,~),|,~)]~[elements(%i0,3,~)]~[elements(%i0,7,~)]))]
         flags: [funsyntax]
       FUN`SHEET`RUNES:
         value: |-
@@ -1021,6 +1023,7 @@ objects:
         value: |-
           @@(%0 an item, %1 its badge, %2 the grant's choices, a JSON object)[
           json(object,
+            _id,json(string,json_query(%0,extract,$._id)),
             id,json(string,json_query(%0,extract,$._id)),
             name,json(string,json_query(%0,extract,$.name)),
             type,json(string,json_query(%0,extract,$.type)),
@@ -1137,14 +1140,17 @@ objects:
             label,json(string,u(FUN`RULE`LABEL,%0)),
             type,json(string,%3),
             modifier,%q<rule_value>,
+            damageType,json(string,u(FUN`FORMULA`INJECT,json_query(%0,extract,$.damageType),%1)),
+            damageCategory,json(string,json_query(%0,extract,$.damageCategory)),
+            critical,firstof(json_query(%0,get,critical),null),
             predicate,u(FUN`FORMULA`INJECT,firstof(json_query(%0,get,predicate),json(array)),%1))]
         flags: [funsyntax]
-      # A FlatModifier whose selectors reach a check's domains, or are injected and so might.
+      # A FlatModifier whose selectors reach a check's domains or any damage, or are injected and so might.
       FUN`RULE`FOR`CHECKS:
         value: |-
           @@(%0 the rule)[
           cand(strmatch(json_query(%0,extract,$.key),FlatModifier),
-            cor(regmatch(json_query(%0,get,selector),\\x7B),words(setinter(u(FUN`RULE`SELECTORS,%0,),v(DATA`CHECK`DOMAINS)))))]
+            cor(regmatch(json_query(%0,get,selector),\\x7B),words(setinter(setr(for_sel,u(FUN`RULE`SELECTORS,%0,)),v(DATA`CHECK`DOMAINS))),words(graball(%q<for_sel>,*damage)))))]
         flags: [funsyntax]
       # A FlatModifier that reads the roll data (a formula with @, or an injected {actor|...},
       # {item|...} or {rule|...}) or that is an ability modifier comes out differently on each sheet.
@@ -1259,7 +1265,7 @@ objects:
           setq(check_entries,u(FUN`SHEET`ENTRIES,%0))][
           setq(check_level,u(FUN`SHEET`LEVEL,%q<check_entries>))][
           setq(check_grants,u(FUN`SHEET`GRANTS,%q<check_entries>,%q<check_level>))][
-          setqm(check_options,self:level:%q<check_level>,check_conditions,,check_static,,check_dynamic,,check_names,,check_unapplied,,check_upgrades,,check_rankdyn,,check_strikes,,check_martial,,check_forms,,check_adjust,,check_rollrules,,check_rollopts,,check_toggles,,check_domopts,,check_actortraits,,check_traits,,check_adjstrike,,check_resgrants,,check_craftgrants,,check_favoredrules,,check_ancestry,,check_heritage,,check_background,,check_class,)][
+          setqm(check_options,self:level:%q<check_level>,check_conditions,,check_static,,check_dynamic,,check_names,,check_unapplied,,check_upgrades,,check_rankdyn,,check_strikes,,check_martial,,check_forms,,check_adjust,,check_rollrules,,check_dmgready,0,check_rollopts,,check_toggles,,check_domopts,,check_actortraits,,check_traits,,check_adjstrike,,check_resgrants,,check_craftgrants,,check_favoredrules,,check_ancestry,,check_heritage,,check_background,,check_class,)][
           null(iter(%q<check_grants>,u(FUN`CHECK`GRANT,%i0)))][
           u(FUN`CHECK`DEITY)][
           null(iter(%q<check_actortraits>,u(FUN`CHECK`ACTORTRAITS,%i0)))][
@@ -1584,7 +1590,7 @@ objects:
           if(member(%q<grant_unapplied>,AdjustStrike),[setq(check_adjstrike,%q<check_adjstrike> %q<grant_pack>~%q<grant_id>~%q<grant_badge>~%q<grant_index>)][if(not(u(FUN`CHECK`ADJSTRIKE`OTHER,%q<grant_pack>,%q<grant_id>)),setq(grant_unapplied,remove(%q<grant_unapplied>,AdjustStrike)))])][
           if(member(%q<grant_unapplied>,AdjustModifier),[setq(check_adjust,squish(%q<check_adjust> [u(FUN`CHECK`ADJUSTS,%q<grant_pack>,%q<grant_id>,%q<grant_badge>,%q<grant_index>)]))][setq(grant_unapplied,remove(%q<grant_unapplied>,AdjustModifier))])][
           if(member(%q<grant_unapplied>,RollOption),[setq(check_rollopts,%q<check_rollopts> %q<grant_pack>~%q<grant_id>~%q<grant_badge>~%q<grant_index>)][setq(grant_unapplied,remove(%q<grant_unapplied>,RollOption))])][
-          null(iter(Note RollTwice AdjustDegreeOfSuccess SubstituteRoll,if(member(%q<grant_unapplied>,%i0),[setq(check_rollrules,%q<check_rollrules> %i0~%q<grant_pack>~%q<grant_id>~%q<grant_badge>~%q<grant_index>)][setq(grant_unapplied,remove(%q<grant_unapplied>,%i0))])))][
+          null(iter(Note RollTwice AdjustDegreeOfSuccess SubstituteRoll DamageDice DamageAlteration,if(member(%q<grant_unapplied>,%i0),[setq(check_rollrules,%q<check_rollrules> %i0~%q<grant_pack>~%q<grant_id>~%q<grant_badge>~%q<grant_index>)][setq(grant_unapplied,remove(%q<grant_unapplied>,%i0))])))][
           setq(check_options,squish(%q<check_options> %q<grant_options>[if(cand(strlen(%q<grant_badge>),match(condition effect,%q<grant_kind>)),%b[first(%q<grant_options>)]:%q<grant_badge>)] [if(words(%q<grant_choiceopts>),u(FUN`CHECK`CHOICE`OPTIONS,%q<grant_choiceopts>,u(FUN`CHECK`CHOICES,%q<grant_index>)))]))][
           if(strmatch(%q<grant_kind>,condition),setq(check_conditions,%q<check_conditions> [json_query(%q<grant_prep>,extract,$.slug)]~%q<grant_badge>))][
           if(gt(strlen(%q<grant_synth>),2),setq(check_static,[if(strlen(%q<check_static>),%q<check_static>\,)][mid(%q<grant_synth>,1,sub(strlen(%q<grant_synth>),2))]))][
@@ -2052,20 +2058,19 @@ objects:
             u(FUN`CHECK`FORMONLY,u(FUN`CHECK`MODS,untyped~%q<strike_form>~battle-form~0,%q<strike_domains>,%q<strike_options>),status circumstance),
             %q<strike_mods>)]
         flags: [funsyntax]
-      # A Strike's damage modifiers, after FUN`STRIKE`ATTACK: Strength in melee or thrown (half of a
-      # bonus for a propulsive weapon), weapon specialization by rank, and the synthetics of damage's domains.
+      # A Strike's damage modifiers, after FUN`STRIKE`ATTACK: Strength when it adds (half of a bonus for a
+      # propulsive weapon), weapon specialization by rank, more entries given, and the synthetics of the
+      # Strike's damage domains (FUN`DAMAGE`DOMAINS); a battle form's own damage bonus instead of the first two.
       FUN`STRIKE`DAMAGE:
         value: |-
-          @@(%0 a Strike)[
+          @@(%0 a Strike, %1 more base entries, %2 more roll options)[
           setq(strike_str,u(FUN`CHECK`ABILITY,str))][
+          setq(strike_dmg_domains,u(FUN`DAMAGE`DOMAINS,%0))][
           if(isint(setr(strike_formdmg,json_query(%0,extract,$.formdmg))),
-            u(FUN`CHECK`FORMONLY,u(FUN`CHECK`MODS,untyped~%q<strike_formdmg>~battle-form~0,damage strike-damage attack-damage melee-strike-damage melee-damage unarmed-damage %q<strike_slug>-damage,%q<strike_options>),status circumstance untyped),
-          u(FUN`CHECK`MODS,[switch(1,
-              not(%q<strike_ranged>),ability~%q<strike_str>~str~0,
-              member(%q<strike_traits>,propulsive),ability~[if(gt(%q<strike_str>,0),div(%q<strike_str>,2),%q<strike_str>)]~str~0,
-              regmatch(%q<strike_traits>,\\bthrown),ability~%q<strike_str>~str~0,)] [
-            if(cand(member(%q<check_options>,feature:weapon-specialization),gte(%q<strike_rank>,2)),untyped~[mul(extract(2 3 4,dec(%q<strike_rank>),1),if(member(%q<check_options>,feature:greater-weapon-specialization),2,1))]~weapon-specialization~0)],
-            damage strike-damage attack-damage [if(%q<strike_ranged>,ranged-strike-damage,melee-strike-damage melee-damage)] [if(strmatch(%q<strike_category>,unarmed),unarmed-damage)] %q<strike_slug>-damage,%q<strike_options>))]
+            u(FUN`CHECK`FORMONLY,u(FUN`CHECK`MODS,untyped~%q<strike_formdmg>~battle-form~0 %1,%q<strike_dmg_domains>,%q<strike_options> %2),status circumstance untyped),
+            u(FUN`CHECK`MODS,[if(u(FUN`DAMAGE`STRENGTH),ability~[if(cand(member(%q<strike_traits>,propulsive),%q<strike_ranged>,gt(%q<strike_str>,0)),div(%q<strike_str>,2),%q<strike_str>)]~str~0)] [
+            if(cand(member(%q<check_options>,feature:weapon-specialization),gte(%q<strike_rank>,2)),untyped~[mul(extract(2 3 4,dec(%q<strike_rank>),1),if(member(%q<check_options>,feature:greater-weapon-specialization),2,1))]~weapon-specialization~0)] %1,
+            %q<strike_dmg_domains>,%q<strike_options> %2))]
         flags: [funsyntax]
       # The best rank the MartialProficiency rules of check_martial give the Strike, after
       # FUN`STRIKE`ATTACK has set strike_options: Fighter Weapon Mastery and the like.
@@ -2085,15 +2090,336 @@ objects:
           @@(json_map's callback, %1 a rule: its rank when it is a MartialProficiency whose definition holds for the Strike, or same:<category>:<cap> when the rank is another category's)[
           if(strmatch(json_query(%1,extract,$.key),MartialProficiency),if(u(FUN`PREDICATE`TEST,u(FUN`FORMULA`INJECT,firstof(json_query(%1,get,definition),json(array)),%q<martial_data>),%q<strike_options>),firstof(json_query(%1,extract,$.value),if(strlen(json_query(%1,get,sameAs)),same:[edit(json_query(%1,get,sameAs),",)]:[if(strlen(json_query(%1,get,maxRank)),dec(match(untrained trained expert master legendary,edit(json_query(%1,get,maxRank),",))),4)]),0)))]
         flags: [funsyntax]
-      # Name|attack|second|third|damage|traits for a Strike: the multiple attack penalty is 5 a step, 4 when agile.
+      # Name|attack|second|third|damage|traits for a Strike: the multiple attack penalty is 5 a step, 4 when agile,
+      # and the damage a hit deals (FUN`DAMAGE`TEXT).
       # A weapon that is not held says where it is, after its name.
       FUN`STRIKE`LINE:
         value: |-
           @@(%0 a Strike)[
           setq(strike_bonus,u(FUN`CHECK`TOTAL,u(FUN`STRIKE`ATTACK,%0)))][
           setq(strike_map,if(member(%q<strike_traits>,agile),4,5))][
-          setq(strike_damage,u(FUN`CHECK`TOTAL,u(FUN`STRIKE`DAMAGE,%0)))][
-          json_query(%0,extract,$.name)][if(strlen(setr(strike_left,json_query(%0,extract,$.left))),%bx%q<strike_left>)][if(strlen(setr(strike_where,json_query(%0,extract,$.where))),%b%(%q<strike_where>%))]|%q<strike_bonus>|[sub(%q<strike_bonus>,%q<strike_map>)]|[sub(%q<strike_bonus>,mul(2,%q<strike_map>))]|[add(json_query(%0,extract,$.dice),json_query(%0,extract,$.striking))][json_query(%0,extract,$.die)][if(%q<strike_damage>,if(gt(%q<strike_damage>,0),+%q<strike_damage>,%q<strike_damage>))] [json_query(%0,extract,$.type)]|%q<strike_traits>
+          u(FUN`DAMAGE`STRIKE,%0,)][u(FUN`DAMAGE`FORMULA,2)][
+          json_query(%0,extract,$.name)][if(strlen(setr(strike_left,json_query(%0,extract,$.left))),%bx%q<strike_left>)][if(strlen(setr(strike_where,json_query(%0,extract,$.where))),%b%(%q<strike_where>%))]|%q<strike_bonus>|[sub(%q<strike_bonus>,%q<strike_map>)]|[sub(%q<strike_bonus>,mul(2,%q<strike_map>))]|[u(FUN`DAMAGE`TEXT)]|%q<strike_traits>
+        flags: [funsyntax]
+      FUN`DAMAGE: Damage rolls as Foundry's WeaponDamagePF2e builds them. A plan (dmg_plan) is |-separated terms, slug~number~faces~modifier~type~category~critical~label~modifier type, where critical is n (doubled on a critical hit), y (only on a critical hit, not doubled) or f (always, not doubled), and an empty type or faces is the base damage's. dmg_over holds the dice overrides, critical~type~upgrade~downgrade~faces~number~new type each.
+      # A Strike's damage domains, after FUN`STRIKE`ATTACK, as Foundry's getAttackDamageDomains gives them.
+      FUN`DAMAGE`DOMAINS:
+        value: |-
+          @@(%0 a Strike)[
+          setqm(dd_id,json_query(%0,extract,$.id),dd_mr,if(%q<strike_ranged>,ranged,melee),dd_group,json_query(%0,extract,$.group),dd_base,json_query(%0,extract,$.base))][
+          setunion(%q<dd_id>-damage %q<dd_id>-%q<dd_mr>-damage %q<strike_slug>-damage %q<dd_mr>-strike-damage %q<dd_mr>-damage [if(cor(member(%q<strike_traits>,unarmed),strmatch(%q<strike_category>,unarmed)),unarmed,weapon)]-damage [if(strlen(%q<dd_group>),%q<dd_group>-weapon-group-damage)] [if(strlen(%q<dd_base>),%q<dd_base>-base-damage %q<dd_base>-base-type-damage %q<dd_base>-damage)] attack-damage strike-damage damage [extract(untrained trained expert master legendary,inc(firstof(%q<strike_rank>,0)),1)]-damage [if(u(FUN`DAMAGE`STRENGTH),str-damage)],)]
+        flags: [funsyntax]
+      # Strength adds to a Strike's damage in melee, with a propulsive weapon, and with a thrown one that does not splash.
+      FUN`DAMAGE`STRENGTH:
+        value: |-
+          cor(not(%q<strike_ranged>),member(%q<strike_traits>,propulsive),cand(regmatch(%q<strike_traits>,\\bthrown),not(member(%q<strike_traits>,splash))))
+        flags: [funsyntax]
+      # A PC's Strike's damage, after FUN`STRIKE`ATTACK: the weapon's dice and its striking runes, its
+      # persistent damage, the damage modifiers (with the traits' kickback, backstabber, tearing,
+      # venomous and splash), deadly and fatal, and the DamageDice rules that apply, then the
+      # DamageAlteration rules. Sets dmg_plan, dmg_over, dmg_domains and dmg_options.
+      FUN`DAMAGE`STRIKE:
+        value: |-
+          @@(%0 a Strike, %1 more roll options, such as the target's)[
+          u(FUN`DAMAGE`RULES)][
+          setq(dmg_domains,u(FUN`DAMAGE`DOMAINS,%0))][
+          setqm(dmg_striking,firstof(json_query(%0,extract,$.striking),0),dmg_potency,firstof(json_query(%0,extract,$.potency),0),dmg_type,firstof(json_query(%0,extract,$.type),bludgeoning),dmg_over,,dmg_upgraded,0)][
+          setq(dmg_options,setunion(%q<check_options> %q<strike_options> %1 %q<strike_traits> [if(%q<strike_ranged>,ranged,melee)] [u(FUN`ROLLOPTION`DOMAINS,%q<dmg_domains>)],))][
+          setq(dmg_weapon,u(FUN`DAMAGE`WEAPON,%0))][
+          setq(dmg_plan,trim(squish(
+            base~[add(firstof(json_query(%0,extract,$.dice),0),%q<dmg_striking>)]~[after(json_query(%0,extract,$.die),d)]~0~%q<dmg_type>~~n~~|[
+            u(FUN`DAMAGE`PERSISTENT,json_query(%0,extract,$.pers))]|[
+            iter(u(FUN`STRIKE`DAMAGE,%0,u(FUN`DAMAGE`TRAITMODS,firstof(json_query(%0,extract,$.splash),0)),%1),u(FUN`DAMAGE`MODTERM,%i0),%b,|)]|[
+            u(FUN`DAMAGE`TRAITDICE)]|[
+            u(FUN`DAMAGE`RULEDICE)],|),|))][
+          u(FUN`DAMAGE`ALTER)]
+        flags: [funsyntax]
+      # A creature's Strike's damage, from a melee item's damage rolls: the first is the base, the others
+      # extra dice and modifiers, with the elite or weak adjustment, then the same rules as a PC's.
+      FUN`DAMAGE`NPC:
+        value: |-
+          @@(%0 a melee item, %1 more roll options, %2 the elite or weak adjustment)[
+          u(FUN`DAMAGE`RULES)][
+          setq(strike_traits,json_map(me/FUN`RULE`SELECTOR,firstof(json_query(%0,extract,$.system.traits.value),json(array)),%b))][
+          setqm(strike_ranged,regmatch(%q<strike_traits>,\\brange),strike_slug,u(FUN`ITEM`SLUG,%0),strike_category,,strike_rank,)][
+          setq(strike_options,squish(item:slug:%q<strike_slug> [if(%q<strike_ranged>,item:ranged,item:melee)] [iter(%q<strike_traits>,item:trait:%i0)]))][
+          setq(dmg_domains,setunion([json_query(%0,extract,$._id)]-damage %q<strike_slug>-damage [if(%q<strike_ranged>,ranged,melee)]-strike-damage [if(%q<strike_ranged>,ranged,melee)]-damage [if(member(%q<strike_traits>,unarmed),unarmed,weapon)]-damage attack-damage strike-damage damage,))][
+          setqm(dmg_striking,0,dmg_potency,0,dmg_over,,dmg_upgraded,0,dmg_weapon,%0)][
+          setq(dmg_options,setunion(%q<check_options> %q<strike_options> %1 %q<strike_traits> [if(%q<strike_ranged>,ranged,melee)] [u(FUN`ROLLOPTION`DOMAINS,%q<dmg_domains>)],))][
+          setq(dmg_rolls,json_map(me/FUN`DAMAGE`NPC`ROLL,firstof(json_query(%0,extract,$.system.damageRolls),json(object)),|))][
+          setq(dmg_type,firstof(elements(first(%q<dmg_rolls>,|),5,~),untyped))][
+          setq(dmg_plan,trim(squish(
+            [iter(%q<dmg_rolls>,u(FUN`DAMAGE`NPC`TERMS,%i0,inum(0)),|,|)]|[
+            iter(u(FUN`CHECK`MODS,[if(%2,untyped~%2~[if(gt(%2,0),elite,weak)]~0)] [u(FUN`DAMAGE`TRAITMODS,0)],%q<dmg_domains>,%q<strike_options> %1),u(FUN`DAMAGE`MODTERM,%i0),%b,|)]|[
+            u(FUN`DAMAGE`TRAITDICE)]|[
+            u(FUN`DAMAGE`RULEDICE)],|),|))][
+          u(FUN`DAMAGE`ALTER)]
+        flags: [funsyntax]
+      # One of a melee item's damage rolls as number~faces~modifier~~type~category.
+      FUN`DAMAGE`NPC`ROLL:
+        value: |-
+          @@(%1 a damage roll: formula, type and category)[
+          setq(npc_f,edit(json_query(%1,extract,$.damage),%b,))][
+          if(regmatch(%q<npc_f>,^\\d+d\\d+),
+            [regedit(%q<npc_f>,^%(\\d+%)d%(\\d+%).*$,$1~$2)]~[add(0,regedit(%q<npc_f>,^\\d+d\\d+,))],
+            0~0~[add(0,%q<npc_f>)])~~[json_query(%1,extract,$.damageType)]~[json_query(%1,extract,$.category)]]
+        flags: [funsyntax]
+      # The terms of the %1th damage roll: the first the base, a later one extra dice and a modifier.
+      FUN`DAMAGE`NPC`TERMS:
+        value: |-
+          @@(%0 number~faces~modifier~~type~category, %1 its place)[
+          setq(npc_slug,if(eq(%1,1),base,base-[dec(%1)]))][
+          [if(first(%0,~),base~[first(%0,~)]~[elements(%0,2,~)]~0~[elements(%0,5,~)]~[elements(%0,6,~)]~n~)]|[
+          if(elements(%0,3,~),%q<npc_slug>~0~0~[elements(%0,3,~)]~[elements(%0,5,~)]~[elements(%0,6,~)]~n~~untyped)]]
+        flags: [funsyntax]
+      # A weapon's persistent damage, such as 1d6 fire or 2 bleed, as a base term.
+      FUN`DAMAGE`PERSISTENT:
+        value: |-
+          @@(%0 a formula and a type)[
+          if(strlen(%0),[setq(dp_f,first(%0))]base~[if(strmatch(%q<dp_f>,*d*),before(%q<dp_f>,d),0)]~[if(strmatch(%q<dp_f>,*d*),after(%q<dp_f>,d),0)]~[if(strmatch(%q<dp_f>,*d*),0,%q<dp_f>)]~[last(%0)]~persistent~n~~)]
+        flags: [funsyntax]
+      # The weapon for @weapon in a rule's formula: its item, with the Strike's dice, die, type and runes.
+      FUN`DAMAGE`WEAPON:
+        value: |-
+          @@(%0 a Strike)[
+          json_mod(firstof(u(FUN`ITEM`GET,equipment,json_query(%0,extract,$.id)),json(object)),patch,json(object,system,json(object,damage,json(object,dice,add(firstof(json_query(%0,extract,$.dice),0),firstof(json_query(%0,extract,$.striking),0)),die,json(string,json_query(%0,extract,$.die)),damageType,json(string,json_query(%0,extract,$.type))),runes,json(object,potency,firstof(json_query(%0,extract,$.potency),0),striking,firstof(json_query(%0,extract,$.striking),0)))))]
+        flags: [funsyntax]
+      # The traits' damage modifiers: kickback, backstabber against an off-guard target, tearing,
+      # venomous and splash, as type~value~slug~force~damage type~category entries.
+      FUN`DAMAGE`TRAITMODS:
+        value: |-
+          @@(%0 the splash damage)[
+          trim([
+            if(member(%q<strike_traits>,kickback),%buntyped~1~kickback~0)][
+            if(cand(member(%q<strike_traits>,backstabber),member(%q<dmg_options>,target:condition:off-guard)),%buntyped~[if(gt(%q<dmg_potency>,2),2,1)]~backstabber~0~~precision)][
+            if(member(%q<strike_traits>,tearing),%buntyped~[if(gt(%q<dmg_striking>,1),2,1)]~tearing~0~bleed~persistent)][
+            if(member(%q<strike_traits>,venomous),%buntyped~[if(gt(%q<dmg_striking>,1),2,1)]~venomous~0~poison~persistent)][
+            if(gt(%0,0),%buntyped~%0~splash~0~%q<dmg_type>~splash)])]
+        flags: [funsyntax]
+      FUN`DAMAGE`MODTERM:
+        value: |-
+          @@(%0 a modifier, type~value~slug~force~damage type~category~critical)[
+          if(elements(%0,2,~),[elements(%0,3,~)]~0~0~[elements(%0,2,~)]~[elements(%0,5,~)]~[elements(%0,6,~)]~[firstof(elements(%0,7,~),n)]~[elements(%0,3,~)]~[first(%0,~)])]
+        flags: [funsyntax]
+      # Deadly adds its die on a critical hit (two with greater striking, three with major); fatal adds one
+      # die of its size and makes the weapon's dice that size.
+      FUN`DAMAGE`TRAITDICE:
+        value: |-
+          [iter(graball(%q<strike_traits>,deadly-*),%i0~[mul(firstof(before(after(%i0,deadly-),d),1),if(gt(%q<dmg_striking>,1),%q<dmg_striking>,1))]~[after(after(%i0,deadly-),d)]~0~~~y~deadly~,%b,|)]|[
+          iter(graball(%q<strike_traits>,fatal-d*),[setq(dmg_over,%q<dmg_over> y~~0~0~[after(%i0,fatal-d)]~~)]%i0~1~[after(%i0,fatal-d)]~0~~~y~fatal~,%b,|)]
+        flags: [funsyntax]
+      # The sheet's DamageDice and DamageAlteration rules, read once after FUN`CHECK`PREPARE: check_dmgdice
+      # (pack~id~badge~index~rule~selectors joined by dots) and check_dmgalts (the same, then slug~property~mode),
+      # each rule in check_dmgrule_<index>_<rule>, its predicate with injected properties resolved in
+      # check_dmgpred_<index>_<rule>, and each grant's roll data in check_dmgdata_<index>.
+      FUN`DAMAGE`RULES:
+        value: |-
+          @@(sets check_dmgready)[
+          if(not(%q<check_dmgready>),
+            [setqm(check_dmgready,1,check_dmgdice,,check_dmgalts,)][
+            null(iter(graball(%q<check_rollrules>,Damage*~*),u(FUN`DAMAGE`RULES`GRANT,%i0)))])]
+        flags: [funsyntax]
+      FUN`DAMAGE`RULES`GRANT:
+        value: |-
+          @@(%0 kind~pack~id~badge~index)[
+          setqm(drg_kind,first(%0,~),drg_at,elements(%0,5,~))][
+          setq(rr_item,u(FUN`ITEM`GET,elements(%0,2,~),elements(%0,3,~)))][
+          setqm(drg_rules,firstof(json_query(%q<rr_item>,extract,$.system.rules),json(array)),check_dmgdata_%q<drg_at>,u(FUN`ROLLRULE`DATA,rest(%0,~)))][
+          null(iter(json_map(me/FUN`CHECK`RULEKEY,%q<drg_rules>,%b,%q<drg_kind>),
+            [setq(drg_rule,json_query(%q<drg_rules>,extract,$\[%i0\]))][
+            setq(check_dmgrule_%q<drg_at>_%i0,%q<drg_rule>)][
+            setq(drg_pred,u(FUN`FORMULA`INJECT,firstof(json_query(%q<drg_rule>,get,predicate),json(array)),r(check_dmgdata_%q<drg_at>)))][
+            setq(check_dmgpred_%q<drg_at>_%i0,%q<drg_pred>)][
+            if(strmatch(%q<drg_kind>,DamageAlteration),setqm(check_dmgpreds_%q<drg_at>_%i0,u(FUN`DAMAGE`PREDICATE`PART,%q<drg_pred>,0),check_dmgpredt_%q<drg_at>_%i0,u(FUN`DAMAGE`PREDICATE`PART,%q<drg_pred>,1)))][
+            setq(drg_sel,edit(u(FUN`RULE`SELECTORS,if(strlen(json_query(%q<drg_rule>,get,selectors)),json_mod(%q<drg_rule>,set,$.selector,json_query(%q<drg_rule>,get,selectors)),%q<drg_rule>),r(check_dmgdata_%q<drg_at>)),%b,.))][
+            if(strmatch(%q<drg_kind>,DamageDice),
+              setq(check_dmgdice,%q<check_dmgdice> [rest(%0,~)]~%i0~%q<drg_sel>),
+              setq(check_dmgalts,%q<check_dmgalts> [rest(%0,~)]~%i0~%q<drg_sel>~[json_query(%q<drg_rule>,extract,$.slug)]~[json_query(%q<drg_rule>,extract,$.property)]~[firstof(json_query(%q<drg_rule>,extract,$.mode),add)]))]))]
+        flags: [funsyntax]
+      # A DamageAlteration's predicate in two: the statements that may read a term's own roll options
+      # (damage, dice:, damage:, bonus:, penalty:, modifier:), tested for each term, and the others, tested
+      # once for the whole damage.
+      FUN`DAMAGE`PREDICATE`PART:
+        value: |-
+          @@(%0 a predicate, %1 1 for the statements that may read a term's options, 0 for the others)[
+          \[[edit(trim(squish(json_map(me/FUN`DAMAGE`PREDICATE`ONE,%0,|,%1),|),|),|,\,)]\]]
+        flags: [funsyntax]
+      FUN`DAMAGE`PREDICATE`ONE:
+        value: |-
+          @@(json_map's callback, %0 the statement's type, %1 the statement, %3 which part)[
+          setq(dpo_json,if(strmatch(%0,string),json(string,%1),%1))][
+          if(eq(%3,regmatch(%q<dpo_json>,damage|dice:|bonus:|penalty:|modifier:)),%q<dpo_json>)]
+        flags: [funsyntax]
+      # The DamageDice rules whose selectors meet the damage's domains and whose predicates hold.
+      FUN`DAMAGE`RULEDICE:
+        value: |-
+          iter(%q<check_dmgdice>,if(cand(words(setinter(edit(elements(%i0,6,~),.,%b),%q<dmg_domains>)),u(FUN`PREDICATE`TEST,r(check_dmgpred_[elements(%i0,4,~)]_[elements(%i0,5,~)]),%q<dmg_options>)),u(FUN`DAMAGE`DICE,%i0)),%b,|)
+        flags: [funsyntax]
+      FUN`DAMAGE`DATA:
+        value: |-
+          @@(%0 pack~id~badge~index~rule: the grant's roll data, with the rule and the weapon)[
+          json_mod(json_mod(r(check_dmgdata_[elements(%0,4,~)]),set,$.rule,r(check_dmgrule_[elements(%0,4,~)]_[elements(%0,5,~)])),set,$.weapon,firstof(%q<dmg_weapon>,json(object)))]
+        flags: [funsyntax]
+      # One DamageDice rule as a term, its override (upgrade, downgrade, dieSize, diceNumber or damageType) in dmg_over.
+      FUN`DAMAGE`DICE:
+        value: |-
+          @@(%0 pack~id~badge~index~rule)[
+          setq(dd_rule,r(check_dmgrule_[elements(%0,4,~)]_[elements(%0,5,~)]))][
+          setq(dd_data,u(FUN`DAMAGE`DATA,%0))][
+          setq(dd_crit,switch(json_query(%q<dd_rule>,extract,$.critical),true,y,false,f,n))][
+          setq(dd_type,u(FUN`DAMAGE`TYPEOF,u(FUN`FORMULA`INJECT,json_query(%q<dd_rule>,extract,$.damageType),%q<dd_data>)))][
+          if(strlen(setr(dd_over,json_query(%q<dd_rule>,get,override))),
+            setq(dmg_over,%q<dmg_over> %q<dd_crit>~%q<dd_type>~[t(json_query(%q<dd_over>,extract,$.upgrade))]~[t(json_query(%q<dd_over>,extract,$.downgrade))]~[after(u(FUN`FORMULA`INJECT,json_query(%q<dd_over>,extract,$.dieSize),%q<dd_data>),d)]~[if(strlen(json_query(%q<dd_over>,get,diceNumber)),max(0,min(256,trunc(u(FUN`FORMULA`VALUE,json_query(%q<dd_over>,get,diceNumber),%q<dd_data>,0)))))]~[u(FUN`DAMAGE`TYPEOF,u(FUN`FORMULA`INJECT,json_query(%q<dd_over>,extract,$.damageType),%q<dd_data>))]))][
+          setq(dd_name,json_query(%q<dd_data>,extract,$.item.name))][
+          [firstof(json_query(%q<dd_rule>,extract,$.slug),u(FUN`ITEM`SLUGGIFY,%q<dd_name>))]~[
+          max(0,trunc(u(FUN`FORMULA`VALUE,firstof(json_query(%q<dd_rule>,get,diceNumber),0),%q<dd_data>,0)))]~[
+          after(u(FUN`FORMULA`INJECT,json_query(%q<dd_rule>,extract,$.dieSize),%q<dd_data>),d)]~0~%q<dd_type>~[
+          json_query(%q<dd_rule>,extract,$.category)]~%q<dd_crit>~[
+          edit(firstof(u(FUN`LANG,json_query(%q<dd_rule>,extract,$.label)),regeditall(%q<dd_name>,^\[^:\]+:\\s+,)),~,-,|,/)]~]
+        flags: [funsyntax]
+      FUN`DAMAGE`TYPEOF:
+        value: |-
+          @@(%0 text: it when it is a damage type)[
+          if(member(v(DATA`DAMAGE`TYPES),%0),%0)]
+        flags: [funsyntax]
+      # The DamageAlteration rules whose selectors meet the damage's domains, applied to each term in turn
+      # when the rule names the term's slug or none and its predicate holds with the term's own roll options.
+      FUN`DAMAGE`ALTER:
+        value: |-
+          @@(dmg_plan: sets it, altered)[
+          setq(dmg_alts,iter(%q<check_dmgalts>,if(cand(words(setinter(edit(elements(%i0,6,~),.,%b),%q<dmg_domains>)),u(FUN`PREDICATE`TEST,r(check_dmgpreds_[elements(%i0,4,~)]_[elements(%i0,5,~)]),%q<dmg_options>)),%i0)))][
+          if(words(%q<dmg_alts>),setq(dmg_plan,iter(%q<dmg_plan>,u(FUN`DAMAGE`ALTER`TERM,%i0),|,|)))]
+        flags: [funsyntax]
+      FUN`DAMAGE`ALTER`TERM:
+        value: |-
+          @@(%0 a term)[
+          setq(alt_t,%0)][
+          null(iter(%q<dmg_alts>,u(FUN`DAMAGE`ALTER`ONE,%i0)))]%q<alt_t>
+        flags: [funsyntax]
+      # Dice properties alter only dice; a die whose size is the base's is left alone, as in Foundry.
+      FUN`DAMAGE`ALTER`ONE:
+        value: |-
+          @@(%0 pack~id~badge~index~rule~selectors~slug~property~mode; alt_t the term)[
+          setqm(alt_slug,elements(%0,7,~),alt_prop,elements(%0,8,~))][
+          if(cand(cor(not(strlen(%q<alt_slug>)),strmatch(%q<alt_slug>,first(%q<alt_t>,~))),cor(strmatch(%q<alt_prop>,damage-type),gt(elements(%q<alt_t>,2,~),0)),u(FUN`PREDICATE`TEST,r(check_dmgpredt_[elements(%0,4,~)]_[elements(%0,5,~)]),%q<dmg_options> [u(FUN`DAMAGE`TERMOPTS,%q<alt_t>)])),
+            u(FUN`DAMAGE`ALTER`APPLY,elements(%0,9,~),u(FUN`FORMULA`VALUE,json_query(r(check_dmgrule_[elements(%0,4,~)]_[elements(%0,5,~)]),get,value),u(FUN`DAMAGE`DATA,%0),)))]
+        flags: [funsyntax]
+      FUN`DAMAGE`ALTER`APPLY:
+        value: |-
+          @@(%0 the mode, %1 the value; alt_prop the property, alt_t the term: sets alt_t)[
+          switch(%q<alt_prop>,
+            damage-type, if(strlen(u(FUN`DAMAGE`TYPEOF,%1)),setq(alt_t,replace(%q<alt_t>,5,%1,~))),
+            dice-number, if(isnum(%1),setq(alt_t,replace(%q<alt_t>,2,max(0,min(99,floor(u(FUN`DAMAGE`MODE,%0,elements(%q<alt_t>,2,~),%1)))),~))),
+            dice-faces, if(gt(setr(alt_faces,firstof(elements(%q<alt_t>,3,~),0)),0),
+              [setq(alt_new,switch(%0,
+                upgrade, if(member(4 6 8 10 12,%1),max(%1,%q<alt_faces>),u(FUN`DAMAGE`STEP,%q<alt_faces>,1)),
+                downgrade, if(member(4 6 8 10 12,%1),min(%1,%q<alt_faces>),u(FUN`DAMAGE`STEP,%q<alt_faces>,-1)),
+                override, if(member(4 6 8 10 12,%1),%1,%q<alt_faces>),
+                %q<alt_faces>))][
+              if(cand(strmatch(first(%q<alt_t>,~),base),strmatch(%0,upgrade),comp(%q<alt_new>,%q<alt_faces>)),setq(dmg_upgraded,1))][
+              setq(alt_t,replace(%q<alt_t>,3,%q<alt_new>,~))]))]
+        flags: [funsyntax]
+      FUN`DAMAGE`MODE:
+        value: |-
+          @@(%0 an ActiveEffectLike mode, %1 the value now, %2 the change)[
+          switch(%0,add,add(%1,%2),subtract,sub(%1,%2),remove,sub(%1,%2),multiply,mul(%1,%2),upgrade,max(%1,%2),downgrade,min(%1,%2),override,%2,%1)]
+        flags: [funsyntax]
+      FUN`DAMAGE`STEP:
+        value: |-
+          @@(%0 a die's faces, %1 1 up or -1 down)[
+          extract(4 6 8 10 12,max(1,min(5,add(match(4 6 8 10 12,%0),%1))),1)]
+        flags: [funsyntax]
+      # A term's own roll options, as Foundry's DamageDicePF2e and ModifierPF2e give them.
+      FUN`DAMAGE`TERMOPTS:
+        value: |-
+          @@(%0 a term)[
+          setqm(to_slug,first(%0,~),to_type,elements(%0,5,~),to_cat,elements(%0,6,~))][
+          if(gt(elements(%0,2,~),0),
+            damage dice:slug:%q<to_slug> dice:number:[elements(%0,2,~)] dice:faces:d[elements(%0,3,~)] dice:damage [if(strlen(%q<to_cat>),damage:category:%q<to_cat> dice:damage:category:%q<to_cat>)] [if(strlen(%q<to_type>),damage:type:%q<to_type> dice:damage:type:%q<to_type>)],
+            [setqm(to_value,elements(%0,4,~),to_mtype,firstof(elements(%0,9,~),untyped))][
+            setq(to_kind,switch(1,cand(gte(%q<to_value>,0),not(match(ability untyped,%q<to_mtype>))),bonus,cand(lt(%q<to_value>,0),comp(%q<to_mtype>,ability)),penalty,modifier))]
+            %q<to_kind>:slug:%q<to_slug> %q<to_kind>:type:%q<to_mtype> %q<to_kind>:value:%q<to_value> damage %q<to_kind>:damage [if(strlen(%q<to_type>),damage:type:%q<to_type> %q<to_kind>:damage:type:%q<to_type>)] [if(strlen(%q<to_cat>),damage:category:%q<to_cat> %q<to_kind>:damage:category:%q<to_cat>)])]
+        flags: [funsyntax]
+      # The damage at a degree of success (3 a critical hit, 2 a hit, 1 a miss, which deals only splash),
+      # after FUN`DAMAGE`STRIKE: the overrides that apply change the base dice, then the terms are summed by
+      # damage type. A critical hit doubles each type's damage but its splash, the dice only on a critical
+      # hit, and the damage that is never doubled. Sets dmg_inst, kind~type~formula~doubled for each:
+      # kind main, precision, splash or persistent; doubled 1 for persistent damage that a critical doubles.
+      FUN`DAMAGE`FORMULA:
+        value: |-
+          @@(%0 the degree)[
+          setq(dmg_inst,)][
+          if(%0,
+            [setq(df_terms,trim(squish(iter(%q<dmg_plan>,if(cand(cor(comp(elements(%i0,7,~),y),eq(%0,3)),cor(gte(%0,2),strmatch(elements(%i0,6,~),splash))),%i0),|,|),|),|))][
+            setq(df_base,first(iter(%q<dmg_plan>,if(cand(strmatch(first(%i0,~),base),comp(elements(%i0,6,~),persistent)),%i0),|,|),|))][
+            setq(df_pbase,first(iter(%q<dmg_plan>,if(cand(strmatch(first(%i0,~),base),strmatch(elements(%i0,6,~),persistent)),%i0),|,|),|))][
+            setq(df_btype,firstof(elements(%q<df_base>,5,~),untyped))][
+            u(FUN`DAMAGE`OVERRIDE,%0)][
+            setq(df_terms,iter(%q<df_terms>,u(FUN`DAMAGE`RESOLVE,%i0),|,|))][
+            setqm(df_double,eq(%0,3),df_keys,)][
+            null(iter(%q<df_terms>,
+              [setq(df_k,[elements(%i0,5,~)]_[switch(elements(%i0,6,~),precision,precision,splash,splash,persistent,persistent,main)]_[if(cand(strmatch(elements(%i0,7,~),n),comp(elements(%i0,6,~),splash)),a,b)])][
+              if(member(%q<df_keys>,%q<df_k>),setq(dfb_%q<df_k>,r(dfb_%q<df_k>)|%i0),[setq(dfb_%q<df_k>,%i0)][setq(df_keys,%q<df_keys> %q<df_k>)])],
+              |))][
+            null(iter(%q<df_btype> [setdiff(setunion(iter(%q<df_keys>,first(%i0,_)),),%q<df_btype>)],
+              [setq(df_t,%i0)][
+              null(iter(main precision splash persistent,if(cor(member(%q<df_keys>,%q<df_t>_%i0_a),member(%q<df_keys>,%q<df_t>_%i0_b)),u(FUN`DAMAGE`INSTANCE,%i0,if(member(%q<df_keys>,%q<df_t>_%i0_a),r(dfb_%q<df_t>_%i0_a)),if(member(%q<df_keys>,%q<df_t>_%i0_b),r(dfb_%q<df_t>_%i0_b)),%q<df_double>))))]))])]
+        flags: [funsyntax]
+      # One instance of type df_t: the doubled terms twice over, and the others once. Persistent damage keeps
+      # its formula whole and says it is doubled, for +enc's persistent damage to double each time it is taken.
+      FUN`DAMAGE`INSTANCE:
+        value: |-
+          @@(%0 the kind, %1 the terms doubled, %2 the others, %3 1 to double)[
+          setqm(di_a,u(FUN`DAMAGE`SIMPLE,%1),di_b,u(FUN`DAMAGE`SIMPLE,%2))][
+          setq(di_f,switch(1,
+            not(strlen(%q<di_a>)),%q<di_b>,
+            not(strlen(%q<di_b>)),if(cand(%3,comp(%0,persistent)),2*%(%q<di_a>%),%q<di_a>),
+            [if(%3,2*%(%q<di_a>%),%q<di_a>)][if(strmatch(%q<di_b>,-*),,+)]%q<di_b>))][
+          if(strlen(%q<di_f>),setq(dmg_inst,[if(strlen(%q<dmg_inst>),%q<dmg_inst>|)]%0~%q<df_t>~%q<di_f>~[cand(%3,strmatch(%0,persistent),strlen(%q<di_a>),not(strlen(%q<di_b>)))]))]
+        flags: [funsyntax]
+      # Terms summed as a formula: the dice of each size, largest first, then the constant.
+      FUN`DAMAGE`SIMPLE:
+        value: |-
+          @@(%0 terms)[
+          setq(simple_c,ladd(0 [iter(%0,elements(%i0,4,~),|,%b)]))][
+          setq(simple_d,trim(squish(iter(revwords(sort(setunion(iter(%0,if(gt(elements(%i0,2,~),0),elements(%i0,3,~)),|),),n)),[setq(simple_n,ladd(0 [iter(%0,if(eq(firstof(elements(%i0,3,~),0),%i1),elements(%i0,2,~)),|,%b)]))][if(gt(%q<simple_n>,0),%q<simple_n>d%i0)],%b,+),+),+))][
+          switch(1,
+            not(strlen(%q<simple_d>)),if(%q<simple_c>,%q<simple_c>),
+            gt(%q<simple_c>,0),%q<simple_d>+%q<simple_c>,
+            lt(%q<simple_c>,0),%q<simple_d>%q<simple_c>,
+            %q<simple_d>)]
+        flags: [funsyntax]
+      # The base's dice as the overrides that apply at this degree leave them: one size up or down at most
+      # (none after a DamageAlteration made them bigger), then the last die size, number and type set.
+      FUN`DAMAGE`OVERRIDE:
+        value: |-
+          @@(%0 the degree; df_base the base term)[
+          if(strlen(%q<df_base>),
+            [setq(ov_app,iter(%q<dmg_over>,if(cand(switch(first(%i0,~),y,eq(%0,3),f,lt(%0,3),1),cor(not(strlen(elements(%i0,2,~))),strmatch(elements(%i0,2,~),%q<df_btype>))),%i0)))][
+            if(words(%q<ov_app>),
+              [setq(ov_max,if(%q<dmg_upgraded>,0,1))][
+              setq(ov_new,%q<df_base>)][
+              setq(ov_delta,sub(min(%q<ov_max>,words(iter(%q<ov_app>,if(elements(%i0,3,~),x)))),min(%q<ov_max>,words(iter(%q<ov_app>,if(elements(%i0,4,~),x))))))][
+              if(cand(%q<ov_delta>,gt(elements(%q<ov_new>,3,~),0)),setq(ov_new,replace(%q<ov_new>,3,u(FUN`DAMAGE`STEP,elements(%q<ov_new>,3,~),%q<ov_delta>),~)))][
+              null(iter(%q<ov_app>,
+                [if(strlen(elements(%i0,7,~)),setq(ov_new,replace(%q<ov_new>,5,elements(%i0,7,~),~)))][
+                if(strlen(elements(%i0,6,~)),setq(ov_new,replace(%q<ov_new>,2,elements(%i0,6,~),~)))][
+                if(strlen(elements(%i0,5,~)),setq(ov_new,replace(%q<ov_new>,3,elements(%i0,5,~),~)))]))][
+              setq(df_terms,iter(%q<df_terms>,if(strmatch(%i0,%q<df_base>),%q<ov_new>,%i0),|,|))][
+              setqm(df_base,%q<ov_new>,df_btype,firstof(elements(%q<ov_new>,5,~),untyped))])])]
+        flags: [funsyntax]
+      # A term with the base's type and die size where it has none of its own.
+      FUN`DAMAGE`RESOLVE:
+        value: |-
+          @@(%0 a term)[
+          setq(dr_t,%0)][
+          if(not(strlen(elements(%0,5,~))),setq(dr_t,replace(%q<dr_t>,5,if(strmatch(elements(%0,6,~),persistent),firstof(elements(%q<df_pbase>,5,~),%q<df_btype>),%q<df_btype>),~)))][
+          if(cand(gt(elements(%0,2,~),0),not(gt(elements(%0,3,~),0))),setq(dr_t,replace(%q<dr_t>,3,elements(%q<df_base>,3,~),~)))]%q<dr_t>
+        flags: [funsyntax]
+      # The damage as text, after FUN`DAMAGE`FORMULA: 2d8+4 slashing, 1d6 precision, 1d6 fire persistent.
+      FUN`DAMAGE`TEXT:
+        value: |-
+          iter(%q<dmg_inst>,[if(elements(%i0,4,~),2*%([elements(%i0,3,~)]%),elements(%i0,3,~))] [switch(first(%i0,~),precision,precision,splash,[elements(%i0,2,~)] splash,persistent,[elements(%i0,2,~)] persistent,elements(%i0,2,~))],|,%,%b)
         flags: [funsyntax]
       FUN`CHOICE: Choices.
       FUN`CHOICE`SLUG:
@@ -4076,7 +4402,7 @@ objects:
     attributes:
       CMD`ENC:
         value: |-
-          $(?is)^\+enc(/\S*)?(?\: +(.*))?$:think setqm(cmd_switch,firstof(lcstr(after(%1,/)),show),cmd_args,trim(%2)); @assert match(show start add remove join init next strike check save use act effect raise damage heal cond persist delay look bestiary award keep undo redo end toggle,%q<cmd_switch>)=@pemit %#=notice(PF2E,There is no +enc/%q<cmd_switch>. +help +enc lists the switches.,warn); think u(%!/FUN`ENC`LOAD,%l); @include %!/INC`ENC`%q<cmd_switch>
+          $(?is)^\+enc(/\S*)?(?\: +(.*))?$:think setqm(cmd_switch,firstof(lcstr(first(after(%1,/),/)),show),cmd_sub,lcstr(after(after(%1,/),/)),cmd_args,trim(%2)); @assert match(show start add remove join init next strike check save use act effect raise damage heal cond persist delay look bestiary award keep undo redo end toggle,%q<cmd_switch>)=@pemit %#=notice(PF2E,There is no +enc/%q<cmd_switch>. +help +enc lists the switches.,warn); think u(%!/FUN`ENC`LOAD,%l); @include %!/INC`ENC`%q<cmd_switch>
         flags: [regexp, cmdsyntax]
       # +cast <spell>[ at <rank>][ with <n> actions][ as <variant>][=<targets>]: in an encounter you are in, on its
       # copy of you and on its combatants; elsewhere from your sheet's day, with healing onto the characters named.
@@ -4372,20 +4698,41 @@ objects:
               u({{core}}/FUN`CHECK`MODS,untyped~[add(%q<act_adj>,sub(firstof(json_query(%q<act_npc>,extract,$.system.attributes.ac.value),10),10))]~base~0,ac all dex-based,),
               u({{core}}/FUN`CHECK`AC,if(cand(%q<act_raised>,strlen(%q<check_shield>)),circumstance~[firstof(json_query(%q<check_shield>,extract,$.system.acBonus),0)]~raised-shield~0)))))]
         flags: [funsyntax]
-      # The Strikes: name|attack|damage formula|traits|agile for each, separated by ^.
+      # The Strikes: name|attack|damage|traits|agile|use~use id|left|||source for each, separated by ^: the source
+      # the Strike's JSON for a character, npc:<attribute> for a creature's melee item. The damage is a hit's, as text.
+      # %0 a name pattern: only the first Strike whose name matches it, all of them when empty.
       FUN`ACT`STRIKES:
         value: |-
-          @@(the prepared combatant's Strikes)[
+          @@(the prepared combatant's Strikes, %0 a name pattern or nothing)[
           if(strlen(%q<act_npc>),
-            iter(u(FUN`ACT`NPC`MELEE),u(FUN`ACT`NPC`STRIKE,%i0),%b,^),
-            iter(u({{core}}/FUN`CHECK`STRIKES),u(FUN`ACT`PC`STRIKE,%i0),|,^))]
+            iter(u(FUN`ACT`NPC`PICK,%0),u(FUN`ACT`NPC`STRIKE,%i0),%b,^),
+            iter(u(FUN`ACT`PC`PICK,%0),u(FUN`ACT`PC`STRIKE,%i0),|,^))]
+        flags: [funsyntax]
+      FUN`ACT`STRIKE`NAMES:
+        value: |-
+          @@(the prepared combatant's Strike names, separated by |)[
+          if(strlen(%q<act_npc>),
+            iter(u(FUN`ACT`NPC`MELEE),json_query(get(%q<npc_store>/%i0),extract,$.name),%b,|),
+            iter(u({{core}}/FUN`CHECK`STRIKES),json_query(%i0,extract,$.name),|,|))]
+        flags: [funsyntax]
+      FUN`ACT`PC`PICK:
+        value: |-
+          @@(%0 a name pattern or nothing)[
+          setq(pick_all,u({{core}}/FUN`CHECK`STRIKES))][
+          if(strlen(%0),first(squish(iter(%q<pick_all>,if(strmatch(json_query(%i0,extract,$.name),%0),%i0),|,|),|),|),%q<pick_all>)]
+        flags: [funsyntax]
+      FUN`ACT`NPC`PICK:
+        value: |-
+          @@(%0 a name pattern or nothing)[
+          setq(pick_all,u(FUN`ACT`NPC`MELEE))][
+          if(strlen(%0),first(iter(%q<pick_all>,if(strmatch(json_query(get(%q<npc_store>/%i0),extract,$.name),%0),%i0))),%q<pick_all>)]
         flags: [funsyntax]
       FUN`ACT`PC`STRIKE:
         value: |-
           @@(%0 a Strike from the core)[
           setq(strike_attack,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`STRIKE`ATTACK,%0)))][
-          setq(strike_bonus,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`STRIKE`DAMAGE,%0)))][
-          json_query(%0,extract,$.name)]|%q<strike_attack>|[add(json_query(%0,extract,$.dice),json_query(%0,extract,$.striking))][json_query(%0,extract,$.die)][if(%q<strike_bonus>,u(%!/FUN`SHOW`SIGNED,%q<strike_bonus>))] [json_query(%0,extract,$.type)]|%q<strike_traits>|[member(%q<strike_traits>,agile)]|[json_query(%0,extract,$.use)]~[json_query(%0,extract,$.useid)]|[json_query(%0,extract,$.left)]|[json_query(%0,extract,$.pers)]|[firstof(json_query(%0,extract,$.splash),0)]
+          u({{core}}/FUN`DAMAGE`STRIKE,%0,)][u({{core}}/FUN`DAMAGE`FORMULA,2)][
+          json_query(%0,extract,$.name)]|%q<strike_attack>|[u({{core}}/FUN`DAMAGE`TEXT)]|%q<strike_traits>|[t(member(%q<strike_traits>,agile))]|[json_query(%0,extract,$.use)]~[json_query(%0,extract,$.useid)]|[json_query(%0,extract,$.left)]|||%0
         flags: [funsyntax]
       FUN`ACT`NPC`MELEE:
         value: |-
@@ -4400,21 +4747,15 @@ objects:
           setq(strike_traits,json_map({{core}}/FUN`RULE`SELECTOR,firstof(json_query(%q<strike_item>,extract,$.system.traits.value),json(array)),%b))][
           setq(strike_ranged,regmatch(%q<strike_traits>,\\brange))][
           setq(strike_attack,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`MODS,untyped~[add(%q<act_adj>,firstof(json_query(%q<strike_item>,extract,$.system.bonus.value),0))]~base~0,attack attack-roll strike-attack-roll all check [if(%q<strike_ranged>,ranged,melee)]-strike-attack-roll,)))][
-          setq(strike_bonus,add(%q<act_adj>,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`MODS,,damage strike-damage attack-damage [if(%q<strike_ranged>,ranged-strike-damage,melee-strike-damage melee-damage)],))))][
-          setq(strike_rolls,firstof(json_query(%q<strike_item>,extract,$.system.damageRolls),json(object)))][
-          json_query(%q<strike_item>,extract,$.name)]|%q<strike_attack>|[trim(iter(json_map(%!/FUN`ACT`NPC`ROLL,%q<strike_rolls>,|),[first(%i0)][if(cand(%q<strike_bonus>,eq(inum(0),1)),u(%!/FUN`SHOW`SIGNED,%q<strike_bonus>))] [rest(%i0)],|,%,%b))]|%q<strike_traits>|[member(%q<strike_traits>,agile)]
-        flags: [funsyntax]
-      FUN`ACT`NPC`ROLL:
-        value: |-
-          @@(%1 one of a melee item's damage rolls: formula and type)[
-          json_query(%1,extract,$.damage) [json_query(%1,extract,$.damageType)]]
+          u({{core}}/FUN`DAMAGE`NPC,%q<strike_item>,,%q<act_adj>)][u({{core}}/FUN`DAMAGE`FORMULA,2)][
+          json_query(%q<strike_item>,extract,$.name)]|%q<strike_attack>|[u({{core}}/FUN`DAMAGE`TEXT)]|%q<strike_traits>|[t(member(%q<strike_traits>,agile))]|||||npc:%0
         flags: [funsyntax]
       # A d20 check of total %0 against DC %1: sets roll_record, roll_face, roll_result and roll_degree (0 to 3, empty without a DC).
       FUN`ACT`ROLL:
         value: |-
-          @@(%0 the modifier, %1 a DC or nothing, %2 the attack's domains, a Strike's when nothing)[
+          @@(%0 the modifier, %1 a DC or nothing, %2 the attack's domains, a Strike's when nothing, %3 more roll options, such as the target's)[
           setq(act_domains,firstof(%2,attack attack-roll strike-attack-roll check all))][
-          setq(act_options,squish(%q<check_options> [u({{core}}/FUN`ROLLOPTION`DOMAINS,%q<act_domains>)] check:type:attack-roll))][
+          setq(act_options,squish(%q<check_options> [u({{core}}/FUN`ROLLOPTION`DOMAINS,%q<act_domains>)] check:type:attack-roll %3))][
           u({{core}}/FUN`ROLL`PLAN,%q<act_domains>,%q<act_options>,)][
           u({{core}}/FUN`ROLL`CHECK,%0,%q<act_domains>,%q<act_options> %q<roll_extra>,%1)]
         flags: [funsyntax]
@@ -4430,17 +4771,18 @@ objects:
           u({{core}}/FUN`ROLL`CHECK,add(u({{core}}/FUN`CHECK`TOTAL,u(FUN`ACT`STAT,%0,if(%3,initiative),%q<act_options> %q<roll_extra>)),firstof(%2,0)),%q<act_domains>,%q<act_options> %q<roll_extra>,%1)]
         flags: [funsyntax]
       # An attack is rolled with the attacker's rules after the target is prepared for its AC: HOLD keeps
-      # the registers a roll reads under a name, TAKE puts them back.
-      DATA`ACT`HOLD: check_rollrules check_actor check_options check_ledger check_entries check_toggles check_domopts check_level
+      # the registers a roll and its damage read (every check_ register and these) under a name, TAKE puts them back.
+      DATA`ACT`HOLD: act_npc act_adj act_raised npc_store
       FUN`ACT`HOLD:
         value: |-
           @@(%0 a name)[
-          null(iter(v(DATA`ACT`HOLD),setq(hold_%0_%i0,r(%i0))))]
+          setq(hold_%0__names,setunion(lcstr(listq(check_*)) [v(DATA`ACT`HOLD)],))][
+          null(iter(r(hold_%0__names),setq(hold_%0_%i0,r(%i0))))]
         flags: [funsyntax]
       FUN`ACT`TAKE:
         value: |-
           @@(%0 a name)[
-          null(iter(v(DATA`ACT`HOLD),setq(%i0,r(hold_%0_%i0))))]
+          null(iter(r(hold_%0__names),setq(%i0,r(hold_%0_%i0))))]
         flags: [funsyntax]
       # After a roll: its fortune, misfortune or substitution, and the rule that changed its degree.
       FUN`ACT`TAGS:
@@ -4460,7 +4802,7 @@ objects:
           extract(Critical failure|Failure|Success|Critical success,inc(%0),1,|)
         flags: [funsyntax]
       # Damage, %0 a formula such as 1d6+3 slashing, 1d4 fire; %1 1 on a critical hit, doubled. Sets
-      # dmg_total and dmg_text.
+      # dmg_total, dmg_text and dmg_parts (type~amount~main for each).
       FUN`ACT`DAMAGE:
         value: |-
           @@(%0 damage parts separated by commas, %1 1 to double)[
@@ -4470,7 +4812,7 @@ objects:
             setq(dmg_record,roll(if(%1,2*%([first(%q<dmg_part>)]%),first(%q<dmg_part>)),,record))][
             setq(dmg_part_total,max(if(eq(inum(0),1),1,0),json_query(%q<dmg_record>,extract,$.total)))][
             setq(dmg_total,add(%q<dmg_total>,%q<dmg_part_total>))][
-            setq(dmg_parts,[if(strlen(%q<dmg_parts>),%q<dmg_parts>|)][firstof(lcstr(last(rest(%q<dmg_part>))),untyped)]~%q<dmg_part_total>)][
+            setq(dmg_parts,[if(strlen(%q<dmg_parts>),%q<dmg_parts>|)][firstof(lcstr(last(rest(%q<dmg_part>))),untyped)]~%q<dmg_part_total>~main)][
             setq(dmg_text,[if(strlen(%q<dmg_text>),%q<dmg_text>%,%b)][json_query(%q<dmg_record>,extract,$.text)] [rest(%q<dmg_part>)])],
             %,))][
           setq(dmg_raw,%q<dmg_total>)]
@@ -4479,15 +4821,16 @@ objects:
       # weakness that fits any type once, then a hazard's hardness, as Pathfinder applies them.
       FUN`ACT`IWR:
         value: |-
-          @@(%0 the target's index, using dmg_parts: sets dmg_total and dmg_iwr, what changed it, and turns regeneration off for a turn when a type deactivates it)[
+          @@(%0 the target's index, using dmg_parts, type~amount~kind each: sets dmg_total and dmg_iwr, what changed it, and turns regeneration off for a turn when a type deactivates it)[
           setqm(iwr_item,if(strmatch(u(FUN`ENC`C,%0,kind),npc),u(FUN`ENC`ITEM,%0)),dmg_iwr,,iwr_weak,0,iwr_weak_type,)][
           if(strlen(%q<iwr_item>),
             [setqm(iwr_w,u(FUN`ACT`IWR`LIST,json_query(%q<iwr_item>,extract,$.system.attributes.weaknesses)),iwr_r,u(FUN`ACT`IWR`LIST,json_query(%q<iwr_item>,extract,$.system.attributes.resistances)),iwr_i,u(FUN`ACT`IWR`LIST,json_query(%q<iwr_item>,extract,$.system.attributes.immunities)))][
-            setq(dmg_total,ladd(0 [iter(%q<dmg_parts>,u(FUN`ACT`IWR`PART,first(%i0,~),rest(%i0,~)),|,%b)]))][
+            setq(iwr_keys,setunion(iter(%q<dmg_parts>,[first(%i0,~)]~[if(strmatch(elements(%i0,3,~),persistent),persistent)],|,%b),))][
+            setq(dmg_total,ladd(0 [iter(%q<iwr_keys>,[setq(iwr_k,%i0)][u(FUN`ACT`IWR`PART,first(%i0,~),u(FUN`ACT`IWR`SUM,%q<iwr_k>,*),u(FUN`ACT`IWR`SUM,%q<iwr_k>,precision))])]))][
             if(%q<iwr_weak>,[setq(dmg_total,add(%q<dmg_total>,%q<iwr_weak>))][setq(dmg_iwr,%q<dmg_iwr>|weakness to [edit(%q<iwr_weak_type>,-,%b)] +%q<iwr_weak>)])][
             if(gt(setr(iwr_hard,firstof(json_query(%q<iwr_item>,extract,$.system.attributes.hardness),0)),0),[setq(dmg_total,max(0,sub(%q<dmg_total>,%q<iwr_hard>)))][setq(dmg_iwr,%q<dmg_iwr>|hardness %q<iwr_hard>)])][
             setq(iwr_off,edit(edit(before(after(lcstr(json_query(%q<iwr_item>,extract,$.system.attributes.hp.details)),deactivated by%b),%)),cold iron,cold-iron),%bor%b,%b))][
-            if(words(iter(%q<dmg_parts>,if(cand(member(%q<iwr_off>,first(%i0,~)),gt(rest(%i0,~),0)),x),|)),u(FUN`ENC`SET,%0,regoff,1))][
+            if(words(iter(%q<dmg_parts>,if(cand(member(%q<iwr_off>,first(%i0,~)),gt(elements(%i0,2,~),0)),x),|)),u(FUN`ENC`SET,%0,regoff,1))][
             setq(dmg_iwr,trim(%q<dmg_iwr>,|,l))])]
         flags: [funsyntax]
       FUN`ACT`IWR`LIST:
@@ -4504,16 +4847,31 @@ objects:
           @@(%0 a weakness, resistance or immunity type, %1 a damage type)[
           cor(strmatch(%0,%1),strmatch(%0,all-damage),cand(strmatch(%0,physical),member(bludgeoning piercing slashing,%1)))]
         flags: [funsyntax]
+      # The damage of one key of FUN`ACT`IWR, type~ or type~persistent, of a kind (* for all of them).
+      FUN`ACT`IWR`SUM:
+        value: |-
+          @@(%0 a key, %1 a kind pattern)[
+          ladd(0 [iter(%q<dmg_parts>,if(cand(strmatch([first(%i0,~)]~[if(strmatch(elements(%i0,3,~),persistent),persistent)],%0),strmatch(elements(%i0,3,~),%1)),elements(%i0,2,~)),|,%b)])]
+        flags: [funsyntax]
+      # One damage type's instance, as Foundry's applyIWR takes it: an immunity to the type takes it all; an
+      # immunity or resistance to precision takes from its precision damage; the highest resistance that fits
+      # the type takes from the rest once.
       FUN`ACT`IWR`PART:
         value: |-
-          @@(%0 a damage type, %1 its amount: the amount taken, noting the weakness that fits best)[
+          @@(%0 a damage type, %1 its amount, %2 the precision damage in it: the amount taken, noting the weakness that fits best)[
           if(words(iter(%q<iwr_i>,if(u(FUN`ACT`IWR`FITS,first(%i0,~),%0),x))),
             [setq(dmg_iwr,%q<dmg_iwr>|immunity to [edit(%0,-,%b)])]0,
-            [setq(iwr_rv,lmax(0 [iter(%q<iwr_r>,if(u(FUN`ACT`IWR`FITS,first(%i0,~),%0),rest(%i0,~)))]))][
+            [setq(iwr_amt,%1)][
+            if(gt(%2,0),
+              if(member(iter(%q<iwr_i>,first(%i0,~)),precision),
+                [setq(iwr_amt,sub(%q<iwr_amt>,%2))][setq(dmg_iwr,%q<dmg_iwr>|immunity to precision)],
+                if(setr(iwr_pv,lmax(0 [iter(%q<iwr_r>,if(strmatch(first(%i0,~),precision),rest(%i0,~)))])),
+                  [setq(dmg_iwr,%q<dmg_iwr>|resistance to precision -[min(%2,%q<iwr_pv>)])][setq(iwr_amt,sub(%q<iwr_amt>,min(%2,%q<iwr_pv>)))])))][
+            setq(iwr_rv,lmax(0 [iter(%q<iwr_r>,if(u(FUN`ACT`IWR`FITS,first(%i0,~),%0),rest(%i0,~)))]))][
             setq(iwr_wv,lmax(0 [iter(%q<iwr_w>,if(u(FUN`ACT`IWR`FITS,first(%i0,~),%0),rest(%i0,~)))]))][
-            if(cand(gt(%1,0),gt(%q<iwr_wv>,%q<iwr_weak>)),setqm(iwr_weak,%q<iwr_wv>,iwr_weak_type,%0))][
-            if(%q<iwr_rv>,setq(dmg_iwr,%q<dmg_iwr>|resistance to [edit(%0,-,%b)] -[min(%1,%q<iwr_rv>)]))][
-            max(0,sub(%1,%q<iwr_rv>))])]
+            if(cand(gt(%q<iwr_amt>,0),gt(%q<iwr_wv>,%q<iwr_weak>)),setqm(iwr_weak,%q<iwr_wv>,iwr_weak_type,%0))][
+            if(cand(%q<iwr_rv>,gt(%q<iwr_amt>,0)),setq(dmg_iwr,%q<dmg_iwr>|resistance to [edit(%0,-,%b)] -[min(%q<iwr_amt>,%q<iwr_rv>)]))][
+            max(0,sub(%q<iwr_amt>,%q<iwr_rv>))])]
         flags: [funsyntax]
       FUN`ACT`IWR`TEXT:
         value: |-
@@ -4573,8 +4931,8 @@ objects:
           if(strlen(%q<save_parts>),
             if(eq(%q<roll_degree>,3),
               setq(save_line,%q<save_line>%, no damage),
-              [setq(dmg_parts,iter(%q<save_parts>,[first(%i0,~)]~[switch(%q<roll_degree>,2,div(rest(%i0,~),2),0,mul(rest(%i0,~),2),rest(%i0,~))],|,|))][
-              setq(dmg_raw,ladd(0 [iter(%q<dmg_parts>,rest(%i0,~),|,%b)]))][
+              [setq(dmg_parts,iter(%q<save_parts>,[first(%i0,~)]~[switch(%q<roll_degree>,2,div(elements(%i0,2,~),2),0,mul(elements(%i0,2,~),2),elements(%i0,2,~))]~[elements(%i0,3,~)],|,|))][
+              setq(dmg_raw,ladd(0 [iter(%q<dmg_parts>,elements(%i0,2,~),|,%b)]))][
               setq(dmg_total,%q<dmg_raw>)][
               u(FUN`ACT`IWR,%0)][
               u(FUN`ACT`HARM,%0,%q<dmg_total>,eq(%q<roll_degree>,0))][
@@ -4598,10 +4956,11 @@ objects:
       # +enc/strike <target>[=<strike>]: the one acting Strikes; the GM may name who strikes as <who>:<target>.
       INC`ENC`STRIKE:
         value: |-
-          @include %!/INC`ENC`NEED; think setqm(strike_who,if(strmatch(before(%q<cmd_args>,=),*:*),trim(before(%q<cmd_args>,:))),strike_target,trim(before(if(strmatch(before(%q<cmd_args>,=),*:*),after(%q<cmd_args>,:),%q<cmd_args>),=)),strike_name,trim(after(%q<cmd_args>,=))); think if(cand(strlen(%q<strike_name>),not(strlen(u(%!/FUN`ENC`FIND,%q<strike_target>))),strlen(u(%!/FUN`ENC`FIND,%q<strike_name>))),setqm(strike_swap,%q<strike_target>,strike_target,%q<strike_name>,strike_name,%q<strike_swap>)); think setq(act_at,if(strlen(%q<strike_who>),u(%!/FUN`ENC`FIND,%q<strike_who>),u(%!/FUN`ENC`ACTING))); @assert gte(%q<act_at>,0)=@pemit %#=notice(PF2E,No one is acting. +enc/next starts the first turn%, or name who strikes: +enc/strike <who>:<target>.,warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,It is [u(%!/FUN`ENC`C,%q<act_at>,name)]'s turn.,warn); @assert strlen(setr(act_target,u(%!/FUN`ENC`FIND,%q<strike_target>)))=@pemit %#=notice(PF2E,No one in the encounter is called %q<strike_target>.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think setq(act_strikes,u(%!/FUN`ACT`STRIKES)); think setq(act_strike,firstof(if(strlen(%q<strike_name>),first(trim(squish(iter(%q<act_strikes>,if(strmatch(first(%i0,|),%q<strike_name>*),%i0,),^,^),^),^),^),first(%q<act_strikes>,^)))); @assert strlen(%q<act_strike>)=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] has no Strike called %q<strike_name>. The Strikes are [itemize(iter(%q<act_strikes>,first(%i0,|),^,|),|)].,warn); think setq(strike_use,elements(%q<act_strike>,6,|)); think if(strlen(first(%q<strike_use>,~)),u(%!/FUN`ACT`CONSUME,%q<act_at>,%q<strike_use>)); think u(%!/FUN`ACT`STRIKE`RESOLVE); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,%q<enc_say>)
+          @include %!/INC`ENC`NEED; think setqm(strike_who,if(strmatch(before(%q<cmd_args>,=),*:*),trim(before(%q<cmd_args>,:))),strike_target,trim(before(if(strmatch(before(%q<cmd_args>,=),*:*),after(%q<cmd_args>,:),%q<cmd_args>),=)),strike_name,trim(after(%q<cmd_args>,=))); think if(cand(strlen(%q<strike_name>),not(strlen(u(%!/FUN`ENC`FIND,%q<strike_target>))),strlen(u(%!/FUN`ENC`FIND,%q<strike_name>))),setqm(strike_swap,%q<strike_target>,strike_target,%q<strike_name>,strike_name,%q<strike_swap>)); think setq(act_at,if(strlen(%q<strike_who>),u(%!/FUN`ENC`FIND,%q<strike_who>),u(%!/FUN`ENC`ACTING))); @assert strlen(%q<act_at>)=@pemit %#=notice(PF2E,No one in the encounter is called %q<strike_who>.,warn); @assert gte(%q<act_at>,0)=@pemit %#=notice(PF2E,No one is acting. +enc/next starts the first turn%, or name who strikes: +enc/strike <who>:<target>.,warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,It is [u(%!/FUN`ENC`C,%q<act_at>,name)]'s turn.,warn); @assert strlen(setr(act_target,u(%!/FUN`ENC`FIND,%q<strike_target>)))=@pemit %#=notice(PF2E,No one in the encounter is called %q<strike_target>.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think setq(act_strike,u(%!/FUN`ACT`STRIKES,%q<strike_name>*)); @assert strlen(%q<act_strike>)=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] has no Strike called %q<strike_name>. The Strikes are [itemize(u(%!/FUN`ACT`STRIKE`NAMES),|)].,warn); think setq(strike_use,elements(%q<act_strike>,6,|)); think if(strlen(first(%q<strike_use>,~)),u(%!/FUN`ACT`CONSUME,%q<act_at>,%q<strike_use>)); think u(%!/FUN`ACT`STRIKE`RESOLVE); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,%q<enc_say>)
         flags: [cmdsyntax]
-      # act_at strikes act_target with act_strike (name|attack|damage|traits|agile): the multiple attack
-      # penalty from the attacks this turn, the target's AC, and on a hit the damage taken.
+      # act_at strikes act_target with act_strike (FUN`ACT`STRIKES): the multiple attack penalty from the
+      # attacks this turn, the target's AC, the roll with the target's roll options (target:condition:off-guard
+      # and the like), and on a hit the damage taken; on a miss, a splash weapon's splash.
       FUN`ACT`STRIKE`RESOLVE:
         value: |-
           @@(sets enc and enc_say)[
@@ -4610,41 +4969,62 @@ objects:
           u(FUN`ACT`HOLD,by)][
           u(FUN`ENC`PREPARE,%q<act_target>)][
           setq(strike_ac,u(FUN`ACT`AC))][
+          setq(act_tgtopts,u(FUN`ACT`TARGET`OPTIONS))][
           u(FUN`ACT`HOLD,on)][u(FUN`ACT`TAKE,by)][
-          u(FUN`ACT`ROLL,%q<strike_total>,%q<strike_ac>)][
-          u(FUN`ACT`TAKE,on)][
+          u(FUN`ACT`ROLL,%q<strike_total>,%q<strike_ac>,,%q<act_tgtopts>)][
           u(FUN`ENC`SET,%q<act_at>,map,inc(u(FUN`ENC`C,%q<act_at>,map)))][
           setq(strike_crit,cand(eq(%q<roll_degree>,3),not(u(FUN`ACT`IMMUNE,%q<act_target>,critical-hits))))][
           setq(enc_say,[u(FUN`ENC`C,%q<act_at>,name)] Strikes [u(FUN`ENC`C,%q<act_target>,name)] with [first(%q<act_strike>,|)]: [json_query(%q<roll_record>,extract,$.text)][u(FUN`ACT`TAGS)][if(%q<strike_map>,%b%(MAP -%q<strike_map>%))] vs AC [if(cor(%q<enc_gm>,strmatch(u(FUN`ENC`C,%q<act_target>,kind),pc)),%q<strike_ac>,?)]: [tone(strong,u(FUN`ACT`DEGREE,%q<roll_degree>))][u(FUN`ACT`ADJUSTED)][if(cand(eq(%q<roll_degree>,3),not(%q<strike_crit>)),%, but [u(FUN`ENC`C,%q<act_target>,name)] is immune to critical hits)].[u(FUN`ACT`NOTES)])][
-          if(gte(%q<roll_degree>,2),
-            [u(FUN`ACT`STRIKE`DAMAGE,elements(%q<act_strike>,3,|),elements(%q<act_strike>,4,|),%q<strike_crit>)][
-            setqm(strike_splash,firstof(elements(%q<act_strike>,9,|),0),strike_type,last(elements(%q<act_strike>,3,|)))][
-            if(%q<strike_splash>,setqm(dmg_parts,%q<dmg_parts>|%q<strike_type>~%q<strike_splash>,dmg_total,add(%q<dmg_total>,%q<strike_splash>),dmg_raw,add(%q<dmg_raw>,%q<strike_splash>),dmg_text,%q<dmg_text> + %q<strike_splash> splash))][
-            u(FUN`ACT`IWR,%q<act_target>)][
+          setq(strike_degree,if(cand(eq(%q<roll_degree>,3),not(%q<strike_crit>)),2,%q<roll_degree>))][
+          setqm(dmg_parts,,dmg_pers,,dmg_splash,0)][
+          if(%q<strike_degree>,u(FUN`ACT`STRIKE`PLAN,%q<strike_degree>))][
+          u(FUN`ACT`TAKE,on)][
+          if(cor(words(%q<dmg_parts>,|),words(%q<dmg_pers>,|)),
+            [u(FUN`ACT`IWR,%q<act_target>)][
             u(FUN`ACT`HARM,%q<act_target>,%q<dmg_total>,%q<strike_crit>)][
-            setq(enc_say,%q<enc_say>%rDamage: %q<dmg_text>[if(gt(words(%q<dmg_parts>,|),1),%b= %q<dmg_raw>)][u(FUN`ACT`IWR`TEXT)]. %q<harm_text>.[if(strlen(elements(%q<act_strike>,8,|)),u(FUN`CAST`PERSIST,%q<act_target>,elements(%q<act_strike>,8,|),%q<strike_crit>))][if(%q<strike_splash>,%bEach other creature within 5 feet takes %q<strike_splash> %q<strike_type> splash damage: +enc/damage.)])])][
-          if(cand(eq(%q<roll_degree>,1),firstof(elements(%q<act_strike>,9,|),0)),
-            [setqm(strike_splash,elements(%q<act_strike>,9,|),strike_type,last(elements(%q<act_strike>,3,|)))][
-            setqm(dmg_parts,%q<strike_type>~%q<strike_splash>,dmg_total,%q<strike_splash>,dmg_raw,%q<strike_splash>)][
-            u(FUN`ACT`IWR,%q<act_target>)][
-            u(FUN`ACT`HARM,%q<act_target>,%q<dmg_total>,0)][
-            setq(enc_say,%q<enc_say>%rSplash: %q<strike_splash> %q<strike_type>[u(FUN`ACT`IWR`TEXT)]. %q<harm_text>. Each other creature within 5 feet takes it too: +enc/damage.)])]
+            setq(enc_say,%q<enc_say>%r[if(gte(%q<strike_degree>,2),Damage,Splash)]: %q<dmg_text>[if(gt(words(%q<dmg_parts>,|),1),%b= %q<dmg_raw>)][u(FUN`ACT`IWR`TEXT)]. %q<harm_text>.[iter(%q<dmg_pers>,u(FUN`CAST`PERSIST,%q<act_target>,first(%i0,~),rest(%i0,~)),|,)][if(%q<dmg_splash>,%bEach other creature within 5 feet takes %q<dmg_splash> %q<dmg_splash_type> splash damage: +enc/damage.)])])]
         flags: [funsyntax]
-      # A Strike's damage: doubled on a critical hit, where a fatal weapon's dice grow to the fatal
-      # size and add one die of it, and a deadly weapon adds its die (two with greater striking, three
-      # with major), neither doubled. Sets dmg_total and dmg_text.
-      FUN`ACT`STRIKE`DAMAGE:
+      # The target's roll options as an attacker sees them, after FUN`ENC`PREPARE of the target: target, and
+      # target:<x> for each of its self:<x>, a creature's traits as target:trait:<trait>.
+      FUN`ACT`TARGET`OPTIONS:
         value: |-
-          @@(%0 the damage parts, %1 the weapon's traits, %2 1 on a critical hit)[
-          setqm(strike_fatal,after(grab(%1,fatal-d*),fatal-),strike_deadly,after(grab(%1,deadly-d*),deadly-),strike_first,first(trim(first(%0,%,))))][
-          setq(strike_parts,if(cand(%2,strlen(%q<strike_fatal>)),regedit(%0,d\\d+,%q<strike_fatal>),%0))][
-          u(FUN`ACT`DAMAGE,%q<strike_parts>,%2)][
-          setq(dmg_text,%q<dmg_text>[if(%2,%bdoubled)])][
-          if(cand(%2,strlen(setr(strike_die,firstof(%q<strike_fatal>,%q<strike_deadly>)))),
-            [setqm(strike_main_total,%q<dmg_total>,strike_main_text,%q<dmg_text>,strike_main_parts,%q<dmg_parts>)][
-            u(FUN`ACT`DAMAGE,[if(strlen(%q<strike_fatal>),1,max(1,dec(firstof(before(%q<strike_first>,d),1))))]%q<strike_die> [rest(trim(first(%0,%,)))],0)][
-            setqm(dmg_total,add(%q<strike_main_total>,%q<dmg_total>),dmg_text,%q<strike_main_text>%, %q<dmg_text> [if(strlen(%q<strike_fatal>),fatal,deadly)],dmg_parts,%q<strike_main_parts>|%q<dmg_parts>)][
-          setq(dmg_raw,%q<dmg_total>)])]
+          @@(the prepared target)[
+          setunion(target [iter(%q<check_options>,if(strmatch(%i0,self:*),target:[after(%i0,self:)]))] [if(strlen(%q<act_npc>),iter(json_map({{core}}/FUN`RULE`SELECTOR,firstof(json_query(%q<act_npc>,extract,$.system.traits.value),json(array)),%b),target:trait:%i0))],)]
+        flags: [funsyntax]
+      # A Strike's damage at a degree, with the attacker prepared: the core's plan for the Strike (FUN`DAMAGE),
+      # with the target's roll options and check:outcome:<degree>, then rolled.
+      FUN`ACT`STRIKE`PLAN:
+        value: |-
+          @@(%0 the degree, 1 a miss to 3 a critical hit)[
+          setq(act_dmgopts,%q<act_tgtopts> check:outcome:[extract(critical-failure failure success critical-success,inc(%0),1)])][
+          setq(act_src,elements(%q<act_strike>,10,|))][
+          if(strmatch(%q<act_src>,npc:*),
+            u({{core}}/FUN`DAMAGE`NPC,get(%q<npc_store>/[after(%q<act_src>,npc:)]),%q<act_dmgopts>,%q<act_adj>),
+            [u({{core}}/FUN`STRIKE`ATTACK,%q<act_src>)][u({{core}}/FUN`DAMAGE`STRIKE,%q<act_src>,%q<act_dmgopts>)])][
+          u({{core}}/FUN`DAMAGE`FORMULA,%0)][
+          u(FUN`ACT`DAMAGE`ROLL)]
+        flags: [funsyntax]
+      # Rolls the core's dmg_inst. Sets dmg_parts (type~amount~kind), dmg_total and dmg_raw (at least 1 when
+      # anything is rolled), dmg_text, dmg_pers (formula type~doubled for each persistent damage, |-separated),
+      # dmg_splash and dmg_splash_type.
+      FUN`ACT`DAMAGE`ROLL:
+        value: |-
+          @@(after the core's FUN`DAMAGE`FORMULA)[
+          setqm(dmg_total,0,dmg_text,,dmg_parts,,dmg_pers,,dmg_splash,0,dmg_splash_type,)][
+          null(iter(%q<dmg_inst>,
+            if(strmatch(first(%i0,~),persistent),
+              setq(dmg_pers,[if(strlen(%q<dmg_pers>),%q<dmg_pers>|)][elements(%i0,3,~)] [elements(%i0,2,~)]~[elements(%i0,4,~)]),
+              [setq(dmg_record,roll(elements(%i0,3,~),,record))][
+              setq(dmg_part_total,max(0,json_query(%q<dmg_record>,extract,$.total)))][
+              if(strmatch(first(%i0,~),splash),setqm(dmg_splash,add(%q<dmg_splash>,%q<dmg_part_total>),dmg_splash_type,elements(%i0,2,~)))][
+              setq(dmg_parts,[if(strlen(%q<dmg_parts>),%q<dmg_parts>|)][elements(%i0,2,~)]~%q<dmg_part_total>~[first(%i0,~)])][
+              setq(dmg_text,[if(strlen(%q<dmg_text>),%q<dmg_text>%,%b)][json_query(%q<dmg_record>,extract,$.text)] [switch(first(%i0,~),precision,precision,splash,[elements(%i0,2,~)] splash,elements(%i0,2,~))])]),
+            |))][
+          setq(dmg_total,ladd(0 [iter(%q<dmg_parts>,elements(%i0,2,~),|,%b)]))][
+          if(cand(words(%q<dmg_parts>,|),lt(%q<dmg_total>,1)),
+            [setq(dmg_parts,replace(%q<dmg_parts>,1,[first(first(%q<dmg_parts>,|),~)]~[add(elements(first(%q<dmg_parts>,|),2,~),sub(1,%q<dmg_total>))]~[elements(first(%q<dmg_parts>,|),3,~)],|))][
+            setq(dmg_total,1)])][
+          setq(dmg_raw,%q<dmg_total>)]
         flags: [funsyntax]
       # +enc/toggle [<who>:]<name>[=<choice>, on or off]: a toggle in the encounter's copy of the
       # sheet, kept in the combatant's tg as domain|option to value|selection; the sheet never sees it.
@@ -4663,9 +5043,11 @@ objects:
         value: |-
           @include %!/INC`ENC`NEED; think setqm(save_who,trim(before(%q<cmd_args>,=)),save_what,trim(after(%q<cmd_args>,=))); think setqm(save_stat,u({{commands}}/FUN`COMMAND`STAT,trim(before(%q<save_what>,%bvs%b))),save_dc,first(after(%q<save_what>,%bvs%b)),save_formula,trim(rest(after(%q<save_what>,%bvs%b)))); @assert cand(match(fortitude reflex will,%q<save_stat>),isint(%q<save_dc>))=@pemit %#=notice(PF2E,+enc/save <who>=<save> vs <DC> <damage>%, such as +enc/save foes=reflex vs 21 6d6 fire. Name several with commas%, or foes%, characters or everyone. Without damage it is a plain save.,warn); @assert cor(%q<enc_gm>,cand(gte(u(%!/FUN`ENC`ACTING),0),u(%!/FUN`ENC`MAY,u(%!/FUN`ENC`ACTING))))=@pemit %#=notice(PF2E,Only the GM or whoever is acting calls for saves.,warn); think setq(save_at,u(%!/FUN`ENC`TARGETS,%q<save_who>)); @assert not(strlen(%q<targets_missing>))=@pemit %#=notice(PF2E,No one in the encounter is called %q<targets_missing>.,warn); @assert words(%q<save_at>)=@pemit %#=notice(PF2E,No one is left to roll.,warn); think if(strlen(%q<save_formula>),u(%!/FUN`ACT`DAMAGE,%q<save_formula>,0),setqm(dmg_parts,,dmg_text,,dmg_total,0)); @assert cand(isint(%q<dmg_total>),cor(not(strlen(%q<save_formula>)),strlen(%q<dmg_parts>)))=@pemit %#=notice(PF2E,%q<save_formula> is not damage. Give a formula such as 6d6 fire.,warn); think setqm(save_parts,%q<dmg_parts>,save_text,%q<dmg_text>,save_raw,%q<dmg_total>); think setq(save_lines,iter(%q<save_at>,u(%!/FUN`ACT`SAVE,%i0),%b,%r)); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,[if(strlen(%q<save_formula>),Basic%b)][u({{commands}}/FUN`SHOW`STAT,%q<save_stat>)] save against DC %q<save_dc>[if(strlen(%q<save_formula>),%, %q<save_text>[if(gt(words(%q<save_parts>,|),1),%b= %q<save_raw>)])]:%r%q<save_lines>)
         flags: [cmdsyntax]
+      # +enc/damage[/half or /double] <who>=<amount or formula>: damage from the GM, halved (rounded down) or
+      # doubled before weaknesses and resistances, as Foundry's chat card applies it.
       INC`ENC`DAMAGE:
         value: |-
-          @include %!/INC`ENC`NEEDGM; think setqm(dmg_who,trim(before(%q<cmd_args>,=)),dmg_what,trim(after(%q<cmd_args>,=))); @assert strlen(setr(act_at,u(%!/FUN`ENC`FIND,%q<dmg_who>)))=@pemit %#=notice(PF2E,No one in the encounter is called %q<dmg_who>.,warn); @assert strlen(%q<dmg_what>)=@pemit %#=notice(PF2E,+enc/damage <who>=<amount or formula>%, such as +enc/damage 3=2d6 fire.,warn); think if(isint(%q<dmg_what>),setqm(dmg_total,%q<dmg_what>,dmg_raw,%q<dmg_what>,dmg_text,%q<dmg_what>,dmg_parts,untyped~%q<dmg_what>),u(%!/FUN`ACT`DAMAGE,%q<dmg_what>,0)); @assert cand(isint(%q<dmg_total>),gte(%q<dmg_total>,0))=@pemit %#=notice(PF2E,%q<dmg_what> is not damage. Give a number or a formula such as 2d6 fire.,warn); think u(%!/FUN`ACT`IWR,%q<act_at>); think u(%!/FUN`ACT`HARM,%q<act_at>,%q<dmg_total>,0); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,%q<harm_text>[if(cor(not(isint(%q<dmg_what>)),strlen(%q<dmg_iwr>)),%b%([trim(%q<dmg_text>)][if(strlen(%q<dmg_iwr>),%, with [itemize(%q<dmg_iwr>,|)])]%))].)
+          @include %!/INC`ENC`NEEDGM; think setqm(dmg_who,trim(before(%q<cmd_args>,=)),dmg_what,trim(after(%q<cmd_args>,=))); @assert strlen(setr(act_at,u(%!/FUN`ENC`FIND,%q<dmg_who>)))=@pemit %#=notice(PF2E,No one in the encounter is called %q<dmg_who>.,warn); @assert strlen(%q<dmg_what>)=@pemit %#=notice(PF2E,+enc/damage <who>=<amount or formula>%, such as +enc/damage 3=2d6 fire.,warn); @assert cor(not(strlen(%q<cmd_sub>)),match(half double,%q<cmd_sub>))=@pemit %#=notice(PF2E,+enc/damage/half and +enc/damage/double are the only kinds.,warn); think if(isint(%q<dmg_what>),setqm(dmg_total,%q<dmg_what>,dmg_raw,%q<dmg_what>,dmg_text,%q<dmg_what>,dmg_parts,untyped~%q<dmg_what>~main),u(%!/FUN`ACT`DAMAGE,%q<dmg_what>,0)); @assert cand(isint(%q<dmg_total>),gte(%q<dmg_total>,0))=@pemit %#=notice(PF2E,%q<dmg_what> is not damage. Give a number or a formula such as 2d6 fire.,warn); think if(strlen(%q<cmd_sub>),[setq(dmg_parts,iter(%q<dmg_parts>,[first(%i0,~)]~[if(strmatch(%q<cmd_sub>,half),div(elements(%i0,2,~),2),mul(elements(%i0,2,~),2))]~[elements(%i0,3,~)],|,|))][setq(dmg_total,ladd(0 [iter(%q<dmg_parts>,elements(%i0,2,~),|,%b)]))][setq(dmg_text,%q<dmg_text>%, [if(strmatch(%q<cmd_sub>,half),halved,doubled)] to %q<dmg_total>)]); think u(%!/FUN`ACT`IWR,%q<act_at>); think u(%!/FUN`ACT`HARM,%q<act_at>,%q<dmg_total>,0); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,%q<harm_text>[if(cor(not(isint(%q<dmg_what>)),strlen(%q<dmg_iwr>),strlen(%q<cmd_sub>)),%b%([trim(%q<dmg_text>)][if(strlen(%q<dmg_iwr>),%, with [itemize(%q<dmg_iwr>,|)])]%))].)
         flags: [cmdsyntax]
       # +enc/use [<who>=]<item>: a consumable from the combatant's gear, used up in the encounter's copy only; a healing item heals.
       INC`ENC`USE:
@@ -4943,8 +5325,8 @@ objects:
           setq(on_crit,cand(eq(%q<roll_degree>,3),not(u(FUN`ACT`IMMUNE,%0,critical-hits))))][
           [u(FUN`ENC`C,%0,name)]: [json_query(%q<roll_record>,extract,$.text)][u(FUN`ACT`TAGS)][if(%q<cast_map>,%b%(MAP -[mul(min(2,%q<cast_map>),5)]%))] vs AC [if(cor(%q<enc_gm>,strmatch(u(FUN`ENC`C,%0,kind),pc)),%q<on_ac>,?)]%, [lcstr(u(FUN`ACT`DEGREE,%q<roll_degree>))][
           if(cand(gte(%q<roll_degree>,2),strlen(%q<cast_dmg_parts>)),
-            [setq(dmg_parts,iter(%q<cast_dmg_parts>,[first(%i0,~)]~[mul(rest(%i0,~),if(%q<on_crit>,2,1))],|,|))][
-            setq(dmg_raw,ladd(0 [iter(%q<dmg_parts>,rest(%i0,~),|,%b)]))][
+            [setq(dmg_parts,iter(%q<cast_dmg_parts>,[first(%i0,~)]~[mul(elements(%i0,2,~),if(%q<on_crit>,2,1))]~[elements(%i0,3,~)],|,|))][
+            setq(dmg_raw,ladd(0 [iter(%q<dmg_parts>,elements(%i0,2,~),|,%b)]))][
             setq(dmg_total,%q<dmg_raw>)][
             u(FUN`ACT`IWR,%0)][
             u(FUN`ACT`HARM,%0,%q<dmg_total>,%q<on_crit>)]%, [if(%q<on_crit>,double%b)]damage %q<dmg_raw>[u(FUN`ACT`IWR`TEXT)]. %q<harm_text>[if(strlen(%q<spell_pers>),u(FUN`CAST`PERSIST,%0,%q<spell_pers>,%q<on_crit>))])].]
@@ -5657,7 +6039,7 @@ objects:
 
         ## On your turn
 
-        - `+enc/strike <target>\[=<Strike>\]`: a Strike against the target's AC, with the multiple attack penalty. A hit deals damage, doubled on a critical hit, and a creature's weaknesses, resistances and immunities count.
+        - `+enc/strike <target>\[=<Strike>\]`: a Strike against the target's AC, with the multiple attack penalty. A hit deals damage, doubled on a critical hit, and a creature's weaknesses, resistances and immunities count. Damage dice and changes from feats and effects count too, such as deadly and fatal dice, precision damage against an off-guard target, or a die size raised. The line shows the formula that was rolled, such as `2*(1d10+4)+2d10 piercing, 2d10 bleed`.
         - `+enc/check <who>=<statistic> \[vs <DC>\]`: a check or save with your conditions.
         - `+enc/toggle \[<who>:\]<name>\[=<choice>\]`: a toggle in the encounter's copy, as `+help pf2e toggle` has it.
         - `+enc/save <who>=<save> vs <DC> \[<damage>\]`: a save for everyone named, such as a spell's targets. Name several with commas, or `foes`, `characters` or `everyone`. With damage it is a basic save from one roll: none on a critical success, half on a success, double on a critical failure.
@@ -5712,7 +6094,7 @@ objects:
         - `+enc/init` rolls initiative for everyone without it, and `+enc/next` starts the next turn. At the start of a turn a creature's regeneration or fast healing heals it, unless damage of a type that stops its regeneration hit it since its last turn, and a dying character makes a recovery check. At the end of a turn persistent damage is rolled with its flat check, and frightened goes down.
         - `+enc/look <creature>` shows its statistics, Strikes and abilities, elite or weak and conditions counted. Only you see a creature's; characters use `+recall`.
         - `+enc/strike <who>:<target>\[=<Strike>\]` Strikes for anyone, such as `+enc/strike 4:Amiri=Jaws`. A creature immune to critical hits takes a critical hit as a hit.
-        - `+enc/damage <who>=<amount or formula>` and `+enc/heal <who>=<amount or formula>`. A typed formula such as `2d6 fire` meets weaknesses, resistances and immunities.
+        - `+enc/damage <who>=<amount or formula>` and `+enc/heal <who>=<amount or formula>`. A typed formula such as `2d6 fire` meets weaknesses, resistances and immunities. `+enc/damage/half` halves the damage, rounded down, and `+enc/damage/double` doubles it, both before weaknesses and resistances.
         - `+enc/cond <who>=<condition>\[ <value>\]\[/<rounds>\]`, where a value of 0 takes it off, and `+enc/persist <who>=<formula> <type>`, where `0 <type>` ends it.
         - `+enc/effect <who>=<effect>` gives anyone an effect from Foundry's effects, such as `+enc/effect Amiri=Inspire Courage`; `=-<effect>` ends it. Effects end on their own when their rounds are over.
         - `+enc/keep \[<who>\]` writes characters' Hit Points, wounded, the day's spells, Focus Points and items made, and the consumables used, back to their sheets. Without it, a fight leaves sheets as they were.
