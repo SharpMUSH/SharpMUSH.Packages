@@ -1,7 +1,7 @@
 format: "1.19"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.9.17"
+version: "0.9.18"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -111,7 +111,7 @@ objects:
       # ledger read again costs a few hundred function calls. The key is the ledger with the package's
       # version, the books and CACHE`STAMP, which the updater and the deity table change. CACHE lists
       # the keys oldest first; past DATA`CACHE`KEEP the oldest goes.
-      DATA`CACHE`VERSION: "0.9.17"
+      DATA`CACHE`VERSION: "0.9.18"
       DATA`CACHE`KEEP: 200
       DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_itemalts check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_shieldrules check_bulkrules check_bulk check_bulk_enc check_bulk_max check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
       # The ItemAlteration properties the core applies, by the kind of item they reach.
@@ -3770,7 +3770,7 @@ objects:
       # times the level, every slot, Divine Font and Focus Point back; the spells prepared stay prepared.
       CMD`REST:
         value: |-
-          $(?is)^\+rest$:think setq(cmd_target,); @include %!/INC`TARGET`VIEW; think u(%!/FUN`DAILY`PREPARE); think setq(rest_max,u({{core}}/FUN`CHECK`HP)); think setq(rest_hp,min(%q<rest_max>,add(firstof(json_query(%q<daily>,extract,$.hp),%q<rest_max>),mul(max(1,u({{core}}/FUN`CHECK`ABILITY,con)),%q<check_level>)))); think setq(daily,json_mod(%q<daily>,patch,json(object,cast,null,spent,null,font,null,focus,null,made,null,res,null,craft,null,sp,null,resolve,null,hp,if(lt(%q<rest_hp>,%q<rest_max>),%q<rest_hp>,null),wounded,if(lt(%q<rest_hp>,%q<rest_max>),firstof(json_query(%q<daily>,extract,$.wounded),null),null)))); @include %!/INC`DAILY`WRITE; @pemit %#=notice(PF2E,You rest and make your daily preparations. Hit Points %q<rest_hp> of %q<rest_max>[if(u({{core}}/FUN`STAMINA),%; Stamina and Resolve Points full)][if(strlen(%q<cast_kind>),%; every spell slot is back)][if(%q<cast_pool>,%; %q<cast_pool> Focus Point[if(neq(%q<cast_pool>,1),s)])].,ok); @oemit %#=notice(PF2E,%N rests.)
+          $(?is)^\+rest$:think setq(cmd_target,); @include %!/INC`TARGET`VIEW; think u(%!/FUN`DAILY`PREPARE); think setq(rest_max,u({{core}}/FUN`CHECK`HP)); think setq(rest_hp,min(%q<rest_max>,add(u(%!/FUN`DAILY`HP,%q<daily>,%q<rest_max>),mul(max(1,u({{core}}/FUN`CHECK`ABILITY,con)),%q<check_level>)))); think setq(daily,json_mod(%q<daily>,patch,json(object,cast,null,spent,null,font,null,focus,null,made,null,res,null,craft,null,sp,null,resolve,null,hp,if(lt(%q<rest_hp>,%q<rest_max>),%q<rest_hp>,null),wounded,if(lt(%q<rest_hp>,%q<rest_max>),firstof(json_query(%q<daily>,extract,$.wounded),null),null)))); @include %!/INC`DAILY`WRITE; @pemit %#=notice(PF2E,You rest and make your daily preparations. Hit Points %q<rest_hp> of %q<rest_max>[if(u({{core}}/FUN`STAMINA),%; Stamina and Resolve Points full)][if(strlen(%q<cast_kind>),%; every spell slot is back)][if(%q<cast_pool>,%; %q<cast_pool> Focus Point[if(neq(%q<cast_pool>,1),s)])].,ok); @oemit %#=notice(PF2E,%N rests.)
         flags: [regexp, cmdsyntax]
       # +refocus: Refocus, 10 minutes, a Focus Point back.
       CMD`REFOCUS:
@@ -3780,7 +3780,7 @@ objects:
       # +heal [<player>=]<hit points or formula>: healing outside an encounter, such as Treat Wounds, onto anyone's sheet.
       CMD`HEAL:
         value: |-
-          $(?is)^\+heal +(?\:([^=]+?) *= *)?(.+)$:think setqm(cmd_target,,heal_who,trim(%1),heal_what,trim(%2)); think setq(sheet_target,if(strlen(%q<heal_who>),pmatch(%q<heal_who>),%#)); @assert hastype(%q<sheet_target>,player)=@pemit %#=notice(PF2E,There is no player called %q<heal_who>.,warn); think setq(sheet_ledger,u(%!/FUN`LEDGER`OF,%q<sheet_target>)); think u(%!/FUN`DAILY`PREPARE); think setq(heal_max,u({{core}}/FUN`CHECK`HP)); think setq(heal_now,firstof(json_query(%q<daily>,extract,$.hp),%q<heal_max>)); @assert lt(%q<heal_now>,%q<heal_max>)=@pemit %#=notice(PF2E,[name(%q<sheet_target>)] has every Hit Point already.,warn); think setq(heal_roll,if(isint(%q<heal_what>),%q<heal_what>,roll(%q<heal_what>))); @assert cand(isint(%q<heal_roll>),gt(%q<heal_roll>,0))=@pemit %#=notice(PF2E,+heal [<player>=]<hit points or formula>%, such as +heal Amiri=2d8+10.,warn); think setq(heal_to,min(%q<heal_max>,add(%q<heal_now>,%q<heal_roll>))); think setq(daily,json_mod(%q<daily>,patch,json(object,hp,if(lt(%q<heal_to>,%q<heal_max>),%q<heal_to>,null),wounded,if(lt(%q<heal_to>,%q<heal_max>),firstof(json_query(%q<daily>,extract,$.wounded),null),null)))); @include %!/INC`DAILY`WRITE; @remit %l=notice(PF2E,%N heals [name(%q<sheet_target>)] [if(isint(%q<heal_what>),%q<heal_roll>,%q<heal_what> = %q<heal_roll>)]: [sub(%q<heal_to>,%q<heal_now>)] Hit Points%, %q<heal_to> of %q<heal_max>.)
+          $(?is)^\+heal +(?\:([^=]+?) *= *)?(.+)$:think setqm(cmd_target,,heal_who,trim(%1),heal_what,trim(%2)); think setq(sheet_target,if(strlen(%q<heal_who>),pmatch(%q<heal_who>),%#)); @assert hastype(%q<sheet_target>,player)=@pemit %#=notice(PF2E,There is no player called %q<heal_who>.,warn); think setq(sheet_ledger,u(%!/FUN`LEDGER`OF,%q<sheet_target>)); think u(%!/FUN`DAILY`PREPARE); think setq(heal_max,u({{core}}/FUN`CHECK`HP)); think setq(heal_now,u(%!/FUN`DAILY`HP,%q<daily>,%q<heal_max>)); @assert lt(%q<heal_now>,%q<heal_max>)=@pemit %#=notice(PF2E,[name(%q<sheet_target>)] has every Hit Point already.,warn); think setq(heal_roll,if(isint(%q<heal_what>),%q<heal_what>,roll(%q<heal_what>))); @assert cand(isint(%q<heal_roll>),gt(%q<heal_roll>,0))=@pemit %#=notice(PF2E,+heal [<player>=]<hit points or formula>%, such as +heal Amiri=2d8+10.,warn); think setq(heal_to,min(%q<heal_max>,add(%q<heal_now>,%q<heal_roll>))); think setq(daily,json_mod(%q<daily>,patch,json(object,hp,if(lt(%q<heal_to>,%q<heal_max>),%q<heal_to>,null),wounded,if(lt(%q<heal_to>,%q<heal_max>),firstof(json_query(%q<daily>,extract,$.wounded),null),null)))); @include %!/INC`DAILY`WRITE; @remit %l=notice(PF2E,%N heals [name(%q<sheet_target>)] [if(isint(%q<heal_what>),%q<heal_roll>,%q<heal_what> = %q<heal_roll>)]: [sub(%q<heal_to>,%q<heal_now>)] Hit Points%, %q<heal_to> of %q<heal_max>.)
         flags: [regexp, cmdsyntax]
       FUN`DAILY`PREPARE:
         value: |-
@@ -3814,6 +3814,12 @@ objects:
         value: |-
           $(?is)^\+repair$:think setq(cmd_target,); @include %!/INC`TARGET`VIEW; think u(%!/FUN`DAILY`PREPARE); @assert strlen(%q<check_shield>)=@pemit %#=notice(PF2E,You hold no shield. +build/equip <shield>=held.,warn); think setq(rep_sh,u({{core}}/FUN`CHECK`SHIELDATTR,%q<check_shield>)); think setqm(rep_id,json_query(%q<rep_sh>,extract,$.id),rep_name,json_query(%q<rep_sh>,extract,$.name),rep_max,json_query(%q<rep_sh>,extract,$.max),rep_hard,json_query(%q<rep_sh>,extract,$.hardness)); think setq(rep_dmg,firstof(json_query(%q<daily>,extract,$.shield.%q<rep_id>),0)); think setq(rep_hp,max(0,sub(json_query(%q<rep_sh>,extract,$.value),%q<rep_dmg>))); @assert gt(%q<rep_dmg>,0)=@pemit %#=notice(PF2E,%q<rep_name> is not damaged.,warn); @assert gt(%q<rep_hp>,0)=@pemit %#=notice(PF2E,%q<rep_name> is destroyed: it cannot be repaired.,warn); @assert gte(setr(rep_rank,u({{core}}/FUN`CHECK`RANK,crafting)),1)=@pemit %#=notice(PF2E,Repair needs training in Crafting.,warn); think setq(cmd_dc,add(extract(get({{core}}/DATA`DC`LEVEL),add(2,max(-1,min(25,firstof(json_query(%q<check_shield>,extract,$.system.level.value),0)))),1),firstof(after(grab(get({{core}}/DATA`DC`RARITY),firstof(json_query(%q<check_shield>,extract,$.system.traits.rarity),common)~*),~),0))); think setqm(roll_stat,crafting,cmd_with,,roll_extra,action:repair); think u(%!/FUN`CHECK`PREPARE); think u({{core}}/FUN`ROLL`CHECK,%q<roll_total>,%q<roll_domains>,%q<roll_options> %q<roll_extra>,%q<cmd_dc>); think setq(rep_change,switch(%q<roll_degree>,3,mul(-10,inc(%q<rep_rank>)),2,mul(-5,inc(%q<rep_rank>)),0,max(0,sub(die(2,6),%q<rep_hard>)),0)); think setq(rep_new,max(0,min(%q<rep_max>,add(%q<rep_dmg>,%q<rep_change>)))); think setq(daily,json_mod(%q<daily>,patch,json(object,shield,json(object,%q<rep_id>,if(%q<rep_new>,%q<rep_new>,null))))); @include %!/INC`DAILY`WRITE; think setq(rep_after,max(0,sub(json_query(%q<rep_sh>,extract,$.value),%q<rep_new>))); @remit %l=notice(PF2E,[u(%!/FUN`SHOW`CHECK)]%r[name(%q<sheet_target>)] [switch(1,lt(%q<rep_change>,0),repairs %q<rep_name>,gt(%q<rep_change>,0),damages %q<rep_name> while repairing it,fails to repair %q<rep_name>)]: Hit Points %q<rep_after> of %q<rep_max>[switch(1,eq(%q<rep_after>,0),%, destroyed,lte(%q<rep_after>,json_query(%q<rep_sh>,extract,$.bt)),%, broken)].)
         flags: [regexp, cmdsyntax]
+      # Hit Points now are hp in the day, full when none are recorded; 0 is a character at 0.
+      FUN`DAILY`HP:
+        value: |-
+          @@(%0 a day, %1 the most Hit Points)[
+          if(isint(setr(daily_hp,json_query(%0,extract,$.hp))),min(%q<daily_hp>,%1),%1)]
+        flags: [funsyntax]
       # Stamina Points and Resolve Points are sp and resolve in the day, full when none are recorded.
       FUN`STAMINA`SP:
         value: |-
@@ -5904,7 +5910,7 @@ objects:
           u({{core}}/FUN`CHECK`PREPARE,%q<join_ledger>)][
           setq(join_hp,max(1,u({{core}}/FUN`CHECK`HP)))][
           setq(join_day,u({{commands}}/FUN`DAILY`OF,%0))][
-          setq(join_now,min(%q<join_hp>,firstof(json_query(%q<join_day>,extract,$.hp),%q<join_hp>)))][
+          setq(join_now,min(%q<join_hp>,u({{commands}}/FUN`DAILY`HP,%q<join_day>,%q<join_hp>)))][
           setq(join_wounded,json_query(%q<join_day>,extract,$.wounded))][
           setqm(join_sp,u({{commands}}/FUN`STAMINA`SP,%q<join_day>),join_rp,u({{commands}}/FUN`STAMINA`RP,%q<join_day>))][
           u(FUN`ENC`ADDC,json(object,name,json(string,name(%0)),kind,"pc",who,json(string,objid(%0)),snap,%q<join_snap>,side,"pc",hp,%q<join_now>,max,%q<join_hp>,temp,0,sp,%q<join_sp>,spmax,%q<stamina_max>,res,%q<join_rp>,resmax,%q<resolve_max>,init,null,daily,%q<join_day>,fx,json(object),conds,if(%q<join_wounded>,json(object,wounded,%q<join_wounded>),json(object)),dur,json(object),pers,json(object),map,0,down,0,act,json(string,firstof(get(%0/PF2E`EXPLORE),none))))]
@@ -6119,7 +6125,8 @@ objects:
         flags: [funsyntax]
       FUN`ACT`TAKE:
         value: |-
-          @@(%0 a name)[
+          @@(%0 a name: the registers held under it, and no other check_ register)[
+          null(iter(setdiff(lcstr(listq(check_*)),r(hold_%0__names)),setq(%i0,)))][
           null(iter(r(hold_%0__names),setq(%i0,r(hold_%0_%i0))))]
         flags: [funsyntax]
       # After a roll: its fortune, misfortune or substitution, and the rule that changed its degree.
@@ -6705,7 +6712,7 @@ objects:
           setqm(heal_ledger,u({{commands}}/FUN`LEDGER`OF,%0),heal_old_target,%q<sheet_target>)][
           null(u({{core}}/FUN`CHECK`PREPARE,%q<heal_ledger>))][
           setqm(heal_max,u({{core}}/FUN`CHECK`HP),heal_day,u({{commands}}/FUN`DAILY`OF,%0))][
-          setq(heal_now,firstof(json_query(%q<heal_day>,extract,$.hp),%q<heal_max>))][
+          setq(heal_now,u({{commands}}/FUN`DAILY`HP,%q<heal_day>,%q<heal_max>))][
           setq(heal_to,min(%q<heal_max>,add(%q<heal_now>,%q<cast_heal_n>)))][
           null(set(%0,PF2E`DAILY:[json_mod(%q<heal_day>,patch,json(object,hp,if(lt(%q<heal_to>,%q<heal_max>),%q<heal_to>,null),wounded,if(lt(%q<heal_to>,%q<heal_max>),firstof(json_query(%q<heal_day>,extract,$.wounded),null),null)))]))][
           null(set(%0/PF2E`DAILY,wizard))][
