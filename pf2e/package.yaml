@@ -1,7 +1,7 @@
-format: "1.16"
+format: "1.19"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.9.13"
+version: "0.9.14"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -30,10 +30,13 @@ objects:
   #
   # Trees: FUN`PREDICATE` tests a predicate against roll options, FUN`MODIFIER` applies the stacking
   # rules, FUN`DEGREE` reads a check's degree of success, FUN`FORMULA` resolves a rule element value.
+  # core, commands and table each have their own function call budget: preparing a sheet from a
+  # long ledger, or a Strike against a creature with many IWR entries, runs well past the game's 25000.
   - ref: core
     type: thing
     name: PF2e Rules
     location: "{{$master_room}}"
+    function_invocation_limit: 300000
     attributes:
       DATA: What the core reads. DATA`PACK`<pack> names the object holding that Foundry pack.
       DATA`PACK: One data object per Foundry pack, holding its items as the PF2e feed carries them.
@@ -99,7 +102,7 @@ objects:
       # ledger read again costs a few hundred function calls. The key is the ledger with the package's
       # version, the books and CACHE`STAMP, which the updater and the deity table change. CACHE lists
       # the keys oldest first; past DATA`CACHE`KEEP the oldest goes.
-      DATA`CACHE`VERSION: "0.9.13"
+      DATA`CACHE`VERSION: "0.9.14"
       DATA`CACHE`KEEP: 200
       DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_itemalts check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_shieldrules check_bulkrules check_bulk check_bulk_enc check_bulk_max check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
       # The ItemAlteration properties the core applies, by the kind of item they reach.
@@ -3541,6 +3544,7 @@ objects:
     type: thing
     name: PF2e Commands
     location: "{{$master_room}}"
+    function_invocation_limit: 300000
     flags: [WIZARD]
     attributes:
       CMD`SHEET:
@@ -5481,6 +5485,7 @@ objects:
     type: thing
     name: PF2e Table
     location: "{{$master_room}}"
+    function_invocation_limit: 300000
     flags: [WIZARD]
     attributes:
       CMD`ENC:
