@@ -64,7 +64,7 @@ Your sheet is a ledger. Every choice is an entry, and nothing is overwritten, so
 
 ## Encounters
 
-The GM starts a fight with `+enc/start`; you take part with `+enc/join`. `+enc/init` rolls initiative and `+enc/next` moves through the turns, handling persistent damage, frightened, timed conditions and recovery checks. On your turn, `+enc/strike <target>` attacks with the multiple attack penalty counted, and `+enc/use <item>` uses a consumable.
+The GM starts a fight with `+enc/start`; you take part with `+enc/join`. `+enc/init` rolls initiative and `+enc/next` moves through the turns, handling persistent damage, frightened, timed conditions and recovery checks. On your turn, `+enc/strike <target>` attacks with the multiple attack penalty counted, and `+enc/use <item>` uses a consumable. A Strike's damage counts what your feats and effects add, as Foundry does: deadly and fatal dice on a critical hit, precision damage, extra dice, and die sizes or damage types they change. The result shows the formula rolled.
 
 The GM builds the fight from the books: `+enc/bestiary <name, trait or hazard>=<levels>` lists creatures and hazards with the XP each is worth against the characters, and `+enc/add Goblin Warrior=2 elite` adds them, elite or weak as GM Core adjusts them. Hazards join the same way; a complex hazard takes turns. Strikes, basic saves (`+enc/save foes=reflex vs 21 6d6 fire`) and damage apply a creature's weaknesses, resistances and immunities, and a troll's regeneration stops for a turn after fire hits it. `+enc/award` writes the encounter's XP into each character's XP ledger. `+help pf2e enc build` and `+help pf2e enc gm` list the GM's commands.
 
