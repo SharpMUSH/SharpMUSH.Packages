@@ -1,7 +1,7 @@
 format: "1.19"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.9.18"
+version: "0.10.0"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -111,7 +111,7 @@ objects:
       # ledger read again costs a few hundred function calls. The key is the ledger with the package's
       # version, the books and CACHE`STAMP, which the updater and the deity table change. CACHE lists
       # the keys oldest first; past DATA`CACHE`KEEP the oldest goes.
-      DATA`CACHE`VERSION: "0.9.18"
+      DATA`CACHE`VERSION: "0.10.0"
       DATA`CACHE`KEEP: 200
       DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_itemalts check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_shieldrules check_bulkrules check_bulk check_bulk_enc check_bulk_max check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
       # The ItemAlteration properties the core applies, by the kind of item they reach.
@@ -5574,6 +5574,12 @@ objects:
         value: |-
           $(?is)^\+enc(/\S*)?(?\: +(.*))?$:think setqm(cmd_switch,firstof(lcstr(first(after(%1,/),/)),show),cmd_sub,lcstr(after(after(%1,/),/)),cmd_args,trim(%2)); @assert match(show start add remove join init next strike check save use act effect badge raise block damage heal cond persist delay look bestiary award keep undo redo end toggle,%q<cmd_switch>)=@pemit %#=notice(PF2E,There is no +enc/%q<cmd_switch>. +help +enc lists the switches.,warn); think u(%!/FUN`ENC`LOAD,%l); @include %!/INC`ENC`%q<cmd_switch>
         flags: [regexp, cmdsyntax]
+      # +act [<who>:]<action> [<target>][=<option>]: an action from the action table, in the encounter here, on its
+      # copies; an action not in the table goes to +enc/act.
+      CMD`ACT:
+        value: |-
+          $(?is)^\+act(?\: +(.*))?$:think setq(cmd_args,trim(%1)); think u(%!/FUN`ENC`LOAD,%l); @include %!/INC`ACTION
+        flags: [regexp, cmdsyntax]
       # +cast <spell>[ at <rank>][ with <n> actions][ as <variant>][=<targets>]: in an encounter you are in, on its
       # copy of you and on its combatants; elsewhere from your sheet's day, with healing onto the characters named.
       # +steel and +breather (stamina variant): spend a Resolve Point for half the Stamina Points, or, in 10
@@ -6108,9 +6114,9 @@ objects:
       # are worked out with.
       FUN`ACT`CHECK:
         value: |-
-          @@(%0 a statistic, %1 a DC or nothing, %2 a number to add, %3 1 for initiative: sets the core's roll_ registers)[
+          @@(%0 a statistic, %1 a DC or nothing, %2 a number to add, %3 1 for initiative, %4 more roll options: sets the core's roll_ registers)[
           setq(act_domains,squish(u({{core}}/FUN`STAT`DOMAINS,%0) [if(%3,initiative)]))][
-          setq(act_options,u({{core}}/FUN`ROLL`OPTIONS,%0,%3))][
+          setq(act_options,squish(u({{core}}/FUN`ROLL`OPTIONS,%0,%3) %4))][
           u({{core}}/FUN`ROLL`PLAN,%q<act_domains>,%q<act_options>,)][
           u({{core}}/FUN`ROLL`CHECK,add(u({{core}}/FUN`CHECK`TOTAL,u(FUN`ACT`STAT,%0,if(%3,initiative),%q<act_options> %q<roll_extra>)),firstof(%2,0)),%q<act_domains>,%q<act_options> %q<roll_extra>,%1)]
         flags: [funsyntax]
@@ -6385,6 +6391,7 @@ objects:
           u(FUN`ACT`ROLL,%q<strike_total>,%q<strike_ac>,,%q<act_tgtopts>)][
           u(FUN`ACT`RUNE`DOS)][
           u(FUN`ENC`SET,%q<act_at>,map,inc(u(FUN`ENC`C,%q<act_at>,map)))][
+          u(FUN`ACTION`SPEND,%q<act_at>,1)][
           setq(strike_crit,cand(eq(%q<roll_degree>,3),not(u(FUN`ACT`IMMUNE,%q<act_target>,critical-hits))))][
           setq(enc_say,[u(FUN`ENC`C,%q<act_at>,name)] Strikes [u(FUN`ENC`C,%q<act_target>,name)] with [first(%q<act_strike>,|)]: [json_query(%q<roll_record>,extract,$.text)][u(FUN`ACT`TAGS)][if(%q<strike_map>,%b%(MAP -%q<strike_map>%))] vs AC [if(cor(%q<enc_gm>,strmatch(u(FUN`ENC`C,%q<act_target>,kind),pc)),%q<strike_ac>,?)]: [tone(strong,u(FUN`ACT`DEGREE,%q<roll_degree>))][u(FUN`ACT`ADJUSTED)][if(strlen(%q<rune_dos>),%b%(%q<rune_dos>%, [lcstr(u(FUN`ACT`DEGREE,%q<rune_dos_was>))] rolled%))][if(cand(eq(%q<roll_degree>,3),not(%q<strike_crit>)),%, but [u(FUN`ENC`C,%q<act_target>,name)] is immune to critical hits)].[u(FUN`ACT`NOTES)])][
           setq(strike_degree,if(cand(eq(%q<roll_degree>,3),not(%q<strike_crit>)),2,%q<roll_degree>))][
@@ -6396,7 +6403,7 @@ objects:
             setqm(sb_at,%q<act_target>,sb_pre,json_query(%q<enc>,extract,$.c\[%q<act_target>\]),sb_dmg,%q<dmg_total>,sb_crit,%q<strike_crit>)][
             u(FUN`ACT`HARM,%q<act_target>,%q<dmg_total>,%q<strike_crit>)][
             setq(enc_say,%q<enc_say>%r[if(gte(%q<strike_degree>,2),Damage,Splash)]: %q<dmg_text>[if(gt(words(%q<dmg_parts>,|),1),%b= %q<dmg_raw>)][u(FUN`ACT`IWR`TEXT)]. %q<harm_text>.[iter(%q<dmg_pers>,u(FUN`CAST`PERSIST,%q<act_target>,first(%i0,~),rest(%i0,~)),|,)][if(%q<dmg_splash>,%bEach other creature within 5 feet takes %q<dmg_splash> %q<dmg_splash_type> splash damage: +enc/damage.)])])][
-          setq(enc_say,%q<enc_say>[u(FUN`ACT`RUNE`NOTES,%q<strike_degree>)])][
+          setq(enc_say,%q<enc_say>[u(FUN`ACT`RUNE`NOTES,%q<strike_degree>)]%q<spend_warn>)][
           setq(dmg_ignore,)]
         flags: [funsyntax]
       # A PC's Strike's property runes after its attack roll: rune_list their slugs, rune_opts the roll options
@@ -7000,6 +7007,124 @@ objects:
           first(iter(spell-effects feat-effects equipment-effects other-effects,first(iter(%0|Effect: %0|Spell Effect: %0|Stance: %0,if(strlen(setr(fxf_id,u({{core}}/FUN`ITEM`FIND,%i1,%i0))),%i1~%q<fxf_id>),|,%b))))]
         flags: [funsyntax]
       # +enc/act [<who>:]<action>: an action or feat on the sheet that brings an effect on its user, such as Rage or a stance.
+      # --- Actions --------------------------------------------------------------------------------
+      FUN`ACTION: The action table and +act.
+      # Each action: name; stat, the statistics it may roll (the best when there are several and none is named);
+      # dc, the target's statistic whose DC it rolls against; traits; cost in actions; self 1 when it targets the
+      # one who grabbed you; imm 1 when the target is immune to the same creature's next one; opts, option~modifier
+      # pairs; cs, s, f and cf, what each degree does, a list of who.kind.args (t the target, s the one acting):
+      # cond.<slug>.<value>.<duration> (e1 the end of this turn, e2 the end of the next, s1 the start of the next),
+      # dmg.<dice>.<type>, by (the target is held by the one acting), release, free; ncs, ns, nf and ncf, a note.
+      DATA`ACTION`NAMES: tumble through~tumble-through|demoralize~demoralize|reposition~reposition|grapple~grapple|disarm~disarm|escape~escape|tumble~tumble-through|feint~feint|shove~shove|trip~trip
+      DATA`ACTION`DEMORALIZE: '{"name":"Demoralize","stat":"intimidation","dc":"will","traits":"auditory concentrate emotion fear mental","cost":1,"imm":1,"opts":"unintelligible~-4","cs":"t.cond.frightened.2","s":"t.cond.frightened.1","ncs":"","ns":"","nf":"","ncf":"","ni":"Either way, the target cannot be Demoralized by you again for 10 minutes."}'
+      DATA`ACTION`FEINT: '{"name":"Feint","stat":"deception","dc":"perception","traits":"mental","cost":1,"cs":"t.cond.off-guard.0.e2","s":"t.cond.off-guard.0.e1","cf":"s.cond.off-guard.0.e2","ncs":"It is off-guard against your melee attacks.","ns":"It is off-guard against your next melee attack.","ncf":"You are off-guard against its melee attacks."}'
+      DATA`ACTION`TRIP: '{"name":"Trip","stat":"athletics","dc":"reflex","traits":"attack","cost":1,"cs":"t.cond.prone t.dmg.1d6.bludgeoning","s":"t.cond.prone","cf":"s.cond.prone"}'
+      DATA`ACTION`GRAPPLE: '{"name":"Grapple","stat":"athletics","dc":"fortitude","traits":"attack","cost":1,"cs":"t.cond.restrained.0.e2 t.by","s":"t.cond.grabbed.0.e2 t.by","f":"t.release","cf":"t.release","ncf":"It can grab you, as if its Grapple succeeded, or make you fall prone."}'
+      DATA`ACTION`SHOVE: '{"name":"Shove","stat":"athletics","dc":"fortitude","traits":"attack","cost":1,"cf":"s.cond.prone","ncs":"Push it up to 10 feet away from you; you can Stride after it.","ns":"Push it up to 5 feet away from you; you can Stride after it."}'
+      DATA`ACTION`DISARM: '{"name":"Disarm","stat":"athletics","dc":"reflex","traits":"attack","cost":1,"cf":"s.cond.off-guard.0.s1","ncs":"It drops the item you chose.","ns":"Until the start of its turn it takes a -2 circumstance penalty to attacks with the item, and Disarm attempts against it gain +2."}'
+      DATA`ACTION`REPOSITION: '{"name":"Reposition","stat":"athletics","dc":"fortitude","traits":"attack","cost":1,"ncs":"Move it up to 10 feet, staying within your reach.","ns":"Move it up to 5 feet, staying within your reach.","ncf":"It can move you up to 5 feet, staying within its reach."}'
+      DATA`ACTION`ESCAPE: '{"name":"Escape","stat":"athletics acrobatics","dc":"athletics","traits":"attack","cost":1,"self":1,"cs":"s.free","s":"s.free","ncs":"You can Stride up to 5 feet.","ncf":"You cannot Escape again until your next turn."}'
+      DATA`ACTION`TUMBLE-THROUGH: '{"name":"Tumble Through","stat":"acrobatics","dc":"reflex","traits":"move","cost":1,"cs":"","s":"","ns":"You move through its space, as difficult terrain.","ncs":"You move through its space, as difficult terrain.","nf":"Your movement ends, and you trigger reactions as if you had moved out of the square you started in.","ncf":"Your movement ends, and you trigger reactions as if you had moved out of the square you started in."}'
+      INC`ACTION:
+        value: |-
+          @include %!/INC`ENC`NEED; think setqm(actn_who,if(strmatch(before(%q<cmd_args>,=),*:*),trim(before(%q<cmd_args>,:))),actn_rest,trim(if(strmatch(before(%q<cmd_args>,=),*:*),after(%q<cmd_args>,:),%q<cmd_args>))); think setqm(actn_opt,lcstr(trim(after(%q<actn_rest>,=))),actn_rest,trim(before(%q<actn_rest>,=))); @assert strlen(%q<actn_rest>)={@pemit %#=notice(PF2E,u(%!/FUN`ACTION`LIST))}; think setq(actn_hit,u(%!/FUN`ACTION`MATCH,%q<actn_rest>)); @assert strlen(%q<actn_hit>)={@include %!/INC`ENC`ACT}; think setqm(actn_slug,ucstr(first(%q<actn_hit>,~)),actn_target_text,trim(rest(%q<actn_hit>,~))); think setq(actn,v(DATA`ACTION`%q<actn_slug>)); think setqm(actn_name,json_query(%q<actn>,extract,$.name),actn_self,t(json_query(%q<actn>,extract,$.self))); think setq(act_at,if(strlen(%q<actn_who>),u(%!/FUN`ENC`FIND,%q<actn_who>),u(%!/FUN`ENC`MINE))); @assert strlen(%q<act_at>)=@pemit %#=notice(PF2E,if(strlen(%q<actn_who>),No one in the encounter is called %q<actn_who>.,You are not in the encounter. The GM names who acts: +act <who>:[lcstr(%q<actn_name>)].),warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,You act only for yourself.,warn); @assert cor(not(strlen(%q<actn_opt>)),member(json_query(%q<actn>,extract,$.stat),%q<actn_opt>),strlen(grab(json_query(%q<actn>,extract,$.opts),%q<actn_opt>~*)))=@pemit %#=notice(PF2E,%q<actn_name> has no option %q<actn_opt>. [u(%!/FUN`ACTION`OPTIONS)],warn); think setq(act_target,if(%q<actn_self>,if(cor(strlen(json_query(u(%!/FUN`ENC`C,%q<act_at>,conds),extract,$.grabbed)),strlen(json_query(u(%!/FUN`ENC`C,%q<act_at>,conds),extract,$.restrained))),u(%!/FUN`ENC`FIND,u(%!/FUN`ENC`C,%q<act_at>,by.grabbed))),u(%!/FUN`ENC`FIND,%q<actn_target_text>))); @assert cor(not(%q<actn_self>),strlen(%q<act_target>))=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] is not grabbed or restrained by anyone in the encounter.,warn); @assert cor(%q<actn_self>,strlen(%q<actn_target_text>))=@pemit %#=notice(PF2E,%q<actn_name> needs a target: +act [lcstr(%q<actn_name>)] <target>.,warn); @assert strlen(%q<act_target>)=@pemit %#=notice(PF2E,No one in the encounter is called %q<actn_target_text>.,warn); @assert neq(%q<act_target>,%q<act_at>)=@pemit %#=notice(PF2E,%q<actn_name> is used on someone else.,warn); think setq(actn_k,u(%!/FUN`ENC`C,%q<act_at>,k)); @assert cor(not(json_query(%q<actn>,extract,$.imm)),not(t(u(%!/FUN`ENC`C,%q<act_target>,imm.[lcstr(%q<actn_slug>)]_%q<actn_k>))))=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_target>,name)] is immune to [u(%!/FUN`ENC`C,%q<act_at>,name)]'s %q<actn_name> for 10 minutes.,warn); think u(%!/FUN`ACTION`RUN); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,%q<enc_say>)
+        flags: [cmdsyntax]
+      FUN`ACTION`MATCH:
+        value: |-
+          @@(%0 typed text: slug~the rest, or nothing)[
+          setq(match_text,lcstr(squish(%0)))][
+          first(trim(squish(iter(v(DATA`ACTION`NAMES),if(cor(strmatch(%q<match_text>,first(%i0,~)),strmatch(%q<match_text>,[first(%i0,~)] *)),[rest(%i0,~)]~[trim(mid(%q<match_text>,strlen(first(%i0,~)),999))]),|,|),|),|),|)]
+        flags: [funsyntax]
+      FUN`ACTION`LIST:
+        value: |-
+          @@(what +act alone says)[
+          Actions: [itemize(setunion(iter(v(DATA`ACTION`NAMES),json_query(v(DATA`ACTION`[ucstr(rest(%i0,~))]),extract,$.name),|,|),,|),|)]. Type +act <action> <target>%, such as +act trip goblin. +enc/act lists your actions that bring an effect.]
+        flags: [funsyntax]
+      FUN`ACTION`OPTIONS:
+        value: |-
+          @@(the options an action takes)[
+          setq(options_all,squish([if(gt(words(json_query(%q<actn>,extract,$.stat)),1),json_query(%q<actn>,extract,$.stat))] [iter(json_query(%q<actn>,extract,$.opts),first(%i0,~))]))][
+          if(words(%q<options_all>),Its options are [itemize(%q<options_all>,%b,or)].,It takes no options.)]
+        flags: [funsyntax]
+      # The statistic an action rolls: the one named, the only one, or the best; an option that is not a statistic
+      # sets actn_optname and its modifier actn_add.
+      FUN`ACTION`STAT:
+        value: |-
+          @@(after FUN`ENC`PREPARE of the one acting)[
+          setqm(stat_list,json_query(%q<actn>,extract,$.stat),actn_optname,,actn_add,0)][
+          if(t(member(%q<stat_list>,%q<actn_opt>)),%q<actn_opt>,
+            [if(strlen(%q<actn_opt>),setqm(actn_optname,%q<actn_opt>,actn_add,firstof(after(grab(json_query(%q<actn>,extract,$.opts),%q<actn_opt>~*),~),0)))][
+            if(eq(words(%q<stat_list>),1),%q<stat_list>,u(FUN`ACTION`BEST,%q<stat_list>))])]
+        flags: [funsyntax]
+      FUN`ACTION`BEST:
+        value: |-
+          @@(%0 statistics: the one with the highest modifier)[
+          setqm(best_stat,first(%0),best_n,-999)][
+          null(iter(%0,if(gt(setr(best_t,u({{core}}/FUN`CHECK`TOTAL,u(FUN`ACT`STAT,%i0))),%q<best_n>),setqm(best_stat,%i0,best_n,%q<best_t>))))][
+          %q<best_stat>]
+        flags: [funsyntax]
+      # Roll the action for act_at against act_target's DC, with the multiple attack penalty for an attack, and
+      # apply what its degree does. Sets enc and enc_say.
+      FUN`ACTION`RUN:
+        value: |-
+          @@(actn, actn_slug, act_at, act_target, actn_k)[
+          setqm(actn_traits,json_query(%q<actn>,extract,$.traits),actn_dcstat,json_query(%q<actn>,extract,$.dc),actn_fx,)][
+          setq(actn_attack,t(member(%q<actn_traits>,attack)))][
+          u(FUN`ENC`PREPARE,%q<act_at>)][
+          setq(actn_stat,u(FUN`ACTION`STAT))][
+          setq(actn_map,if(%q<actn_attack>,mul(5,min(2,firstof(u(FUN`ENC`C,%q<act_at>,map),0))),0))][
+          u(FUN`ACT`HOLD,by)][
+          u(FUN`ENC`PREPARE,%q<act_target>)][
+          setq(actn_dc,add(10,u({{core}}/FUN`CHECK`TOTAL,u(FUN`ACT`STAT,%q<actn_dcstat>,%q<actn_dcstat>-dc))))][
+          setq(act_tgtopts,u(FUN`ACT`TARGET`OPTIONS))][
+          u(FUN`ACT`HOLD,on)][u(FUN`ACT`TAKE,by)][
+          u(FUN`ACT`CHECK,%q<actn_stat>,%q<actn_dc>,sub(%q<actn_add>,%q<actn_map>),,squish(action:[lcstr(%q<actn_slug>)] [iter(%q<actn_traits>,%i0 item:trait:%i0)] [if(%q<actn_attack>,trait:attack)] [if(strlen(%q<actn_optname>),action:[lcstr(%q<actn_slug>)]:%q<actn_optname>)] %q<act_tgtopts>))][
+          if(%q<actn_attack>,u(FUN`ENC`SET,%q<act_at>,map,inc(firstof(u(FUN`ENC`C,%q<act_at>,map),0))))][
+          u(FUN`ACTION`SPEND,%q<act_at>,firstof(json_query(%q<actn>,extract,$.cost),1))][
+          setq(actn_deg,extract(cf f s cs,inc(%q<roll_degree>),1))][
+          null(iter(json_query(%q<actn>,extract,$.%q<actn_deg>),u(FUN`ACTION`APPLY,%i0)))][
+          if(json_query(%q<actn>,extract,$.imm),u(FUN`ENC`SET,%q<act_target>,imm,json_mod(firstof(u(FUN`ENC`C,%q<act_target>,imm),json(object)),set,$.[lcstr(%q<actn_slug>)]_%q<actn_k>,1)))][
+          setq(enc_say,[u(FUN`ENC`C,%q<act_at>,name)] uses %q<actn_name>[if(not(%q<actn_self>),%bon [u(FUN`ENC`C,%q<act_target>,name)])] with [u({{commands}}/FUN`SHOW`STAT,%q<actn_stat>)]: [json_query(%q<roll_record>,extract,$.text)][u(FUN`ACT`TAGS)][if(%q<actn_map>,%b%(MAP -%q<actn_map>%))][if(strlen(%q<actn_optname>),%b%(%q<actn_optname> [u(FUN`SHOW`SIGNED,%q<actn_add>)]%))] vs [if(%q<actn_self>,[u(FUN`ENC`C,%q<act_target>,name)]'s%b)][u({{commands}}/FUN`SHOW`STAT,%q<actn_dcstat>)] DC [if(cor(%q<enc_gm>,strmatch(u(FUN`ENC`C,%q<act_target>,kind),pc)),%q<actn_dc>,?)]: [tone(strong,u(FUN`ACT`DEGREE,%q<roll_degree>))][u(FUN`ACT`ADJUSTED)].[if(strlen(setr(actn_note,json_query(%q<actn>,extract,$.n%q<actn_deg>))),%b%q<actn_note>)]%q<actn_fx>[if(strlen(setr(actn_note,json_query(%q<actn>,extract,$.ni))),%b%q<actn_note>)][u(FUN`ACT`NOTES)]%q<spend_warn>)]
+        flags: [funsyntax]
+      FUN`ACTION`APPLY:
+        value: |-
+          @@(%0 who.kind.args)[
+          setqm(ap_at,if(strmatch(first(%0,.),t),%q<act_target>,%q<act_at>),ap_kind,elements(%0,2,.))][
+          setq(ap_name,u(FUN`ENC`C,%q<ap_at>,name))][
+          switch(%q<ap_kind>,
+            cond, u(FUN`ACTION`COND,%q<ap_at>,elements(%0,3,.),firstof(elements(%0,4,.),0),elements(%0,5,.)),
+            dmg, [u(FUN`ACT`DAMAGE,[elements(%0,3,.)] [elements(%0,4,.)],0)][setqm(iwr_opts,,dmg_ignore,)][u(FUN`ACT`IWR,%q<ap_at>)][u(FUN`ACT`HARM,%q<ap_at>,%q<dmg_total>,0)][setq(actn_fx,%q<actn_fx> Damage %q<dmg_text>[u(FUN`ACT`IWR`TEXT)]. %q<harm_text>.)],
+            by, u(FUN`ENC`PATCH,%q<ap_at>,json(object,by,json(object,grabbed,json(string,%q<actn_k>)))),
+            release, if(strmatch(u(FUN`ENC`C,%q<ap_at>,by.grabbed),%q<actn_k>),[u(FUN`ACTION`FREE,%q<ap_at>)][setq(actn_fx,%q<actn_fx> %q<ap_name> is free.)]),
+            free, [u(FUN`ACTION`FREE,%q<ap_at>)][setq(actn_fx,%q<actn_fx> %q<ap_name> is free.)])]
+        flags: [funsyntax]
+      FUN`ACTION`COND:
+        value: |-
+          @@(%0 a combatant's index, %1 a condition, %2 its value or 0, %3 e1, e2, s1 or nothing)[
+          setq(cond_was,json_query(u(FUN`ENC`C,%0,conds),extract,$\["%1"\]))][
+          setq(cond_v,if(%2,max(%2,firstof(%q<cond_was>,0)),0))][
+          if(strmatch(%1,restrained),u(FUN`ENC`PATCH,%0,json(object,conds,json(object,grabbed,null),dur,json(object,grabbed,null))))][
+          u(FUN`ENC`PATCH,%0,json(object,conds,json(object,%1,%q<cond_v>),dur,json(object,%1,switch(%3,e1,json(string,%q<actn_k>~1~end),e2,json(string,%q<actn_k>~2~end),s1,json(string,%q<actn_k>~1),null))))][
+          setq(actn_fx,%q<actn_fx> [u(FUN`ENC`C,%0,name)] is %1[if(%2,%b%q<cond_v>)][switch(%3,e1,%buntil the end of [u(FUN`ENC`C,%q<act_at>,name)]'s turn,e2,%buntil the end of [u(FUN`ENC`C,%q<act_at>,name)]'s next turn,s1,%buntil [u(FUN`ENC`C,%q<act_at>,name)]'s next turn starts)].)]
+        flags: [funsyntax]
+      FUN`ACTION`FREE:
+        value: |-
+          @@(%0 a combatant's index: no longer grabbed or restrained)[
+          u(FUN`ENC`PATCH,%0,json(object,conds,json(object,grabbed,null,restrained,null),dur,json(object,grabbed,null,restrained,null),by,null))]
+        flags: [funsyntax]
+      # Actions spent on the acting combatant's turn: three, one more when quickened, less slowed and stunned.
+      # Past that, a warning, not a refusal. Sets spend_warn.
+      FUN`ACTION`SPEND:
+        value: |-
+          @@(%0 a combatant's index, %1 actions)[
+          setq(spend_warn,)][
+          if(eq(%0,firstof(u(FUN`ENC`ACTING),-1)),
+            [setq(spend_n,add(firstof(u(FUN`ENC`C,%0,acts),0),%1))][
+            u(FUN`ENC`SET,%0,acts,%q<spend_n>)][
+            setq(spend_conds,firstof(u(FUN`ENC`C,%0,conds),json(object)))][
+            setq(spend_max,max(0,sub(add(3,if(strlen(json_query(%q<spend_conds>,extract,$.quickened)),1,0)),add(firstof(json_query(%q<spend_conds>,extract,$.slowed),0),firstof(json_query(%q<spend_conds>,extract,$.stunned),0)))))][
+            if(gt(%q<spend_n>,%q<spend_max>),setq(spend_warn,%b[tone(warning,[u(FUN`ENC`C,%0,name)] has used %q<spend_n> actions this turn%, more than %q<spend_max>.)]))])]
+        flags: [funsyntax]
       INC`ENC`ACT:
         value: |-
           @include %!/INC`ENC`NEED; think setqm(actn_who,if(strmatch(%q<cmd_args>,*:*),trim(before(%q<cmd_args>,:))),actn_name,trim(if(strmatch(%q<cmd_args>,*:*),after(%q<cmd_args>,:),%q<cmd_args>))); think setq(act_at,if(strlen(%q<actn_who>),u(%!/FUN`ENC`FIND,%q<actn_who>),u(%!/FUN`ENC`MINE))); @assert strlen(%q<act_at>)=@pemit %#=notice(PF2E,if(strlen(%q<actn_who>),No one in the encounter is called %q<actn_who>.,You are not in the encounter.),warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,You act only for yourself.,warn); @assert strmatch(u(%!/FUN`ENC`C,%q<act_at>,kind),pc)=@pemit %#=notice(PF2E,A creature's abilities are on its statistics. +enc/effect gives it an effect.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think setq(actn_found,u(%!/FUN`FIND`ON,FUN`ACT`SELFEFFECT,%q<actn_name>)); @assert strlen(%q<actn_found>)=@pemit %#=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] has no action called %q<actn_name> that brings an effect.[if(words(setr(actn_list,u(%!/FUN`ACT`SELFEFFECTS))),%bThose that do: [itemize(%q<actn_list>,|)].)],warn); think setqm(fx_origin,u(%!/FUN`FX`ORIGIN,first(%q<self_from>,~),rest(%q<self_from>,~)),fx_outcome,); think setq(actn_line,u(%!/FUN`FX`ADD,%q<act_at>,first(%q<actn_found>,~),elements(%q<actn_found>,2,~),%q<check_level>,,u(%!/FUN`ENC`C,%q<act_at>,k))); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] uses [last(%q<actn_found>,~)]. %q<actn_line>)
@@ -7106,7 +7231,21 @@ objects:
             setq(next_text,%q<next_text>%rPersistent %i0 damage: %q<dmg_text>[u(FUN`ACT`IWR`TEXT)]. %q<harm_text>. Flat check %q<end_flat> vs DC %q<end_dc>: [if(gte(%q<end_flat>,%q<end_dc>),it ends,it goes on)].)]))][
           if(isnum(setr(end_frightened,json_query(u(FUN`ENC`C,%0,conds),extract,$.frightened))),
             [u(FUN`ENC`PATCH,%0,json(object,conds,json(object,frightened,if(gt(%q<end_frightened>,1),dec(%q<end_frightened>),null))))][
-            setq(next_text,%q<next_text>%r[u(FUN`ENC`C,%0,name)] is [if(gt(%q<end_frightened>,1),now frightened [dec(%q<end_frightened>)],no longer frightened)].)])]
+            setq(next_text,%q<next_text>%r[u(FUN`ENC`C,%0,name)] is [if(gt(%q<end_frightened>,1),now frightened [dec(%q<end_frightened>)],no longer frightened)].)])][
+          setq(end_key,u(FUN`ENC`C,%0,k))][
+          null(iter(u(FUN`ENC`INDEXES),u(FUN`TURN`ENDTICK,%i0,%q<end_key>)))]
+        flags: [funsyntax]
+      # Conditions that last until the end of a turn: dur key~turns~end counts down when that key's turn ends.
+      FUN`TURN`ENDTICK:
+        value: |-
+          @@(%0 a combatant's index, %1 the key whose turn ends)[
+          setq(etick_dur,firstof(u(FUN`ENC`C,%0,dur),json(object)))][
+          null(iter(json_map(%!/FUN`JSON`KEY,%q<etick_dur>,%b),
+            if(cand(strmatch(first(setr(etick_v,json_query(%q<etick_dur>,extract,$\["%i0"\])),~),%1),strmatch(last(%q<etick_v>,~),end)),
+              if(gt(elements(%q<etick_v>,2,~),1),
+                u(FUN`ENC`PATCH,%0,json(object,dur,json(object,%i0,json(string,%1~[dec(elements(%q<etick_v>,2,~))]~end)))),
+                [u(FUN`ENC`PATCH,%0,json(object,dur,json(object,%i0,null),conds,json(object,%i0,null)))][
+                setq(next_text,%q<next_text>%r[u(FUN`ENC`C,%0,name)] is no longer %i0.)]))))]
         flags: [funsyntax]
       # The start of a turn: the multiple attack penalty resets, a raised shield is lowered, conditions
       # timed by this combatant's turns count down, and a dying character makes a recovery check.
@@ -7114,6 +7253,7 @@ objects:
         value: |-
           @@(%0 a combatant's index: adds to next_text)[
           u(FUN`ENC`SET,%0,map,0)][
+          u(FUN`ENC`SET,%0,acts,0)][
           u(FUN`ENC`SET,%0,raised,0)][
           u(FUN`ENC`SET,%0,react,0)][
           u(FUN`ENC`SET,%0,qsb,0)][
@@ -7139,7 +7279,7 @@ objects:
           @@(%0 a combatant's index, %1 the key whose turn starts)[
           setq(tick_dur,u(FUN`ENC`C,%0,dur))][
           null(iter(json_map(%!/FUN`JSON`KEY,%q<tick_dur>,%b),
-            if(strmatch(first(setr(tick_value,json_query(%q<tick_dur>,extract,$.%i0)),~),%1),
+            if(cand(strmatch(first(setr(tick_value,json_query(%q<tick_dur>,extract,$\["%i0"\])),~),%1),not(strmatch(last(%q<tick_value>,~),end))),
               if(gt(rest(%q<tick_value>,~),1),
                 u(FUN`ENC`PATCH,%0,json(object,dur,json(object,%i0,json(string,%1~[dec(rest(%q<tick_value>,~))])))),
                 [u(FUN`ENC`PATCH,%0,json(object,dur,json(object,%i0,null),conds,json(object,%i0,null)))][
@@ -7689,6 +7829,7 @@ objects:
         - `+enc/use <item>`: drinks, eats or uses a consumable from the encounter's copy, or an item you made today. A healing item heals, and a mutagen or elixir gives its effect. An oil or talisman goes on the item you name: `+enc/use oil of potency on longsword`. `+enc/act` takes `on <item>` the same way.
         - Bombs and versatile vials are Strikes: `+enc/strike <target>=<bomb>` throws one and uses it up. A hit adds the splash and persistent damage; a failure still splashes the target.
         - `+cast <spell>=<targets>` casts from the encounter's copy of your day: `+help pf2e spells`.
+        - `+act <action> <target>`: an action such as Trip, Grapple or Demoralize, rolled against the target's DC with its outcome applied: `+help pf2e act`.
         - `+enc/act <action>`: an action that brings an effect, such as Rage or a stance. `+enc/act` on its own lists yours. `+enc/effect <your name>=-<effect>` ends one early.
         - `+enc/raise \[<who>\]`: Raise a Shield on your turn, or as a reaction with Reactive Shield. The shield you hold adds its bonus to your AC until your next turn starts. A creature with a shield raises it the same way. A broken or destroyed shield cannot be raised.
         - `+enc/block`: Shield Block, the reaction to damage just dealt to you while your shield is raised, with the Shield Block feat, the Shield spell or a creature's Shield Block. The shield's Hardness takes that much of the damage and the shield takes the rest, up to its Hit Points; you take all but what the Hardness took. A shield at its Broken Threshold or below is broken, at 0 Hit Points destroyed. Quick Shield Block gives a second block each round. The Shield spell ends when it blocks, and cannot be cast again for 10 minutes.
@@ -7707,8 +7848,29 @@ objects:
         ```
 
         Damage to a dying character raises dying by 1, or 2 on a critical hit; at dying 4 they die. Healing wakes them, wounded 1 more. A Hero Point avoids death: `+help pf2e hero`.
+      HELP`PF2E`ACT: |-
+        `+act <action> <target>` takes an action in the encounter here: its check against the target's DC, and what the result does, applied to the encounter's copies. The GM acts for anyone: `+act <who>:<action> <target>`.
+
+        - Demoralize: Intimidation against Will. Frightened 2 on a critical success, 1 on a success; either way the target is immune to your Demoralize for 10 minutes. `=unintelligible` takes -4 when it does not understand you.
+        - Feint: Deception against Perception. The target is off-guard to your melee attacks until the end of your turn, or of your next turn on a critical success; on a critical failure you are, until the end of your next turn.
+        - Trip: Athletics against Reflex. Prone, and 1d6 bludgeoning on a critical success; you fall prone on a critical failure.
+        - Grapple: Athletics against Fortitude. Grabbed, or restrained on a critical success, until the end of your next turn. A failure lets go of a creature you held.
+        - Shove, Reposition: Athletics against Fortitude, with how far it moves. Shove's critical failure leaves you prone.
+        - Disarm: Athletics against Reflex. A critical failure leaves you off-guard until your next turn starts.
+        - Escape: Athletics or Acrobatics, whichever is better, against the Athletics DC of whoever holds you; `=acrobatics` or `=athletics` chooses. Success ends grabbed and restrained.
+        - Tumble Through: Acrobatics against Reflex.
+
+        Attacks (Trip, Grapple, Shove, Disarm, Reposition, Escape) take the multiple attack penalty and add to it. Each action and Strike on your turn counts: past three, less slowed and stunned, more with quickened, the line warns. `+act` alone lists the actions, and an action not in the list goes to `+enc/act`.
+
+        Example:
+
+        `+act grapple rat`
+
+        Output: `\[PF2E\] Wren uses Grapple on Rat Swarm with Athletics: 1d20\[13\] + 0 = 13 vs Fortitude DC 12: Success. Rat Swarm is grabbed until the end of Wren's next turn.`
+      SEE`PF2E`ACT: |-
+        pf2e enc|pf2e enc gm
       SEE`PF2E`ENC: |-
-        pf2e enc build|pf2e enc gm|pf2e recall
+        pf2e act|pf2e enc build|pf2e enc gm|pf2e recall
       HELP`PF2E`ENC`BUILD: |-
         Building an encounter. `+enc/start` begins one in the room, and you run it; staff can run any.
 
