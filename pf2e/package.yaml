@@ -1,7 +1,7 @@
 format: "1.16"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.9.0"
+version: "0.9.1"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -87,6 +87,14 @@ objects:
       # Which shape of ITEM`<id>`PREP the core reads. The updater prepares an item again when its PREP
       # was made for another shape.
       DATA`PREP`VERSION: 4
+      # The derived-sheet cache: FUN`CHECK`PREPARE keeps the registers it works out from a ledger under
+      # CACHE`<key> on this object, with the sheet's statistics, Strikes and their lines under it, so a
+      # ledger read again costs a few hundred function calls. The key is the ledger with the package's
+      # version, the books and CACHE`STAMP, which the updater and the deity table change. CACHE lists
+      # the keys oldest first; past DATA`CACHE`KEEP the oldest goes.
+      DATA`CACHE`VERSION: "0.9.1"
+      DATA`CACHE`KEEP: 200
+      DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
       # Foundry's damage types.
       DATA`DAMAGE`TYPES: acid bleed bludgeoning cold electricity fire force mental piercing poison slashing sonic spirit untyped vitality void
       # The proficiencies other than the statistics: weapon categories, armor categories, spellcasting and the class DC.
@@ -1257,10 +1265,19 @@ objects:
       # check_stats (every statistic and proficiency), check_actor, check_synthetics, check_index,
       # check_flats (each synthetic's type~value~slug~force, - when its predicate fails), check_names,
       # check_unapplied, check_strikes, check_traits (the character's traits from ActorTraits rules), check_adjstrike, check_gear, check_armor (the worn armor's item) and check_ancestry,
-      # check_heritage, check_background and check_class (pack~id~index of each, when granted).
+      # check_heritage, check_background and check_class (pack~id~index of each, when granted), and
+      # check_key, the ledger's key in the cache, from which it reads them when it can.
       FUN`CHECK`PREPARE:
         value: |-
           @@(%0 the ledger, %1 1 to leave out the synthetics, for the builder)[
+          setq(check_key,left(digest(sha1,%0|%1|[v(DATA`CACHE`VERSION)]|[v(DATA`CONFIG`BOOKS)]|[v(CACHE`STAMP)]),20))][
+          if(hasattr(me,CACHE`%q<check_key>),
+            [setqm(check_ledger,%0,check_dmgready,0)][null(iter(v(DATA`CACHE`REGISTERS),setq(%i0,v(CACHE`%q<check_key>`%i0))))],
+            [u(FUN`CHECK`PREPARE`BUILD,%0,%1)][u(FUN`CACHE`SAVE)])]
+        flags: [funsyntax]
+      FUN`CHECK`PREPARE`BUILD:
+        value: |-
+          @@(%0 the ledger, %1 1 to leave out the synthetics)[
           setq(check_ledger,%0)][
           setq(check_entries,u(FUN`SHEET`ENTRIES,%0))][
           setq(check_level,u(FUN`SHEET`LEVEL,%q<check_entries>))][
@@ -1286,6 +1303,57 @@ objects:
           setq(check_crafting,iter(setr(craft_all,iter(%q<check_craftgrants>,u(FUN`CHECK`CRAFTING,first(%i0,~),rest(%i0,~)))),firstof(first(graball(%q<craft_all>,%i0~*~*~?*)),first(graball(%q<craft_all>,%i0~*)))))][setq(check_crafting,iter(setunion(iter(%q<craft_all>,first(%i0,~)),),firstof(first(graball(%q<craft_all>,%i0~*~*~?*)),first(graball(%q<craft_all>,%i0~*)))))][
           setq(check_armor,u(FUN`CHECK`ARMOR))][
           setq(check_shield,u(FUN`CHECK`SHIELD))]
+        flags: [funsyntax]
+      # Keeps the registers FUN`CHECK`PREPARE`BUILD set under CACHE`<check_key>, the key itself last so a
+      # half-written entry is never read, and drops the oldest key past DATA`CACHE`KEEP.
+      FUN`CACHE`SAVE:
+        value: |-
+          @@(after FUN`CHECK`PREPARE`BUILD)[
+          null(iter(v(DATA`CACHE`REGISTERS),if(strlen(r(%i0)),attrib_set(me/CACHE`%q<check_key>`%i0,r(%i0)))))][
+          null(attrib_set(me/CACHE`%q<check_key>,1))][
+          setq(cache_keys,squish([v(CACHE)] %q<check_key>))][
+          if(gt(words(%q<cache_keys>),v(DATA`CACHE`KEEP)),
+            [null(wipe(me/CACHE`[first(%q<cache_keys>)]))][setq(cache_keys,rest(%q<cache_keys>))])][
+          null(attrib_set(me/CACHE,%q<cache_keys>))]
+        flags: [funsyntax]
+      # %1 run with %2 and %3 for the ledger prepared: worked out once, then read from CACHE`<check_key>`%0.
+      FUN`CACHE`MEMO:
+        value: |-
+          @@(%0 a name under the ledger's key, %1 an attribute of this object, %2 and %3 its arguments)[
+          if(cand(strlen(%q<check_key>),hasattr(me,CACHE`%q<check_key>`%0)),
+            v(CACHE`%q<check_key>`%0),
+            [setq(memo_out,u(%1,%2,%3))][
+            if(cand(strlen(%q<check_key>),hasattr(me,CACHE`%q<check_key>)),null(attrib_set(me/CACHE`%q<check_key>`%0,%q<memo_out>)))]%q<memo_out>)]
+        flags: [funsyntax]
+      # The statistics the sheet lists: every skill, save and Perception, and the Lores.
+      FUN`SHEET`STATS:
+        value: |-
+          setunion([v(DATA`STATISTICS)] [iter(%q<check_stats>,if(strmatch(%i0,*-lore),%i0))],)
+        flags: [funsyntax]
+      # After FUN`CHECK`PREPARE, with check_daily: the steps FUN`SHEET`WARM still has to take for the sheet,
+      # strikes for the list of Strikes, stats:<n> for each six statistics, and each Strike's place.
+      FUN`SHEET`COLD:
+        value: |-
+          @@(the steps not in the cache)[
+          setq(cold_stats,u(FUN`SHEET`STATS))][
+          squish(
+            [iter(lnum(0,div(dec(words(%q<cold_stats>)),6)),if(words(iter(extract(%q<cold_stats>,inc(mul(%i0,6)),6),if(hasattr(me,CACHE`%q<check_key>`CHOSEN`%i0),,%i0))),stats:%i0))]
+            [if(hasattr(me,CACHE`%q<check_key>`STRIKES`[left(digest(sha1,x%q<check_daily>),16)]),
+              iter(lnum(1,words(setr(cold_strikes,u(FUN`CHECK`STRIKES)),|)),if(hasattr(me,CACHE`%q<check_key>`LINE`[left(digest(sha1,extract(%q<cold_strikes>,%i0,1,|)),16)]),,%i0)),
+              strikes)])]
+        flags: [funsyntax]
+      FUN`SHEET`WARM:
+        value: |-
+          @@(%0 a step from FUN`SHEET`COLD, after FUN`CHECK`PREPARE with check_daily)[
+          switch(%0,
+            strikes,null(u(FUN`CHECK`STRIKES)),
+            stats:*,null(iter(extract(u(FUN`SHEET`STATS),inc(mul(after(%0,:),6)),6),u(FUN`CHECK`CHOSEN,%i0))),
+            null(u(FUN`STRIKE`LINE,extract(u(FUN`CHECK`STRIKES),%0,1,|))))]
+        flags: [funsyntax]
+      # Changes CACHE`STAMP, so every ledger is worked out again: the deity table or the items changed.
+      FUN`CACHE`BUMP:
+        value: |-
+          null(attrib_set(me/CACHE`STAMP,inc(v(CACHE`STAMP))))
         flags: [funsyntax]
       # A granted item's SpecialResource rules, such as an alchemist's versatile vials: slug~most~item id~item
       # level for each, the most and the level worked out for the sheet.
@@ -1904,6 +1972,11 @@ objects:
       # given, such as initiative).
       FUN`CHECK`CHOSEN:
         value: |-
+          @@(%0 a statistic, %1 more domains, %2 more roll options: worked out once per ledger when there are none)[
+          if(cor(strlen(%1),strlen(%2)),u(FUN`CHECK`CHOSEN`BUILD,%0,%1,%2),u(FUN`CACHE`MEMO,CHOSEN`%0,FUN`CHECK`CHOSEN`BUILD,%0))]
+        flags: [funsyntax]
+      FUN`CHECK`CHOSEN`BUILD:
+        value: |-
           @@(%0 a statistic, %1 more domains, %2 more roll options)[
           setq(chosen_attribute,u(FUN`STAT`ATTRIBUTE,%0))][
           setq(chosen_mods,u(FUN`CHECK`MODS,ability~[u(FUN`CHECK`ABILITY,%q<chosen_attribute>)]~%q<chosen_attribute>~0 proficiency~[u(FUN`CHECK`PROFICIENCY,u(FUN`CHECK`RANK,%0))]~proficiency~0 [u(FUN`CHECK`ARMOR`PENALTY,%0,%q<chosen_attribute>)] [u(FUN`CHECK`RESILIENT,%0)],u(FUN`STAT`DOMAINS,%0) %1,%2))][
@@ -1999,6 +2072,11 @@ objects:
       # holds (a rule that only grants a fist adds nothing more), and a fist. In a battle form, only the
       # form's attacks.
       FUN`CHECK`STRIKES:
+        value: |-
+          @@(the Strikes, separated by |: worked out once per ledger and day, check_daily)[
+          u(FUN`CACHE`MEMO,STRIKES`[left(digest(sha1,x%q<check_daily>),16)],FUN`CHECK`STRIKES`BUILD)]
+        flags: [funsyntax]
+      FUN`CHECK`STRIKES`BUILD:
         value: |-
           @@(the Strikes, separated by |)[
           setq(strikes_all,if(strlen(u(FUN`CHECK`FORM`GET,strikes)),
@@ -2195,6 +2273,11 @@ objects:
       # and the damage a hit deals (FUN`DAMAGE`TEXT).
       # A weapon that is not held says where it is, after its name.
       FUN`STRIKE`LINE:
+        value: |-
+          @@(%0 a Strike: worked out once per ledger)[
+          u(FUN`CACHE`MEMO,LINE`[left(digest(sha1,%0),16)],FUN`STRIKE`LINE`BUILD,%0)]
+        flags: [funsyntax]
+      FUN`STRIKE`LINE`BUILD:
         value: |-
           @@(%0 a Strike)[
           setq(strike_bonus,u(FUN`CHECK`TOTAL,u(FUN`STRIKE`ATTACK,%0)))][
@@ -2650,7 +2733,7 @@ objects:
         flags: [cmdsyntax]
       INC`UPDATE`DONE:
         value: |-
-          &FEED`INDEX me=[get(me/FEED`NEXT)]; &FEED`NEXT me; &FEED`CURRENT me; &FEED`BODY me; &FEED`LINES me; &FEED`AT me; @pemit [get(me/FEED`RUN)]=PF2E: The feed is read.[if(words(get(me/FEED`FAILED)),%bThese files could not be read and are tried again next time: [get(me/FEED`FAILED)])]; &FEED`RUN me
+          think u({{core}}/FUN`CACHE`BUMP); &FEED`INDEX me=[get(me/FEED`NEXT)]; &FEED`NEXT me; &FEED`CURRENT me; &FEED`BODY me; &FEED`LINES me; &FEED`AT me; @pemit [get(me/FEED`RUN)]=PF2E: The feed is read.[if(words(get(me/FEED`FAILED)),%bThese files could not be read and are tried again next time: [get(me/FEED`FAILED)])]; &FEED`RUN me
         flags: [cmdsyntax]
       FUN: Function attributes.
       # Every file of every book in the index whose hash differs from the last one read in full, as
@@ -2693,8 +2776,14 @@ objects:
     attributes:
       CMD`SHEET:
         value: |-
-          $(?is)^\+sheet(?\: +(.*))?$:think setq(cmd_target,trim(%1)); @include %!/INC`TARGET`VIEW; @pemit %#=u(%!/FUN`SHOW`SHEET)
+          $(?is)^\+sheet(?\: +(.*))?$:think setq(cmd_target,trim(%1)); @include %!/INC`TARGET`VIEW; think setq(sheet_round,0); @include %!/INC`SHEET`SHOW
         flags: [regexp, cmdsyntax]
+      # Shows the sheet, first working out in queue entries of their own the parts not in the cache, so a
+      # big sheet seen the first time stays under the function invocation limit.
+      INC`SHEET`SHOW:
+        value: |-
+          think u({{core}}/FUN`CHECK`PREPARE,%q<sheet_ledger>); think setq(check_daily,u(%!/FUN`DAILY`OF,%q<sheet_target>)); think setq(sheet_cold,if(lt(%q<sheet_round>,3),u({{core}}/FUN`SHEET`COLD))); @break not(words(%q<sheet_cold>))=@pemit %#=u(%!/FUN`SHOW`SHEET); think setq(sheet_round,inc(%q<sheet_round>)); @dolist/then %q<sheet_cold>={think u({{core}}/FUN`CHECK`PREPARE,%q<sheet_ledger>); think u({{core}}/FUN`SHEET`WARM,##)},{@include %!/INC`SHEET`SHOW}
+        flags: [cmdsyntax]
       CMD`CHECK:
         value: |-
           $(?is)^\+check +([^=]+?)(?\: *= *(.*))?$:think setqm(cmd_target,,cmd_stat,trim(%1),cmd_dc,trim(%2)); @include %!/INC`TARGET`VIEW; @include %!/INC`CHECK`ROLL
@@ -2715,19 +2804,19 @@ objects:
         flags: [cmdsyntax]
       INC`DEITY`CREATE:
         value: |-
-          think setq(deity_slug,u({{core}}/FUN`ITEM`SLUGGIFY,%q<cmd_args>)); @assert strlen(%q<deity_slug>)=@pemit %#=notice(PF2E,+deity/create <name>,warn); @assert not(strlen(u({{core}}/FUN`DEITY`GET,%q<deity_slug>)))=@pemit %#=notice(PF2E,There is a deity called [json_query(u({{core}}/FUN`DEITY`GET,%q<deity_slug>),extract,$.name)] already.,warn); think setq(deity_json,json(object,name,json(string,%q<cmd_args>),title,"",text,"",font,"",sanctification,"",domains,"",alternate,"",weapons,"",skill,"",spells,"")); &DEITY`%q<deity_slug> {{core}}=%q<deity_json>; @pemit %#=notice(PF2E,Added %q<cmd_args>. Fill it in with +deity/set %q<cmd_args>/<field>=<value>: font%, sanctification%, domains%, alternate%, weapon%, skill%, spells%, title and text.,ok)
+          think setq(deity_slug,u({{core}}/FUN`ITEM`SLUGGIFY,%q<cmd_args>)); @assert strlen(%q<deity_slug>)=@pemit %#=notice(PF2E,+deity/create <name>,warn); @assert not(strlen(u({{core}}/FUN`DEITY`GET,%q<deity_slug>)))=@pemit %#=notice(PF2E,There is a deity called [json_query(u({{core}}/FUN`DEITY`GET,%q<deity_slug>),extract,$.name)] already.,warn); think setq(deity_json,json(object,name,json(string,%q<cmd_args>),title,"",text,"",font,"",sanctification,"",domains,"",alternate,"",weapons,"",skill,"",spells,"")); &DEITY`%q<deity_slug> {{core}}=%q<deity_json>; think u({{core}}/FUN`CACHE`BUMP); @pemit %#=notice(PF2E,Added %q<cmd_args>. Fill it in with +deity/set %q<cmd_args>/<field>=<value>: font%, sanctification%, domains%, alternate%, weapon%, skill%, spells%, title and text.,ok)
         flags: [cmdsyntax]
       INC`DEITY`SET:
         value: |-
-          think setqm(deity_name,trim(before(%q<cmd_args>,/)),deity_field,lcstr(trim(before(after(%q<cmd_args>,/),=))),deity_value,trim(after(%q<cmd_args>,=))); think setq(deity_slug,u({{core}}/FUN`DEITY`FIND,%q<deity_name>)); @assert strlen(%q<deity_slug>)=@pemit %#=notice(PF2E,There is no deity called %q<deity_name>. +deity/create <name> adds one.,warn); @assert match(name title text font sanctification domains alternate weapon skill spells,%q<deity_field>)=@pemit %#=notice(PF2E,+deity/set <deity>/<field>=<value>. The fields are name%, title%, text%, font%, sanctification%, domains%, alternate%, weapon%, skill and spells.,warn); think setq(deity_stored,u(%!/FUN`DEITY`VALUE,%q<deity_field>,%q<deity_value>)); @assert not(strmatch(%q<deity_stored>,!*))=@pemit %#=notice(PF2E,after(%q<deity_stored>,!),warn); think setq(deity_json,json_mod(u({{core}}/FUN`DEITY`GET,%q<deity_slug>),patch,json(object,switch(%q<deity_field>,weapon,weapons,%q<deity_field>),json(string,%q<deity_stored>)))); &DEITY`%q<deity_slug> {{core}}=%q<deity_json>; @pemit %#=notice(PF2E,[json_query(%q<deity_json>,extract,$.name)]: %q<deity_field> [switch(1,not(strlen(%q<deity_stored>)),cleared,strmatch(%q<deity_field>,text),set,set to [u(%!/FUN`DEITY`FIELD,%q<deity_field>,%q<deity_stored>)])].,ok)
+          think setqm(deity_name,trim(before(%q<cmd_args>,/)),deity_field,lcstr(trim(before(after(%q<cmd_args>,/),=))),deity_value,trim(after(%q<cmd_args>,=))); think setq(deity_slug,u({{core}}/FUN`DEITY`FIND,%q<deity_name>)); @assert strlen(%q<deity_slug>)=@pemit %#=notice(PF2E,There is no deity called %q<deity_name>. +deity/create <name> adds one.,warn); @assert match(name title text font sanctification domains alternate weapon skill spells,%q<deity_field>)=@pemit %#=notice(PF2E,+deity/set <deity>/<field>=<value>. The fields are name%, title%, text%, font%, sanctification%, domains%, alternate%, weapon%, skill and spells.,warn); think setq(deity_stored,u(%!/FUN`DEITY`VALUE,%q<deity_field>,%q<deity_value>)); @assert not(strmatch(%q<deity_stored>,!*))=@pemit %#=notice(PF2E,after(%q<deity_stored>,!),warn); think setq(deity_json,json_mod(u({{core}}/FUN`DEITY`GET,%q<deity_slug>),patch,json(object,switch(%q<deity_field>,weapon,weapons,%q<deity_field>),json(string,%q<deity_stored>)))); &DEITY`%q<deity_slug> {{core}}=%q<deity_json>; think u({{core}}/FUN`CACHE`BUMP); @pemit %#=notice(PF2E,[json_query(%q<deity_json>,extract,$.name)]: %q<deity_field> [switch(1,not(strlen(%q<deity_stored>)),cleared,strmatch(%q<deity_field>,text),set,set to [u(%!/FUN`DEITY`FIELD,%q<deity_field>,%q<deity_stored>)])].,ok)
         flags: [cmdsyntax]
       INC`DEITY`DESTROY:
         value: |-
-          think setq(deity_slug,u({{core}}/FUN`DEITY`FIND,%q<cmd_args>)); @assert strlen(%q<deity_slug>)=@pemit %#=notice(PF2E,There is no deity called %q<cmd_args>.,warn); think setq(deity_name,json_query(u({{core}}/FUN`DEITY`GET,%q<deity_slug>),extract,$.name)); &DEITY`%q<deity_slug> {{core}}; @pemit %#=notice(PF2E,Removed %q<deity_name>. A character who chose them keeps the choice but gets nothing from it until a deity called %q<deity_name> is added again.,ok)
+          think setq(deity_slug,u({{core}}/FUN`DEITY`FIND,%q<cmd_args>)); @assert strlen(%q<deity_slug>)=@pemit %#=notice(PF2E,There is no deity called %q<cmd_args>.,warn); think setq(deity_name,json_query(u({{core}}/FUN`DEITY`GET,%q<deity_slug>),extract,$.name)); &DEITY`%q<deity_slug> {{core}}; think u({{core}}/FUN`CACHE`BUMP); @pemit %#=notice(PF2E,Removed %q<deity_name>. A character who chose them keeps the choice but gets nothing from it until a deity called %q<deity_name> is added again.,ok)
         flags: [cmdsyntax]
       INC`DEITY`SAMPLES:
         value: |-
-          think setq(deity_new,squish(iter(lattr({{core}}/DATA`DEITY`SAMPLE`*),if(strlen(u({{core}}/FUN`DEITY`GET,lcstr(after(%i0,DATA`DEITY`SAMPLE`)))),,lcstr(after(%i0,DATA`DEITY`SAMPLE`)))))); @assert words(%q<deity_new>)=@pemit %#=notice(PF2E,Every sample deity is in the table already.,warn); @dolist/inplace %q<deity_new>={think setq(deity_json,get({{core}}/DATA`DEITY`SAMPLE`##)); think setq(deity_json,json_mod(%q<deity_json>,patch,json(object,spells,json(string,u(%!/FUN`DEITY`SPELLS,json_query(%q<deity_json>,extract,$.spells),0))))); &DEITY`## {{core}}=%q<deity_json>}; @pemit %#=notice(PF2E,Added [words(%q<deity_new>)] sample deities: [itemize(iter(%q<deity_new>,json_query(get({{core}}/DATA`DEITY`SAMPLE`%i0),extract,$.name),%b,|),|)]. They are a starting point: +deity/set changes them and +deity/destroy removes one.,ok)
+          think setq(deity_new,squish(iter(lattr({{core}}/DATA`DEITY`SAMPLE`*),if(strlen(u({{core}}/FUN`DEITY`GET,lcstr(after(%i0,DATA`DEITY`SAMPLE`)))),,lcstr(after(%i0,DATA`DEITY`SAMPLE`)))))); @assert words(%q<deity_new>)=@pemit %#=notice(PF2E,Every sample deity is in the table already.,warn); @dolist/inplace %q<deity_new>={think setq(deity_json,get({{core}}/DATA`DEITY`SAMPLE`##)); think setq(deity_json,json_mod(%q<deity_json>,patch,json(object,spells,json(string,u(%!/FUN`DEITY`SPELLS,json_query(%q<deity_json>,extract,$.spells),0))))); &DEITY`## {{core}}=%q<deity_json>}; think u({{core}}/FUN`CACHE`BUMP); @pemit %#=notice(PF2E,Added [words(%q<deity_new>)] sample deities: [itemize(iter(%q<deity_new>,json_query(get({{core}}/DATA`DEITY`SAMPLE`%i0),extract,$.name),%b,|),|)]. They are a starting point: +deity/set changes them and +deity/destroy removes one.,ok)
         flags: [cmdsyntax]
       # A field's value as the table keeps it, or an error led by !.
       FUN`DEITY`VALUE:
@@ -4296,7 +4385,7 @@ objects:
               [setq(show_day,setr(check_daily,u(%!/FUN`DAILY`OF,%q<sheet_target>)))][if(strlen(json_query(%q<show_day>,extract,$.hp)),[json_query(%q<show_day>,extract,$.hp)] of%b)][u({{core}}/FUN`CHECK`HP)][if(json_query(%q<show_day>,extract,$.wounded),%b[tone(warning,%(wounded [json_query(%q<show_day>,extract,$.wounded)]%))])]|[add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`AC)))][if(strlen(%q<check_armor>),%b[tone(muted,%([json_query(%q<check_armor>,extract,$.name)]%))])]|[if(strlen(%q<check_shield>),[u(%!/FUN`SHOW`SHIELD)]|)][u({{core}}/FUN`CHECK`SPEED)] feet[iter(u({{core}}/FUN`CHECK`SPEEDS),if(comp(first(%i0,~),land),%,%b[first(%i0,~)] [rest(%i0,~)] feet),%b,)]|[add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`CLASSDC)))][if(%q<show_spellcaster>,|attack [u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,attack)))]%, DC [add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,dc)))])][if(strlen(%q<show_senses>),|%q<show_senses>)][if(strlen(%q<show_defences>),|%q<show_defences>)],
               |)]%r[
             rule()]%r[
-            ldatatable(,Statistic|Rank|>Modifier,iter(setunion(get({{core}}/DATA`STATISTICS) [iter(%q<check_stats>,if(strmatch(%i0,*-lore),%i0))],),u(%!/FUN`SHOW`STATISTIC,%i0),%b,%r),%r)]%r[
+            ldatatable(,Statistic|Rank|>Modifier,iter(u({{core}}/FUN`SHEET`STATS),u(%!/FUN`SHOW`STATISTIC,%i0),%b,%r),%r)]%r[
             rule()]%r[
             ldatatable(,Strike|>Attack|>MAP|Damage|Traits,iter(u({{core}}/FUN`CHECK`STRIKES),u(%!/FUN`SHOW`STRIKE,u({{core}}/FUN`STRIKE`LINE,%i0)),|,%r),%r)]%r[
             rule()]%r[
