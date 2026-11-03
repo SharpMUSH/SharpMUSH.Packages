@@ -1,7 +1,7 @@
 format: "1.20"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.10.10"
+version: "0.10.11"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -113,7 +113,7 @@ objects:
       # ledger read again costs a few hundred function calls. The key is the ledger with the package's
       # version, the books and CACHE`STAMP, which the updater and the deity table change. CACHE lists
       # the keys oldest first; past DATA`CACHE`KEEP the oldest goes.
-      DATA`CACHE`VERSION: "0.10.10"
+      DATA`CACHE`VERSION: "0.10.11"
       DATA`CACHE`KEEP: 200
       DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_itemalts check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_shieldrules check_bulkrules check_bulk check_bulk_enc check_bulk_max check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
       # The ItemAlteration properties the core applies, by the kind of item they reach.
@@ -381,6 +381,26 @@ objects:
       DATA`DEITY`SAMPLE`MORDRAK: '{"name":"Mordrak","title":"the Hungering Dark","text":"Something under the world that wants everything to stop moving. Its priests promise that the dead never feel pain; they rarely mention why. Edicts: spread undeath, put out lights, outlast the living. Anathema: destroy an undead servant without need, heal the living out of mercy.","font":"harm","sanctification":"must unholy","domains":"darkness destruction nightmares undeath","alternate":"pain","weapons":"scythe","skill":"intimidation","spells":"1 Grim Tendrils|2 Darkness|3 Vampiric Feast"}'
       DATA`DEITY`SAMPLE`LADY-COIN: '{"name":"Lady Coin","title":"Mistress of the Market","text":"She smiles on fair trade, loud haggling and anyone who pays their debts on time. Her temples double as banks, and the interest rate is a matter of doctrine. Edicts: deal fairly, pay what you owe, make your city prosper. Anathema: counterfeit money, cheat a customer.","font":"heal","sanctification":"can holy","domains":"ambition cities luck wealth","alternate":"knowledge","weapons":"light-mace","skill":"society","spells":"1 Item Facade|2 Translate|3 Enthrall"}'
       DATA`DEITY`SAMPLE`BRANNOCH: '{"name":"Brannoch","title":"Stormfist","text":"God of thunder, contests and settling things outside. He holds that most problems yield to honest effort and the rest to a good punch. Edicts: test yourself, protect the weak, win fair. Anathema: strike a foe who has yielded, refuse a fair challenge.","font":"heal","sanctification":"can holy","domains":"air confidence might zeal","alternate":"protection","weapons":"fist","skill":"athletics","spells":"1 Thunderstrike|3 Lightning Bolt|4 Fly"}'
+      # Player Core's animal companions (ORC): each type's base statistics, Strikes, support benefit and advanced
+      # maneuver. Foundry keeps no companion data, so these come from the book. senses as Foundry's sense types,
+      # <type>[~acuity~range]; size as Foundry's size values.
+      DATA`COMPANION`TYPES: ape arboreal-sapling badger bat bear bird boar cat crocodile dromaeosaur horse riding-drake scorpion shark snake wolf
+      DATA`COMPANION`APE: '{"name":"Ape","size":"sm","rarity":"common","attr":{"str":3,"dex":1,"con":2,"int":-4,"wis":2,"cha":0},"hp":8,"skill":"intimidation","senses":"lowLightVision","sensetext":"low-light vision","speed":{"climb":25,"land":25},"strikes":[{"name":"fist","die":"d8","type":"bludgeoning","traits":""}],"support":"Your ape threatens your foes with menacing growls. Until the start of your next turn, if you hit and deal damage to a creature in your ape''s reach, the creature becomes frightened 1.","maneuver":"Frightening Display","mactions":1,"mtext":"Your ape makes a loud and frightening display, throwing a foe off balance. The ape attempts to Demoralize the target creature; this display gains the visual trait and doesn''t require language. While frightened by this ability, the target is off-guard to your ape.","text":"Your companion is an ape or other primate."}'
+      DATA`COMPANION`ARBOREAL-SAPLING: '{"name":"Arboreal Sapling","size":"sm","rarity":"uncommon","attr":{"str":3,"dex":1,"con":2,"int":-4,"wis":2,"cha":0},"hp":8,"skill":"stealth","senses":"lowLightVision","sensetext":"low-light vision","speed":{"land":25},"strikes":[{"name":"branch","die":"d8","type":"bludgeoning","traits":""}],"support":"Your arboreal sapling plants roots around your foe, impeding its movement. Until the start of your next turn, if you hit and deal damage to a creature in your arboreal sapling''s reach, the first square the creature moves into after taking that damage is difficult terrain.","maneuver":"Throw Rock","mactions":1,"mtext":"The arboreal sapling Interacts to pick up a rock within reach or retrieve a stowed rock, then throws it with a ranged rock Strike that deals 2d6 bludgeoning (3d6 for a specialized companion) damage with a range increment of 30 feet.","text":"Your companion is a walking tree, a cousin of the great arboreal wardens and regents. An arboreal sapling has the plant trait instead of the animal …"}'
+      DATA`COMPANION`BADGER: '{"name":"Badger","size":"sm","rarity":"common","attr":{"str":2,"dex":2,"con":2,"int":-4,"wis":2,"cha":0},"hp":8,"skill":"survival","senses":"lowLightVision scent~imprecise~30","sensetext":"low-light vision, scent (imprecise, 30 feet)","speed":{"burrow":10,"climb":10,"land":25},"strikes":[{"name":"jaws","die":"d8","type":"piercing","traits":""},{"name":"claw","die":"d6","type":"slashing","traits":"agile"}],"support":"Your badger digs around your foe''s position, interfering with its footing. Until the start of your next turn, if you hit and deal damage to a creature your badger threatens, the target can''t use a Step action (unless it can Step through difficult terrain) until it moves from its current position.","maneuver":"Badger Rage","mactions":1,"mtext":"The badger enters a state of pure rage that lasts for 1 minute, until there are no enemies it can perceive, or until it falls unconscious, whichever comes first. It can''t voluntarily stop raging. While raging, the badger is affected in the following ways. It deals 4 additional damage with its bite attacks and 2 additional damage with its claw attacks.It takes a –1 penalty to AC.It can''t use actions that have the concentrate trait. The animal companion can Seek even while raging.After it has stopped raging, it can''t use Badger Rage again for 1 minute.","text":"Your companion is a badger, wolverine, or other big mustelid."}'
+      DATA`COMPANION`BAT: '{"name":"Bat","size":"sm","rarity":"common","attr":{"str":2,"dex":3,"con":2,"int":-4,"wis":1,"cha":0},"hp":6,"skill":"stealth","senses":"echolocation~precise~20 lowLightVision","sensetext":"echolocation 20 feet (the bat can use hearing as a precise sense within this range), low-light vision","speed":{"fly":30,"land":15},"strikes":[{"name":"jaws","die":"d6","type":"piercing","traits":"finesse"},{"name":"wing","die":"d4","type":"slashing","traits":"agile finesse"}],"support":"Your bat flaps around your foes'' arms and faces, getting in the way of their attacks. Until the start of your next turn, creatures in your bat''s reach that you damage with Strikes take a –1 circumstance penalty to their attack rolls.","maneuver":"Wing Thrash","mactions":2,"mtext":"The bat thrashes wildly with its wings, making wing Strikes against up to three adjacent foes. Each attack counts toward the bat''s multiple attack penalty, but the penalty only increases after all the attacks have been made.","text":"Your companion is a particularly large bat, such as a giant bat."}'
+      DATA`COMPANION`BEAR: '{"name":"Bear","size":"sm","rarity":"common","attr":{"str":3,"dex":2,"con":2,"int":-4,"wis":1,"cha":0},"hp":8,"skill":"intimidation","senses":"lowLightVision scent~imprecise~30","sensetext":"low-light vision, scent (imprecise, 30 feet)","speed":{"land":35},"strikes":[{"name":"jaws","die":"d8","type":"piercing","traits":""},{"name":"claw","die":"d6","type":"slashing","traits":"agile"}],"support":"Your bear mauls your enemies when you create an opening. Until the start of your next turn, each time you hit a creature in the bear''s reach with a Strike, the creature takes 1d8 slashing damage from the bear. If your bear is nimble or savage, the slashing damage increases to 2d8.","maneuver":"Bear Hug","mactions":1,"mtext":"The bear makes another claw Strike against the same target. If this Strike hits, the target is also grabbed, as if the bear had successfully Grappled the target.","text":"Your companion is a black, grizzly, polar, or other type of bear."}'
+      DATA`COMPANION`BIRD: '{"name":"Bird","size":"sm","rarity":"common","attr":{"str":2,"dex":3,"con":1,"int":-4,"wis":2,"cha":0},"hp":4,"skill":"stealth","senses":"lowLightVision","sensetext":"low-light vision","speed":{"fly":60,"land":10},"strikes":[{"name":"jaws","die":"d6","type":"piercing","traits":"finesse"},{"name":"talon","die":"d4","type":"slashing","traits":"agile finesse"}],"support":"The bird pecks at your foes'' eyes when you create an opening. Until the start of your next turn, your Strikes that damage a creature that your bird threatens also deal 1d4 persistent bleed damage, and the target is dazzled until it removes the bleed damage. If your bird is nimble or savage, the persistent bleed damage increases to 2d4.","maneuver":"Flyby Attack","mactions":2,"mtext":"The bird Flies and makes a talon Strike at any point along the way.","text":"Your companion is a bird of prey, such as an eagle, hawk, or owl."}'
+      DATA`COMPANION`BOAR: '{"name":"Boar","size":"sm","rarity":"common","attr":{"str":3,"dex":1,"con":2,"int":-4,"wis":2,"cha":0},"hp":8,"skill":"survival","senses":"lowLightVision scent~imprecise~30","sensetext":"low-light vision, scent (imprecise, 30 feet)","speed":{"land":35},"strikes":[{"name":"tusk","die":"d8","type":"piercing","traits":""}],"support":"Your boar gores your foes. Until the start of your next turn, your Strikes that damage a creature in your boar''s reach also deal 1d6 persistent bleed damage. If your boar is nimble or savage, the persistent bleed damage increases to 2d6.","maneuver":"Boar Charge","mactions":2,"mtext":"The boar Strides twice in a straight line and then makes a tusk Strike. As long as it moved at least 20 feet, it gains a +2 circumstance bonus to its attack roll.","text":"Your companion is a boar or pig."}'
+      DATA`COMPANION`CAT: '{"name":"Cat","size":"sm","rarity":"common","attr":{"str":2,"dex":3,"con":1,"int":-4,"wis":2,"cha":0},"hp":4,"skill":"stealth","senses":"lowLightVision scent~imprecise~30","sensetext":"low-light vision, scent (imprecise, 30 feet)","speed":{"land":35},"strikes":[{"name":"jaws","die":"d6","type":"piercing","traits":"finesse"},{"name":"claw","die":"d4","type":"slashing","traits":"agile finesse"}],"support":"Your cat throws your enemies off-balance when you create an opening. Until the start of your next turn, your Strikes that deal damage to a creature within your cat''s reach make the target off-guard until the end of your next turn.","maneuver":"Cat Pounce","mactions":1,"mtext":"The cat Strides and then Strikes. If it was undetected at the start of its Cat Pounce, it remains undetected until after the attack.","text":"Your companion is a big cat, such as a leopard or tiger."}'
+      DATA`COMPANION`CROCODILE: '{"name":"Crocodile","size":"sm","rarity":"common","attr":{"str":3,"dex":2,"con":2,"int":-4,"wis":1,"cha":0},"hp":6,"skill":"stealth","senses":"lowLightVision","sensetext":"low-light vision","speed":{"land":20,"swim":25},"strikes":[{"name":"jaws","die":"d8","type":"piercing","traits":""},{"name":"tail","die":"d6","type":"bludgeoning","traits":"finesse"}],"support":"Your crocodile clamps its jaws on your foe, refusing to let go. Until the start of your next turn, if your Strike damages a creature in your crocodile''s reach, your crocodile can latch onto the creature. While thus attached, the crocodile can move along with the target whenever the target moves until the end of your next turn. Your crocodile can latch onto only one creature in this way, and it must release the creature to make a jaws Strike. If the target is smaller than the crocodile, it takes a –10-foot circumstance penalty to its Speeds and can''t Fly while the crocodile is latched on.","maneuver":"Death Roll","mactions":1,"mtext":"The crocodile tucks its legs and rolls rapidly, twisting its victim. It makes a jaws Strike with a +2 circumstance bonus to the attack roll against the grabbed creature. If it hits, it also knocks the creature prone. If it misses, it releases the creature.","text":"Your companion is a crocodile or a similar crocodilian reptile, such as an alligator or caiman."}'
+      DATA`COMPANION`DROMAEOSAUR: '{"name":"Dromaeosaur","size":"sm","rarity":"common","attr":{"str":2,"dex":3,"con":2,"int":-4,"wis":1,"cha":0},"hp":6,"skill":"stealth","senses":"lowLightVision scent~imprecise~30","sensetext":"low-light vision, scent (imprecise, 30 feet)","speed":{"land":50},"strikes":[{"name":"jaws","die":"d8","type":"piercing","traits":"finesse"},{"name":"talon","die":"d6","type":"slashing","traits":"agile finesse"}],"support":"Your raptor constantly darts into flanking position. Until the start of your next turn, it counts as being in its space or an empty space of your choice within 10 feet when determining whether you and your companion are flanking; you can choose a different space for each of your attacks.","maneuver":"Darting Attack","mactions":1,"mtext":"The raptor Steps up to 10 feet and then Strikes, or Strikes and then Steps up to 10 feet.","text":"Your companion is a dromaeosaur (also called a raptor), such as a velociraptor or deinonychus."}'
+      DATA`COMPANION`HORSE: '{"name":"Horse","size":"med","rarity":"common","attr":{"str":3,"dex":2,"con":2,"int":-4,"wis":1,"cha":0},"hp":8,"skill":"survival","senses":"lowLightVision scent~imprecise~30","sensetext":"low-light vision, scent (imprecise, 30 feet)","speed":{"land":40},"strikes":[{"name":"hoof","die":"d6","type":"bludgeoning","traits":"agile"}],"support":"Until the start of your next turn, if you''re mounted on your horse and moved 10 feet or more on the action before a melee Strike, add a circumstance bonus to damage for that Strike equal to twice the number of weapon damage dice. If your weapon already has the jousting weapon trait, increase the trait''s damage bonus by 2 per die instead.","maneuver":"Gallop","mactions":2,"mtext":"The horse Strides twice at a +10-foot circumstance bonus to Speed.","text":"Your companion is a horse, pony, or similar equine."}'
+      DATA`COMPANION`RIDING-DRAKE: '{"name":"Riding Drake","size":"lg","rarity":"uncommon","attr":{"str":2,"dex":1,"con":2,"int":-4,"wis":1,"cha":2},"hp":8,"skill":"intimidation","senses":"darkvision","sensetext":"darkvision","speed":{"land":45},"strikes":[{"name":"jaws","die":"d8","type":"piercing","traits":""},{"name":"tail","die":"d6","type":"bludgeoning","traits":""}],"support":"Your drake snorts fire in your foes'' faces. Until the start of your next turn, each time you Strike while riding the drake and hit a creature in the drake''s reach, the creature takes 1d4 fire damage from the drake. If your drake is nimble or savage, the fire damage increases to 2d4.","maneuver":"Fire Breath","mactions":2,"mtext":"The riding drake breathes a 30-foot cone of fire, dealing 1d6 fire damage for every 2 levels the drake has to all creatures in the area (basic Reflex save). This uses a trained DC using the drake''s Constitution modifier or an expert DC if the drake is specialized.","text":"Your companion is a swift, flightless drake with limited intelligence, less vicious than most drakes but fiercely loyal to you. A riding drake has …"}'
+      DATA`COMPANION`SCORPION: '{"name":"Scorpion","size":"sm","rarity":"common","attr":{"str":3,"dex":3,"con":1,"int":-4,"wis":1,"cha":0},"hp":6,"skill":"stealth","senses":"darkvision","sensetext":"darkvision","speed":{"land":30},"strikes":[{"name":"stinger","die":"d6","type":"piercing","traits":""},{"name":"pincer","die":"d6","type":"slashing","traits":"agile"}],"support":"Your scorpion drips poison from its stinger when you create an opening. Until the start of your next turn, your Strikes that damage a creature in your scorpion''s reach also deal 1d6 persistent poison damage. If your scorpion is nimble or savage, the persistent poison damage increases to 2d6.","maneuver":"Grab and Sting","mactions":2,"mtext":"The scorpion holds its foe in place with its pincers in order to sting it. It makes a pincer Strike. If the Strike hits, the target creature automatically becomes grabbed by the scorpion, which then makes a stinger Strike against it. The grabbed condition lasts until the end of your next turn.","text":"Your companion is one of the various species of giant scorpion."}'
+      DATA`COMPANION`SHARK: '{"name":"Shark","size":"sm","rarity":"common","attr":{"str":3,"dex":2,"con":2,"int":-4,"wis":1,"cha":0},"hp":6,"skill":"stealth","senses":"scent~imprecise~60","sensetext":"blood scent, scent (imprecise, 60 feet)","speed":{"swim":40},"strikes":[{"name":"jaws","die":"d8","type":"piercing","traits":""}],"support":"When your shark senses blood, it tears into your enemies. Until the start of your next turn, each time you hit a creature in the shark''s reach with a Strike and deal slashing or piercing damage, the creature takes 1d8 slashing damage from the shark. If your shark is nimble or savage, the slashing damage increases to 2d8.","maneuver":"Shred","mactions":1,"mtext":"The shark viciously rips into the wound. The target of the shark’s Strike takes 2d8 slashing damage (3d8 for a specialized companion).","text":"Your companion is a shark of any kind, such as a hammerhead, great white, or jigsaw shark."}'
+      DATA`COMPANION`SNAKE: '{"name":"Snake","size":"sm","rarity":"common","attr":{"str":3,"dex":3,"con":1,"int":-4,"wis":1,"cha":0},"hp":6,"skill":"stealth","senses":"lowLightVision scent~imprecise~30","sensetext":"low-light vision, scent (imprecise, 30 feet)","speed":{"climb":20,"land":20,"swim":20},"strikes":[{"name":"jaws","die":"d8","type":"piercing","traits":"finesse"}],"support":"Your snake holds your enemies with its coils, interfering with reactions. Until the start of your next turn, any creature your snake threatens can''t use reactions triggered by your actions unless its level is higher than yours.","maneuver":"Constrict","mactions":1,"mtext":"The snake deals 12 bludgeoning damage to the grabbed creature; the creature must attempt a basic Fortitude save against your class DC. If the snake is a specialized animal companion, increase this damage to 20.","text":"Your companion is a constrictor snake, such as a boa or python."}'
+      DATA`COMPANION`WOLF: '{"name":"Wolf","size":"sm","rarity":"common","attr":{"str":2,"dex":3,"con":2,"int":-4,"wis":1,"cha":0},"hp":6,"skill":"survival","senses":"lowLightVision scent~imprecise~30","sensetext":"low-light vision, scent (imprecise, 30 feet)","speed":{"land":40},"strikes":[{"name":"jaws","die":"d8","type":"piercing","traits":"finesse"}],"support":"Your wolf tears tendons with each opening. Until the start of your next turn, your Strikes that damage creatures your wolf threatens give the target a –5-foot status penalty to its Speeds for 1 minute (–10 on a critical success).","maneuver":"Takedown","mactions":1,"mtext":"The wolf automatically knocks the target of its jaws Strike prone.","text":"Your companion is a wolf, dog, or other canine."}'
       # The lists a ChoiceSet names by config, as Foundry's CONFIG.PF2E has them.
       DATA`CHOICES`SKILLS: acrobatics arcana athletics crafting deception diplomacy intimidation medicine nature occultism performance religion society stealth survival thievery
       DATA`CHOICES`SAVES: fortitude reflex will
@@ -3775,6 +3795,204 @@ objects:
         value: |-
           edit(%1,",)
         flags: [funsyntax]
+      # +companion shows your animal companion; +companion/type <animal> chooses its type, +companion/name <name> names
+      # it, +companion/path nimble|savage and +companion/specialize <specialization>, ... choose its advancement once the
+      # feats allow it. Mature, Incredible and Specialized Companion feats advance it; the sub-ledger is
+      # PF2E`COMPANION`<n> on the character: type {type}, name {name}, path {path} and spec {specs} entries, the latest
+      # of each kind counting. A player chooses each once; staff change them.
+      CMD`COMPANION:
+        value: |-
+          $(?is)^\+companion(/\S*)?(?\: +(.*))?$:think setqm(cmd_switch,lcstr(after(%1,/)),cmd_args,trim(%2)); @assert match(type name path specialize,firstof(%q<cmd_switch>,name))=@pemit %#=notice(PF2E,There is no +companion/%q<cmd_switch>. The switches are /type%, /name%, /path and /specialize.,warn); think u(%!/FUN`COMMAND`TARGET); @include %!/INC`TARGET`VIEW; think u({{core}}/FUN`CHECK`PREPARE,%q<sheet_ledger>); @assert u(%!/FUN`COMP`HAS)=@pemit %#=notice(PF2E,[name(%q<sheet_target>)] has no animal companion: it comes with a feat or class feature such as Animal Companion.,warn); think u(%!/FUN`COMP`STATE,%q<sheet_target>); think setq(comp_staff,permission(%#,softcode.pf2e.staff)); @break not(strlen(%q<cmd_switch>))={@pemit %#=u(%!/FUN`COMP`SHOW,%q<sheet_target>)}; @include %!/INC`COMPANION`[ucstr(%q<cmd_switch>)]
+        flags: [regexp, cmdsyntax]
+      INC`COMPANION`TYPE:
+        value: |-
+          @assert cor(%q<comp_staff>,not(strlen(%q<cs_type>)))=@pemit %#=notice(PF2E,[name(%q<sheet_target>)]'s companion is a [json_query(%q<cs_data>,extract,$.name)]. A new one takes a week of downtime: staff change the type.,warn); think setq(comp_new,first(iter(get({{core}}/DATA`COMPANION`TYPES),if(strmatch(json_query(get({{core}}/DATA`COMPANION`[ucstr(%i0)]),extract,$.name),%q<cmd_rest>),%i0)))); @assert strlen(%q<comp_new>)=@pemit %#=notice(PF2E,There is no animal companion called %q<cmd_rest>. The types are [itemize(iter(get({{core}}/DATA`COMPANION`TYPES),json_query(get({{core}}/DATA`COMPANION`[ucstr(%i0)]),extract,$.name),%b,|),|)].,warn); @assert cor(%q<comp_staff>,strmatch(json_query(get({{core}}/DATA`COMPANION`[ucstr(%q<comp_new>)]),extract,$.rarity),common))=@pemit %#=notice(PF2E,The [json_query(get({{core}}/DATA`COMPANION`[ucstr(%q<comp_new>)]),extract,$.name)] is uncommon: staff grant it.,warn); think setq(comp_entry,json(object,kind,"type",type,json(string,%q<comp_new>))); @include %!/INC`COMPANION`PUT; @pemit %#=notice(PF2E,[name(%q<sheet_target>)]'s animal companion is a [json_query(get({{core}}/DATA`COMPANION`[ucstr(%q<comp_new>)]),extract,$.name)].,ok)
+        flags: [cmdsyntax]
+      INC`COMPANION`NAME:
+        value: |-
+          @assert cand(strlen(%q<cmd_rest>),lte(strlen(%q<cmd_rest>),40),not(regmatch(%q<cmd_rest>,\[^A-Za-z0-9 '-\])))=@pemit %#=notice(PF2E,A companion's name is up to 40 letters%, digits%, spaces%, hyphens and apostrophes.,warn); think setq(comp_entry,json(object,kind,"name",name,json(string,%q<cmd_rest>))); @include %!/INC`COMPANION`PUT; @pemit %#=notice(PF2E,[name(%q<sheet_target>)]'s animal companion is %q<cmd_rest>.,ok)
+        flags: [cmdsyntax]
+      INC`COMPANION`PATH:
+        value: |-
+          @assert cand(%q<cs_mature>,u(%!/FUN`COMP`INCREDIBLE))=@pemit %#=notice(PF2E,A mature companion becomes nimble or savage with a feat such as Incredible Companion.,warn); @assert cor(%q<comp_staff>,not(strlen(%q<cs_path>)))=@pemit %#=notice(PF2E,[name(%q<sheet_target>)]'s companion is already %q<cs_path>: staff change it.,warn); think setq(comp_new,lcstr(%q<cmd_rest>)); @assert match(nimble savage,%q<comp_new>)=@pemit %#=notice(PF2E,The paths are nimble and savage.,warn); think setq(comp_entry,json(object,kind,"path",path,json(string,%q<comp_new>))); @include %!/INC`COMPANION`PUT; @pemit %#=notice(PF2E,[name(%q<sheet_target>)]'s companion is %q<comp_new>.,ok)
+        flags: [cmdsyntax]
+      INC`COMPANION`SPECIALIZE:
+        value: |-
+          @assert %q<cs_specn>=@pemit %#=notice(PF2E,A nimble or savage companion takes a specialization with a feat such as Specialized Companion.,warn); think setq(comp_new,squish(iter(lcstr(%q<cmd_rest>),trim(%i0),\,,%b))); @assert cand(words(%q<comp_new>),not(words(setdiff(%q<comp_new>,v(DATA`COMPANION`SPECS)))))=@pemit %#=notice(PF2E,The specializations are [itemize(v(DATA`COMPANION`SPECS))].,warn); @assert eq(words(%q<comp_new>),words(setunion(%q<comp_new>,)))=@pemit %#=notice(PF2E,Each specialization is chosen once.,warn); @assert lte(words(%q<comp_new>),%q<cs_specn>)=@pemit %#=notice(PF2E,[name(%q<sheet_target>)]'s feats give %q<cs_specn> specialization[if(gt(%q<cs_specn>,1),s)].,warn); think setq(comp_old,u(%!/FUN`COMP`FIELD,%q<sheet_target>,spec,specs)); @assert cor(%q<comp_staff>,not(words(setdiff(%q<comp_old>,%q<comp_new>))))=@pemit %#=notice(PF2E,[name(%q<sheet_target>)]'s companion keeps [itemize(%q<comp_old>)]: name them with the new one%, or staff change them.,warn); think setq(comp_entry,json(object,kind,"spec",specs,json(string,%q<comp_new>))); @include %!/INC`COMPANION`PUT; @pemit %#=notice(PF2E,[name(%q<sheet_target>)]'s companion is specialized: [itemize(%q<comp_new>)].,ok)
+        flags: [cmdsyntax]
+      INC`COMPANION`PUT:
+        value: |-
+          think setq(comp_n,inc(lmax(0 [u(%!/FUN`PURSE`ENTRIES,%q<sheet_target>,companion)]))); &PF2E`COMPANION`%q<comp_n> %q<sheet_target>=[json_mod(%q<comp_entry>,patch,json(object,by,json(string,objid(%#)),at,secs()))]; @set %q<sheet_target>/PF2E`COMPANION`%q<comp_n>=wizard
+        flags: [cmdsyntax]
+      DATA`COMPANION`SPECS: ambusher bully daredevil racer tracker wrecker
+      FUN`COMP`HAS:
+        value: |-
+          @@(check_options: 1 when a feat gives an animal companion)[
+          regmatch(%q<check_options>,%(^|\\s%)feat:%(animal-companion|animal-companion-ranger|beastmaster-dedication%)%(\\s|$%))]
+        flags: [funsyntax]
+      FUN`COMP`INCREDIBLE:
+        value: |-
+          @@(check_options: 1 with a feat that makes the companion nimble or savage)[
+          regmatch(%q<check_options>,%(^|\\s%)feat:%(incredible-companion-druid|incredible-companion-ranger|incredible-beastmaster-companion%)%(\\s|$%))]
+        flags: [funsyntax]
+      FUN`COMP`LATEST:
+        value: |-
+          @@(%0 a character, %1 type, name, path or spec)[
+          last(trim(squish(iter(u(%!/FUN`PURSE`ENTRIES,%0,companion),if(strmatch(json_query(setr(comp_e,get(%0/PF2E`COMPANION`%i0)),extract,$.kind),%1),%q<comp_e>),%b,|),|),b,|),|)]
+        flags: [funsyntax]
+      FUN`COMP`FIELD:
+        value: |-
+          @@(%0 a character, %1 an entry kind, %2 a field: the field of the latest entry of that kind)[
+          if(strlen(setr(cf_e,u(%!/FUN`COMP`LATEST,%0,%1))),json_query(%q<cf_e>,extract,$.%2))]
+        flags: [funsyntax]
+      # The companion's state from the master's feats and sub-ledger: cs_type, cs_data (its DATA`COMPANION` JSON),
+      # cs_name, cs_mature, cs_path (nimble or savage, once an Incredible Companion feat allows it), cs_specn (how
+      # many specializations the feats give, once it has a path) and cs_specs.
+      FUN`COMP`STATE:
+        value: |-
+          @@(%0 the master; check_ registers)[
+          setq(cs_type,u(%!/FUN`COMP`FIELD,%0,type,type))][
+          setq(cs_data,if(strlen(%q<cs_type>),get({{core}}/DATA`COMPANION`[ucstr(%q<cs_type>)])))][
+          setq(cs_name,firstof(u(%!/FUN`COMP`FIELD,%0,name,name),[name(%0)]'s companion))][
+          setq(cs_mature,regmatch(%q<check_options>,%(^|\\s%)feat:%(mature-animal-companion-druid|mature-animal-companion-ranger|mature-beastmaster-companion%)%(\\s|$%)))][
+          setq(cs_path,if(cand(%q<cs_mature>,u(%!/FUN`COMP`INCREDIBLE)),u(%!/FUN`COMP`FIELD,%0,path,path)))][
+          setq(cs_specn,if(strlen(%q<cs_path>),min(3,words(iter(%q<check_options>,if(regmatch(%i0,^feat:%(specialized-companion-druid|specialized-companion-ranger|specialized-beastmaster-companion%)$),x)))),0))][
+          setq(cs_specs,if(%q<cs_specn>,extract(u(%!/FUN`COMP`FIELD,%0,spec,specs),1,%q<cs_specn>)))]
+        flags: [funsyntax]
+      # An attribute modifier (Player Core): the type's, +1 to Str, Dex, Con and Wis when mature; nimble Dex +2 and the
+      # others +1, savage Str +2 and the others +1; the first specialization Dex +1 and Int +2, then each its own.
+      FUN`COMP`ATTR:
+        value: |-
+          @@(%0 str, dex, con, int, wis or cha; cs_ registers)[
+          add(json_query(%q<cs_data>,extract,$.attr.%0),
+            if(cand(%q<cs_mature>,match(str dex con wis,%0)),1,0),
+            switch(%q<cs_path>,nimble,switch(%0,dex,2,int,0,cha,0,1),savage,switch(%0,str,2,int,0,cha,0,1),0),
+            if(words(%q<cs_specs>),switch(%0,dex,1,int,2,0),0),
+            ladd(0 [iter(%q<cs_specs>,switch(%i0~%0,ambusher~dex,1,bully~str,1,bully~cha,3,daredevil~dex,1,racer~con,1,tracker~wis,1,wrecker~str,1,0))]))]
+        flags: [funsyntax]
+      # A proficiency rank, 0 to 4: trained in unarmed attacks, unarmored defense, saves, Perception, Acrobatics,
+      # Athletics and the type's skill; the advancement and specializations raise them as Player Core lists.
+      FUN`COMP`RANK:
+        value: |-
+          @@(%0 unarmed, defense, perception, a save or a skill; cs_ registers)[
+          switch(%0,
+            unarmed,if(words(%q<cs_specs>),2,1),
+            defense,if(words(setinter(%q<cs_specs>,ambusher daredevil)),2,1),
+            fortitude,if(member(%q<cs_specs>,racer),4,u(%!/FUN`COMP`RANK`SAVE)),
+            reflex,u(%!/FUN`COMP`RANK`SAVE),
+            will,u(%!/FUN`COMP`RANK`SAVE),
+            perception,u(%!/FUN`COMP`RANK`SAVE),
+            u(%!/FUN`COMP`RANK`SKILL,%0))]
+        flags: [funsyntax]
+      FUN`COMP`RANK`SAVE:
+        value: |-
+          if(words(%q<cs_specs>),3,if(%q<cs_mature>,2,1))
+        flags: [funsyntax]
+      FUN`COMP`RANK`SKILL:
+        value: |-
+          @@(%0 a skill; cs_ registers)[
+          setq(crs_type,json_query(%q<cs_data>,extract,$.skill))][
+          setq(crs_r,max(t(match(acrobatics athletics %q<crs_type>,%0)),if(cand(%q<cs_mature>,match(intimidation stealth survival,%0)),add(1,t(match(%q<crs_type>,%0))),0)))][
+          if(cand(strmatch(%q<cs_path>,nimble),strmatch(%0,acrobatics)),setq(crs_r,max(%q<crs_r>,2)))][
+          if(cand(strmatch(%q<cs_path>,savage),strmatch(%0,athletics)),setq(crs_r,max(%q<crs_r>,2)))][
+          null(iter(%q<cs_specs>,switch(%i0~%0,ambusher~stealth,setq(crs_r,if(gte(%q<crs_r>,2),3,2)),bully~athletics,setq(crs_r,if(gte(%q<crs_r>,2),3,2)),bully~intimidation,setq(crs_r,if(gte(%q<crs_r>,2),3,2)),tracker~survival,setq(crs_r,if(gte(%q<crs_r>,2),3,2)),daredevil~acrobatics,setq(crs_r,max(%q<crs_r>,3)),wrecker~athletics,setq(crs_r,max(%q<crs_r>,3)))))]%q<crs_r>
+        flags: [funsyntax]
+      FUN`COMP`PROF:
+        value: |-
+          @@(%0 as FUN`COMP`RANK: the proficiency bonus, ca_level)[
+          if(setr(cp_r,u(%!/FUN`COMP`RANK,%0)),add(%q<ca_level>,mul(2,%q<cp_r>)),0)]
+        flags: [funsyntax]
+      # Mature companions of Medium size or smaller grow one size, and savage ones once more.
+      FUN`COMP`SIZE:
+        value: |-
+          @@(cs_ registers: Foundry's size value)[
+          setqm(csz_l,tiny sm med lg huge grg,csz_i,match(tiny sm med lg huge grg,json_query(%q<cs_data>,extract,$.size)))][
+          if(cand(%q<cs_mature>,lte(%q<csz_i>,3)),setq(csz_i,inc(%q<csz_i>)))][
+          if(cand(strmatch(%q<cs_path>,savage),lte(%q<csz_i>,3)),setq(csz_i,inc(%q<csz_i>)))][
+          extract(%q<csz_l>,%q<csz_i>,1)]
+        flags: [funsyntax]
+      # A Strike as a Foundry melee item: Str to hit, or Dex for finesse; one damage die, two when mature, three when
+      # specialized, plus Str and 2 (nimble) or 3 (savage), doubled when specialized; magical once nimble or savage.
+      FUN`COMP`STRIKE:
+        value: |-
+          @@(%0 a Strike from the type's data, %1 its index; ca_ and cs_ registers)[
+          setq(cst_tr,json_query(%0,extract,$.traits))][
+          setq(cst_bonus,add(if(member(%q<cst_tr>,finesse),max(%q<ca_str>,%q<ca_dex>),%q<ca_str>),u(%!/FUN`COMP`PROF,unarmed)))][
+          setq(cst_flat,add(%q<ca_str>,mul(switch(%q<cs_path>,nimble,2,savage,3,0),if(words(%q<cs_specs>),2,1))))][
+          setq(cst_dmg,[if(words(%q<cs_specs>),3,if(%q<cs_mature>,2,1))][json_query(%0,extract,$.die)][if(gt(%q<cst_flat>,0),+%q<cst_flat>,if(lt(%q<cst_flat>,0),%q<cst_flat>))])][
+          json(object,_id,json(string,companion-%1),name,json(string,capstr(json_query(%0,extract,$.name))),type,"melee",system,json(object,slug,json(string,json_query(%0,extract,$.name)),bonus,json(object,value,%q<cst_bonus>),damageRolls,json(object,base,json(object,damage,json(string,%q<cst_dmg>),damageType,json(string,json_query(%0,extract,$.type)))),traits,json(object,value,\[[iter(squish(%q<cst_tr> unarmed [if(strlen(%q<cs_path>),magical)]),json(string,%i0),%b,\,)]\]),range,null))]
+        flags: [funsyntax]
+      # The companion as a Foundry npc from its type and advancement (Player Core): its level the master's, AC 10 +
+      # Dex + unarmored defense, the type's Hit Points + (6 + Con) a level, saves and skills from its ranks, a racer's
+      # +10-foot status bonus on its land Speed (its first other Speed without one), its Strikes as items.
+      FUN`COMP`ACTOR:
+        value: |-
+          @@(%0 the master; check_ and cs_ registers)[
+          setq(ca_level,%q<check_level>)][
+          null(iter(str dex con int wis cha,setq(ca_%i0,u(%!/FUN`COMP`ATTR,%i0))))][
+          setq(ca_hp,add(json_query(%q<cs_data>,extract,$.hp),mul(add(6,%q<ca_con>),%q<ca_level>)))][
+          setqm(ca_speed,json_query(%q<cs_data>,extract,$.speed),ca_racer,t(member(%q<cs_specs>,racer)))][
+          setq(ca_land,firstof(json_query(%q<ca_speed>,extract,$.land),0))][
+          setq(ca_others,trim(squish(json_map(%!/FUN`COMP`SPEED,%q<ca_speed>,%b))))][
+          if(%q<ca_racer>,if(%q<ca_land>,setq(ca_land,add(%q<ca_land>,10)),if(words(%q<ca_others>),setq(ca_others,trim([first(%q<ca_others>,~)]~[add(10,rest(first(%q<ca_others>),~))] [rest(%q<ca_others>)])))))][
+          setq(ca_skills,json(object))][null(iter(get({{core}}/DATA`CHOICES`SKILLS),setq(ca_skills,json_mod(%q<ca_skills>,set,$.%i0,json(object,base,add(r(ca_[u({{core}}/FUN`STAT`ATTRIBUTE,%i0)]),u(%!/FUN`COMP`PROF,%i0)),rank,u(%!/FUN`COMP`RANK,%i0))))))][
+          setq(ca_strikes,json_query(%q<cs_data>,extract,$.strikes))][
+          json(object,
+            name,json(string,%q<cs_name>),
+            type,"npc",
+            items,\[[iter(lnum(json_query(%q<ca_strikes>,size)),u(%!/FUN`COMP`STRIKE,json_query(%q<ca_strikes>,extract,$\[%i0\]),%i0),%b,\,)]\],
+            system,json(object,
+              abilities,json(object,str,json(object,mod,%q<ca_str>),dex,json(object,mod,%q<ca_dex>),con,json(object,mod,%q<ca_con>),int,json(object,mod,%q<ca_int>),wis,json(object,mod,%q<ca_wis>),cha,json(object,mod,%q<ca_cha>)),
+              attributes,json(object,ac,json(object,value,add(10,%q<ca_dex>,u(%!/FUN`COMP`PROF,defense))),hp,json(object,max,%q<ca_hp>,value,%q<ca_hp>,temp,0),speed,json(object,value,%q<ca_land>,otherSpeeds,\[[iter(%q<ca_others>,json(object,type,json(string,first(%i0,~)),value,rest(%i0,~)),%b,\,)]\]),resistances,\[\]),
+              details,json(object,level,json(object,value,%q<ca_level>)),
+              perception,json(object,mod,add(%q<ca_wis>,u(%!/FUN`COMP`PROF,perception)),senses,\[[iter(json_query(%q<cs_data>,extract,$.senses),json(object,type,json(string,first(%i0,~)),acuity,json(string,firstof(elements(%i0,2,~),precise)),range,firstof(elements(%i0,3,~),null)),%b,\,)]\]),
+              saves,json(object,fortitude,json(object,value,add(%q<ca_con>,u(%!/FUN`COMP`PROF,fortitude))),reflex,json(object,value,add(%q<ca_dex>,u(%!/FUN`COMP`PROF,reflex))),will,json(object,value,add(%q<ca_wis>,u(%!/FUN`COMP`PROF,will)))),
+              skills,%q<ca_skills>,
+              traits,json(object,rarity,json(string,json_query(%q<cs_data>,extract,$.rarity)),size,json(object,value,json(string,u(%!/FUN`COMP`SIZE))),value,\["animal"\,"minion"\])))]
+        flags: [funsyntax]
+      FUN`COMP`SPEED:
+        value: |-
+          if(strmatch(%2,land),,%2~%1)
+        flags: [funsyntax]
+      FUN`COMP`SHOW:
+        value: |-
+          @@(%0 the master; check_ and cs_ registers)[
+          if(not(strlen(%q<cs_type>)),notice(PF2E,[name(%0)]'s animal companion has no type yet: +companion/type <animal> chooses one of [itemize(iter(get({{core}}/DATA`COMPANION`TYPES),json_query(get({{core}}/DATA`COMPANION`[ucstr(%i0)]),extract,$.name),%b,|),|)].,warn),
+            [setq(csh,u(%!/FUN`COMP`ACTOR,%0))][
+            box(fields(,
+              Type,[json_query(%q<cs_data>,extract,$.name)]%, [firstof(%q<cs_path>,if(%q<cs_mature>,mature,young))][if(words(%q<cs_specs>),%, specialized: [itemize(%q<cs_specs>)])],
+              Level,%q<ca_level>,
+              Size,u(%!/FUN`COMP`SIZENAME,json_query(%q<csh>,extract,$.system.traits.size.value)),
+              HP,json_query(%q<csh>,extract,$.system.attributes.hp.max),
+              AC,json_query(%q<csh>,extract,$.system.attributes.ac.value),
+              Saves,Fortitude [u(%!/FUN`SHOW`SIGNED,json_query(%q<csh>,extract,$.system.saves.fortitude.value))]%, Reflex [u(%!/FUN`SHOW`SIGNED,json_query(%q<csh>,extract,$.system.saves.reflex.value))]%, Will [u(%!/FUN`SHOW`SIGNED,json_query(%q<csh>,extract,$.system.saves.will.value))],
+              Perception,u(%!/FUN`SHOW`SIGNED,json_query(%q<csh>,extract,$.system.perception.mod)),
+              Skills,itemize(trim(squish(iter(get({{core}}/DATA`CHOICES`SKILLS),if(json_query(%q<csh>,extract,$.system.skills.%i0.rank),[capstr(%i0)] [u(%!/FUN`SHOW`SIGNED,json_query(%q<csh>,extract,$.system.skills.%i0.base))]),%b,|),|),b,|),|),
+              Attributes,iter(str dex con int wis cha,[capstr(%i0)] [u(%!/FUN`SHOW`SIGNED,r(ca_%i0))],%b,%,%b),
+              Speed,itemize(trim([if(%q<ca_land>,%q<ca_land> feet)][iter(%q<ca_others>,|[first(%i0,~)] [rest(%i0,~)] feet,%b,)],b,|),|),
+              Senses,json_query(%q<cs_data>,extract,$.sensetext),
+              Strikes,itemize(iter(lnum(json_query(json_query(%q<csh>,extract,$.items),size)),[setq(csi,json_query(%q<csh>,extract,$.items\[%i0\]))][json_query(%q<csi>,extract,$.name)] [u(%!/FUN`SHOW`SIGNED,json_query(%q<csi>,extract,$.system.bonus.value))] %([json_query(%q<csi>,extract,$.system.damageRolls.base.damage)] [json_query(%q<csi>,extract,$.system.damageRolls.base.damageType)][if(strlen(setr(csi_t,remove(json_map({{core}}/FUN`RULE`SELECTOR,json_query(%q<csi>,extract,$.system.traits.value),%b),unarmed))),; %q<csi_t>)]%),%b,|),|),
+              Support,json_query(%q<cs_data>,extract,$.support),
+              Maneuver,if(strlen(%q<cs_path>),[json_query(%q<cs_data>,extract,$.maneuver)] %([switch(setr(csm_a,json_query(%q<cs_data>,extract,$.mactions)),1,1 action,%q<csm_a> actions)]%): [json_query(%q<cs_data>,extract,$.mtext)],learned once nimble or savage)),
+              %q<cs_name>%, [name(%0)]'s animal companion)])]
+        flags: [funsyntax]
+      FUN`COMP`SIZENAME:
+        value: |-
+          switch(%0,tiny,Tiny,sm,Small,med,Medium,lg,Large,huge,Huge,grg,Gargantuan,%0)
+        flags: [funsyntax]
+      # The companion as an encounter combatant, or #-1~why.
+      FUN`COMP`COMBATANT:
+        value: |-
+          @@(%0 the master)[
+          setqm(sheet_target,%0,sheet_ledger,u(%!/FUN`LEDGER`OF,%0))][
+          u({{core}}/FUN`CHECK`PREPARE,%q<sheet_ledger>)][
+          u(%!/FUN`COMP`STATE,%0)][
+          switch(1,
+            not(u(%!/FUN`COMP`HAS)),#-1~[name(%0)] has no animal companion.,
+            not(strlen(%q<cs_type>)),#-1~[name(%0)]'s animal companion has no type yet: +companion/type chooses it.,
+            [setq(cc_actor,u(%!/FUN`COMP`ACTOR,%0))][
+            json(object,name,json(string,%q<cs_name>),kind,"npc",pack,"minion",id,json(string,C[after(num(%0),#)]),actor,%q<cc_actor>,master,json(string,objid(%0)),abil,"",abch,json(object),side,"pc",adj,0,hazard,0,simple,1,hp,%q<ca_hp>,max,%q<ca_hp>,temp,0,init,null,conds,json(object),dur,json(object),pers,json(object),map,0,down,0)])]
+        flags: [funsyntax]
       CMD`RITUAL:
         value: |-
           $(?is)^\+ritual(?\: +(.*))?$:think setq(cmd_args,trim(%1)); think u(%!/FUN`COMMAND`TARGET); @include %!/INC`TARGET`VIEW; think u({{core}}/FUN`CHECK`PREPARE,%q<sheet_ledger>); @assert strlen(%q<cmd_rest>)=@pemit %#=notice(PF2E,u(%!/FUN`RITUAL`KNOWN),warn); @include %!/INC`RITUAL
@@ -6228,7 +6446,7 @@ objects:
       # +enc/add <creature>[=<count>] from the creature packs, or +enc/add <player>.
       INC`ENC`ADD:
         value: |-
-          @include %!/INC`ENC`NEEDGM; think setqm(add_name,trim(before(%q<cmd_args>,=)),add_opts,lcstr(trim(after(%q<cmd_args>,=)))); think setq(add_adj,switch(1,cor(member(%q<add_opts>,elite),match(elite,first(%q<add_name>))),2,cor(member(%q<add_opts>,weak),match(weak,first(%q<add_name>))),-2,0)); think setqm(add_count,firstof(remove(remove(%q<add_opts>,elite),weak),1),add_name,if(match(elite weak,first(%q<add_name>)),rest(%q<add_name>),%q<add_name>)); @assert cand(isint(%q<add_count>),gte(%q<add_count>,1),lte(%q<add_count>,12))=@pemit %#=notice(PF2E,Add from 1 to 12 at a time%, such as +enc/add Goblin Warrior=3%, or +enc/add Goblin Warrior=2 elite.,warn); @assert not(cand(hastype(setr(add_player,pmatch(%q<add_name>)),player),strlen(u(%!/FUN`ENC`FIND,%q<add_name>))))=@pemit %#=notice(PF2E,[name(%q<add_player>)] is already in the encounter.,warn); @break regmatchi(%q<add_name>,^%(.+%)/familiar$,0 add_master)={@include %!/INC`ENC`ADD`FAMILIAR}; @break hastype(%q<add_player>,player)={think u(%!/FUN`ENC`JOIN,%q<add_player>); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,[name(%q<add_player>)] joins the encounter.,ok)}; think setq(add_found,u(%!/FUN`ENC`CREATURE,%q<add_name>)); @assert strlen(%q<add_found>)=@pemit %#=notice(PF2E,There is no creature or hazard called %q<add_name> in a book the game uses. +enc/bestiary <name> searches.,warn); think setq(add_item,u({{core}}/FUN`ITEM`GET,first(%q<add_found>,~),rest(%q<add_found>,~))); @assert cor(not(%q<add_adj>),strmatch(json_query(%q<add_item>,extract,$.type),npc))=@pemit %#=notice(PF2E,Elite and weak are for creatures%, not hazards.,warn); think null(iter(lnum(1,%q<add_count>),u(%!/FUN`ENC`NPC,first(%q<add_found>,~),rest(%q<add_found>,~),if(%q<add_adj>,%q<add_adj>)))); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,%N adds [if(gt(%q<add_count>,1),%q<add_count>%b)][switch(%q<add_adj>,2,elite%b,-2,weak%b)][json_query(%q<add_item>,extract,$.name)] to the encounter.,ok)
+          @include %!/INC`ENC`NEEDGM; think setqm(add_name,trim(before(%q<cmd_args>,=)),add_opts,lcstr(trim(after(%q<cmd_args>,=)))); think setq(add_adj,switch(1,cor(member(%q<add_opts>,elite),match(elite,first(%q<add_name>))),2,cor(member(%q<add_opts>,weak),match(weak,first(%q<add_name>))),-2,0)); think setqm(add_count,firstof(remove(remove(%q<add_opts>,elite),weak),1),add_name,if(match(elite weak,first(%q<add_name>)),rest(%q<add_name>),%q<add_name>)); @assert cand(isint(%q<add_count>),gte(%q<add_count>,1),lte(%q<add_count>,12))=@pemit %#=notice(PF2E,Add from 1 to 12 at a time%, such as +enc/add Goblin Warrior=3%, or +enc/add Goblin Warrior=2 elite.,warn); @assert not(cand(hastype(setr(add_player,pmatch(%q<add_name>)),player),strlen(u(%!/FUN`ENC`FIND,%q<add_name>))))=@pemit %#=notice(PF2E,[name(%q<add_player>)] is already in the encounter.,warn); @break regmatchi(%q<add_name>,^%(.+%)/%(familiar|companion%)$,0 add_master add_role)={@include %!/INC`ENC`ADD`MINION}; @break hastype(%q<add_player>,player)={think u(%!/FUN`ENC`JOIN,%q<add_player>); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,[name(%q<add_player>)] joins the encounter.,ok)}; think setq(add_found,u(%!/FUN`ENC`CREATURE,%q<add_name>)); @assert strlen(%q<add_found>)=@pemit %#=notice(PF2E,There is no creature or hazard called %q<add_name> in a book the game uses. +enc/bestiary <name> searches.,warn); think setq(add_item,u({{core}}/FUN`ITEM`GET,first(%q<add_found>,~),rest(%q<add_found>,~))); @assert cor(not(%q<add_adj>),strmatch(json_query(%q<add_item>,extract,$.type),npc))=@pemit %#=notice(PF2E,Elite and weak are for creatures%, not hazards.,warn); think null(iter(lnum(1,%q<add_count>),u(%!/FUN`ENC`NPC,first(%q<add_found>,~),rest(%q<add_found>,~),if(%q<add_adj>,%q<add_adj>)))); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,%N adds [if(gt(%q<add_count>,1),%q<add_count>%b)][switch(%q<add_adj>,2,elite%b,-2,weak%b)][json_query(%q<add_item>,extract,$.name)] to the encounter.,ok)
         flags: [cmdsyntax]
       INC`ENC`JOIN:
         value: |-
@@ -6250,11 +6468,12 @@ objects:
           @@(%0 a name)[
           if(words(setr(named_same,iter(u(FUN`ENC`INDEXES),if(strmatch(before(u(FUN`ENC`C,%i0,name),%b#),%0),%i0)))),%0 #[inc(words(%q<named_same>))],%0)]
         flags: [funsyntax]
-      # +enc/add <player>/familiar: the familiar joins on its master's side as a minion, with its statistics and
-      # today's abilities as they are now. It acts on its master's turn, two actions.
-      INC`ENC`ADD`FAMILIAR:
+      # +enc/add <player>/familiar or <player>/companion: the familiar or animal companion joins on its master's side
+      # as a minion, with its statistics (and a familiar's abilities for the day) as they are now. It acts on its
+      # master's turn, two actions.
+      INC`ENC`ADD`MINION:
         value: |-
-          think setq(add_master,pmatch(trim(%q<add_master>))); @assert hastype(%q<add_master>,player)=@pemit %#=notice(PF2E,There is no player called [before(%q<add_name>,/)].,warn); think setq(add_fam,u({{commands}}/FUN`FAM`COMBATANT,%q<add_master>)); @assert not(strmatch(%q<add_fam>,#-1*))=@pemit %#=notice(PF2E,rest(%q<add_fam>,~),warn); @assert strmatch(json_query(%q<add_fam>,type),object)=@pemit %#=notice(PF2E,[name(%q<add_master>)]'s familiar could not be read: %q<add_fam>,error); @assert not(words(iter(u(%!/FUN`ENC`INDEXES),if(strmatch(u(%!/FUN`ENC`C,%i0,master),objid(%q<add_master>)),%i0))))=@pemit %#=notice(PF2E,[json_query(%q<add_fam>,extract,$.name)] is already in the encounter.,warn); think u(%!/FUN`ENC`ADDC,%q<add_fam>); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,[json_query(%q<add_fam>,extract,$.name)]%, [name(%q<add_master>)]'s familiar%, joins the encounter.,ok)
+          think setqm(add_master,pmatch(trim(%q<add_master>)),add_role,lcstr(%q<add_role>)); @assert hastype(%q<add_master>,player)=@pemit %#=notice(PF2E,There is no player called [before(%q<add_name>,/)].,warn); think setq(add_fam,u({{commands}}/FUN`[if(strmatch(%q<add_role>,familiar),FAM,COMP)]`COMBATANT,%q<add_master>)); @assert not(strmatch(%q<add_fam>,#-1*))=@pemit %#=notice(PF2E,rest(%q<add_fam>,~),warn); @assert strmatch(json_query(%q<add_fam>,type),object)=@pemit %#=notice(PF2E,[name(%q<add_master>)]'s %q<add_role> could not be read: %q<add_fam>,error); @assert not(words(iter(u(%!/FUN`ENC`INDEXES),if(strmatch(u(%!/FUN`ENC`C,%i0,id),json_query(%q<add_fam>,extract,$.id)),%i0))))=@pemit %#=notice(PF2E,[json_query(%q<add_fam>,extract,$.name)] is already in the encounter.,warn); think u(%!/FUN`ENC`ADDC,%q<add_fam>); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,[json_query(%q<add_fam>,extract,$.name)]%, [name(%q<add_master>)]'s [if(strmatch(%q<add_role>,familiar),familiar,animal companion)]%, joins the encounter.,ok)
         flags: [cmdsyntax]
       FUN`ENC`ADDC:
         value: |-
@@ -6475,7 +6694,7 @@ objects:
         value: |-
           @@(the prepared combatant's Strike names, separated by |)[
           if(strlen(%q<act_npc>),
-            iter(u(FUN`ACT`NPC`MELEE),json_query(get(%q<npc_store>/%i0),extract,$.name),%b,|),
+            iter(u(FUN`ACT`NPC`MELEE),json_query(u(FUN`ACT`NPC`GET,%i0),extract,$.name),%b,|),
             iter(u({{core}}/FUN`CHECK`STRIKES),json_query(%i0,extract,$.name),|,|))]
         flags: [funsyntax]
       FUN`ACT`PC`PICK:
@@ -6488,7 +6707,7 @@ objects:
         value: |-
           @@(%0 a name pattern or nothing)[
           setq(pick_all,u(FUN`ACT`NPC`MELEE))][
-          if(strlen(%0),first(iter(%q<pick_all>,if(strmatch(json_query(get(%q<npc_store>/%i0),extract,$.name),%0),%i0))),%q<pick_all>)]
+          if(strlen(%0),first(iter(%q<pick_all>,if(strmatch(json_query(u(FUN`ACT`NPC`GET,%i0),extract,$.name),%0),%i0))),%q<pick_all>)]
         flags: [funsyntax]
       FUN`ACT`PC`STRIKE:
         value: |-
@@ -6507,19 +6726,26 @@ objects:
           @@(%0 a Strike from FUN`ACT`STRIKES: 1 when it is ranged)[
           setq(sr_src,last(%0,|))][
           if(strmatch(%q<sr_src>,npc:*),
-            gt(firstof(json_query(get(%q<npc_store>/[after(%q<sr_src>,npc:)]),extract,$.system.range.increment),0),0),
+            gt(firstof(json_query(u(FUN`ACT`NPC`GET,after(%q<sr_src>,npc:)),extract,$.system.range.increment),0),0),
             gt(firstof(json_query(%q<sr_src>,extract,$.range),0),0))]
         flags: [funsyntax]
       FUN`ACT`NPC`MELEE:
         value: |-
           @@(the creature's melee items, the Strikes in Foundry's creature data)[
           setq(npc_store,u({{core}}/DATA`PACK`[ucstr(json_query(%q<enc>,extract,$.c\[%q<act_at>\].pack))]))][
-          iter(lattr(%q<npc_store>/ITEM`[ucstr(json_query(%q<act_npc>,extract,$._id))]`EMBED`*),if(strmatch(json_query(get(%q<npc_store>/%i0),extract,$.type),melee),%i0))]
+          if(strmatch(json_query(%q<enc>,extract,$.c\[%q<act_at>\].pack),minion),
+            iter(lnum(firstof(json_query(json_query(%q<act_npc>,extract,$.items),size),0)),item:%i0),
+            iter(lattr(%q<npc_store>/ITEM`[ucstr(json_query(%q<act_npc>,extract,$._id))]`EMBED`*),if(strmatch(json_query(get(%q<npc_store>/%i0),extract,$.type),melee),%i0)))]
+        flags: [funsyntax]
+      FUN`ACT`NPC`GET:
+        value: |-
+          @@(%0 from FUN`ACT`NPC`MELEE: the melee item, a creature's from its pack, a minion's from its statistics)[
+          if(strmatch(%0,item:*),json_query(%q<act_npc>,extract,$.items\[[after(%0,item:)]\]),get(%q<npc_store>/%0))]
         flags: [funsyntax]
       FUN`ACT`NPC`STRIKE:
         value: |-
           @@(%0 a melee item's attribute)[
-          setq(strike_item,get(%q<npc_store>/%0))][
+          setq(strike_item,u(FUN`ACT`NPC`GET,%0))][
           setq(strike_traits,json_map({{core}}/FUN`RULE`SELECTOR,firstof(json_query(%q<strike_item>,extract,$.system.traits.value),json(array)),%b))][
           setq(strike_ranged,cor(regmatch(%q<strike_traits>,\\brange),gt(firstof(json_query(%q<strike_item>,extract,$.system.range.increment),0),0)))][
           setq(strike_attack,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`MODS,untyped~[add(sub(%q<act_adj>,%q<act_pwol>),firstof(json_query(%q<strike_item>,extract,$.system.bonus.value),0))]~base~0,attack attack-roll strike-attack-roll all check [if(%q<strike_ranged>,ranged,melee)]-strike-attack-roll,)))][
@@ -6882,7 +7108,7 @@ objects:
           setq(act_dmgopts,%q<act_tgtopts> check:outcome:[extract(critical-failure failure success critical-success,inc(%0),1)])][
           setq(act_src,elements(%q<act_strike>,10,|))][
           if(strmatch(%q<act_src>,npc:*),
-            u({{core}}/FUN`DAMAGE`NPC,get(%q<npc_store>/[after(%q<act_src>,npc:)]),%q<act_dmgopts>,%q<act_adj>),
+            u({{core}}/FUN`DAMAGE`NPC,u(FUN`ACT`NPC`GET,after(%q<act_src>,npc:)),%q<act_dmgopts>,%q<act_adj>),
             [u({{core}}/FUN`STRIKE`ATTACK,%q<act_src>)][u({{core}}/FUN`DAMAGE`STRIKE,%q<act_src>,%q<act_dmgopts>)])][
           u({{core}}/FUN`DAMAGE`FORMULA,%0)][
           u(FUN`ACT`DAMAGE`ROLL)]
@@ -7997,7 +8223,7 @@ objects:
       FUN`ACT`ATTACKFX:
         value: |-
           @@(%0 the Strike's degree, after FUN`ACT`STRIKE`RESOLVE; rune_src npc:<the melee item's attribute>)[
-          if(cand(gte(%0,2),strmatch(%q<rune_src>,npc:*)),
+          if(cand(gte(%0,2),strmatch(%q<rune_src>,npc:*),not(strmatch(%q<rune_src>,npc:item:*))),
             [setqm(afx_store,u({{core}}/DATA`PACK`[ucstr(json_query(%q<enc>,extract,$.c\[%q<act_at>\].pack))]),afx_melee,after(%q<rune_src>,npc:))][
             setq(afx_list,json_map(%!/FUN`JSON`ITEM,firstof(json_query(get(%q<afx_store>/%q<afx_melee>),extract,$.system.attackEffects.value),json(array)),%b))][
             iter(%q<afx_list>,u(FUN`ACT`ATTACKFX`ONE,edit(%i0,",),before(%q<afx_melee>,`EMBED`)),%b,)])]
@@ -8599,8 +8825,8 @@ objects:
       FUN`SHOW`THREAT:
         value: |-
           @@(the threat, or a hint without characters and creatures: sets threat_pcs, threat_level and threat_xp)[
-          setq(threat_pcs,iter(u(FUN`ENC`INDEXES),if(strmatch(u(FUN`ENC`C,%i0,side),pc),%i0)))][
-          setq(threat_foes,iter(u(FUN`ENC`INDEXES),if(strmatch(u(FUN`ENC`C,%i0,kind),npc),%i0)))][
+          setq(threat_pcs,iter(u(FUN`ENC`INDEXES),if(cand(strmatch(u(FUN`ENC`C,%i0,side),pc),not(strlen(u(FUN`ENC`C,%i0,master)))),%i0)))][
+          setq(threat_foes,iter(u(FUN`ENC`INDEXES),if(cand(strmatch(u(FUN`ENC`C,%i0,kind),npc),not(strlen(u(FUN`ENC`C,%i0,master)))),%i0)))][
           setq(threat_level,if(words(%q<threat_pcs>),lmax(iter(%q<threat_pcs>,u(FUN`ENC`PCLEVEL,%i0)))))][
           setq(threat_xp,ladd(0 [iter(%q<threat_foes>,u(FUN`ENC`XP,%i0,%q<threat_level>))]))][
           if(cand(words(%q<threat_pcs>),words(%q<threat_foes>)),
@@ -8687,6 +8913,7 @@ objects:
         - `+sheet` shows it and `+check` rolls against it: `+help pf2e sheet`, `+help pf2e check`. `+toggle` turns your situational feats on and off: `+help pf2e toggle`.
         - `+hero` spends Hero Points on a reroll or to avoid death: `+help pf2e hero`.
         - `+familiar` shows your familiar and chooses its abilities each day: `+help pf2e familiar`.
+        - `+companion` shows your animal companion and chooses its type and advancement: `+help pf2e companion`.
         - `+spells`, `+prepare` and `+cast` are for casters, `+rest` begins a new day: `+help pf2e spells`, `+help pf2e day`.
         - `+deity` lists the game's deities, which clerics and champions follow: `+help pf2e deity`.
         - `+alchemy` makes alchemical items from your formula book: `+help pf2e alchemy`.
@@ -8928,7 +9155,7 @@ objects:
         Building an encounter. `+enc/start` begins one in the room, and you run it; staff can run any.
 
         - `+enc/bestiary <name, trait or hazard>\[=<levels>\]` lists the creatures and hazards in the game's books with their levels. Once characters have joined, it adds the XP each is worth against them and their budget. `=5` is one level, `=2-4` a range.
-        - `+enc/add <creature>\[=<count>\]\[ elite or weak\]` adds up to 12 at a time. Elite gives +2 to AC, attacks, damage, saves, Perception and skills, more Hit Points by level, and a level more for XP; weak the opposite. `+enc/add Elite Goblin Warrior` works too. `+enc/add <player>/familiar` adds a character's familiar (`+help pf2e familiar`).
+        - `+enc/add <creature>\[=<count>\]\[ elite or weak\]` adds up to 12 at a time. Elite gives +2 to AC, attacks, damage, saves, Perception and skills, more Hit Points by level, and a level more for XP; weak the opposite. `+enc/add Elite Goblin Warrior` works too. `+enc/add <player>/familiar` and `+enc/add <player>/companion` add a character's familiar or animal companion (`+help pf2e familiar`, `+help pf2e companion`).
         - `+enc/add <hazard>` adds a hazard. A complex hazard rolls Stealth for initiative and takes turns; a simple hazard stays out of the turn order. Hardness comes off damage to either.
         - `+enc/add <player>` adds a character, and `+enc/remove <who>` takes anyone out. When the one removed was acting, the next turn starts.
         - `+enc` shows the threat, from GM Core's XP budget: each creature's and hazard's XP by its level against the characters' highest, against the budget for that many characters.
@@ -9033,6 +9260,23 @@ objects:
         ```
       SEE`PF2E`FAMILIAR: |-
         pf2e build|pf2e enc
+      HELP`PF2E`COMPANION: |-
+        `+companion` shows your animal companion, when a feat such as Animal Companion gives you one: its statistics from Player Core, worked out from its type, your level and its advancement.
+
+        - `+companion/type <animal>` chooses its type, once: Ape, Badger, Bat, Bear, Bird, Boar, Cat, Crocodile, Dromaeosaur, Horse, Scorpion, Shark, Snake or Wolf. The Arboreal Sapling and Riding Drake are uncommon, and staff grant them. A new companion takes a week of downtime, so staff change the type.
+        - `+companion/name <name>` names it.
+        - A Mature Animal Companion feat makes it mature. With an Incredible Companion feat, `+companion/path nimble` or `+companion/path savage` chooses its path, and with each Specialized Companion feat `+companion/specialize <specialization>, ...` adds a specialization: ambusher, bully, daredevil, racer, tracker or wrecker. Name the ones it has with the new one. Staff change a choice made.
+        - Its support benefit and advanced maneuver show in full. Nimble and savage attacks are magical.
+        - Each choice is an entry in the companion's own ledger on your character.
+        - In an encounter the GM adds it with `+enc/add <your name>/companion`. It is a minion on your side and acts on your turn, two actions. Its Strikes are listed by `+enc/look`.
+
+        Example:
+
+        `+companion/type bear`
+
+        Output: `\[PF2E\] Done: Rook's animal companion is a Bear.`
+      SEE`PF2E`COMPANION: |-
+        pf2e familiar|pf2e enc
       SEE`PF2E`RITUAL: |-
         pf2e spells|pf2e cast
       HELP`PF2E`CAST: |-
