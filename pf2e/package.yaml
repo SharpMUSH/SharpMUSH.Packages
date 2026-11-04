@@ -6122,7 +6122,7 @@ objects:
               u(%!/WEB`SECTION,Statistics,2,1,u(%!/WEB`TABLE,stats,Statistic~name Rank~rank Modifier~mod))]%r[
               u(%!/WEB`SECTION,Strikes,3,1,u(%!/WEB`TABLE,strikes,Strike~strike Attack~attack MAP~map Damage~damage Traits~traits))]%r[
               u(%!/WEB`SECTION,Belongings,4,1,u(%!/WEB`KEYS,Languages|Money)%r[u(%!/WEB`TABLE,gear,Item~item Count~count Where~where)])]%r[
-              u(%!/WEB`SECTION,Spells and feats,5,1,u(%!/WEB`KEYS,Spells known|Feats and features|Actions|Conditions))],%r)))]
+              u(%!/WEB`SECTION,Spells and feats,5,1,u(%!/WEB`KEYS,Spells known|Feats and features|Actions|Conditions|Not applied yet))],%r)))]
         flags: [funsyntax]
       DATA`WEB`DOCUMENT: |-
         {"kind":"view","schema_version":1,"title":"","pages":[{"key":"sheet","title":"","order":1,"sections":[]}],"actions":{}}
@@ -6185,7 +6185,8 @@ objects:
             u(%!/WEB`VALUE,Spells known,%q<show_spells>)]%r[
             u(%!/WEB`VALUE,Feats and features,itemize(%q<show_feats>,|))]%r[
             u(%!/WEB`VALUE,Actions,itemize(%q<show_actions>,|))]%r[
-            u(%!/WEB`VALUE,Conditions,itemize(%q<show_conditions>,|))],
+            u(%!/WEB`VALUE,Conditions,itemize(%q<show_conditions>,|))]%r[
+            u(%!/WEB`VALUE,Not applied yet,itemize(%q<check_unapplied>,|))],
             json(object),%r)]
         flags: [funsyntax]
       WEB`MERGE:
