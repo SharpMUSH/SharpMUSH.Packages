@@ -1,9 +1,9 @@
 format: "1.20"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.10.13"
+version: "0.10.14"
 authors: [SharpMUSH]
-description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, downtime (+downtime: Earn Income, Crafting, Learn a Spell, Retraining), and audited awards with levels and runes (+pf2e/award)."
+description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, downtime (+downtime: Earn Income, Crafting, Learn a Spell, Retraining), loot, stashes and shops with unidentified magic items (+loot, +identify), and audited awards with levels and runes (+pf2e/award)."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [pf2e, pathfinder, rules, dice]
@@ -113,7 +113,7 @@ objects:
       # ledger read again costs a few hundred function calls. The key is the ledger with the package's
       # version, the books and CACHE`STAMP, which the updater and the deity table change. CACHE lists
       # the keys oldest first; past DATA`CACHE`KEEP the oldest goes.
-      DATA`CACHE`VERSION: "0.10.13"
+      DATA`CACHE`VERSION: "0.10.14"
       DATA`CACHE`KEEP: 200
       DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_itemalts check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_shieldrules check_bulkrules check_bulk check_bulk_enc check_bulk_max check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
       # The ItemAlteration properties the core applies, by the kind of item they reach.
@@ -1019,6 +1019,7 @@ objects:
             ritual, ucstr(json_query(%1,extract,$.id)),
             formula, ucstr(json_query(%1,extract,$.id)),
             learned, ucstr(json_query(%1,extract,$.id)),
+            myst, ucstr(json_query(%1,extract,$.id)),
             choice, [json_query(%1,extract,$.entry)]|[json_query(%1,extract,$.flag)],
             rune, [ucstr(json_query(%1,extract,$.id))]|[json_query(%1,extract,$.rune)],
             language, json_query(%1,extract,$.name),
@@ -1034,6 +1035,7 @@ objects:
             money, json_query(%1,extract,$.cp),
             xp, json_query(%1,extract,$.xp),
             rune, json_query(%1,extract,$.value),
+            myst, json_query(%1,extract,$.state),
             hp, json_query(%1,extract,$.value),
             signature, json_query(%1,extract,$.rank),
             innate, firstof(json_query(%1,extract,$.per),0),
@@ -1172,9 +1174,48 @@ objects:
       # An item of gear as the sheet has it: the equipment item with the runes etched onto it since.
       FUN`ITEM`RUNED:
         value: |-
-          @@(%0 an equipment id; check_entries)[
+          @@(%0 an equipment id; check_entries: named as the character knows it)[
           setqm(runed_item,u(FUN`ITEM`GET,equipment,%0),runed_runes,u(FUN`SHEET`RUNES,%q<check_entries>,%0))][
-          if(strmatch(%q<runed_runes>,{}),%q<runed_item>,json_mod(%q<runed_item>,patch,json(object,system,json(object,runes,%q<runed_runes>))))]
+          setq(runed_item,if(strmatch(%q<runed_runes>,{}),%q<runed_item>,json_mod(%q<runed_item>,patch,json(object,system,json(object,runes,%q<runed_runes>)))))][
+          if(strlen(u(FUN`ITEM`MYST,%0)),json_mod(%q<runed_item>,set,$.name,json(string,u(FUN`ITEM`SHOWN,%0))),%q<runed_item>)]
+        flags: [funsyntax]
+      # Identification. A myst entry holds what the character knows of an item of gear: u while they have
+      # not identified it, k once they have, or another item's id when they misidentified it as that item.
+      FUN`ITEM`MYST:
+        value: |-
+          @@(%0 an equipment id; check_entries: u, another item's id, or nothing when the character knows it)[
+          setq(myst_state,u(FUN`SHEET`VALUE,%q<check_entries>,myst,ucstr(%0)))][
+          if(strmatch(%q<myst_state>,k),,%q<myst_state>)]
+        flags: [funsyntax]
+      FUN`ITEM`SHOWN:
+        value: |-
+          @@(%0 an equipment id; check_entries: its name as the character knows it)[
+          setq(shown_state,u(FUN`ITEM`MYST,%0))][
+          case(1,
+            not(strlen(%q<shown_state>)), json_query(u(FUN`ITEM`GET,equipment,%0),extract,$.name),
+            strmatch(%q<shown_state>,u), u(FUN`ITEM`UNUSUAL,u(FUN`ITEM`GET,equipment,%0)),
+            json_query(u(FUN`ITEM`GET,equipment,%q<shown_state>),extract,$.name))]
+        flags: [funsyntax]
+      # Foundry's name for an item no one has identified: Unusual and what it looks like.
+      FUN`ITEM`UNUSUAL:
+        value: |-
+          @@(%0 an item: Unusual Longsword, Unusual Ring, Unusual Liquid)[
+          setqm(unu_slug,u(FUN`ITEM`SLUG,%0),unu_cat,json_query(%0,extract,$.system.category),unu_traits,json_map(me/FUN`RULE`SELECTOR,firstof(json_query(%0,extract,$.system.traits.value),json(array)),%b))][
+          Unusual [switch(json_query(%0,extract,$.type),
+            weapon, firstof(u(FUN`ITEM`TITLE,json_query(%0,extract,$.system.baseItem)),u(FUN`ITEM`TITLE,json_query(%0,extract,$.system.group)),Weapon),
+            armor, firstof(u(FUN`ITEM`TITLE,json_query(%0,extract,$.system.baseItem)),u(FUN`ITEM`TITLE,json_query(%0,extract,$.system.group)),Armor),
+            shield, firstof(u(FUN`ITEM`TITLE,json_query(%0,extract,$.system.baseItem)),Shield),
+            consumable, case(1,t(match(drug elixir mutagen oil poison potion,%q<unu_cat>)),if(cor(member(%q<unu_traits>,inhaled),member(%q<unu_traits>,contact)),Substance,Liquid),t(match(scroll snare,%q<unu_cat>)),capstr(%q<unu_cat>),Object),
+            equipment, case(1,regmatchi(%q<unu_slug>,%(^|-%)book%(-|$%)),Book,regmatchi(%q<unu_slug>,%(^|-%)ring%(-|$%)),Ring,firstof(grab(Amulet Anklets Armbands Backpack Belt Book Bracers Circlet Cloak Collar Epaulets Eyepiece Garment Gloves Headwear Horseshoes Liquid Mask Necklace Ring Saddle Shoes Substance Tool,capstr(lcstr(if(strmatch(setr(unu_use,json_query(%0,extract,$.system.usage.value)),worn*),mid(%q<unu_use>,4,99),%q<unu_use>)))),Object)),
+            backpack, Container,
+            treasure, Treasure,
+            kit, Kit,
+            Object)]]
+        flags: [funsyntax]
+      FUN`ITEM`TITLE:
+        value: |-
+          @@(%0 a slug such as bastard-sword: Bastard Sword)[
+          if(strlen(%0),iter(edit(%0,-,%b),capstr(%i0)))]
         flags: [funsyntax]
       # A weapon or armor as a check uses it: under ABP, without the runes ABP sets aside.
       FUN`ITEM`ABP:
@@ -4441,7 +4482,7 @@ objects:
       # times the level, every slot, Divine Font and Focus Point back; the spells prepared stay prepared.
       CMD`REST:
         value: |-
-          $(?is)^\+rest$:think setq(cmd_target,); @include %!/INC`TARGET`VIEW; think u(%!/FUN`DAILY`PREPARE); think setq(rest_max,u({{core}}/FUN`CHECK`HP)); think setq(rest_hp,min(%q<rest_max>,add(u(%!/FUN`DAILY`HP,%q<daily>,%q<rest_max>),mul(max(1,u({{core}}/FUN`CHECK`ABILITY,con)),%q<check_level>)))); think setq(daily,json_mod(%q<daily>,patch,json(object,cast,null,spent,null,font,null,focus,null,inn,null,staff,null,fam,null,made,null,res,null,craft,null,sp,null,resolve,null,hp,if(lt(%q<rest_hp>,%q<rest_max>),%q<rest_hp>,null),wounded,if(lt(%q<rest_hp>,%q<rest_max>),firstof(json_query(%q<daily>,extract,$.wounded),null),null)))); @include %!/INC`DAILY`WRITE; @pemit %#=notice(PF2E,You rest and make your daily preparations. Hit Points %q<rest_hp> of %q<rest_max>[if(u({{core}}/FUN`STAMINA),%; Stamina and Resolve Points full)][if(strlen(%q<cast_kind>),%; every spell slot is back)][if(%q<cast_pool>,%; %q<cast_pool> Focus Point[if(neq(%q<cast_pool>,1),s)])].,ok); @oemit %#=notice(PF2E,%N rests.)
+          $(?is)^\+rest$:think setq(cmd_target,); @include %!/INC`TARGET`VIEW; think u(%!/FUN`DAILY`PREPARE); think setq(rest_max,u({{core}}/FUN`CHECK`HP)); think setq(rest_hp,min(%q<rest_max>,add(u(%!/FUN`DAILY`HP,%q<daily>,%q<rest_max>),mul(max(1,u({{core}}/FUN`CHECK`ABILITY,con)),%q<check_level>)))); think setq(daily,json_mod(%q<daily>,patch,json(object,cast,null,spent,null,font,null,focus,null,inn,null,staff,null,fam,null,made,null,res,null,craft,null,sp,null,resolve,null,ident,null,hp,if(lt(%q<rest_hp>,%q<rest_max>),%q<rest_hp>,null),wounded,if(lt(%q<rest_hp>,%q<rest_max>),firstof(json_query(%q<daily>,extract,$.wounded),null),null)))); @include %!/INC`DAILY`WRITE; @pemit %#=notice(PF2E,You rest and make your daily preparations. Hit Points %q<rest_hp> of %q<rest_max>[if(u({{core}}/FUN`STAMINA),%; Stamina and Resolve Points full)][if(strlen(%q<cast_kind>),%; every spell slot is back)][if(%q<cast_pool>,%; %q<cast_pool> Focus Point[if(neq(%q<cast_pool>,1),s)])].,ok); @oemit %#=notice(PF2E,%N rests.)
         flags: [regexp, cmdsyntax]
       # +refocus: Refocus, 10 minutes, a Focus Point back.
       CMD`REFOCUS:
@@ -5147,7 +5188,7 @@ objects:
       # +build/buy <item>[=<count>], +build/sell <item>[=<count>]: gear, paid for from the sheet's money.
       INC`BUILD`BUY:
         value: |-
-          think setqm(build_id,u({{core}}/FUN`ITEM`FIND,equipment,before(%q<cmd_rest>,=)),build_count,firstof(trim(after(%q<cmd_rest>,=)),1)); think if(not(strlen(%q<build_id>)),if(eq(words(setr(build_starts,u({{core}}/FUN`ITEM`STARTS,equipment,trim(before(%q<cmd_rest>,=))))),1),setq(build_id,%q<build_starts>))); @assert strlen(%q<build_id>)=@pemit %#=notice(PF2E,[if(words(%q<build_starts>),Which one: [itemize(iter(extract(%q<build_starts>,1,8),json_query(get(u({{core}}/DATA`PACK`EQUIPMENT)/ITEM`%i0`PREP),extract,$.name),%b,|),|,or)][if(gt(words(%q<build_starts>),8),%, or [sub(words(%q<build_starts>),8)] more)]?,There is no [trim(before(%q<cmd_rest>,=))] from a book the game uses. +build/list gear <text> searches.)],warn); @assert cand(isint(%q<build_count>),gt(%q<build_count>,0))=@pemit %#=notice(PF2E,A count is a whole number above 0.,warn); think setqm(build_item,u({{core}}/FUN`ITEM`GET,equipment,%q<build_id>),build_cost,mul(%q<build_count>,u(%!/FUN`BUILD`PRICE,u({{core}}/FUN`ITEM`GET,equipment,%q<build_id>)))); @assert lte(json_query(%q<build_item>,extract,$.system.level.value),%q<check_level>)=@pemit %#=notice(PF2E,[json_query(%q<build_item>,extract,$.name)] is level [json_query(%q<build_item>,extract,$.system.level.value)]%, above yours.,warn); @assert lte(%q<build_cost>,u(%!/FUN`PURSE`TOTAL,%q<sheet_target>,money))=@pemit %#=notice(PF2E,That costs [u(%!/FUN`SHOW`MONEY,%q<build_cost>)]%, and the sheet has [u(%!/FUN`SHOW`MONEY,u(%!/FUN`PURSE`TOTAL,%q<sheet_target>,money))].,warn); @include %!/INC`BUILD`BEGIN; think setq(build_held,first(u({{core}}/FUN`SHEET`VALUE,%q<check_entries>,gear,%q<build_id>),|)); think setq(entry_json,json(object,kind,"gear",id,json(string,%q<build_id>),qty,add(firstof(%q<build_held>,0),%q<build_count>),where,json(string,setr(build_where,firstof(rest(u({{core}}/FUN`SHEET`VALUE,%q<check_entries>,gear,%q<build_id>),|),u(%!/FUN`BUILD`GEAR`WHERE,%q<build_id>)))),step,"gear")); @include %!/INC`BUILD`PUT; think setqm(purse_kind,money,purse_amount,-%q<build_cost>,purse_reason,Bought [if(gt(%q<build_count>,1),%q<build_count>%b)][json_query(%q<build_item>,extract,$.name)]); @include %!/INC`PURSE`PUT; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)]Bought [if(gt(%q<build_count>,1),%q<build_count>%b)][json_query(%q<build_item>,extract,$.name)] for [u(%!/FUN`SHOW`MONEY,%q<build_cost>)][if(match(worn held,%q<build_where>),%, %q<build_where>)]. [u(%!/FUN`SHOW`MONEY,u(%!/FUN`PURSE`TOTAL,%q<sheet_target>,money))] left.,ok)
+          think setqm(build_id,u({{core}}/FUN`ITEM`FIND,equipment,before(%q<cmd_rest>,=)),build_count,firstof(trim(after(%q<cmd_rest>,=)),1)); think if(not(strlen(%q<build_id>)),if(eq(words(setr(build_starts,u({{core}}/FUN`ITEM`STARTS,equipment,trim(before(%q<cmd_rest>,=))))),1),setq(build_id,%q<build_starts>))); @assert strlen(%q<build_id>)=@pemit %#=notice(PF2E,[if(words(%q<build_starts>),Which one: [itemize(iter(extract(%q<build_starts>,1,8),json_query(get(u({{core}}/DATA`PACK`EQUIPMENT)/ITEM`%i0`PREP),extract,$.name),%b,|),|,or)][if(gt(words(%q<build_starts>),8),%, or [sub(words(%q<build_starts>),8)] more)]?,There is no [trim(before(%q<cmd_rest>,=))] from a book the game uses. +build/list gear <text> searches.)],warn); @assert cand(isint(%q<build_count>),gt(%q<build_count>,0))=@pemit %#=notice(PF2E,A count is a whole number above 0.,warn); think setqm(build_item,u({{core}}/FUN`ITEM`GET,equipment,%q<build_id>),build_cost,mul(%q<build_count>,u(%!/FUN`BUILD`PRICE,u({{core}}/FUN`ITEM`GET,equipment,%q<build_id>)))); @assert lte(json_query(%q<build_item>,extract,$.system.level.value),%q<check_level>)=@pemit %#=notice(PF2E,[json_query(%q<build_item>,extract,$.name)] is level [json_query(%q<build_item>,extract,$.system.level.value)]%, above yours.,warn); @assert lte(%q<build_cost>,u(%!/FUN`PURSE`TOTAL,%q<sheet_target>,money))=@pemit %#=notice(PF2E,That costs [u(%!/FUN`SHOW`MONEY,%q<build_cost>)]%, and the sheet has [u(%!/FUN`SHOW`MONEY,u(%!/FUN`PURSE`TOTAL,%q<sheet_target>,money))].,warn); @include %!/INC`BUILD`BEGIN; think setq(build_held,first(u({{core}}/FUN`SHEET`VALUE,%q<check_entries>,gear,%q<build_id>),|)); think setq(entry_json,json(object,kind,"gear",id,json(string,%q<build_id>),qty,add(firstof(%q<build_held>,0),%q<build_count>),where,json(string,setr(build_where,firstof(rest(u({{core}}/FUN`SHEET`VALUE,%q<check_entries>,gear,%q<build_id>),|),u(%!/FUN`BUILD`GEAR`WHERE,%q<build_id>)))),step,"gear")); @include %!/INC`BUILD`PUT; @dolist/inplace [if(strlen(u({{core}}/FUN`ITEM`MYST,%q<build_id>)),x)]={think setq(entry_json,json(object,kind,"myst",id,json(string,%q<build_id>),state,"k",step,"gear")); @include %!/INC`BUILD`PUT}; think setqm(purse_kind,money,purse_amount,-%q<build_cost>,purse_reason,Bought [if(gt(%q<build_count>,1),%q<build_count>%b)][json_query(%q<build_item>,extract,$.name)]); @include %!/INC`PURSE`PUT; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)]Bought [if(gt(%q<build_count>,1),%q<build_count>%b)][json_query(%q<build_item>,extract,$.name)] for [u(%!/FUN`SHOW`MONEY,%q<build_cost>)][if(match(worn held,%q<build_where>),%, %q<build_where>)]. [u(%!/FUN`SHOW`MONEY,u(%!/FUN`PURSE`TOTAL,%q<sheet_target>,money))] left.,ok)
         flags: [cmdsyntax]
       # +build/level: a new level for 1000 XP, which it spends. The new level's steps then show on +build.
       INC`BUILD`LEVEL:
@@ -5158,7 +5199,7 @@ objects:
       # a property rune goes to INC`BUILD`PROPERTY.
       INC`BUILD`UPGRADE:
         value: |-
-          think setqm(build_id,u(%!/FUN`BUILD`GEAR`FIND,before(%q<cmd_rest>,=)),build_rune,u(%!/FUN`BUILD`RUNE`TYPED,after(%q<cmd_rest>,=))); @assert strlen(%q<build_id>)=@pemit %#=notice(PF2E,There is no [trim(before(%q<cmd_rest>,=))] in the sheet's gear.,warn); think setq(build_kind,json_query(get(u({{core}}/DATA`PACK`EQUIPMENT)/ITEM`%q<build_id>`PREP),extract,$.kind)); @assert match(weapon armor shield,%q<build_kind>)=@pemit %#=notice(PF2E,Runes go on weapons%, armor and shields.,warn); @break cand(not(strlen(%q<build_rune>)),comp(%q<build_kind>,shield))={@include %!/INC`BUILD`PROPERTY}; @assert cor(strmatch(%q<build_kind>,shield),not(strlen(u({{core}}/FUN`ABP`MODE))))=@pemit %#=notice(PF2E,Automatic Bonus Progression gives potency%, striking and resilient by level%, so weapons and armor take no fundamental runes.,warn); think setq(build_slug,last(grab(v(DATA`RUNES),[first(%q<build_rune>,~)]~[last(%q<build_rune>,~)]~%q<build_kind>~*),~)); @assert strlen(%q<build_slug>)=@pemit %#=notice(PF2E,u(%!/FUN`BUILD`RUNE`ASK,%q<build_kind>),warn); think setqm(build_old,firstof(json_query(u({{core}}/FUN`ITEM`RUNED,%q<build_id>),extract,$.system.runes.[first(%q<build_rune>,~)]),0),build_rune_item,u({{core}}/FUN`ITEM`GET,equipment,u({{core}}/FUN`ITEM`FIND,equipment,%q<build_slug>))); @assert gt(last(%q<build_rune>,~),%q<build_old>)=@pemit %#=notice(PF2E,[u(%!/FUN`SHOW`ITEM,equipment,%q<build_id>,)] already has [u(%!/FUN`SHOW`RUNE,first(%q<build_rune>,~),%q<build_old>)].,warn); @assert lte(json_query(%q<build_rune_item>,extract,$.system.level.value),%q<check_level>)=@pemit %#=notice(PF2E,[json_query(%q<build_rune_item>,extract,$.name)] is level [json_query(%q<build_rune_item>,extract,$.system.level.value)]%, above yours.,warn); think setq(build_cost,max(0,sub(u(%!/FUN`BUILD`PRICE,%q<build_rune_item>),if(%q<build_old>,u(%!/FUN`BUILD`PRICE,u({{core}}/FUN`ITEM`GET,equipment,u({{core}}/FUN`ITEM`FIND,equipment,last(grab(v(DATA`RUNES),[first(%q<build_rune>,~)]~%q<build_old>~%q<build_kind>~*),~)))),0)))); @assert lte(%q<build_cost>,u(%!/FUN`PURSE`TOTAL,%q<sheet_target>,money))=@pemit %#=notice(PF2E,It costs [u(%!/FUN`SHOW`MONEY,%q<build_cost>)]%, and the sheet has [u(%!/FUN`SHOW`MONEY,u(%!/FUN`PURSE`TOTAL,%q<sheet_target>,money))].,warn); @include %!/INC`BUILD`BEGIN; think setq(entry_json,json(object,kind,"rune",id,json(string,%q<build_id>),rune,json(string,first(%q<build_rune>,~)),value,last(%q<build_rune>,~),step,"gear")); @include %!/INC`BUILD`PUT; think setqm(purse_kind,money,purse_amount,mul(-1,%q<build_cost>),purse_reason,[u(%!/FUN`SHOW`RUNE,first(%q<build_rune>,~),last(%q<build_rune>,~))] rune on [u(%!/FUN`SHOW`ITEM,equipment,%q<build_id>,)]); @include %!/INC`PURSE`PUT; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)][u(%!/FUN`SHOW`ITEM,equipment,%q<build_id>,)] has [u(%!/FUN`SHOW`RUNE,first(%q<build_rune>,~),last(%q<build_rune>,~))] now%, for [u(%!/FUN`SHOW`MONEY,%q<build_cost>)].,ok)
+          think setqm(build_id,u(%!/FUN`BUILD`GEAR`FIND,before(%q<cmd_rest>,=)),build_rune,u(%!/FUN`BUILD`RUNE`TYPED,after(%q<cmd_rest>,=))); @assert strlen(%q<build_id>)=@pemit %#=notice(PF2E,There is no [trim(before(%q<cmd_rest>,=))] in the sheet's gear.,warn); @assert not(strlen(u({{core}}/FUN`ITEM`MYST,%q<build_id>)))=@pemit %#=notice(PF2E,Identify [u(%!/FUN`SHOW`ITEM,equipment,%q<build_id>,)] first: +identify.,warn); think setq(build_kind,json_query(get(u({{core}}/DATA`PACK`EQUIPMENT)/ITEM`%q<build_id>`PREP),extract,$.kind)); @assert match(weapon armor shield,%q<build_kind>)=@pemit %#=notice(PF2E,Runes go on weapons%, armor and shields.,warn); @break cand(not(strlen(%q<build_rune>)),comp(%q<build_kind>,shield))={@include %!/INC`BUILD`PROPERTY}; @assert cor(strmatch(%q<build_kind>,shield),not(strlen(u({{core}}/FUN`ABP`MODE))))=@pemit %#=notice(PF2E,Automatic Bonus Progression gives potency%, striking and resilient by level%, so weapons and armor take no fundamental runes.,warn); think setq(build_slug,last(grab(v(DATA`RUNES),[first(%q<build_rune>,~)]~[last(%q<build_rune>,~)]~%q<build_kind>~*),~)); @assert strlen(%q<build_slug>)=@pemit %#=notice(PF2E,u(%!/FUN`BUILD`RUNE`ASK,%q<build_kind>),warn); think setqm(build_old,firstof(json_query(u({{core}}/FUN`ITEM`RUNED,%q<build_id>),extract,$.system.runes.[first(%q<build_rune>,~)]),0),build_rune_item,u({{core}}/FUN`ITEM`GET,equipment,u({{core}}/FUN`ITEM`FIND,equipment,%q<build_slug>))); @assert gt(last(%q<build_rune>,~),%q<build_old>)=@pemit %#=notice(PF2E,[u(%!/FUN`SHOW`ITEM,equipment,%q<build_id>,)] already has [u(%!/FUN`SHOW`RUNE,first(%q<build_rune>,~),%q<build_old>)].,warn); @assert lte(json_query(%q<build_rune_item>,extract,$.system.level.value),%q<check_level>)=@pemit %#=notice(PF2E,[json_query(%q<build_rune_item>,extract,$.name)] is level [json_query(%q<build_rune_item>,extract,$.system.level.value)]%, above yours.,warn); think setq(build_cost,max(0,sub(u(%!/FUN`BUILD`PRICE,%q<build_rune_item>),if(%q<build_old>,u(%!/FUN`BUILD`PRICE,u({{core}}/FUN`ITEM`GET,equipment,u({{core}}/FUN`ITEM`FIND,equipment,last(grab(v(DATA`RUNES),[first(%q<build_rune>,~)]~%q<build_old>~%q<build_kind>~*),~)))),0)))); @assert lte(%q<build_cost>,u(%!/FUN`PURSE`TOTAL,%q<sheet_target>,money))=@pemit %#=notice(PF2E,It costs [u(%!/FUN`SHOW`MONEY,%q<build_cost>)]%, and the sheet has [u(%!/FUN`SHOW`MONEY,u(%!/FUN`PURSE`TOTAL,%q<sheet_target>,money))].,warn); @include %!/INC`BUILD`BEGIN; think setq(entry_json,json(object,kind,"rune",id,json(string,%q<build_id>),rune,json(string,first(%q<build_rune>,~)),value,last(%q<build_rune>,~),step,"gear")); @include %!/INC`BUILD`PUT; think setqm(purse_kind,money,purse_amount,mul(-1,%q<build_cost>),purse_reason,[u(%!/FUN`SHOW`RUNE,first(%q<build_rune>,~),last(%q<build_rune>,~))] rune on [u(%!/FUN`SHOW`ITEM,equipment,%q<build_id>,)]); @include %!/INC`PURSE`PUT; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)][u(%!/FUN`SHOW`ITEM,equipment,%q<build_id>,)] has [u(%!/FUN`SHOW`RUNE,first(%q<build_rune>,~),last(%q<build_rune>,~))] now%, for [u(%!/FUN`SHOW`MONEY,%q<build_cost>)].,ok)
         flags: [cmdsyntax]
       # Each fundamental rune: rune~value~what it goes on~the equipment slug of the rune.
       DATA`RUNES: potency~1~weapon~weapon-potency-1 potency~2~weapon~weapon-potency-2 potency~3~weapon~weapon-potency-3 striking~1~weapon~striking striking~2~weapon~striking-greater striking~3~weapon~striking-major potency~1~armor~armor-potency-1 potency~2~armor~armor-potency-2 potency~3~armor~armor-potency-3 resilient~1~armor~resilient resilient~2~armor~resilient-greater resilient~3~armor~resilient-major reinforcing~1~shield~reinforcing-rune-minor reinforcing~2~shield~reinforcing-rune-lesser reinforcing~3~shield~reinforcing-rune-moderate reinforcing~4~shield~reinforcing-rune-greater reinforcing~5~shield~reinforcing-rune-major reinforcing~6~shield~reinforcing-rune-supreme
@@ -5190,7 +5231,12 @@ objects:
         flags: [cmdsyntax]
       INC`BUILD`SELL:
         value: |-
-          think setqm(build_id,u(%!/FUN`BUILD`GEAR`FIND,before(%q<cmd_rest>,=)),build_count,firstof(trim(after(%q<cmd_rest>,=)),1)); @assert strlen(%q<build_id>)=@pemit %#=notice(PF2E,There is no [trim(before(%q<cmd_rest>,=))] in the sheet's gear.,warn); think setq(build_state,u({{core}}/FUN`SHEET`VALUE,%q<check_entries>,gear,%q<build_id>)); @assert cand(isint(%q<build_count>),gt(%q<build_count>,0),lte(%q<build_count>,first(%q<build_state>,|)))=@pemit %#=notice(PF2E,The sheet has [first(%q<build_state>,|)].,warn); think setq(build_cost,div(mul(%q<build_count>,u(%!/FUN`BUILD`PRICE,u({{core}}/FUN`ITEM`GET,equipment,%q<build_id>))),if(%q<build_locked>,2,1))); @include %!/INC`BUILD`BEGIN; think setq(entry_json,json(object,kind,"gear",id,json(string,%q<build_id>),qty,sub(first(%q<build_state>,|),%q<build_count>),where,json(string,rest(%q<build_state>,|)),step,"gear")); @include %!/INC`BUILD`PUT; think setqm(purse_kind,money,purse_amount,%q<build_cost>,purse_reason,[if(%q<build_locked>,Sold,Returned)] [if(gt(%q<build_count>,1),%q<build_count>%b)][u(%!/FUN`SHOW`ITEM,equipment,%q<build_id>,)]); @include %!/INC`PURSE`PUT; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)][if(%q<build_locked>,Sold,Returned)] [if(gt(%q<build_count>,1),%q<build_count>%b)][u(%!/FUN`SHOW`ITEM,equipment,%q<build_id>,)] for [u(%!/FUN`SHOW`MONEY,%q<build_cost>)].,ok)
+          think setqm(build_id,u(%!/FUN`BUILD`GEAR`FIND,before(%q<cmd_rest>,=)),build_count,firstof(trim(after(%q<cmd_rest>,=)),1)); @assert strlen(%q<build_id>)=@pemit %#=notice(PF2E,There is no [trim(before(%q<cmd_rest>,=))] in the sheet's gear.,warn); think setq(build_state,u({{core}}/FUN`SHEET`VALUE,%q<check_entries>,gear,%q<build_id>)); @assert cand(isint(%q<build_count>),gt(%q<build_count>,0),lte(%q<build_count>,first(%q<build_state>,|)))=@pemit %#=notice(PF2E,The sheet has [first(%q<build_state>,|)].,warn); think setq(build_cost,div(mul(%q<build_count>,u(%!/FUN`BUILD`PRICE,u({{core}}/FUN`ITEM`GET,equipment,%q<build_id>))),if(%q<build_locked>,2,1))); @include %!/INC`BUILD`BEGIN; think setq(entry_json,json(object,kind,"gear",id,json(string,%q<build_id>),qty,sub(first(%q<build_state>,|),%q<build_count>),where,json(string,rest(%q<build_state>,|)),step,"gear")); @include %!/INC`BUILD`PUT; think setqm(gear_id,%q<build_id>,gear_left,sub(first(%q<build_state>,|),%q<build_count>)); @include/nobreak %!/INC`GEAR`BARE; think setqm(purse_kind,money,purse_amount,%q<build_cost>,purse_reason,[if(%q<build_locked>,Sold,Returned)] [if(gt(%q<build_count>,1),%q<build_count>%b)][u(%!/FUN`SHOW`ITEM,equipment,%q<build_id>,)]); @include %!/INC`PURSE`PUT; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)][if(%q<build_locked>,Sold,Returned)] [if(gt(%q<build_count>,1),%q<build_count>%b)][u(%!/FUN`SHOW`ITEM,equipment,%q<build_id>,)] for [u(%!/FUN`SHOW`MONEY,%q<build_cost>)].,ok)
+        flags: [cmdsyntax]
+      # When the last of an item of gear goes, its runes go with it, so one bought or found later starts bare.
+      INC`GEAR`BARE:
+        value: |-
+          @break gt(%q<gear_left>,0); @dolist/inplace [iter(potency striking resilient reinforcing property,if(cand(strlen(setr(gear_rv,u({{core}}/FUN`SHEET`VALUE,%q<check_entries>,rune,[ucstr(%q<gear_id>)]|%i0))),comp(%q<gear_rv>,0)),%i0))]={think setq(entry_json,json(object,kind,"rune",id,json(string,%q<gear_id>),rune,"##",value,if(strmatch(##,property),"",0),step,"gear")); @include {{commands}}/INC`BUILD`PUT}
         flags: [cmdsyntax]
       # Where a new item goes: armor is worn when none is, a shield held when none is; the rest is carried.
       FUN`BUILD`GEAR`WHERE:
@@ -6040,7 +6086,7 @@ objects:
             rule()]%r[
             lfields(,
               Languages|Money|Gear[if(strlen(%q<show_spells>),|Spells known)]|Feats and features[if(words(%q<show_actions>,|),|Actions)][if(words(%q<show_conditions>,|),|Conditions)],
-              [firstof(itemize(iter(u(%!/FUN`SHOW`LANGUAGES),capstr(%i0))),none)]|[u(%!/FUN`SHOW`MONEY,u(%!/FUN`PURSE`TOTAL,%q<sheet_target>,money))]|[firstof(itemize(iter(%q<check_gear>,[u(%!/FUN`SHOW`ITEM,equipment,first(%i0,~),)][if(strlen(setr(show_gr,u(%!/FUN`SHOW`RUNES,first(%i0,~)))),%b%(%q<show_gr>%))][if(gt(elements(%i0,2,~),1),%bx[elements(%i0,2,~)])][if(strlen(elements(%i0,3,~)),%b%([elements(%i0,3,~)]%))],%b,|),|),none)][if(strlen(%q<show_spells>),|%q<show_spells>)]|[firstof(itemize(%q<show_feats>,|),Nothing yet.)][if(words(%q<show_actions>,|),|[itemize(%q<show_actions>,|)])][if(words(%q<show_conditions>,|),|[itemize(%q<show_conditions>,|)])],
+              [firstof(itemize(iter(u(%!/FUN`SHOW`LANGUAGES),capstr(%i0))),none)]|[u(%!/FUN`SHOW`MONEY,u(%!/FUN`PURSE`TOTAL,%q<sheet_target>,money))]|[firstof(itemize(iter(%q<check_gear>,[u(%!/FUN`SHOW`ITEM,equipment,first(%i0,~),)][if(cand(not(strlen(u({{core}}/FUN`ITEM`MYST,first(%i0,~)))),strlen(setr(show_gr,u(%!/FUN`SHOW`RUNES,first(%i0,~))))),%b%(%q<show_gr>%))][u(%!/FUN`SHOW`MYST,first(%i0,~))][if(gt(elements(%i0,2,~),1),%bx[elements(%i0,2,~)])][if(strlen(elements(%i0,3,~)),%b%([elements(%i0,3,~)]%))],%b,|),|),none)][if(strlen(%q<show_spells>),|%q<show_spells>)]|[firstof(itemize(%q<show_feats>,|),Nothing yet.)][if(words(%q<show_actions>,|),|[itemize(%q<show_actions>,|)])][if(words(%q<show_conditions>,|),|[itemize(%q<show_conditions>,|)])],
               |)][
             u(%!/FUN`SHOW`UNAPPLIED)],
             name(%q<sheet_target>))]
@@ -6188,8 +6234,14 @@ objects:
         flags: [funsyntax]
       FUN`SHOW`ITEM:
         value: |-
-          @@(%0 a pack, %1 an id, %2 a badge: the item's name, with its badge)[
-          json_query(u({{core}}/FUN`ITEM`GET,%0,%1),extract,$.name)][if(strlen(%2),%b%2)]
+          @@(%0 a pack, %1 an id, %2 a badge; check_entries: the item's name as the character knows it, with its badge)[
+          if(strmatch(%0,equipment),u({{core}}/FUN`ITEM`SHOWN,%1),json_query(u({{core}}/FUN`ITEM`GET,%0,%1),extract,$.name))][if(strlen(%2),%b%2)]
+        flags: [funsyntax]
+      # For staff, what an item the character has not identified really is.
+      FUN`SHOW`MYST:
+        value: |-
+          @@(%0 an equipment id; check_entries)[
+          if(cand(permission(%#,softcode.pf2e.staff),strlen(u({{core}}/FUN`ITEM`MYST,%0))),%b[tone(muted,%[[if(strmatch(u({{core}}/FUN`ITEM`MYST,%0),u),unidentified,misidentified)]: [json_query(u({{core}}/FUN`ITEM`GET,equipment,%0),extract,$.name)][if(strlen(setr(show_mr,u(%!/FUN`SHOW`RUNES,%0))),%b%(%q<show_mr>%))]%])])]
         flags: [funsyntax]
       FUN`SHOW`XP:
         value: |-
@@ -6267,7 +6319,8 @@ objects:
       FUN`SHOW`LEDGER:
         value: |-
           @@(the ledger: every entry, oldest first, with who made it)[
-          box(if(json_query(setr(show_ledger,u(%!/FUN`LEDGER`OF,%q<sheet_target>,1)),size),ldatatable(,>#|Entry|By,json_map(%!/FUN`SHOW`ENTRY,%q<show_ledger>,%r),%r),tone(muted,No entries yet.)),[name(%q<sheet_target>)]'s ledger)]
+          setq(check_entries,u({{core}}/FUN`SHEET`ENTRIES,setr(show_ledger,u(%!/FUN`LEDGER`OF,%q<sheet_target>,1))))][
+          box(if(json_query(%q<show_ledger>,size),ldatatable(,>#|Entry|By,json_map(%!/FUN`SHOW`ENTRY,%q<show_ledger>,%r),%r),tone(muted,No entries yet.)),[name(%q<sheet_target>)]'s ledger)]
         flags: [funsyntax]
       FUN`SHOW`PURSE:
         value: |-
@@ -6291,7 +6344,8 @@ objects:
             gear, [u(%!/FUN`SHOW`ITEM,equipment,json_query(%1,extract,$.id),)] x[json_query(%1,extract,$.qty)][if(strlen(json_query(%1,extract,$.where)),%b%([json_query(%1,extract,$.where)]%))],
             money, Money [u(%!/FUN`SHOW`SIGNED,json_query(%1,extract,$.cp))] cp[if(strlen(json_query(%1,extract,$.reason)),: [json_query(%1,extract,$.reason)])],
             xp, XP [u(%!/FUN`SHOW`SIGNED,json_query(%1,extract,$.xp))][if(strlen(json_query(%1,extract,$.reason)),: [json_query(%1,extract,$.reason)])],
-            rune, [u(%!/FUN`SHOW`ITEM,equipment,json_query(%1,extract,$.id),)]: [u(%!/FUN`SHOW`RUNE,json_query(%1,extract,$.rune),json_query(%1,extract,$.value))] rune,
+            rune, [u(%!/FUN`SHOW`ITEM,equipment,json_query(%1,extract,$.id),)]: [if(cand(strlen(u({{core}}/FUN`ITEM`MYST,json_query(%1,extract,$.id))),not(permission(%#,softcode.pf2e.staff))),a rune,[u(%!/FUN`SHOW`RUNE,json_query(%1,extract,$.rune),json_query(%1,extract,$.value))] rune)],
+            myst, [setq(show_mi,u({{core}}/FUN`ITEM`GET,equipment,json_query(%1,extract,$.id)))][switch(json_query(%1,extract,$.state),u,[u({{core}}/FUN`ITEM`UNUSUAL,%q<show_mi>)]%, not identified,k,Identified [json_query(%q<show_mi>,extract,$.name)],if(permission(%#,softcode.pf2e.staff),Misidentified [json_query(%q<show_mi>,extract,$.name)] as [json_query(u({{core}}/FUN`ITEM`GET,equipment,json_query(%1,extract,$.state)),extract,$.name)],Identified [json_query(u({{core}}/FUN`ITEM`GET,equipment,json_query(%1,extract,$.state)),extract,$.name)]))],
             learned, Learned [u(%!/FUN`SHOW`ITEM,spells,json_query(%1,extract,$.id),)],
             lock, Sheet finished,
             json_query(%1,extract,$.kind))]|[name(json_query(%1,extract,$.by))]
@@ -6361,7 +6415,7 @@ objects:
         flags: [regexp, cmdsyntax]
       CMD`EXPLORE:
         value: |-
-          $(?is)^\+explore(/\S*)?(?\: +(.*))?$:think setqm(cmd_switch,firstof(lcstr(after(%1,/)),show),cmd_args,trim(%2)); @assert match(show set stop search,%q<cmd_switch>)=@pemit %#=notice(PF2E,There is no +explore/%q<cmd_switch>. +help +explore lists the switches.,warn); @include %!/INC`EXPLORE`%q<cmd_switch>
+          $(?is)^\+explore(/\S*)?(?\: +(.*))?$:think setqm(cmd_switch,firstof(lcstr(after(%1,/)),show),cmd_args,trim(%2)); @assert match(show set stop search secret,%q<cmd_switch>)=@pemit %#=notice(PF2E,There is no +explore/%q<cmd_switch>. +help +explore lists the switches.,warn); @include %!/INC`EXPLORE`%q<cmd_switch>
         flags: [regexp, cmdsyntax]
       CMD`CHALLENGE:
         value: |-
@@ -6370,6 +6424,16 @@ objects:
       CMD`RECALL:
         value: |-
           $(?is)^\+recall +([^=]+?)(?\: *= *(.*))?$:think setqm(cmd_what,trim(%1),cmd_skill,lcstr(trim(%2))); think u(%!/FUN`ENC`LOAD,%l); @include %!/INC`RECALL
+        flags: [regexp, cmdsyntax]
+      # +identify <item>[=<skill>]: Identify Magic or Identify Alchemy on an item of your gear.
+      CMD`IDENTIFY:
+        value: |-
+          $(?is)^\+identify +([^=]+?)(?\: *= *(.*))?$:think setqm(cmd_what,trim(%1),cmd_skill,lcstr(trim(%2))); think u(%!/FUN`ENC`LOAD,%l); @include %!/INC`IDENTIFY
+        flags: [regexp, cmdsyntax]
+      # +loot[/<switch>] [<args>]: the loot pile or shop in the room.
+      CMD`LOOT:
+        value: |-
+          $(?is)^\+loot(/\S*)?(?\: +(.*))?$:think setqm(cmd_switch,firstof(lcstr(first(after(%1,/),/)),show),cmd_sub,lcstr(after(after(%1,/),/)),cmd_args,trim(%2),loot_p,LOOT`[after(num(%l),#)]); @assert match(show add take drop split shop name clear,%q<cmd_switch>)=@pemit %#=notice(PF2E,There is no +loot/%q<cmd_switch>. +help pf2e loot lists the switches.,warn); @include %!/INC`LOOT`%q<cmd_switch>
         flags: [regexp, cmdsyntax]
       CMD`DC:
         value: |-
@@ -8697,6 +8761,12 @@ objects:
         value: |-
           @assert cand(isint(%q<cmd_args>),gt(%q<cmd_args>,0))=@pemit %#=notice(PF2E,+explore/search <DC> rolls a secret Perception check for each character here who is Searching.,warn); think setq(search_who,iter(lcon(%l,connect),if(strmatch(get(%i0/PF2E`EXPLORE),search),%i0))); @assert words(%q<search_who>)=@pemit %#=notice(PF2E,No one here is Searching.,warn); @pemit %#=notice(PF2E,Secret Perception checks against DC %q<cmd_args>:%r[iter(%q<search_who>,u(%!/FUN`EXPLORE`SECRET,%i0,perception,%q<cmd_args>),%b,%r)])
         flags: [cmdsyntax]
+      # +explore/secret <characters>=<statistic>=<DC>: the GM's secret check for characters here, such as Decipher
+      # Writing or Gather Information; only the GM sees the rolls.
+      INC`EXPLORE`SECRET:
+        value: |-
+          think setqm(sec_who,trim(before(%q<cmd_args>,=)),sec_stat,u({{commands}}/FUN`COMMAND`STAT,before(after(%q<cmd_args>,=),=)),sec_dc,trim(after(after(%q<cmd_args>,=),=))); @assert cand(strlen(%q<sec_who>),isint(%q<sec_dc>),gt(%q<sec_dc>,0))=@pemit %#=notice(PF2E,+explore/secret <characters>=<skill>=<DC>%, such as +explore/secret Wren Rook=society=20.,warn); @assert eq(words(%q<sec_stat>),1)=@pemit %#=notice(PF2E,There is no one statistic called [trim(before(after(%q<cmd_args>,=),=))].,warn); think setq(sec_list,iter(%q<sec_who>,if(cand(hastype(setr(sec_one,pmatch(%i0)),player),strmatch(num(loc(%q<sec_one>)),num(%l))),%q<sec_one>,#-1))); @assert not(member(%q<sec_list>,#-1))=@pemit %#=notice(PF2E,Name characters who are here.,warn); @pemit %#=notice(PF2E,Secret [u({{commands}}/FUN`SHOW`STAT,%q<sec_stat>)] checks against DC %q<sec_dc>:%r[iter(%q<sec_list>,u(%!/FUN`EXPLORE`SECRET,%i0,%q<sec_stat>,%q<sec_dc>),%b,%r)])
+        flags: [cmdsyntax]
       FUN`EXPLORE`NAME:
         value: |-
           lcstr(elements(grab(get(%!/DATA`EXPLORE),%0~*,|),2,~))
@@ -8795,6 +8865,193 @@ objects:
           @@(%0 a creature: its actions and abilities by name, separated by |)[
           setq(abil_store,u({{core}}/DATA`PACK`[ucstr(first(%q<recall_found>,~))]))][
           trim(squish(iter(lattr(%q<abil_store>/ITEM`[ucstr(json_query(%0,extract,$._id))]`EMBED`*),if(strmatch(json_query(get(%q<abil_store>/%i0),extract,$.type),action),json_query(get(%q<abil_store>/%i0),extract,$.name)),%b,|),|),|)]
+        flags: [funsyntax]
+
+      # --- Identify Magic and Identify Alchemy -----------------------------------------------------
+      # +identify <item>[=<skill>]: 10 minutes, a secret check against the item's level DC (its runes' levels
+      # count; cursed is unique), 5 harder with a skill off the item's tradition. A success makes it known; a
+      # failure at Identify Magic waits for the next daily preparations; a critical failure misidentifies it
+      # as another item of its kind and about its level, which the character takes for the truth.
+      INC`IDENTIFY:
+        value: |-
+          think setqm(sheet_target,%#,sheet_ledger,u({{commands}}/FUN`LEDGER`OF,%#)); think u({{commands}}/FUN`DAILY`PREPARE); @assert not(cand(strlen(%q<enc>),strlen(u(%!/FUN`ENC`MINE))))=@pemit %#=notice(PF2E,Identifying takes 10 minutes%, not a turn in an encounter.,warn); think setq(id_id,u({{commands}}/FUN`BUILD`GEAR`FIND,%q<cmd_what>)); @assert strlen(%q<id_id>)=@pemit %#=notice(PF2E,You carry no %q<cmd_what>.,warn); think setqm(id_name,u({{core}}/FUN`ITEM`SHOWN,%q<id_id>),id_item,u({{core}}/FUN`ITEM`GET,equipment,%q<id_id>),id_code,u(%!/FUN`LOOT`CODE,u({{core}}/FUN`SHEET`RUNES,%q<check_entries>,%q<id_id>))); @assert strmatch(u({{core}}/FUN`ITEM`MYST,%q<id_id>),u)=@pemit %#=notice(PF2E,You know what %q<id_name> is.,warn); @assert not(member(json_query(%q<daily>,extract,$.ident),ucstr(%q<id_id>)))=@pemit %#=notice(PF2E,You could not identify %q<id_name> today. Try again after your daily preparations: +rest.,warn); think setq(id_traits,json_map({{core}}/FUN`RULE`SELECTOR,firstof(json_query(%q<id_item>,extract,$.system.traits.value),json(array)),%b)); think setq(id_magic,cor(member(%q<id_traits>,magical),words(setinter(%q<id_traits>,arcane divine occult primal)),strlen(%q<id_code>))); think setqm(id_trad,iter(setinter(%q<id_traits>,arcane divine occult primal),switch(%i0,arcane,arcana,divine,religion,occult,occultism,nature)),id_skills,if(%q<id_magic>,arcana nature occultism religion,crafting)); think setq(id_stat,if(strlen(%q<cmd_skill>),u({{commands}}/FUN`COMMAND`STAT,%q<cmd_skill>),firstof(first(iter(%q<id_trad>,if(u({{core}}/FUN`CHECK`RANK,%i0),%i0))),after(last(sort(iter(%q<id_skills>,[u({{core}}/FUN`CHECK`RANK,%i0)]~%i0))),~)))); @assert cand(eq(words(%q<id_stat>),1),member(%q<id_skills>,%q<id_stat>))=@pemit %#=notice(PF2E,[if(%q<id_magic>,Identify Magic uses Arcana%, Nature%, Occultism or Religion,Identify Alchemy uses Crafting)].,warn); @assert u({{core}}/FUN`CHECK`RANK,%q<id_stat>)=@pemit %#=notice(PF2E,[if(%q<id_magic>,Identify Magic,Identify Alchemy)] needs training in [u({{commands}}/FUN`SHOW`STAT,%q<id_stat>)].,warn); @assert cor(%q<id_magic>,words(iter(%q<check_gear>,if(regmatch(json_query(get(u({{core}}/DATA`PACK`EQUIPMENT)/ITEM`[first(%i0,~)]`PREP),extract,$.slug),^alchemists-%(toolkit|lab%)),x))))=@pemit %#=notice(PF2E,Identify Alchemy needs alchemist's tools: an alchemist's toolkit or lab in your gear.,warn); think setq(id_worth,u(%!/FUN`LOOT`WORTH,%q<id_id>,%q<id_code>)); think setq(id_dc,add(u(%!/FUN`DC`OF,first(%q<id_worth>,~),,if(member(%q<id_traits>,cursed),unique,json_query(%q<id_item>,extract,$.system.traits.rarity))),if(cand(words(%q<id_trad>),not(member(%q<id_trad>,%q<id_stat>))),5,0))); think setq(act_npc,); think u(%!/FUN`ACT`CHECK,%q<id_stat>,%q<id_dc>,,,action:[if(%q<id_magic>,identify-magic,identify-alchemy)]); @include/nobreak %!/INC`IDENTIFY`GM; @include %!/INC`IDENTIFY`[switch(%q<roll_degree>,3,KNOW,2,KNOW,1,FAIL,WRONG)]
+        flags: [cmdsyntax]
+      INC`IDENTIFY`KNOW:
+        value: |-
+          think setq(entry_json,json(object,kind,"myst",id,json(string,ucstr(%q<id_id>)),state,"k",step,"gear")); @include {{commands}}/INC`BUILD`PUT; @pemit %#=notice(PF2E,u(%!/FUN`IDENTIFY`SAY,[json_query(%q<id_item>,extract,$.name)][if(strlen(%q<id_code>),%b%([u(%!/FUN`LOOT`RUNETEXT,%q<id_code>)]%))])[if(cand(eq(%q<roll_degree>,3),member(%q<id_traits>,cursed)),%b[tone(strong,It is cursed.)])],ok)
+        flags: [cmdsyntax]
+      INC`IDENTIFY`FAIL:
+        value: |-
+          @break not(%q<id_magic>)=@pemit %#=notice(PF2E,After 10 minutes of tests%, you cannot yet tell what %q<id_name> is. You may try again.,warn); think setq(daily,json_mod(%q<daily>,patch,json(object,ident,json(string,squish(json_query(%q<daily>,extract,$.ident) [ucstr(%q<id_id>)]))))); @include {{commands}}/INC`DAILY`WRITE; @pemit %#=notice(PF2E,After 10 minutes with [u({{commands}}/FUN`SHOW`STAT,%q<id_stat>)]%, you cannot tell what %q<id_name> is. Try again after your daily preparations.,warn)
+        flags: [cmdsyntax]
+      INC`IDENTIFY`WRONG:
+        value: |-
+          think setq(id_wrong,u(%!/FUN`IDENTIFY`OTHER,%q<id_item>,first(%q<id_worth>,~),%q<id_magic>)); @break not(strlen(%q<id_wrong>))={@include %!/INC`IDENTIFY`FAIL}; think setq(entry_json,json(object,kind,"myst",id,json(string,ucstr(%q<id_id>)),state,json(string,%q<id_wrong>),step,"gear")); @include {{commands}}/INC`BUILD`PUT; @pemit %#=notice(PF2E,u(%!/FUN`IDENTIFY`SAY,json_query(u({{core}}/FUN`ITEM`GET,equipment,%q<id_wrong>),extract,$.name)),ok)
+        flags: [cmdsyntax]
+      # The GM of the room's encounter hears every identification; a misidentification is flagged.
+      INC`IDENTIFY`GM:
+        value: |-
+          @break not(strlen(%q<enc>)); think setq(id_gm,json_query(%q<enc>,extract,$.gm)); @break strmatch(%q<id_gm>,objid(%#)); @pemit %q<id_gm>=notice(PF2E,%N identifies %q<id_name> ([json_query(%q<id_item>,extract,$.name)]) with [u({{commands}}/FUN`SHOW`STAT,%q<id_stat>)]: [json_query(%q<roll_record>,extract,$.text)] vs DC %q<id_dc>%, [lcstr(u(%!/FUN`ACT`DEGREE,%q<roll_degree>))].,if(eq(%q<roll_degree>,0),warn,))
+        flags: [cmdsyntax]
+      FUN`IDENTIFY`SAY:
+        value: |-
+          @@(%0 what the character takes the item for)[
+          After 10 minutes with [u({{commands}}/FUN`SHOW`STAT,%q<id_stat>)]%, you know what %q<id_name> is: %0. +build/info describes it.]
+        flags: [funsyntax]
+      FUN`IDENTIFY`OTHER:
+        value: |-
+          @@(%0 an item, %1 its level, %2 1 for magic: the id of another magical or alchemical item of its kind within 2 levels of it, from a book the game uses, one that looks the same when there is one)[
+          setqm(oth_store,u({{core}}/DATA`PACK`EQUIPMENT),oth_kind,json_query(%0,extract,$.type),oth_self,ucstr(json_query(%0,extract,$._id)),oth_books,get({{core}}/DATA`CONFIG`BOOKS),oth_look,u({{core}}/FUN`ITEM`UNUSUAL,%0))][
+          setq(oth_levels,setunion(iter(lnum(sub(%1,2),add(%1,2)),wildgrep(%q<oth_store>,ITEM`*`PREP,*"level":%i0%,*)),))][
+          setq(oth_all,shuffle(iter(setinter(setinter(wildgrep(%q<oth_store>,ITEM`*`PREP,*"kind":"%q<oth_kind>"*),wildgrep(%q<oth_store>,ITEM`*`PREP,*item:trait:[if(%2,magical,alchemical)]*)),%q<oth_levels>),if(cand(comp(elements(%i0,2,`),%q<oth_self>),member(%q<oth_books>,get(%q<oth_store>/ITEM`[elements(%i0,2,`)]`BOOK))),elements(%i0,2,`)))))][
+          firstof(first(iter(%q<oth_all>,if(strmatch(u({{core}}/FUN`ITEM`UNUSUAL,u({{core}}/FUN`ITEM`GET,equipment,%i0)),%q<oth_look>),%i0))),first(%q<oth_all>))]
+        flags: [funsyntax]
+
+      # --- Loot piles and shops ------------------------------------------------------------------
+      # LOOT`<room> holds a room's pile: ITEMS (id~count~u when no one has identified it~runes), CP (coins),
+      # NAME, and SHOP (buy and sell percentages) when it is a merchant's. Runes are a code,
+      # potency.striking.resilient.reinforcing.property:property, empty for none.
+      INC`LOOT`STAFF:
+        value: |-
+          @assert permission(%#,softcode.pf2e.staff)=@pemit %#=notice(PF2E,Only staff stock loot and shops.,error)
+        flags: [cmdsyntax]
+      INC`LOOT`SHEET:
+        value: |-
+          think setq(sheet_target,%#); think u({{commands}}/FUN`BUILD`LOAD); @assert words(lattr(%#/PF2E`LEDGER`*))=@pemit %#=notice(PF2E,You have no sheet yet: +build makes one.,warn)
+        flags: [cmdsyntax]
+      INC`LOOT`SHOW:
+        value: |-
+          @assert cor(words(v(%q<loot_p>`ITEMS)),v(%q<loot_p>`CP),strlen(v(%q<loot_p>`SHOP)))=@pemit %#=notice(PF2E,There is no loot here.,warn); @pemit %#=u(%!/FUN`SHOW`LOOT)
+        flags: [cmdsyntax]
+      INC`LOOT`ADD:
+        value: |-
+          @include %!/INC`LOOT`STAFF; @break regmatchi(%q<cmd_args>,^%(\\d+%) *%(pp|gp|sp|cp%)$,- loot_n loot_u)={think setq(loot_cp,mul(%q<loot_n>,switch(lcstr(%q<loot_u>),pp,1000,gp,100,sp,10,1))); &%q<loot_p>`CP %!=[add(v(%q<loot_p>`CP),%q<loot_cp>)]; @remit %l=notice(PF2E,%N puts [u({{commands}}/FUN`SHOW`MONEY,%q<loot_cp>)] in [u(%!/FUN`LOOT`TITLE)].,ok)}; think setqm(loot_what,trim(before(before(%q<cmd_args>,=),%bwith%b)),loot_with,trim(after(before(%q<cmd_args>,=),%bwith%b)),loot_count,firstof(trim(after(%q<cmd_args>,=)),1)); think setq(loot_id,u({{core}}/FUN`ITEM`FIND,equipment,%q<loot_what>)); @assert strlen(%q<loot_id>)=@pemit %#=notice(PF2E,There is no %q<loot_what> from a book the game uses. +build/list gear <text> searches.,warn); @assert cand(isint(%q<loot_count>),gt(%q<loot_count>,0))=@pemit %#=notice(PF2E,A count is a whole number above 0.,warn); think setq(loot_kind,json_query(u({{core}}/FUN`ITEM`GET,equipment,%q<loot_id>),extract,$.type)); think setq(loot_code,u(%!/FUN`LOOT`TYPED,%q<loot_with>,%q<loot_kind>)); @assert not(strmatch(%q<loot_code>,#-1*))=@pemit %#=notice(PF2E,rest(%q<loot_code>),warn); think setq(loot_myst,if(cand(not(strmatch(%q<cmd_sub>,known)),not(strlen(v(%q<loot_p>`SHOP))),cor(strlen(%q<loot_code>),regmatch(json_query(get(u({{core}}/DATA`PACK`EQUIPMENT)/ITEM`%q<loot_id>`PREP),extract,$.opts),item:trait:%(magical|arcane|divine|occult|primal|alchemical%)))),u)); &%q<loot_p>`ITEMS %!=[u(%!/FUN`LOOT`MOVE,v(%q<loot_p>`ITEMS),%q<loot_id>,%q<loot_myst>,%q<loot_code>,%q<loot_count>)]; think setq(loot_shown,u(%!/FUN`LOOT`SHOWN,%q<loot_id>~%q<loot_count>~%q<loot_myst>~%q<loot_code>)); @remit %l=notice(PF2E,%N puts [u(%!/FUN`LOOT`COUNTED,%q<loot_count>,%q<loot_shown>)] in [u(%!/FUN`LOOT`TITLE)].,ok); @pemit %#=if(strlen(%q<loot_myst>),notice(PF2E,No one has identified it: +identify. +loot/add/known puts in an item everyone knows.))
+        flags: [cmdsyntax]
+      INC`LOOT`TAKE:
+        value: |-
+          @include %!/INC`LOOT`SHEET; @break regmatchi(%q<cmd_args>,^%(\\d+%) *%(pp|gp|sp|cp%)$,- loot_n loot_u)={@include %!/INC`LOOT`TAKECOIN}; think setqm(loot_pick,u(%!/FUN`LOOT`FIND,before(%q<cmd_args>,=)),loot_count,firstof(trim(after(%q<cmd_args>,=)),1),loot_shop,v(%q<loot_p>`SHOP)); @assert strlen(%q<loot_pick>)=@pemit %#=notice(PF2E,There is no [trim(before(%q<cmd_args>,=))] here. +loot lists what there is.,warn); think setqm(loot_id,first(%q<loot_pick>,~),loot_have,elements(%q<loot_pick>,2,~),loot_myst,elements(%q<loot_pick>,3,~),loot_code,elements(%q<loot_pick>,4,~),loot_shown,u(%!/FUN`LOOT`SHOWN,%q<loot_pick>)); @assert cand(isint(%q<loot_count>),gt(%q<loot_count>,0),lte(%q<loot_count>,%q<loot_have>))=@pemit %#=notice(PF2E,There [if(eq(%q<loot_have>,1),is 1,are %q<loot_have>)] here.,warn); think setq(loot_held,firstof(first(u({{core}}/FUN`SHEET`VALUE,%q<check_entries>,gear,%q<loot_id>),|),0)); @assert cor(not(%q<loot_held>),strmatch(u(%!/FUN`LOOT`CODE,u({{core}}/FUN`SHEET`RUNES,%q<check_entries>,%q<loot_id>)),%q<loot_code>))=@pemit %#=notice(PF2E,You carry [u({{core}}/FUN`ITEM`SHOWN,%q<loot_id>)] with other runes: the items of one kind share their runes. Drop or sell yours first.,warn); think setq(loot_cost,if(strlen(%q<loot_shop>),ceil(fdiv(mul(%q<loot_count>,rest(u(%!/FUN`LOOT`WORTH,%q<loot_id>,%q<loot_code>),~),first(%q<loot_shop>)),100)),0)); @assert lte(%q<loot_cost>,u({{commands}}/FUN`PURSE`TOTAL,%#,money))=@pemit %#=notice(PF2E,That costs [u({{commands}}/FUN`SHOW`MONEY,%q<loot_cost>)]%, and you have [u({{commands}}/FUN`SHOW`MONEY,u({{commands}}/FUN`PURSE`TOTAL,%#,money))].,warn); think setq(entry_json,json(object,kind,"gear",id,json(string,%q<loot_id>),qty,add(%q<loot_held>,%q<loot_count>),where,json(string,firstof(rest(u({{core}}/FUN`SHEET`VALUE,%q<check_entries>,gear,%q<loot_id>),|),u({{commands}}/FUN`BUILD`GEAR`WHERE,%q<loot_id>))),step,"gear")); @include {{commands}}/INC`BUILD`PUT; @dolist/inplace [if(not(%q<loot_held>),u(%!/FUN`LOOT`RUNES,%q<loot_code>))]={think setq(entry_json,json(object,kind,"rune",id,json(string,%q<loot_id>),rune,json(string,before(##,~)),value,if(strmatch(##,property~*),json(string,after(##,~)),after(##,~)),step,"gear")); @include {{commands}}/INC`BUILD`PUT}; think setq(loot_state,u(%!/FUN`LOOT`STATE,%q<loot_id>,%q<loot_held>,%q<loot_myst>)); @dolist/inplace [if(strlen(%q<loot_state>),x)]={think setq(entry_json,json(object,kind,"myst",id,json(string,ucstr(%q<loot_id>)),state,"%q<loot_state>",step,"gear")); @include {{commands}}/INC`BUILD`PUT}; &%q<loot_p>`ITEMS %!=[u(%!/FUN`LOOT`MOVE,v(%q<loot_p>`ITEMS),%q<loot_id>,%q<loot_myst>,%q<loot_code>,-%q<loot_count>)]; @dolist/inplace [if(%q<loot_cost>,x)]={think setqm(sheet_target,%#,purse_kind,money,purse_amount,-%q<loot_cost>,purse_reason,Bought [u(%!/FUN`LOOT`COUNTED,%q<loot_count>,%q<loot_shown>)] at [u(%!/FUN`LOOT`TITLE)]); @include {{commands}}/INC`PURSE`PUT}; @remit %l=notice(PF2E,%N [if(%q<loot_cost>,buys,takes)] [u(%!/FUN`LOOT`COUNTED,%q<loot_count>,%q<loot_shown>)] [if(%q<loot_cost>,for [u({{commands}}/FUN`SHOW`MONEY,%q<loot_cost>)] at,from)] [u(%!/FUN`LOOT`TITLE)].,ok)
+        flags: [cmdsyntax]
+      INC`LOOT`TAKECOIN:
+        value: |-
+          @assert not(strlen(v(%q<loot_p>`SHOP)))=@pemit %#=notice(PF2E,A shop's money is not there for the taking.,warn); think setq(loot_cp,mul(%q<loot_n>,switch(lcstr(%q<loot_u>),pp,1000,gp,100,sp,10,1))); @assert cand(gt(%q<loot_cp>,0),lte(%q<loot_cp>,firstof(v(%q<loot_p>`CP),0)))=@pemit %#=notice(PF2E,There [if(v(%q<loot_p>`CP),is only [u({{commands}}/FUN`SHOW`MONEY,v(%q<loot_p>`CP))],are no coins)] here.,warn); &%q<loot_p>`CP %!=[sub(v(%q<loot_p>`CP),%q<loot_cp>)]; think setqm(sheet_target,%#,purse_kind,money,purse_amount,%q<loot_cp>,purse_reason,Took from [u(%!/FUN`LOOT`TITLE)]); @include {{commands}}/INC`PURSE`PUT; @remit %l=notice(PF2E,%N takes [u({{commands}}/FUN`SHOW`MONEY,%q<loot_cp>)] from [u(%!/FUN`LOOT`TITLE)].,ok)
+        flags: [cmdsyntax]
+      INC`LOOT`DROP:
+        value: |-
+          @include %!/INC`LOOT`SHEET; @break regmatchi(%q<cmd_args>,^%(\\d+%) *%(pp|gp|sp|cp%)$,- loot_n loot_u)={@include %!/INC`LOOT`DROPCOIN}; think setqm(loot_id,u({{commands}}/FUN`BUILD`GEAR`FIND,before(%q<cmd_args>,=)),loot_count,firstof(trim(after(%q<cmd_args>,=)),1),loot_shop,v(%q<loot_p>`SHOP)); @assert strlen(%q<loot_id>)=@pemit %#=notice(PF2E,You carry no [trim(before(%q<cmd_args>,=))].,warn); think setq(loot_state,u({{core}}/FUN`SHEET`VALUE,%q<check_entries>,gear,%q<loot_id>)); @assert cand(isint(%q<loot_count>),gt(%q<loot_count>,0),lte(%q<loot_count>,first(%q<loot_state>,|)))=@pemit %#=notice(PF2E,You carry [first(%q<loot_state>,|)].,warn); think setqm(loot_shown,u({{core}}/FUN`ITEM`SHOWN,%q<loot_id>),loot_myst,if(strlen(u({{core}}/FUN`ITEM`MYST,%q<loot_id>)),u),loot_code,u(%!/FUN`LOOT`CODE,u({{core}}/FUN`SHEET`RUNES,%q<check_entries>,%q<loot_id>))); @assert cor(not(strlen(%q<loot_shop>)),not(strmatch(u({{core}}/FUN`ITEM`MYST,%q<loot_id>),u)))=@pemit %#=notice(PF2E,Identify %q<loot_shown> before you sell it: +identify.,warn); think setq(loot_pay,if(strlen(%q<loot_shop>),div(mul(%q<loot_count>,rest(u(%!/FUN`LOOT`WORTH,%q<loot_id>,%q<loot_code>),~),last(%q<loot_shop>)),100),0)); think setq(entry_json,json(object,kind,"gear",id,json(string,%q<loot_id>),qty,sub(first(%q<loot_state>,|),%q<loot_count>),where,json(string,rest(%q<loot_state>,|)),step,"gear")); @include {{commands}}/INC`BUILD`PUT; think setqm(gear_id,%q<loot_id>,gear_left,sub(first(%q<loot_state>,|),%q<loot_count>)); @include/nobreak {{commands}}/INC`GEAR`BARE; &%q<loot_p>`ITEMS %!=[u(%!/FUN`LOOT`MOVE,v(%q<loot_p>`ITEMS),%q<loot_id>,if(strlen(%q<loot_shop>),,%q<loot_myst>),%q<loot_code>,%q<loot_count>)]; @dolist/inplace [if(%q<loot_pay>,x)]={think setqm(sheet_target,%#,purse_kind,money,purse_amount,%q<loot_pay>,purse_reason,Sold [u(%!/FUN`LOOT`COUNTED,%q<loot_count>,%q<loot_shown>)] at [u(%!/FUN`LOOT`TITLE)]); @include {{commands}}/INC`PURSE`PUT}; @remit %l=notice(PF2E,%N [if(strlen(%q<loot_shop>),sells,leaves)] [u(%!/FUN`LOOT`COUNTED,%q<loot_count>,%q<loot_shown>)] [if(strlen(%q<loot_shop>),for [u({{commands}}/FUN`SHOW`MONEY,%q<loot_pay>)] at,in)] [u(%!/FUN`LOOT`TITLE)].,ok)
+        flags: [cmdsyntax]
+      INC`LOOT`DROPCOIN:
+        value: |-
+          @assert not(strlen(v(%q<loot_p>`SHOP)))=@pemit %#=notice(PF2E,A shop takes money only for what it sells.,warn); think setq(loot_cp,mul(%q<loot_n>,switch(lcstr(%q<loot_u>),pp,1000,gp,100,sp,10,1))); @assert cand(gt(%q<loot_cp>,0),lte(%q<loot_cp>,u({{commands}}/FUN`PURSE`TOTAL,%#,money)))=@pemit %#=notice(PF2E,You have [u({{commands}}/FUN`SHOW`MONEY,u({{commands}}/FUN`PURSE`TOTAL,%#,money))].,warn); think setqm(sheet_target,%#,purse_kind,money,purse_amount,-%q<loot_cp>,purse_reason,Left in [u(%!/FUN`LOOT`TITLE)]); @include {{commands}}/INC`PURSE`PUT; &%q<loot_p>`CP %!=[add(v(%q<loot_p>`CP),%q<loot_cp>)]; @remit %l=notice(PF2E,%N leaves [u({{commands}}/FUN`SHOW`MONEY,%q<loot_cp>)] in [u(%!/FUN`LOOT`TITLE)].,ok)
+        flags: [cmdsyntax]
+      # +loot/split: the coins shared evenly among the characters here; what does not divide stays.
+      INC`LOOT`SPLIT:
+        value: |-
+          @assert not(strlen(v(%q<loot_p>`SHOP)))=@pemit %#=notice(PF2E,A shop's money is not there for the taking.,warn); think setq(loot_who,iter(lcon(%l,connect),if(cand(hastype(%i0,player),words(lattr(%i0/PF2E`LEDGER`*))),%i0))); @assert words(%q<loot_who>)=@pemit %#=notice(PF2E,No one here has a sheet.,warn); think setq(loot_share,div(firstof(v(%q<loot_p>`CP),0),words(%q<loot_who>))); @assert %q<loot_share>=@pemit %#=notice(PF2E,There are too few coins here to share among [words(%q<loot_who>)].,warn); @dolist/inplace %q<loot_who>={think setqm(sheet_target,##,purse_kind,money,purse_amount,%q<loot_share>,purse_reason,A share of [u(%!/FUN`LOOT`TITLE)]); @include {{commands}}/INC`PURSE`PUT}; &%q<loot_p>`CP %!=[sub(v(%q<loot_p>`CP),mul(%q<loot_share>,words(%q<loot_who>)))]; @remit %l=notice(PF2E,%N shares out the coins in [u(%!/FUN`LOOT`TITLE)]: [u({{commands}}/FUN`SHOW`MONEY,%q<loot_share>)] each to [itemize(iter(%q<loot_who>,name(%i0),%b,|),|)].,ok)
+        flags: [cmdsyntax]
+      # +loot/shop <buy %>=<sell %>: the pile becomes a merchant's, which sells at buy % of the Price and pays
+      # sell % for what it buys. +loot/shop off makes it a pile again.
+      INC`LOOT`SHOP:
+        value: |-
+          @include %!/INC`LOOT`STAFF; @break strmatch(%q<cmd_args>,off)={&%q<loot_p>`SHOP %!=; @remit %l=notice(PF2E,[u(%!/FUN`LOOT`TITLE)] is no longer a shop.,ok)}; think setqm(loot_buy,trim(before(%q<cmd_args>,=)),loot_sell,firstof(trim(after(%q<cmd_args>,=)),50)); @assert cand(isint(%q<loot_buy>),isint(%q<loot_sell>),gt(%q<loot_buy>,0),gte(%q<loot_sell>,0),lte(%q<loot_sell>,%q<loot_buy>))=@pemit %#=notice(PF2E,+loot/shop <percent of the Price it sells at>=<percent it pays>%, such as +loot/shop 100=50. It never pays more than it asks.,warn); &%q<loot_p>`SHOP %!=%q<loot_buy> %q<loot_sell>; &%q<loot_p>`ITEMS %!=[iter(v(%q<loot_p>`ITEMS),[first(%i0,~)]~[elements(%i0,2,~)]~~[elements(%i0,4,~)])]; @remit %l=notice(PF2E,[u(%!/FUN`LOOT`TITLE)] is a shop: it sells at %q<loot_buy>%% of the Price and pays %q<loot_sell>%%.,ok)
+        flags: [cmdsyntax]
+      INC`LOOT`NAME:
+        value: |-
+          @include %!/INC`LOOT`STAFF; &%q<loot_p>`NAME %!=%q<cmd_args>; @pemit %#=notice(PF2E,The loot here is [u(%!/FUN`LOOT`TITLE)].,ok)
+        flags: [cmdsyntax]
+      INC`LOOT`CLEAR:
+        value: |-
+          @include %!/INC`LOOT`STAFF; &%q<loot_p>`ITEMS %!=; &%q<loot_p>`CP %!=; &%q<loot_p>`SHOP %!=; &%q<loot_p>`NAME %!=; @pemit %#=notice(PF2E,The loot here is gone.,ok)
+        flags: [cmdsyntax]
+      FUN`LOOT`TITLE:
+        value: |-
+          firstof(v(%q<loot_p>`NAME),if(strlen(v(%q<loot_p>`SHOP)),the shop,the loot))
+        flags: [funsyntax]
+      FUN`LOOT`COUNTED:
+        value: |-
+          @@(%0 a count, %1 a name)[
+          if(eq(%0,1),art(%1) %1,%0 %1)]
+        flags: [funsyntax]
+      FUN`LOOT`SHOWN:
+        value: |-
+          @@(%0 a pile entry: its name as the characters see it)[
+          setq(ls_item,u({{core}}/FUN`ITEM`GET,equipment,first(%0,~)))][
+          if(strmatch(elements(%0,3,~),u),u({{core}}/FUN`ITEM`UNUSUAL,%q<ls_item>),[json_query(%q<ls_item>,extract,$.name)][if(strlen(elements(%0,4,~)),%b%([u(FUN`LOOT`RUNETEXT,elements(%0,4,~))]%))])]
+        flags: [funsyntax]
+      FUN`LOOT`FIND:
+        value: |-
+          @@(%0 typed text: the pile entry it names)[
+          setq(lf_text,trim(%0))][
+          firstof(
+            first(iter(v(%q<loot_p>`ITEMS),if(strmatch(u(FUN`LOOT`SHOWN,%i0),%q<lf_text>),%i0))),
+            first(iter(v(%q<loot_p>`ITEMS),if(strmatch(u(FUN`LOOT`SHOWN,%i0),%q<lf_text>*),%i0))))]
+        flags: [funsyntax]
+      FUN`LOOT`MOVE:
+        value: |-
+          @@(%0 pile entries, %1 an id, %2 u or nothing, %3 a runes code, %4 how many to add, negative to take away: the entries after)[
+          setq(lm_found,0)][
+          setq(lm_out,iter(%0,if(cand(strmatch(first(%i0,~),%1),strmatch(elements(%i0,3,~),%2),strmatch(elements(%i0,4,~),%3)),[setq(lm_found,1)][if(gt(setr(lm_q,add(elements(%i0,2,~),%4)),0),[first(%i0,~)]~%q<lm_q>~%2~%3)],%i0)))][
+          squish(%q<lm_out> [if(cand(not(%q<lm_found>),gt(%4,0)),%1~%4~%2~%3)])]
+        flags: [funsyntax]
+      FUN`LOOT`STATE:
+        value: |-
+          @@(%0 an id, %1 how many the character held, %2 u when the taken item is unidentified; check_entries: the myst state to write, or nothing)[
+          setq(lst_now,u({{core}}/FUN`SHEET`VALUE,%q<check_entries>,myst,ucstr(%0)))][
+          case(1,
+            t(%1), if(cand(strlen(u({{core}}/FUN`ITEM`MYST,%0)),not(strlen(%2))),k),
+            t(strlen(%2)), if(strmatch(%q<lst_now>,u),,u),
+            if(cand(strlen(%q<lst_now>),comp(%q<lst_now>,k)),k))]
+        flags: [funsyntax]
+      FUN`LOOT`CODE:
+        value: |-
+          @@(%0 runes as Foundry's system.runes: the runes code)[
+          setq(lc_code,[firstof(json_query(%0,extract,$.potency),0)].[firstof(json_query(%0,extract,$.striking),0)].[firstof(json_query(%0,extract,$.resilient),0)].[firstof(json_query(%0,extract,$.reinforcing),0)].[edit(json_map({{core}}/FUN`RULE`SELECTOR,firstof(json_query(%0,extract,$.property),json(array)),%b),%b,:)])][
+          if(strmatch(%q<lc_code>,0.0.0.0.),,%q<lc_code>)]
+        flags: [funsyntax]
+      FUN`LOOT`RUNES:
+        value: |-
+          @@(%0 a runes code: rune~value for each rune entry it makes, a property value the slugs joined by dots)[
+          squish([iter(potency striking resilient reinforcing,if(setr(lr_v,elements(%0,inum(0),.)),%i0~%q<lr_v>))] [if(strlen(elements(%0,5,.)),property~[edit(elements(%0,5,.),:,.)])])]
+        flags: [funsyntax]
+      FUN`LOOT`RUNETEXT:
+        value: |-
+          @@(%0 a runes code: +1 striking flaming)[
+          squish([if(setr(lrt_v,elements(%0,1,.)),+%q<lrt_v>)] [iter(striking~2 resilient~3,if(setr(lrt_v,elements(%0,last(%i0,~),.)),[switch(%q<lrt_v>,2,greater%b,3,major%b)][first(%i0,~)]))] [if(setr(lrt_v,elements(%0,4,.)),lcstr(extract(Minor Lesser Moderate Greater Major Supreme,%q<lrt_v>,1)) reinforcing)] [lcstr(iter(elements(%0,5,.),u({{commands}}/FUN`SHOW`PROPERTY,%i0),:,%b))])]
+        flags: [funsyntax]
+      FUN`LOOT`TYPED:
+        value: |-
+          @@(%0 runes as typed, such as +1%, striking%, flaming; %1 weapon, armor or shield: a runes code, or #-1 and why)[
+          setqm(lt_p,0,lt_s,0,lt_r,0,lt_f,0,lt_props,,lt_bad,)][
+          null(iter(%0,
+            [setqm(lt_one,trim(%i0),lt_fund,u({{commands}}/FUN`BUILD`RUNE`TYPED,trim(%i0)))][
+            case(1,
+              t(cand(strlen(%q<lt_fund>),strlen(grab(get({{commands}}/DATA`RUNES),[first(%q<lt_fund>,~)]~[last(%q<lt_fund>,~)]~%1~*)))), setq(lt_[switch(first(%q<lt_fund>,~),potency,p,striking,s,resilient,r,f)],last(%q<lt_fund>,~)),
+              t(cand(match(weapon armor,%1),strlen(setr(lt_prop,u({{core}}/FUN`RUNE`FIND,if(strmatch(%1,weapon),W,A),%q<lt_one>))))), setq(lt_props,squish(%q<lt_props> %q<lt_prop>)),
+              setq(lt_bad,[if(strlen(%q<lt_bad>),%q<lt_bad>|)]%q<lt_one>))],
+            \,))][
+          case(1,
+            not(strlen(%0)),,
+            t(strlen(%q<lt_bad>)), #-1 [itemize(%q<lt_bad>,|)] [if(gt(words(%q<lt_bad>,|),1),are not runes,is not a rune)] for [art(%1)] %1.,
+            gt(words(%q<lt_props>),%q<lt_p>), #-1 A [if(strmatch(%1,weapon),weapon,armor)] holds one property rune for each point of potency.,
+            %q<lt_p>.%q<lt_s>.%q<lt_r>.%q<lt_f>.[edit(%q<lt_props>,%b,:)])]
+        flags: [funsyntax]
+      FUN`LOOT`WORTH:
+        value: |-
+          @@(%0 an equipment id, %1 a runes code: the level and the Price in copper of the item with those runes, level~cp)[
+          setqm(lw_item,u({{core}}/FUN`ITEM`GET,equipment,%0),lw_kind,json_query(u({{core}}/FUN`ITEM`GET,equipment,%0),extract,$.type))][
+          setqm(lw_level,firstof(json_query(%q<lw_item>,extract,$.system.level.value),0),lw_cp,u({{commands}}/FUN`BUILD`PRICE,%q<lw_item>))][
+          null(iter(potency striking resilient reinforcing,if(setr(lw_v,elements(%1,inum(0),.)),[setq(lw_r,u({{core}}/FUN`ITEM`GET,equipment,u({{core}}/FUN`ITEM`FIND,equipment,last(grab(get({{commands}}/DATA`RUNES),%i0~%q<lw_v>~%q<lw_kind>~*),~))))][setqm(lw_level,max(%q<lw_level>,firstof(json_query(%q<lw_r>,extract,$.system.level.value),0)),lw_cp,add(%q<lw_cp>,u({{commands}}/FUN`BUILD`PRICE,%q<lw_r>)))])))][
+          null(iter(elements(%1,5,.),[setq(lw_r,u({{core}}/FUN`RUNE`GET,%i0,if(strmatch(%q<lw_kind>,weapon),W,A)))][setqm(lw_level,max(%q<lw_level>,firstof(json_query(%q<lw_r>,extract,$.level),0)),lw_cp,add(%q<lw_cp>,mul(100,firstof(json_query(%q<lw_r>,extract,$.price),0))))],:))][
+          %q<lw_level>~%q<lw_cp>]
+        flags: [funsyntax]
+      FUN`SHOW`LOOT:
+        value: |-
+          @@(loot_p: the loot here)[
+          setqm(sl_items,v(%q<loot_p>`ITEMS),sl_shop,v(%q<loot_p>`SHOP),sl_staff,permission(%#,softcode.pf2e.staff))][
+          box(
+            [if(words(%q<sl_items>),ldatatable(,Item|>Count[if(strlen(%q<sl_shop>),|>Price)],iter(%q<sl_items>,[u(FUN`LOOT`SHOWN,%i0)][if(cand(%q<sl_staff>,strmatch(elements(%i0,3,~),u)),%b[tone(muted,%[[json_query(u({{core}}/FUN`ITEM`GET,equipment,first(%i0,~)),extract,$.name)][if(strlen(elements(%i0,4,~)),%b%([u(FUN`LOOT`RUNETEXT,elements(%i0,4,~))]%))]%])])]|[elements(%i0,2,~)][if(strlen(%q<sl_shop>),|[u({{commands}}/FUN`SHOW`MONEY,ceil(fdiv(mul(rest(u(FUN`LOOT`WORTH,first(%i0,~),elements(%i0,4,~)),~),first(%q<sl_shop>)),100)))])],%b,%r),%r),tone(muted,No items.))]%r[
+            rule()]%r[
+            if(strlen(%q<sl_shop>),tone(muted,It sells at [first(%q<sl_shop>)]%% of the Price and pays [last(%q<sl_shop>)]%% for what it buys. +loot/take <item> buys%, +loot/drop <item> sells.),[fields(,Coins,u({{commands}}/FUN`SHOW`MONEY,firstof(v(%q<loot_p>`CP),0)))]%r[tone(muted,+loot/take <item or coins> takes%, +loot/drop leaves%, +loot/split shares the coins.)])],
+            capstr(u(FUN`LOOT`TITLE)))]
         flags: [funsyntax]
 
       # --- DCs -----------------------------------------------------------------------------------
@@ -9070,6 +9327,7 @@ objects:
         - `+familiar` shows your familiar and chooses its abilities each day: `+help pf2e familiar`.
         - `+companion` shows your animal companion and chooses its type and advancement: `+help pf2e companion`.
         - `+downtime` spends the downtime days staff award on Earn Income, Crafting, Learn a Spell and Retraining: `+help pf2e downtime`.
+        - `+loot` is the treasure, stash or shop in a room, and `+identify` works out what a magic or alchemical item is: `+help pf2e loot`, `+help pf2e identify`.
         - `+spells`, `+prepare` and `+cast` are for casters, `+rest` begins a new day: `+help pf2e spells`, `+help pf2e day`.
         - `+deity` lists the game's deities, which clerics and champions follow: `+help pf2e deity`.
         - `+alchemy` makes alchemical items from your formula book: `+help pf2e alchemy`.
@@ -9080,7 +9338,7 @@ objects:
 
         Your sheet is a ledger: every choice is an entry, and nothing is ever overwritten. Money, experience and downtime days have ledgers of their own. `+pf2e/ledger` shows the sheet's, `+pf2e/ledger money`, `+pf2e/ledger xp` and `+pf2e/ledger days` the others with their totals.
       SEE`PF2E: |-
-        pf2e build|pf2e sheet|pf2e enc|pf2e spells|pf2e cast|pf2e deity|pf2e alchemy
+        pf2e build|pf2e sheet|pf2e enc|pf2e spells|pf2e cast|pf2e deity|pf2e alchemy|pf2e loot
       HELP`PF2E`BUILD: |-
         `+build` makes your character. Type it on its own to see every step, what is done and what to type next.
 
@@ -9431,6 +9689,45 @@ objects:
         `+companion/type bear`
 
         Output: `\[PF2E\] Done: Rook's animal companion is a Bear.`
+      HELP`PF2E`LOOT: |-
+        `+loot` shows the loot in the room: items and coins, or a shop's wares and prices. A party's stash is the loot where they keep it.
+
+        - `+loot/take <item>\[=<count>\]` and `+loot/drop <item>\[=<count>\]` move gear; `+loot/take 10 gp` and `+loot/drop 10 gp` move coins.
+        - `+loot/split` shares the coins among the connected characters here with a sheet.
+        - An item no one has identified shows as Unusual and what it looks like, such as an Unusual Liquid: `+help pf2e identify`.
+        - Items of one kind share their runes, so a weapon or armor with other runes than yours waits until you drop or sell yours.
+        - In a shop, `+loot/take` buys and `+loot/drop` sells, runes included. A shop buys only what you have identified.
+
+        ## Staff
+
+        - `+loot/add <item>\[ with <runes>\]\[=<count>\]`, such as `+loot/add longsword with +1, striking`. Magic and alchemical items come in unidentified; `+loot/add/known` puts in one everyone knows. `+loot/add 30 gp` adds coins.
+        - `+loot/shop <sell %>=<buy %>` makes it a shop: `+loot/shop 100=50`. `+loot/shop off` ends it.
+        - `+loot/name <name>` names it, `+loot/clear` empties it. Staff see what each unidentified item is.
+
+        Example:
+
+        `+loot/take unusual liquid=2`
+
+        Output: `\[PF2E\] Done: Rook takes 2 Unusual Liquid from the loot.`
+      SEE`PF2E`LOOT: |-
+        pf2e identify|pf2e build|pf2e advance
+      HELP`PF2E`IDENTIFY: |-
+        `+identify <item>\[=<skill>\]` spends 10 minutes working out what an unidentified item of your gear is. It is a secret check: you learn the answer, not the roll.
+
+        - A magic item takes Identify Magic, with Arcana, Nature, Occultism or Religion. An item of one tradition is 5 harder with another tradition's skill: Arcana for arcane, Nature for primal, Occultism for occult, Religion for divine. Without a skill named, the best one you are trained in is used.
+        - An alchemical item takes Identify Alchemy, with Crafting and an alchemist's toolkit or lab in your gear.
+        - The DC is the item's level DC, its runes' levels counted, and harder for uncommon, rare and unique items. A cursed item is as hard as a unique one.
+        - You need to be trained in the skill. It is not done in an encounter.
+        - A success tells you what the item is; a critical success also tells you whether it is cursed. After a failure at Identify Magic you try again after your next daily preparations; Identify Alchemy may be tried again at once. On a critical failure you take it for another item.
+        - Until you know what an item is, its runes cannot be changed and a shop will not buy it. It still works.
+
+        Example:
+
+        `+identify unusual liquid`
+
+        Output: `\[PF2E\] Done: After 10 minutes with Nature, you know what Unusual Liquid is: Healing Potion (Lesser). +build/info describes it.`
+      SEE`PF2E`IDENTIFY: |-
+        pf2e loot|pf2e explore
       HELP`PF2E`DOWNTIME: |-
         `+downtime` shows your downtime days and what you are crafting. Staff award the days with `+pf2e/award <players>=7 days <reason>`, and each activity spends them.
 
@@ -9511,6 +9808,13 @@ objects:
         - `+explore/set <activity>`: Avoid Notice, Defend, Detect Magic, Follow the Expert, Investigate, Repeat a Spell, Search, Scout, Hustle or Track. Avoid Notice rolls Stealth for initiative, and Scout gives every character +1 to it.
         - `+explore/stop` stops.
         - `+explore/search <DC>`: the GM's secret Perception check for everyone here who is Searching. Only the GM sees the rolls.
+        - `+explore/secret <characters>=<statistic>=<DC>`: the GM's secret check for characters here, such as Decipher Writing (Arcana, Occultism, Religion or Society) or Gather Information (Diplomacy). Only the GM sees the rolls and tells each character what they learn.
+
+        Example:
+
+        `+explore/secret Rook=farming lore=15`
+
+        Output: `\[PF2E\] Secret Farming Lore checks against DC 15:`, then `Rook: 1d20\[10\] + 5 = 15, success`
       SEE`PF2E`EXPLORE: |-
         pf2e enc|pf2e challenge
       HELP`PF2E`CHALLENGE: |-
