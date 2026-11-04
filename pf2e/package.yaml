@@ -1,7 +1,7 @@
 format: "1.20"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.10.14"
+version: "0.10.15"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, downtime (+downtime: Earn Income, Crafting, Learn a Spell, Retraining), loot, stashes and shops with unidentified magic items (+loot, +identify), and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -113,7 +113,7 @@ objects:
       # ledger read again costs a few hundred function calls. The key is the ledger with the package's
       # version, the books and CACHE`STAMP, which the updater and the deity table change. CACHE lists
       # the keys oldest first; past DATA`CACHE`KEEP the oldest goes.
-      DATA`CACHE`VERSION: "0.10.14"
+      DATA`CACHE`VERSION: "0.10.15"
       DATA`CACHE`KEEP: 200
       DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_itemalts check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_shieldrules check_bulkrules check_bulk check_bulk_enc check_bulk_max check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
       # The ItemAlteration properties the core applies, by the kind of item they reach.
@@ -6090,6 +6090,128 @@ objects:
               |)][
             u(%!/FUN`SHOW`UNAPPLIED)],
             name(%q<sheet_target>))]
+        flags: [funsyntax]
+      # --- The portal ----------------------------------------------------------------------------
+      # The pf2e-portal package routes GET /http/pf2e/schema and /http/pf2e/data here, %<at> the name after
+      # /apps/pf2e/: a read-only view of +sheet, the viewer's own when %<at> is empty. Staff see anyone's.
+      # The route @forces this object to run INC`WEB`, so a sheet is read under this object's call budget.
+      INC`WEB`SCHEMA:
+        value: |-
+          think setq(web_response,u(%!/WEB`SCHEMA,%<viewer>,%<at>))
+        flags: [cmdsyntax]
+      INC`WEB`DATA:
+        value: |-
+          think setq(web_response,u(%!/WEB`DATA,%<viewer>,%<at>))
+        flags: [cmdsyntax]
+      WEB`WHO:
+        value: |-
+          @@(%0 the viewer, %1 a name or nothing: whose sheet it is, when the viewer may see it)[
+          setq(web_who,if(strlen(%1),pmatch(%1),%0))][
+          if(cand(hastype(%q<web_who>,player),cor(strmatch(num(%q<web_who>),num(%0)),permission(%0,softcode.pf2e.staff))),num(%q<web_who>))]
+        flags: [funsyntax]
+      WEB`SCHEMA:
+        value: |-
+          @@(%0 the viewer, %1 a name: the page)[
+          setq(web_who,u(%!/WEB`WHO,%0,%1))][
+          case(1,
+            not(strlen(%0)), u(%!/WEB`SAY,Sign in with a character to see their sheet.),
+            not(strlen(%q<web_who>)), u(%!/WEB`SAY,There is no sheet of [firstof(%1,yours)] you may see.),
+            not(words(lattr(%q<web_who>/PF2E`LEDGER`*))), u(%!/WEB`SAY,[name(%q<web_who>)] has no sheet yet. +build makes one.),
+            json_fill(get(%!/DATA`WEB`DOCUMENT),/title,name(%q<web_who>),/pages/0/title,name(%q<web_who>),/pages/0/sections,json_array(
+              [u(%!/WEB`SECTION,Character,1,2,u(%!/WEB`KEYS,Level Ancestry Background Class Traits Size Attributes)%r[u(%!/WEB`KEYS,Hit points|Hero points|AC|Shield|Speed|Bulk|Class DC|Spells|Senses|Defences)])]%r[
+              u(%!/WEB`SECTION,Statistics,2,1,u(%!/WEB`TABLE,stats,Statistic~name Rank~rank Modifier~mod))]%r[
+              u(%!/WEB`SECTION,Strikes,3,1,u(%!/WEB`TABLE,strikes,Strike~strike Attack~attack MAP~map Damage~damage Traits~traits))]%r[
+              u(%!/WEB`SECTION,Belongings,4,1,u(%!/WEB`KEYS,Languages|Money)%r[u(%!/WEB`TABLE,gear,Item~item Count~count Where~where)])]%r[
+              u(%!/WEB`SECTION,Spells and feats,5,1,u(%!/WEB`KEYS,Spells known|Feats and features|Actions|Conditions))],%r)))]
+        flags: [funsyntax]
+      DATA`WEB`DOCUMENT: |-
+        {"kind":"view","schema_version":1,"title":"","pages":[{"key":"sheet","title":"","order":1,"sections":[]}],"actions":{}}
+      WEB`SAY:
+        value: |-
+          @@(%0 the text: a page that only says it)[
+          json_fill(get(%!/DATA`WEB`DOCUMENT),/title,Pathfinder sheet,/pages/0/title,Pathfinder sheet,/pages/0/sections,json_array(u(%!/WEB`SECTION,,1,1,json(object,kind,"markdown",value,json(string,%0))),%r))]
+        flags: [funsyntax]
+      WEB`SECTION:
+        value: |-
+          @@(%0 a name, %1 its order, %2 columns, %3 its elements, %r-separated)[
+          json(object,name,json(string,%0),order,%1,columns,%2,elements,json_array(%3,%r))]
+        flags: [funsyntax]
+      WEB`KEYS:
+        value: |-
+          @@(%0 data keys separated by |, or by spaces when there is no |: a keyvalue element)[
+          json(object,kind,"keyvalue",fields,json_array(iter(%0,json(string,%i0),if(strmatch(%0,*|*),|,%b),%r),%r))]
+        flags: [funsyntax]
+      WEB`TABLE:
+        value: |-
+          @@(%0 the rows' data key, %1 label~key for each column: a table element)[
+          json(object,kind,"table",rows_field,json(string,%0),columns,json_array(iter(%1,json(object,key,json(string,last(%i0,~)),label,json(string,first(%i0,~))),%b,%r),%r),empty,"None.")]
+        flags: [funsyntax]
+      WEB`DATA:
+        value: |-
+          @@(%0 the viewer, %1 a name: the page's values)[
+          setq(web_who,u(%!/WEB`WHO,%0,%1))][
+          json(object,fields,if(cand(strlen(%0),strlen(%q<web_who>),words(lattr(%q<web_who>/PF2E`LEDGER`*))),u(%!/WEB`DATA`SHEET,%0),json(object)))]
+        flags: [funsyntax]
+      WEB`DATA`SHEET:
+        value: |-
+          @@(%0 the viewer; web_who whose sheet: every value the page shows)[
+          setqm(sheet_target,%q<web_who>,sheet_ledger,u(%!/FUN`LEDGER`OF,%q<web_who>))][
+          u({{core}}/FUN`CHECK`PREPARE,%q<sheet_ledger>)][
+          setqm(check_daily,u(%!/FUN`DAILY`OF,%q<web_who>),web_staff,permission(%0,softcode.pf2e.staff),show_spellcaster,gt(u({{core}}/FUN`CHECK`RANK,spellcasting),0),show_spells,u(%!/FUN`SHOW`SPELLS),show_conditions,u(%!/FUN`SHOW`GRANTS,conditions),show_actions,u(%!/FUN`SHOW`GRANTS,actions))][
+          setq(show_feats,setunion(trim(squish(iter(%q<check_grants>,if(match(spells conditions actions,elements(%i0,2,~)),,u(%!/FUN`SHOW`ITEM,elements(%i0,2,~),elements(%i0,3,~),elements(%i0,4,~))),%b,|),|),|),,|))][
+          fold(%!/WEB`MERGE,
+            [u(%!/WEB`VALUE,Level,[%q<check_level>] %([u(%!/FUN`PURSE`TOTAL,%q<web_who>,xp)] XP%))]%r[
+            u(%!/WEB`VALUE,Ancestry,[u(%!/FUN`SHOW`GRANTED,%q<check_ancestry>)][if(strlen(%q<check_heritage>),%b%([u(%!/FUN`SHOW`GRANTED,%q<check_heritage>)]%))])]%r[
+            u(%!/WEB`VALUE,Background,u(%!/FUN`SHOW`GRANTED,%q<check_background>))]%r[
+            u(%!/WEB`VALUE,Class,[u(%!/FUN`SHOW`GRANTED,%q<check_class>)][if(strlen(%q<check_deity>),%, follows [json_query(u({{core}}/FUN`DEITY`GET,%q<check_deity>),extract,$.name)])])]%r[
+            u(%!/WEB`VALUE,Traits,itemize(%q<check_traits>))]%r[
+            u(%!/WEB`VALUE,Size,switch(u({{core}}/FUN`CHECK`SIZE),tiny,Tiny,sm,Small,lg,Large,huge,Huge,grg,Gargantuan,Medium))]%r[
+            u(%!/WEB`VALUE,Attributes,iter(str dex con int wis cha,[capstr(%i0)] [u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`CHECK`ABILITY,%i0))],%b,%b%b))]%r[
+            u(%!/WEB`VALUE,Hit points,[if(strlen(json_query(%q<check_daily>,extract,$.hp)),[json_query(%q<check_daily>,extract,$.hp)] of%b)][u({{core}}/FUN`CHECK`HP)][if(json_query(%q<check_daily>,extract,$.wounded),%b%(wounded [json_query(%q<check_daily>,extract,$.wounded)]%))])]%r[
+            u(%!/WEB`VALUE,Hero points,[u(%!/FUN`HERO`N,%q<check_daily>)] of 3)]%r[
+            u(%!/WEB`VALUE,AC,[add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`AC)))][if(strlen(%q<check_armor>),%b%([json_query(%q<check_armor>,extract,$.name)]%))])]%r[
+            u(%!/WEB`VALUE,Shield,if(strlen(%q<check_shield>),u(%!/FUN`SHOW`SHIELD)))]%r[
+            u(%!/WEB`VALUE,Speed,[u({{core}}/FUN`CHECK`SPEED)] feet[iter(u({{core}}/FUN`CHECK`SPEEDS),if(comp(first(%i0,~),land),%,%b[first(%i0,~)] [rest(%i0,~)] feet),%b,)])]%r[
+            u(%!/WEB`VALUE,Bulk,u(%!/FUN`SHOW`BULK))]%r[
+            u(%!/WEB`VALUE,Class DC,add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`CLASSDC))))]%r[
+            u(%!/WEB`VALUE,Spells,if(%q<show_spellcaster>,attack [u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,attack)))]%, DC [add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,dc)))]))]%r[
+            u(%!/WEB`VALUE,Senses,u(%!/FUN`SHOW`SENSES))]%r[
+            u(%!/WEB`VALUE,Defences,u(%!/FUN`SHOW`DEFENCES))]%r[
+            u(%!/WEB`ROWS,stats,json_array(iter(u({{core}}/FUN`SHEET`STATS),u(%!/WEB`ROW,u(%!/FUN`SHOW`STATISTIC,%i0),name rank mod),%b,%r),%r))]%r[
+            u(%!/WEB`ROWS,strikes,json_array(iter(u({{core}}/FUN`CHECK`STRIKES),u(%!/WEB`ROW,u(%!/FUN`SHOW`STRIKE,u({{core}}/FUN`STRIKE`LINE,%i0)),strike attack map damage traits),|,%r),%r))]%r[
+            u(%!/WEB`VALUE,Languages,itemize(iter(u(%!/FUN`SHOW`LANGUAGES),capstr(%i0))))]%r[
+            u(%!/WEB`VALUE,Money,u(%!/FUN`SHOW`MONEY,u(%!/FUN`PURSE`TOTAL,%q<web_who>,money)))]%r[
+            u(%!/WEB`ROWS,gear,json_array(iter(%q<check_gear>,u(%!/WEB`GEAR,%i0),%b,%r),%r))]%r[
+            u(%!/WEB`VALUE,Spells known,%q<show_spells>)]%r[
+            u(%!/WEB`VALUE,Feats and features,itemize(%q<show_feats>,|))]%r[
+            u(%!/WEB`VALUE,Actions,itemize(%q<show_actions>,|))]%r[
+            u(%!/WEB`VALUE,Conditions,itemize(%q<show_conditions>,|))],
+            json(object),%r)]
+        flags: [funsyntax]
+      WEB`MERGE:
+        value: |-
+          json_mod(%0,patch,%1)
+        flags: [funsyntax]
+      WEB`VALUE:
+        value: |-
+          @@(%0 a key, %1 its text: one member, shown when there is text)[
+          json(object,%0,json(object,value,json(string,%1),visible,json(boolean,if(strlen(%1),true,false))))]
+        flags: [funsyntax]
+      WEB`ROWS:
+        value: |-
+          @@(%0 a key, %1 a JSON array of rows: one member)[
+          json(object,%0,json(object,value,%1,visible,json(boolean,true)))]
+        flags: [funsyntax]
+      WEB`ROW:
+        value: |-
+          @@(%0 a row's cells separated by |, %1 their keys: a row object)[
+          fold(%!/WEB`MERGE,iter(%1,json(object,%i0,json(string,elements(%0,inum(0),|))),%b,%r),json(object),%r)]
+        flags: [funsyntax]
+      WEB`GEAR:
+        value: |-
+          @@(%0 id~count~where of an item of gear; web_staff, check_entries: its row)[
+          setq(web_myst,u({{core}}/FUN`ITEM`MYST,first(%0,~)))][
+          u(%!/WEB`ROW,[u(%!/FUN`SHOW`ITEM,equipment,first(%0,~),)][if(cand(not(strlen(%q<web_myst>)),strlen(setr(web_gr,u(%!/FUN`SHOW`RUNES,first(%0,~))))),%b%(%q<web_gr>%))][if(cand(%q<web_staff>,strlen(%q<web_myst>)),%b%[[json_query(u({{core}}/FUN`ITEM`GET,equipment,first(%0,~)),extract,$.name)]%])]|[elements(%0,2,~)]|[elements(%0,3,~)],item count where)]
         flags: [funsyntax]
       # The character's senses, as words: darkvision, scent (imprecise) 30 feet.
       FUN`SHOW`SENSES:

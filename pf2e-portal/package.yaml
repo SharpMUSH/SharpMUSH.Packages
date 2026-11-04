@@ -1,0 +1,40 @@
+format: "1.20"
+package: pf2e-portal
+title: "Pathfinder 2e: sheets in the portal"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Joins the Pathfinder 2e rules to the HTTP handler: the routes the pf2e-app page reads, a character's sheet as +sheet shows it, for the character themselves and for staff."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [pf2e, pathfinder, portal, sheet, bridge]
+category: Game System
+subcategory: Pathfinder 2e
+bridge: true
+requires_server: ">=1.0"
+
+# A bridge: pf2e builds the page and its values (WEB` on its commands object), http-handler routes the request.
+depends:
+  - package: pf2e
+    version: ">=0.10.15"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH.Packages
+      path: pf2e/
+      branch: main
+  - package: http-handler
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/http-handler/
+      branch: main
+
+objects:
+  # GET /http/pf2e/schema?at=<name> and /http/pf2e/data?at=<name>, as children of http-handler's GET verb.
+  # %<viewer> is the character the portal signed in as. The handler @forces the PF2e Commands object, which
+  # reads the sheet under its own call budget and leaves the JSON in %q<web_response>.
+  - ref: routes
+    target: "{{$http_handler}}"
+    attributes:
+      GET`PF2E`SCHEMA: |-
+        @force {{pf2e/commands}}=@include/args/nobreak {{pf2e/commands}}/INC`WEB`SCHEMA=viewer,%<viewer>,at,%q<form.at>; @respond/type application/json; think %q<web_response>
+      GET`PF2E`DATA: |-
+        @force {{pf2e/commands}}=@include/args/nobreak {{pf2e/commands}}/INC`WEB`DATA=viewer,%<viewer>,at,%q<form.at>; @respond/type application/json; think %q<web_response>
