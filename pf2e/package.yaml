@@ -1,7 +1,7 @@
 format: "1.20"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.10.15"
+version: "0.10.16"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, downtime (+downtime: Earn Income, Crafting, Learn a Spell, Retraining), loot, stashes and shops with unidentified magic items (+loot, +identify), and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -113,7 +113,7 @@ objects:
       # ledger read again costs a few hundred function calls. The key is the ledger with the package's
       # version, the books and CACHE`STAMP, which the updater and the deity table change. CACHE lists
       # the keys oldest first; past DATA`CACHE`KEEP the oldest goes.
-      DATA`CACHE`VERSION: "0.10.15"
+      DATA`CACHE`VERSION: "0.10.16"
       DATA`CACHE`KEEP: 200
       DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_itemalts check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_shieldrules check_bulkrules check_bulk check_bulk_enc check_bulk_max check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
       # The ItemAlteration properties the core applies, by the kind of item they reach.
@@ -6117,12 +6117,31 @@ objects:
             not(strlen(%0)), u(%!/WEB`SAY,Sign in with a character to see their sheet.),
             not(strlen(%q<web_who>)), u(%!/WEB`SAY,There is no sheet of [firstof(%1,yours)] you may see.),
             not(words(lattr(%q<web_who>/PF2E`LEDGER`*))), u(%!/WEB`SAY,[name(%q<web_who>)] has no sheet yet. +build makes one.),
-            json_fill(get(%!/DATA`WEB`DOCUMENT),/title,name(%q<web_who>),/pages/0/title,name(%q<web_who>),/pages/0/sections,json_array(
-              [u(%!/WEB`SECTION,Character,1,2,u(%!/WEB`KEYS,Level Ancestry Background Class Traits Size Attributes)%r[u(%!/WEB`KEYS,Hit points|Hero points|AC|Shield|Speed|Bulk|Class DC|Spells|Senses|Defences)])]%r[
-              u(%!/WEB`SECTION,Statistics,2,1,u(%!/WEB`TABLE,stats,Statistic~name Rank~rank Modifier~mod))]%r[
-              u(%!/WEB`SECTION,Strikes,3,1,u(%!/WEB`TABLE,strikes,Strike~strike Attack~attack MAP~map Damage~damage Traits~traits))]%r[
-              u(%!/WEB`SECTION,Belongings,4,1,u(%!/WEB`KEYS,Languages|Money)%r[u(%!/WEB`TABLE,gear,Item~item Count~count Where~where)])]%r[
-              u(%!/WEB`SECTION,Spells and feats,5,1,u(%!/WEB`KEYS,Spells known|Feats and features|Actions|Conditions|Not applied yet))],%r)))]
+            u(%!/WEB`SCHEMA`SHEET))]
+        flags: [funsyntax]
+      WEB`SCHEMA`SHEET:
+        value: |-
+          @@(web_who whose sheet: the sheet's tabs. Spells only for a character with spellcasting or spells)[
+          setqm(sheet_target,%q<web_who>,sheet_ledger,u(%!/FUN`LEDGER`OF,%q<web_who>))][
+          u(%!/FUN`DAILY`PREPARE)][
+          json(object,kind,"view",schema_version,1,title,json(string,name(%q<web_who>)),layout,"tabs",actions,json(object),pages,json_array(
+            [u(%!/WEB`PAGE,sheet,Sheet,1,
+              [u(%!/WEB`SECTION,,1,1,u(%!/WEB`KEYS,Level|Ancestry|Background|Class|Size|Languages)%r[u(%!/WEB`CHIPS,traits,Traits)]%r[u(%!/WEB`CHIPS,conditions,Conditions)])]%r[
+              u(%!/WEB`SECTION,Defences,2,1,u(%!/WEB`STATS,defences)%r[u(%!/WEB`KEYS,Shield|Senses|Defences)])]%r[
+              u(%!/WEB`SECTION,Attributes,3,1,u(%!/WEB`STATS,attributes))]%r[
+              u(%!/WEB`SECTION,Perception and saves,4,1,u(%!/WEB`STATS,saves))]%r[
+              u(%!/WEB`SECTION,Skills,5,1,u(%!/WEB`TABLE,skills,Skill~name Rank~rank~rank_color Modifier~mod))])]%r[
+            u(%!/WEB`PAGE,strikes,Strikes,2,
+              [u(%!/WEB`SECTION,Strikes,1,1,u(%!/WEB`TABLE,strikes,Strike~strike Attack~attack MAP~map Damage~damage Traits~traits))]%r[
+              u(%!/WEB`SECTION,Actions,2,1,u(%!/WEB`CHIPS,actions,,None.))])][if(cor(strlen(%q<cast_kind>),words(%q<cast_focus>),words(%q<cast_known>),words(%q<cast_innate>),words(graball(%q<check_entries>,ritual~*))),%r[u(%!/WEB`PAGE,spells,Spells,3,
+              [u(%!/WEB`SECTION,,1,1,u(%!/WEB`STATS,spellcasting))]%r[
+              u(%!/WEB`SECTION,Spells,2,1,u(%!/WEB`TABLE,spells,Spells~rank Left~left Which~spells))])])]%r[
+            u(%!/WEB`PAGE,feats,Feats,4,
+              [u(%!/WEB`SECTION,Feats and features,1,1,u(%!/WEB`CHIPS,feats,,None.))]%r[
+              u(%!/WEB`SECTION,,2,1,u(%!/WEB`KEYS,Not applied yet))])]%r[
+            u(%!/WEB`PAGE,gear,Gear,5,
+              [u(%!/WEB`SECTION,,1,1,u(%!/WEB`KEYS,Money|Bulk))]%r[
+              u(%!/WEB`SECTION,Belongings,2,1,u(%!/WEB`TABLE,gear,Item~item Count~count Where~where~where_color))])],%r))]
         flags: [funsyntax]
       DATA`WEB`DOCUMENT: |-
         {"kind":"view","schema_version":1,"title":"","pages":[{"key":"sheet","title":"","order":1,"sections":[]}],"actions":{}}
@@ -6130,6 +6149,21 @@ objects:
         value: |-
           @@(%0 the text: a page that only says it)[
           json_fill(get(%!/DATA`WEB`DOCUMENT),/title,Pathfinder sheet,/pages/0/title,Pathfinder sheet,/pages/0/sections,json_array(u(%!/WEB`SECTION,,1,1,json(object,kind,"markdown",value,json(string,%0))),%r))]
+        flags: [funsyntax]
+      WEB`PAGE:
+        value: |-
+          @@(%0 a key, %1 its title, %2 its order, %3 its sections, %r-separated)[
+          json(object,key,json(string,%0),title,json(string,%1),order,%2,sections,json_array(%3,%r))]
+        flags: [funsyntax]
+      WEB`STATS:
+        value: |-
+          @@(%0 the rows' data key: a row of stat tiles)[
+          json(object,kind,"stats",rows_field,json(string,%0))]
+        flags: [funsyntax]
+      WEB`CHIPS:
+        value: |-
+          @@(%0 the data key of a list, %1 a label, %2 what shows when it is empty: chips)[
+          json(object,kind,"chips",src_field,json(string,%0),label,json(string,%1),empty,json(string,%2))]
         flags: [funsyntax]
       WEB`SECTION:
         value: |-
@@ -6143,8 +6177,8 @@ objects:
         flags: [funsyntax]
       WEB`TABLE:
         value: |-
-          @@(%0 the rows' data key, %1 label~key for each column: a table element)[
-          json(object,kind,"table",rows_field,json(string,%0),columns,json_array(iter(%1,json(object,key,json(string,last(%i0,~)),label,json(string,first(%i0,~))),%b,%r),%r),empty,"None.")]
+          @@(%0 the rows' data key, %1 label~key for each column, or label~key~color key for a chip: a table element)[
+          json(object,kind,"table",rows_field,json(string,%0),columns,json_array(iter(%1,json(object,key,json(string,elements(%i0,2,~)),label,json(string,first(%i0,~)),type,if(strlen(elements(%i0,3,~)),"chip","text"),color_key,json(string,elements(%i0,3,~))),%b,%r),%r),empty,"None.")]
         flags: [funsyntax]
       WEB`DATA:
         value: |-
@@ -6156,8 +6190,8 @@ objects:
         value: |-
           @@(%0 the viewer; web_who whose sheet: every value the page shows)[
           setqm(sheet_target,%q<web_who>,sheet_ledger,u(%!/FUN`LEDGER`OF,%q<web_who>))][
-          u({{core}}/FUN`CHECK`PREPARE,%q<sheet_ledger>)][
-          setqm(check_daily,u(%!/FUN`DAILY`OF,%q<web_who>),web_staff,permission(%0,softcode.pf2e.staff),show_spellcaster,gt(u({{core}}/FUN`CHECK`RANK,spellcasting),0),show_spells,u(%!/FUN`SHOW`SPELLS),show_conditions,u(%!/FUN`SHOW`GRANTS,conditions),show_actions,u(%!/FUN`SHOW`GRANTS,actions))][
+          u(%!/FUN`DAILY`PREPARE)][
+          setqm(check_daily,u(%!/FUN`DAILY`OF,%q<web_who>),web_stats,iter(u({{core}}/FUN`SHEET`STATS),u(%!/FUN`SHOW`STATISTIC,%i0),%b,%r),web_save_names,Perception Fortitude Reflex Will,web_staff,permission(%0,softcode.pf2e.staff),show_spellcaster,gt(u({{core}}/FUN`CHECK`RANK,spellcasting),0),show_spells,u(%!/FUN`SHOW`SPELLS),show_conditions,u(%!/FUN`SHOW`GRANTS,conditions),show_actions,u(%!/FUN`SHOW`GRANTS,actions))][
           setq(show_feats,setunion(trim(squish(iter(%q<check_grants>,if(match(spells conditions actions,elements(%i0,2,~)),,u(%!/FUN`SHOW`ITEM,elements(%i0,2,~),elements(%i0,3,~),elements(%i0,4,~))),%b,|),|),|),,|))][
           fold(%!/WEB`MERGE,
             [u(%!/WEB`VALUE,Level,[%q<check_level>] %([u(%!/FUN`PURSE`TOTAL,%q<web_who>,xp)] XP%))]%r[
@@ -6177,7 +6211,17 @@ objects:
             u(%!/WEB`VALUE,Spells,if(%q<show_spellcaster>,attack [u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,attack)))]%, DC [add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,dc)))]))]%r[
             u(%!/WEB`VALUE,Senses,u(%!/FUN`SHOW`SENSES))]%r[
             u(%!/WEB`VALUE,Defences,u(%!/FUN`SHOW`DEFENCES))]%r[
-            u(%!/WEB`ROWS,stats,json_array(iter(u({{core}}/FUN`SHEET`STATS),u(%!/WEB`ROW,u(%!/FUN`SHOW`STATISTIC,%i0),name rank mod),%b,%r),%r))]%r[
+            u(%!/WEB`ROWS,stats,json_array(iter(%q<web_stats>,u(%!/WEB`ROW,%i0,name rank mod),%r,%r),%r))]%r[
+            u(%!/WEB`ROWS,skills,json_array(trim(squish(iter(%q<web_stats>,if(match(%q<web_save_names>,first(%i0,|)),,u(%!/WEB`ROW,%i0|[u(%!/WEB`RANKCOLOR,elements(%i0,2,|))],name rank mod rank_color)),%r,~),~),b,~),~))]%r[
+            u(%!/WEB`ROWS,saves,json_array(iter(%q<web_save_names>,u(%!/WEB`TILE,%i0,elements(setr(web_s,grab(%q<web_stats>,%i0|*,%r)),3,|),elements(%q<web_s>,2,|),u(%!/WEB`RANKCOLOR,elements(%q<web_s>,2,|))),%b,%r),%r))]%r[
+            u(%!/WEB`ROWS,attributes,json_array(iter(str dex con int wis cha,u(%!/WEB`TILE,switch(%i0,str,Strength,dex,Dexterity,con,Constitution,int,Intelligence,wis,Wisdom,Charisma),u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`CHECK`ABILITY,%i0))),%b,%r),%r))]%r[
+            u(%!/WEB`ROWS,defences,u(%!/WEB`DEFENCES))]%r[
+            u(%!/WEB`ROWS,spellcasting,if(%q<show_spellcaster>,json_array([u(%!/WEB`TILE,Spellcasting,if(strlen(%q<cast_kind>),capstr(%q<cast_trad>),Innate),if(strlen(%q<cast_kind>),capstr(%q<cast_kind>),and focus),primary)]%r[u(%!/WEB`TILE,Spell DC,add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,dc))),,primary)]%r[u(%!/WEB`TILE,Spell attack,u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,attack))),,primary)],%r),json(array)))]%r[
+            u(%!/WEB`ROWS,spells,if(strlen(setr(web_book,u(%!/FUN`SHOW`BOOK`ROWS))),json_array(iter(%q<web_book>,u(%!/WEB`ROW,%i0,rank left spells),~,%r),%r),json(array)))]%r[
+            u(%!/WEB`ROWS,traits,u(%!/WEB`LIST,iter(%q<check_traits>,capstr(%i0),%b,|)))]%r[
+            u(%!/WEB`ROWS,conditions,u(%!/WEB`LIST,%q<show_conditions>,error))]%r[
+            u(%!/WEB`ROWS,feats,u(%!/WEB`LIST,%q<show_feats>))]%r[
+            u(%!/WEB`ROWS,actions,u(%!/WEB`LIST,%q<show_actions>,primary))]%r[
             u(%!/WEB`ROWS,strikes,json_array(iter(u({{core}}/FUN`CHECK`STRIKES),u(%!/WEB`ROW,u(%!/FUN`SHOW`STRIKE,u({{core}}/FUN`STRIKE`LINE,%i0)),strike attack map damage traits),|,%r),%r))]%r[
             u(%!/WEB`VALUE,Languages,itemize(iter(u(%!/FUN`SHOW`LANGUAGES),capstr(%i0))))]%r[
             u(%!/WEB`VALUE,Money,u(%!/FUN`SHOW`MONEY,u(%!/FUN`PURSE`TOTAL,%q<web_who>,money)))]%r[
@@ -6208,11 +6252,37 @@ objects:
           @@(%0 a row's cells separated by |, %1 their keys: a row object)[
           fold(%!/WEB`MERGE,iter(%1,json(object,%i0,json(string,elements(%0,inum(0),|))),%b,%r),json(object),%r)]
         flags: [funsyntax]
+      WEB`TILE:
+        value: |-
+          @@(%0 a label, %1 a value, %2 a caption, %3 a colour: a stat tile)[
+          json(object,label,json(string,%0),value,json(string,%1),caption,json(string,%2),color,json(string,%3))]
+        flags: [funsyntax]
+      WEB`RANKCOLOR:
+        value: |-
+          @@(%0 a proficiency rank's name: its colour)[
+          switch(%0,Trained,info,Expert,success,Master,warning,Legendary,secondary,default)]
+        flags: [funsyntax]
+      WEB`LIST:
+        value: |-
+          @@(%0 a list separated by |, %1 a colour or nothing: chips)[
+          if(strlen(%0),json_array(iter(%0,if(strlen(%1),json(object,text,json(string,%i0),color,json(string,%1)),json(string,%i0)),|,%r),%r),json(array))]
+        flags: [funsyntax]
+      WEB`DEFENCES:
+        value: |-
+          @@(check_daily the day: hit points as a bar, AC, Hero Points as pips, class DC and Speed as tiles)[
+          setqm(web_hpmax,u({{core}}/FUN`CHECK`HP),web_hp,firstof(json_query(%q<check_daily>,extract,$.hp),u({{core}}/FUN`CHECK`HP)),web_hero,u(%!/FUN`HERO`N,%q<check_daily>))][
+          json_array(
+            [json(object,label,"Hit points",value,json(string,%q<web_hp> / %q<web_hpmax>),current,%q<web_hp>,max,%q<web_hpmax>,color,json(string,case(1,lte(mul(%q<web_hp>,4),%q<web_hpmax>),error,lte(mul(%q<web_hp>,2),%q<web_hpmax>),warning,success)),caption,json(string,if(json_query(%q<check_daily>,extract,$.wounded),Wounded [json_query(%q<check_daily>,extract,$.wounded)])))]%r[
+            u(%!/WEB`TILE,AC,add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`AC))),if(strlen(%q<check_armor>),json_query(%q<check_armor>,extract,$.name),Unarmored),info)]%r[
+            json(object,label,"Hero Points",value,json(string,%q<web_hero>),current,%q<web_hero>,max,3,pips,true,color,"warning")]%r[
+            u(%!/WEB`TILE,Class DC,add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`CLASSDC))),,primary)]%r[
+            u(%!/WEB`TILE,Speed,[u({{core}}/FUN`CHECK`SPEED)] ft,trim(iter(u({{core}}/FUN`CHECK`SPEEDS),if(comp(first(%i0,~),land),[capstr(first(%i0,~))] [rest(%i0,~)] ft),%b,%b%b)))],%r)]
+        flags: [funsyntax]
       WEB`GEAR:
         value: |-
           @@(%0 id~count~where of an item of gear; web_staff, check_entries: its row)[
           setq(web_myst,u({{core}}/FUN`ITEM`MYST,first(%0,~)))][
-          u(%!/WEB`ROW,[u(%!/FUN`SHOW`ITEM,equipment,first(%0,~),)][if(cand(not(strlen(%q<web_myst>)),strlen(setr(web_gr,u(%!/FUN`SHOW`RUNES,first(%0,~))))),%b%(%q<web_gr>%))][if(cand(%q<web_staff>,strlen(%q<web_myst>)),%b%[[json_query(u({{core}}/FUN`ITEM`GET,equipment,first(%0,~)),extract,$.name)]%])]|[elements(%0,2,~)]|[elements(%0,3,~)],item count where)]
+          u(%!/WEB`ROW,[u(%!/FUN`SHOW`ITEM,equipment,first(%0,~),)][if(cand(not(strlen(%q<web_myst>)),strlen(setr(web_gr,u(%!/FUN`SHOW`RUNES,first(%0,~))))),%b%(%q<web_gr>%))][if(cand(%q<web_staff>,strlen(%q<web_myst>)),%b%[[json_query(u({{core}}/FUN`ITEM`GET,equipment,first(%0,~)),extract,$.name)]%])]|[elements(%0,2,~)]|[elements(%0,3,~)]|[switch(elements(%0,3,~),held*,success,worn*,info,default)],item count where where_color)]
         flags: [funsyntax]
       # The character's senses, as words: darkvision, scent (imprecise) 30 feet.
       FUN`SHOW`SENSES:
@@ -6256,16 +6326,21 @@ objects:
                 Spell attack,u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,attack))),
                 Spell DC,add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,dc))))]%r[
               rule()]%r[
-              ldatatable(,Spells|Left|Which,edit(trim(squish(
+              ldatatable(,Spells|Left|Which,edit(u(%!/FUN`SHOW`BOOK`ROWS),~,%r),%r)]%r[
+              rule()]%r[
+              tone(muted,[switch(%q<cast_kind>,prepared,+prepare <spell> \[at <rank>\] fills a slot.%b,spontaneous,+build/spell learns a spell.%b,)]+cast <spell> \[at <rank>\] casts one. +rest begins a new day.)],
+              [name(%q<sheet_target>)]: spells))]
+        flags: [funsyntax]
+      FUN`SHOW`BOOK`ROWS:
+        value: |-
+          @@(check_, cast_ registers and daily: the spellbook's rows, Spells|Left|Which, separated by ~)[
+          trim(squish(
                 [u(%!/FUN`SHOW`BOOK`CANTRIPS)]~[
                 if(%q<cast_top>,iter(lnum(1,%q<cast_top>),u(%!/FUN`SHOW`BOOK`RANK,%i0),%b,~))]~[
                 if(%q<cast_fonts>,Divine Font|[sub(%q<cast_fonts>,u(%!/FUN`DAILY`N,font))] of %q<cast_fonts>|[capstr(%q<cast_font>)]%, rank %q<cast_fontrank>)]~[
                 if(%q<cast_pool>,Focus|[sub(%q<cast_pool>,u(%!/FUN`DAILY`N,focus))] of %q<cast_pool> points|[itemize(iter(%q<cast_focus>,u(%!/FUN`SHOW`SPELLNAME,%i0),%b,|),|)]%, rank %q<cast_heighten>)]~[
                 if(words(%q<cast_innate>),Innate|-|[itemize(iter(%q<cast_innate>,[u(%!/FUN`SHOW`SPELLNAME,first(%i0,~))] %([if(rest(%i0,~),[max(0,sub(rest(%i0,~),firstof(u(%!/FUN`DAILY`AT,inn,first(%i0,~)),0)))] of [rest(%i0,~)] today,at will)]%),%b,|),|)])]~[
-                if(words(setr(book_rit,iter(graball(%q<check_entries>,ritual~*),elements(%i0,2,~)))),Rituals|-|[itemize(iter(%q<book_rit>,u(%!/FUN`SHOW`SPELLNAME,%i0),%b,|),|)])],~),~),~,%r),%r)]%r[
-              rule()]%r[
-              tone(muted,[switch(%q<cast_kind>,prepared,+prepare <spell> \[at <rank>\] fills a slot.%b,spontaneous,+build/spell learns a spell.%b,)]+cast <spell> \[at <rank>\] casts one. +rest begins a new day.)],
-              [name(%q<sheet_target>)]: spells))]
+                if(words(setr(book_rit,iter(graball(%q<check_entries>,ritual~*),elements(%i0,2,~)))),Rituals|-|[itemize(iter(%q<book_rit>,u(%!/FUN`SHOW`SPELLNAME,%i0),%b,|),|)])],~),b,~)]
         flags: [funsyntax]
       FUN`SHOW`BOOK`CANTRIPS:
         value: |-
