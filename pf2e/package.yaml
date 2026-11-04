@@ -5531,6 +5531,14 @@ objects:
         flags: [funsyntax]
       # Why a feat cannot go in a slot, or nothing: its category and traits, its level, whether the
       # sheet has it already, and the prerequisites the builder can read.
+      # Whether the sheet may take another copy of a feat: Foundry's maxTakable, where null is no limit and
+      # a feat without it is taken once.
+      FUN`BUILD`FEAT`ROOM:
+        value: |-
+          @@(%0 a feat's id; check_grants)[
+          setq(room_n,words(graball(%q<check_grants>,*~feats~%0~*)))][
+          cor(not(%q<room_n>),lt(%q<room_n>,firstof(json_query(setr(room_item,u({{core}}/FUN`ITEM`GET,feats,%0)),extract,$.system.maxTakable),if(json_query(%q<room_item>,exists,system,maxTakable),add(%q<room_n>,1),1))))]
+        flags: [funsyntax]
       FUN`BUILD`FEAT`WHY:
         value: |-
           @@(%0 the slot, %1 the feat's id)[
@@ -5539,7 +5547,7 @@ objects:
           switch(1,
             not(u(%!/FUN`BUILD`FEAT`FITS,%q<why_kind>,%q<why_prep>)), %q<why_name> is not [art(%q<why_kind>)] %q<why_kind> feat you can take. +build/list feats %0 shows those you can.,
             gt(json_query(%q<why_prep>,extract,$.level),%q<why_level>), %q<why_name> is level [json_query(%q<why_prep>,extract,$.level)]%, above this level %q<why_level> slot.,
-            cand(strlen(u(%!/FUN`BUILD`GRANT`N,feats,%1)),not(strmatch(u(%!/FUN`BUILD`STEP,feat-%0),u(%!/FUN`BUILD`GRANT`N,feats,%1))),lte(firstof(json_query(setr(why_item,u({{core}}/FUN`ITEM`GET,feats,%1)),extract,$.system.maxTakable),if(json_query(%q<why_item>,exists,system,maxTakable),99,1)),1)), The sheet has %q<why_name> already.,
+            cand(strlen(u(%!/FUN`BUILD`GRANT`N,feats,%1)),not(strmatch(u(%!/FUN`BUILD`STEP,feat-%0),u(%!/FUN`BUILD`GRANT`N,feats,%1))),not(u(%!/FUN`BUILD`FEAT`ROOM,%1))), The sheet has %q<why_name> already.,
             t(words(setr(why_unmet,u(%!/FUN`BUILD`PREREQ`UNMET,%1)),|)), %q<why_name> needs [itemize(%q<why_unmet>,|)].,
             )]
         flags: [funsyntax]
@@ -5965,7 +5973,7 @@ objects:
               skill, get(%q<list_store>/OPT`CATEGORY`SKILL),
               general, setunion(get(%q<list_store>/OPT`CATEGORY`GENERAL),get(%q<list_store>/OPT`CATEGORY`SKILL))))][
             iter(sort(iter(setunion(%q<list_ids>,),
-              if(cand(member(%q<build_books>,get(%q<list_store>/ITEM`%i0`BOOK)),lte(json_query(setr(list_prep,get(%q<list_store>/ITEM`%i0`PREP)),extract,$.level),%q<list_level>),cor(lt(first(%?),20000),setr(list_cut,0)),u(%!/FUN`BUILD`FEAT`FITS,%q<list_kind>,%q<list_prep>),cor(not(strlen(%1)),strmatch(json_query(%q<list_prep>,extract,$.name),*%1*)),not(words(graball(%q<check_grants>,*~feats~%i0~*))),not(words(u(%!/FUN`BUILD`PREREQ`UNMET,%i0),|))),
+              if(cand(member(%q<build_books>,get(%q<list_store>/ITEM`%i0`BOOK)),lte(json_query(setr(list_prep,get(%q<list_store>/ITEM`%i0`PREP)),extract,$.level),%q<list_level>),cor(lt(first(%?),20000),setr(list_cut,0)),u(%!/FUN`BUILD`FEAT`FITS,%q<list_kind>,%q<list_prep>),cor(not(strlen(%1)),strmatch(json_query(%q<list_prep>,extract,$.name),*%1*)),u(%!/FUN`BUILD`FEAT`ROOM,%i0),not(words(u(%!/FUN`BUILD`PREREQ`UNMET,%i0),|))),
                 [rjust(json_query(%q<list_prep>,extract,$.level),2,0)] [json_query(%q<list_prep>,extract,$.name)]),
               %b,|),a,|,|),%i0,|,|)],
             #-1)]
