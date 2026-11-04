@@ -1,9 +1,9 @@
 format: "1.20"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.10.11"
+version: "0.10.12"
 authors: [SharpMUSH]
-description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, and audited awards with levels and runes (+pf2e/award)."
+description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, downtime (+downtime: Earn Income, Crafting, Learn a Spell), and audited awards with levels and runes (+pf2e/award)."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [pf2e, pathfinder, rules, dice]
@@ -113,7 +113,7 @@ objects:
       # ledger read again costs a few hundred function calls. The key is the ledger with the package's
       # version, the books and CACHE`STAMP, which the updater and the deity table change. CACHE lists
       # the keys oldest first; past DATA`CACHE`KEEP the oldest goes.
-      DATA`CACHE`VERSION: "0.10.11"
+      DATA`CACHE`VERSION: "0.10.12"
       DATA`CACHE`KEEP: 200
       DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_itemalts check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_shieldrules check_bulkrules check_bulk check_bulk_enc check_bulk_max check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
       # The ItemAlteration properties the core applies, by the kind of item they reach.
@@ -325,6 +325,11 @@ objects:
       DATA`DC`LEVEL: 13 14 15 16 18 19 20 22 23 24 26 27 28 30 31 32 34 35 36 38 39 40 42 44 46 48 50
       DATA`DC`ADJUST: incredibly-easy~-10 very-easy~-5 easy~-2 normal~0 hard~2 very-hard~5 incredibly-hard~10
       DATA`DC`RARITY: common~0 uncommon~2 rare~5 unique~10
+      # Income Earned (Player Core): for task levels 0 to 20 and a critical success at 20, the copper pieces a day
+      # for a failure, then trained, expert, master and legendary.
+      DATA`INCOME: 1 5 5 5 5|2 20 20 20 20|4 30 30 30 30|8 50 50 50 50|10 70 80 80 80|20 90 100 100 100|30 150 200 200 200|40 200 250 250 250|50 250 300 300 300|60 300 400 400 400|70 400 500 600 600|80 500 600 800 800|90 600 800 1000 1000|100 700 1000 1500 1500|150 800 1500 2000 2000|200 1000 2000 2800 2800|250 1300 2500 3600 4000|300 1500 3000 4500 5500|400 2000 4500 7000 9000|600 3000 6000 10000 13000|800 4000 7500 15000 20000|0 5000 9000 17500 30000
+      # Learning a Spell (Player Core): for ranks 1 (and cantrips) to 10, the materials in gold pieces and the typical DC.
+      DATA`LEARN`SPELL: 2 15|6 18|16 20|36 23|70 26|140 28|300 31|650 34|1500 36|7000 41
       # Simple DCs by proficiency rank, untrained to legendary.
       DATA`DC`SIMPLE: 10 15 20 30 40
       # The Foundry compendium names that item links use, and the pack each is here.
@@ -983,7 +988,7 @@ objects:
         flags: [funsyntax]
       FUN`SHEET: The sheet's ledger, read once into entries. FUN`SHEET`ENTRIES takes the ledger, a JSON array of entry objects each with n (its number) and kind; every other FUN`SHEET` takes the entries it gives. A later entry wins; a revoke entry takes back the entry it names, and with it every entry whose parent is taken back.
       # Entry kinds: level {level}, ability {ability, mod}, boost {ability}, flaw {ability}, rank {stat,
-      # rank}, grant {pack, id, badge, choices, level}, revoke {entry}, gear {id, qty, where}, money {cp}, signature {id, rank}, innate {id, per: uses a day, 0 at will}, ritual {id},
+      # rank}, grant {pack, id, badge, choices, level}, revoke {entry}, gear {id, qty, where}, money {cp}, signature {id, rank}, innate {id, per: uses a day, 0 at will}, ritual {id}, learned {id: a spell Learned},
       # hp {value}, language {name}, choice {entry, flag, value: a selection made for grant entry's
       # ChoiceSet flag, its value read from the ledger by index}, lock. Any entry may name its parent (the entry it came with) and its step (the
       # builder's step it belongs to). A grant with a level counts from that character level on. The
@@ -1013,6 +1018,7 @@ objects:
             innate, ucstr(json_query(%1,extract,$.id)),
             ritual, ucstr(json_query(%1,extract,$.id)),
             formula, ucstr(json_query(%1,extract,$.id)),
+            learned, ucstr(json_query(%1,extract,$.id)),
             choice, [json_query(%1,extract,$.entry)]|[json_query(%1,extract,$.flag)],
             rune, [ucstr(json_query(%1,extract,$.id))]|[json_query(%1,extract,$.rune)],
             language, json_query(%1,extract,$.name),
@@ -3628,6 +3634,101 @@ objects:
         value: |-
           think u({{core}}/FUN`CHECK`PREPARE,%q<sheet_ledger>); think setq(check_daily,u(%!/FUN`DAILY`OF,%q<sheet_target>)); think setq(sheet_cold,if(lt(%q<sheet_round>,3),u({{core}}/FUN`SHEET`COLD))); @break not(words(%q<sheet_cold>))=@pemit %#=u(%!/FUN`SHOW`SHEET); think setq(sheet_round,inc(%q<sheet_round>)); @dolist/then %q<sheet_cold>={think u({{core}}/FUN`CHECK`PREPARE,%q<sheet_ledger>); think u({{core}}/FUN`SHEET`WARM,##)},{@include %!/INC`SHEET`SHOW}
         flags: [cmdsyntax]
+      # +downtime[ <player>]: downtime days left and the item being crafted. Staff award the days
+      # (+pf2e/award <players>=7 days <reason>), a ledger of their own beside money and experience, and each
+      # downtime activity spends them. /income <skill>=<task level>[,<days>] Earns Income, /craft <item>[=<count>]
+      # starts Crafting, /work [<days>] and /finish complete it, /drop gives it up, /learn <spell> Learns a Spell.
+      CMD`DOWNTIME:
+        value: |-
+          $(?is)^\+downtime(/\S*)?(?\: +(.*))?$:think setqm(cmd_switch,lcstr(after(%1,/)),cmd_args,trim(%2)); @assert cor(not(strlen(%q<cmd_switch>)),match(income craft work finish drop learn,%q<cmd_switch>))=@pemit %#=notice(PF2E,There is no +downtime/%q<cmd_switch>. The switches are /income%, /craft%, /work%, /finish%, /drop and /learn.,warn); think u(%!/FUN`COMMAND`TARGET); think if(cand(not(strlen(%q<cmd_switch>)),strlen(%q<cmd_args>)),setq(cmd_target,%q<cmd_args>)); @include %!/INC`TARGET`VIEW; think u({{core}}/FUN`CHECK`PREPARE,%q<sheet_ledger>); think setqm(dt_staff,permission(%#,softcode.pf2e.staff),dt_days,u(%!/FUN`PURSE`TOTAL,%q<sheet_target>,days),dt_project,if(hasflag(%q<sheet_target>/PF2E`CRAFT,wizard),get(%q<sheet_target>/PF2E`CRAFT)),dt_tell,setunion(%# %q<sheet_target>,)); @break not(strlen(%q<cmd_switch>))={@pemit %#=u(%!/FUN`DOWNTIME`SHOW)}; @include %!/INC`DOWNTIME`[ucstr(%q<cmd_switch>)]
+        flags: [regexp, cmdsyntax]
+      FUN`DOWNTIME`SHOW:
+        value: |-
+          @@(dt_ registers: the downtime box)[
+          box(fields(,
+            Downtime days,[%q<dt_days>] [tone(muted,%(+pf2e/ledger days%))],
+            Crafting,if(strlen(%q<dt_project>),[u(%!/FUN`DOWNTIME`ITEMS,json_query(%q<dt_project>,extract,$.count),json_query(%q<dt_project>,extract,$.name))]: [u(%!/FUN`SHOW`MONEY,json_query(%q<dt_project>,extract,$.left))] of materials to go%, [u(%!/FUN`SHOW`MONEY,json_query(%q<dt_project>,extract,$.per))] less each day of work,nothing)),
+            [name(%q<sheet_target>)]'s downtime)]
+        flags: [funsyntax]
+      FUN`DOWNTIME`ITEMS:
+        value: |-
+          @@(%0 a count, %1 an item's name)[
+          if(gt(%0,1),%0%b)]%1
+        flags: [funsyntax]
+      FUN`DOWNTIME`INCOME:
+        value: |-
+          @@(%0 a task level, 21 for a critical success at 20, %1 a proficiency rank, 0 for a failure: the copper pieces a day)[
+          extract(extract(get({{core}}/DATA`INCOME),inc(max(0,min(21,%0))),1,|),inc(max(0,min(4,%1))),1)]
+        flags: [funsyntax]
+      # Writes purse_kind's entry unless purse_amount is 0.
+      INC`DOWNTIME`PAY:
+        value: |-
+          @break not(%q<purse_amount>); @include %!/INC`PURSE`PUT
+        flags: [cmdsyntax]
+      # Earn Income: one check at the task's DC, and the same pay for every day after the first; a critical failure
+      # ends the job after a day. Experienced Professional turns a Lore's critical failure into a failure and
+      # doubles a failure's pay.
+      INC`DOWNTIME`INCOME:
+        value: |-
+          think setqm(dt_skilltext,trim(before(%q<cmd_rest>,=)),dt_task,trim(before(after(%q<cmd_rest>,=),%,)),dt_n,firstof(trim(after(after(%q<cmd_rest>,=),%,)),1)); @assert cand(strlen(%q<dt_skilltext>),isint(%q<dt_task>))=@pemit %#=notice(PF2E,+downtime/income <skill>=<task level>\[%,<days>\]%, such as +downtime/income performance=1%,7.,warn); think setq(dt_stat,u(%!/FUN`COMMAND`STAT,%q<dt_skilltext>)); @assert cand(eq(words(%q<dt_stat>),1),not(match(perception fortitude reflex will,%q<dt_stat>)))=@pemit %#=notice(PF2E,There is no skill called %q<dt_skilltext>.,warn); think setq(dt_label,u(%!/FUN`SHOW`STAT,%q<dt_stat>)); @assert gte(setr(dt_rank,u({{core}}/FUN`CHECK`RANK,%q<dt_stat>)),1)=@pemit %#=notice(PF2E,Earn Income needs training in %q<dt_label>.,warn); @assert cand(gte(%q<dt_task>,0),lte(%q<dt_task>,min(20,%q<check_level>)))=@pemit %#=notice(PF2E,A task level is from 0 to [name(%q<sheet_target>)]'s level%, [min(20,%q<check_level>)].,warn); @assert cand(isint(%q<dt_n>),gt(%q<dt_n>,0))=@pemit %#=notice(PF2E,Days are a whole number above 0.,warn); @assert lte(%q<dt_n>,%q<dt_days>)=@pemit %#=notice(PF2E,u(%!/FUN`DOWNTIME`SHORT,%q<dt_n>),warn); think setqm(cmd_dc,extract(get({{core}}/DATA`DC`LEVEL),add(2,%q<dt_task>),1),roll_stat,%q<dt_stat>,cmd_with,,roll_extra,action:earn-income); think u(%!/FUN`CHECK`PREPARE); think u({{core}}/FUN`ROLL`CHECK,%q<roll_total>,%q<roll_domains>,%q<roll_options> %q<roll_extra>,%q<cmd_dc>); think setq(dt_exp,cand(strmatch(%q<dt_stat>,*-lore),member(%q<check_options>,feat:experienced-professional))); think setq(dt_degree,if(cand(%q<dt_exp>,eq(%q<roll_degree>,0)),1,%q<roll_degree>)); think setqm(dt_per,switch(%q<dt_degree>,3,u(%!/FUN`DOWNTIME`INCOME,inc(%q<dt_task>),%q<dt_rank>),2,u(%!/FUN`DOWNTIME`INCOME,%q<dt_task>,%q<dt_rank>),1,mul(if(%q<dt_exp>,2,1),u(%!/FUN`DOWNTIME`INCOME,%q<dt_task>,0)),0),dt_spent,if(%q<dt_degree>,%q<dt_n>,1)); think setqm(purse_kind,days,purse_amount,-%q<dt_spent>,purse_reason,Earn Income: %q<dt_label>%, task level %q<dt_task>); @include %!/INC`PURSE`PUT; think setqm(purse_kind,money,purse_amount,mul(%q<dt_per>,%q<dt_spent>),purse_reason,Earn Income: %q<dt_label>%, task level %q<dt_task>%, [u(%!/FUN`DOWNTIME`DAYS,%q<dt_spent>)]); @include/nobreak %!/INC`DOWNTIME`PAY; @pemit/list %q<dt_tell>=notice(PF2E,[u(%!/FUN`SHOW`CHECK)]%r[name(%q<sheet_target>)] [if(%q<dt_degree>,earns [u(%!/FUN`SHOW`MONEY,%q<dt_per>)] a day for [u(%!/FUN`DOWNTIME`DAYS,%q<dt_spent>)]: [u(%!/FUN`SHOW`MONEY,mul(%q<dt_per>,%q<dt_spent>))][if(eq(%q<dt_degree>,1),. Shoddy work: the job may end sooner)],is fired after a day and earns nothing)]. [u(%!/FUN`DOWNTIME`LEFT)])
+        flags: [cmdsyntax]
+      FUN`DOWNTIME`DAYS:
+        value: |-
+          @@(%0 a number of days)[
+          %0 day[if(neq(%0,1),s)]]
+        flags: [funsyntax]
+      FUN`DOWNTIME`LEFT:
+        value: |-
+          @@(the days left after this command's entries)[
+          u(%!/FUN`DOWNTIME`DAYS,u(%!/FUN`PURSE`TOTAL,%q<sheet_target>,days))] of downtime left.
+        flags: [funsyntax]
+      FUN`DOWNTIME`SHORT:
+        value: |-
+          @@(%0 the days needed)[
+          That takes [u(%!/FUN`DOWNTIME`DAYS,%0)] of downtime%, and [name(%q<sheet_target>)] has %q<dt_days>. Staff award downtime: +pf2e/award <players>=7 days <reason>.]
+        flags: [funsyntax]
+      # Craft: the item's level, proficiency, feats and rarity allow it; the check comes after 2 days of setting up,
+      # 1 with the formula, and needs half the Price in materials. A success spends them and starts a project whose
+      # remaining materials each day of work lessens by the Income Earned for the crafter's level (one higher on a
+      # critical success) and Crafting rank. A failure salvages everything; a critical failure ruins a tenth.
+      INC`DOWNTIME`CRAFT:
+        value: |-
+          @assert not(strlen(%q<dt_project>))=@pemit %#=notice(PF2E,[name(%q<sheet_target>)] is crafting [u(%!/FUN`DOWNTIME`ITEMS,json_query(%q<dt_project>,extract,$.count),json_query(%q<dt_project>,extract,$.name))] already: +downtime/work%, +downtime/finish or +downtime/drop.,warn); think setqm(dt_text,trim(before(%q<cmd_rest>,=)),dt_count,firstof(trim(after(%q<cmd_rest>,=)),1)); think setq(dt_id,u({{core}}/FUN`ITEM`FIND,equipment,%q<dt_text>)); think if(not(strlen(%q<dt_id>)),if(eq(words(setr(dt_starts,u({{core}}/FUN`ITEM`STARTS,equipment,%q<dt_text>))),1),setq(dt_id,%q<dt_starts>))); @assert strlen(%q<dt_id>)=@pemit %#=notice(PF2E,[if(words(%q<dt_starts>),Which one: [itemize(iter(extract(%q<dt_starts>,1,8),json_query(get(u({{core}}/DATA`PACK`EQUIPMENT)/ITEM`%i0`PREP),extract,$.name),%b,|),|,or)][if(gt(words(%q<dt_starts>),8),%, or [sub(words(%q<dt_starts>),8)] more)]?,There is no %q<dt_text> from a book the game uses. +build/list gear <text> searches.)],warn); think setq(dt_item,u({{core}}/FUN`ITEM`GET,equipment,%q<dt_id>)); think setqm(dt_name,json_query(%q<dt_item>,extract,$.name),dt_level,firstof(json_query(%q<dt_item>,extract,$.system.level.value),0),dt_rarity,firstof(json_query(%q<dt_item>,extract,$.system.traits.rarity),common),dt_traits,json_map({{core}}/FUN`RULE`SELECTOR,firstof(json_query(%q<dt_item>,extract,$.system.traits.value),json(array)),%b),dt_batch,switch(1,cor(strmatch(json_query(%q<dt_item>,extract,$.type),ammo),strmatch(json_query(%q<dt_item>,extract,$.system.category),ammo)),10,strmatch(json_query(%q<dt_item>,extract,$.type),consumable),4,1)); @assert cand(isint(%q<dt_count>),gt(%q<dt_count>,0),lte(%q<dt_count>,%q<dt_batch>))=@pemit %#=notice(PF2E,if(eq(%q<dt_batch>,1),%q<dt_name> is crafted one at a time.,A batch is 1 to %q<dt_batch> of %q<dt_name>.),warn); @assert gte(setr(dt_rank,u({{core}}/FUN`CHECK`RANK,crafting)),1)=@pemit %#=notice(PF2E,Crafting needs training in Crafting.,warn); @assert lte(%q<dt_level>,%q<check_level>)=@pemit %#=notice(PF2E,%q<dt_name> is level %q<dt_level>%, above [name(%q<sheet_target>)]'s.,warn); @assert gte(%q<dt_rank>,switch(1,gte(%q<dt_level>,17),4,gte(%q<dt_level>,9),3,1))=@pemit %#=notice(PF2E,%q<dt_name> is level %q<dt_level>: crafting it needs [if(gte(%q<dt_level>,17),legendary,master)] Crafting.,warn); @assert cor(not(member(%q<dt_traits>,alchemical)),member(%q<check_options>,feat:alchemical-crafting))=@pemit %#=notice(PF2E,%q<dt_name> is alchemical: crafting it needs the Alchemical Crafting feat.,warn); @assert cor(not(member(%q<dt_traits>,magical)),member(%q<check_options>,feat:magical-crafting))=@pemit %#=notice(PF2E,%q<dt_name> is magical: crafting it needs the Magical Crafting feat.,warn); @assert cor(not(member(%q<dt_traits>,snare)),member(%q<check_options>,feat:snare-crafting))=@pemit %#=notice(PF2E,%q<dt_name> is a snare: crafting it needs the Snare Crafting feat.,warn); @assert cor(%q<dt_staff>,strmatch(%q<dt_rarity>,common))=@pemit %#=notice(PF2E,%q<dt_name> is %q<dt_rarity>: staff start it for you.,warn); think setqm(dt_formula,t(words(graball(%q<check_entries>,formula~[ucstr(%q<dt_id>)]~*))),dt_price,mul(%q<dt_count>,u(%!/FUN`BUILD`PRICE,%q<dt_item>))); think setqm(dt_mat,ceil(fdiv(%q<dt_price>,2)),dt_setup,if(%q<dt_formula>,1,2)); @assert lte(%q<dt_setup>,%q<dt_days>)=@pemit %#=notice(PF2E,Setting up takes [u(%!/FUN`DOWNTIME`DAYS,%q<dt_setup>)][if(not(%q<dt_formula>),%, 1 with the formula)]%, and [name(%q<sheet_target>)] has [u(%!/FUN`DOWNTIME`DAYS,%q<dt_days>)] of downtime. Staff award downtime: +pf2e/award <players>=7 days <reason>.,warn); @assert lte(%q<dt_mat>,u(%!/FUN`PURSE`TOTAL,%q<sheet_target>,money))=@pemit %#=notice(PF2E,The materials cost [u(%!/FUN`SHOW`MONEY,%q<dt_mat>)]%, half the Price%, and the sheet has [u(%!/FUN`SHOW`MONEY,u(%!/FUN`PURSE`TOTAL,%q<sheet_target>,money))].,warn); think setqm(cmd_dc,add(extract(get({{core}}/DATA`DC`LEVEL),add(2,max(-1,min(25,%q<dt_level>))),1),firstof(after(grab(get({{core}}/DATA`DC`RARITY),%q<dt_rarity>~*),~),0)),roll_stat,crafting,cmd_with,,roll_extra,action:craft); think u(%!/FUN`CHECK`PREPARE); think u({{core}}/FUN`ROLL`CHECK,%q<roll_total>,%q<roll_domains>,%q<roll_options> %q<roll_extra>,%q<cmd_dc>); think setqm(dt_what,u(%!/FUN`DOWNTIME`ITEMS,%q<dt_count>,%q<dt_name>),dt_per,switch(%q<roll_degree>,3,u(%!/FUN`DOWNTIME`INCOME,inc(%q<check_level>),%q<dt_rank>),2,u(%!/FUN`DOWNTIME`INCOME,%q<check_level>,%q<dt_rank>),0)); think setqm(dt_spend,switch(%q<roll_degree>,3,%q<dt_mat>,2,%q<dt_mat>,0,ceil(fdiv(%q<dt_mat>,10)),0),dt_left,if(gte(%q<roll_degree>,2),sub(%q<dt_price>,%q<dt_mat>),0)); think setqm(purse_kind,days,purse_amount,-%q<dt_setup>,purse_reason,Craft %q<dt_what>: setting up); @include %!/INC`PURSE`PUT; think setqm(purse_kind,money,purse_amount,-%q<dt_spend>,purse_reason,Craft %q<dt_what>: [if(gte(%q<roll_degree>,2),materials,ruined materials)]); @include/nobreak %!/INC`DOWNTIME`PAY; @break lt(%q<roll_degree>,2)={@pemit/list %q<dt_tell>=notice(PF2E,[u(%!/FUN`SHOW`CHECK)]%r[name(%q<sheet_target>)] fails to craft %q<dt_what>[if(%q<roll_degree>,%, and salvages the materials,%, and ruins [u(%!/FUN`SHOW`MONEY,%q<dt_spend>)] of materials)]. [u(%!/FUN`DOWNTIME`LEFT)])}; @break not(%q<dt_left>)={@include %!/INC`DOWNTIME`GIVE; @pemit/list %q<dt_tell>=notice(PF2E,[u(%!/FUN`SHOW`CHECK)]%r[name(%q<sheet_target>)] crafts %q<dt_what> for [u(%!/FUN`SHOW`MONEY,%q<dt_spend>)]. [u(%!/FUN`DOWNTIME`LEFT)])}; &PF2E`CRAFT %q<sheet_target>=[json(object,id,json(string,%q<dt_id>),name,json(string,%q<dt_name>),count,%q<dt_count>,left,%q<dt_left>,per,%q<dt_per>,by,json(string,objid(%#)),at,secs())]; @set %q<sheet_target>/PF2E`CRAFT=wizard; @pemit/list %q<dt_tell>=notice(PF2E,[u(%!/FUN`SHOW`CHECK)]%r[name(%q<sheet_target>)] starts crafting %q<dt_what>%, spending [u(%!/FUN`SHOW`MONEY,%q<dt_spend>)] of materials. The rest is [u(%!/FUN`SHOW`MONEY,%q<dt_left>)]: +downtime/finish pays it now%, and each day of +downtime/work takes [u(%!/FUN`SHOW`MONEY,%q<dt_per>)] off it. [u(%!/FUN`DOWNTIME`LEFT)])
+        flags: [cmdsyntax]
+      # The project's items, dt_id and dt_count, join the sheet's gear; the project ends.
+      INC`DOWNTIME`GIVE:
+        value: |-
+          @include %!/INC`BUILD`BEGIN; think setq(build_held,u({{core}}/FUN`SHEET`VALUE,%q<check_entries>,gear,%q<dt_id>)); think setq(entry_json,json(object,kind,"gear",id,json(string,%q<dt_id>),qty,add(firstof(first(%q<build_held>,|),0),%q<dt_count>),where,json(string,firstof(rest(%q<build_held>,|),u(%!/FUN`BUILD`GEAR`WHERE,%q<dt_id>))),step,"gear")); @include %!/INC`BUILD`PUT; &PF2E`CRAFT %q<sheet_target>=
+        flags: [cmdsyntax]
+      INC`DOWNTIME`NEED:
+        value: |-
+          @assert strlen(%q<dt_project>)=@pemit %#=notice(PF2E,[name(%q<sheet_target>)] is crafting nothing. +downtime/craft <item> starts.,warn); think setqm(dt_id,json_query(%q<dt_project>,extract,$.id),dt_count,json_query(%q<dt_project>,extract,$.count),dt_left,json_query(%q<dt_project>,extract,$.left),dt_per,json_query(%q<dt_project>,extract,$.per)); think setq(dt_what,u(%!/FUN`DOWNTIME`ITEMS,%q<dt_count>,json_query(%q<dt_project>,extract,$.name)))
+        flags: [cmdsyntax]
+      INC`DOWNTIME`WORK:
+        value: |-
+          @include %!/INC`DOWNTIME`NEED; think setqm(dt_need,ceil(fdiv(%q<dt_left>,max(1,%q<dt_per>))),dt_n,firstof(%q<cmd_rest>,1)); @assert cand(isint(%q<dt_n>),gt(%q<dt_n>,0))=@pemit %#=notice(PF2E,Days are a whole number above 0.,warn); @assert gt(%q<dt_per>,0)=@pemit %#=notice(PF2E,Work takes nothing off %q<dt_what>: +downtime/finish pays the rest.,warn); think setq(dt_n,min(%q<dt_n>,%q<dt_need>)); @assert lte(%q<dt_n>,%q<dt_days>)=@pemit %#=notice(PF2E,u(%!/FUN`DOWNTIME`SHORT,%q<dt_n>),warn); think setq(dt_left,max(0,sub(%q<dt_left>,mul(%q<dt_n>,%q<dt_per>)))); think setqm(purse_kind,days,purse_amount,-%q<dt_n>,purse_reason,Craft %q<dt_what>: work); @include %!/INC`PURSE`PUT; @break not(%q<dt_left>)={@include %!/INC`DOWNTIME`GIVE; @pemit/list %q<dt_tell>=notice(PF2E,[name(%q<sheet_target>)] works [u(%!/FUN`DOWNTIME`DAYS,%q<dt_n>)] and finishes %q<dt_what>. [u(%!/FUN`DOWNTIME`LEFT)],ok)}; &PF2E`CRAFT %q<sheet_target>=[json_mod(%q<dt_project>,patch,json(object,left,%q<dt_left>))]; @set %q<sheet_target>/PF2E`CRAFT=wizard; @pemit/list %q<dt_tell>=notice(PF2E,[name(%q<sheet_target>)] works [u(%!/FUN`DOWNTIME`DAYS,%q<dt_n>)] on %q<dt_what>: [u(%!/FUN`SHOW`MONEY,%q<dt_left>)] of materials to go%, [u(%!/FUN`DOWNTIME`DAYS,ceil(fdiv(%q<dt_left>,%q<dt_per>)))] more. [u(%!/FUN`DOWNTIME`LEFT)],ok)
+        flags: [cmdsyntax]
+      INC`DOWNTIME`FINISH:
+        value: |-
+          @include %!/INC`DOWNTIME`NEED; @assert lte(%q<dt_left>,u(%!/FUN`PURSE`TOTAL,%q<sheet_target>,money))=@pemit %#=notice(PF2E,The rest of the materials cost [u(%!/FUN`SHOW`MONEY,%q<dt_left>)]%, and the sheet has [u(%!/FUN`SHOW`MONEY,u(%!/FUN`PURSE`TOTAL,%q<sheet_target>,money))].,warn); think setqm(purse_kind,money,purse_amount,-%q<dt_left>,purse_reason,Craft %q<dt_what>: the rest of the materials); @include/nobreak %!/INC`DOWNTIME`PAY; @include %!/INC`DOWNTIME`GIVE; @pemit/list %q<dt_tell>=notice(PF2E,[name(%q<sheet_target>)] pays [u(%!/FUN`SHOW`MONEY,%q<dt_left>)] and finishes %q<dt_what>. [u(%!/FUN`SHOW`MONEY,u(%!/FUN`PURSE`TOTAL,%q<sheet_target>,money))] left.,ok)
+        flags: [cmdsyntax]
+      INC`DOWNTIME`DROP:
+        value: |-
+          @include %!/INC`DOWNTIME`NEED; &PF2E`CRAFT %q<sheet_target>=; @pemit/list %q<dt_tell>=notice(PF2E,[name(%q<sheet_target>)] gives up crafting %q<dt_what>. The materials already spent stay spent.,ok)
+        flags: [cmdsyntax]
+      # Learn a Spell: a spell of the caster's tradition, for materials and a check with the tradition's skill, both
+      # by the spell's rank (a cantrip as rank 1). A wizard's or witch's spell joins the spellbook or familiar beside
+      # the ones the class gives, a cleric's or druid's joins what they prepare from; a spontaneous caster may choose
+      # it with +build/spell. A failure waits for the next level, recorded in PF2E`LEARN`FAILED as id~level.
+      INC`DOWNTIME`LEARN:
+        value: |-
+          think u({{core}}/FUN`CAST`PREPARE); @assert strlen(%q<cast_kind>)=@pemit %#=notice(PF2E,[name(%q<sheet_target>)] has no spellcasting class feature.,warn); think setq(dt_id,u({{core}}/FUN`ITEM`FIND,spells,%q<cmd_rest>)); @assert strlen(%q<dt_id>)=@pemit %#=notice(PF2E,There is no spell called %q<cmd_rest> from a book the game uses.,warn); think setq(dt_prep,get(u({{core}}/DATA`PACK`SPELLS)/ITEM`%q<dt_id>`PREP)); think setqm(dt_name,json_query(%q<dt_prep>,extract,$.name),dt_opts,json_query(%q<dt_prep>,extract,$.opts),dt_trads,json_map({{core}}/FUN`RULE`SELECTOR,firstof(json_query(u({{core}}/FUN`ITEM`GET,spells,%q<dt_id>),extract,$.system.traits.traditions),json(array)),%b)); think setqm(dt_cantrip,t(member(%q<dt_opts>,item:trait:cantrip)),dt_rarity,firstof(after(first(graball(%q<dt_opts>,item:rarity:*)),item:rarity:),common)); @assert not(member(%q<dt_opts>,item:trait:focus))=@pemit %#=notice(PF2E,%q<dt_name> is a focus spell: it comes with a feat.,warn); @assert member(%q<dt_trads>,%q<cast_trad>)=@pemit %#=notice(PF2E,%q<dt_name> is not on the %q<cast_trad> spell list.,warn); @assert not(cor(words(graball(%q<cast_known>,%q<dt_id>~*)),words(graball(%q<check_entries>,learned~[ucstr(%q<dt_id>)]~*))))=@pemit %#=notice(PF2E,[name(%q<sheet_target>)] knows %q<dt_name> already.,warn); @assert cor(%q<dt_staff>,strmatch(%q<dt_rarity>,common))=@pemit %#=notice(PF2E,%q<dt_name> is %q<dt_rarity>: staff teach it when you find someone who knows it.,warn); think setq(dt_failed,if(hasflag(%q<sheet_target>/PF2E`LEARN`FAILED,wizard),get(%q<sheet_target>/PF2E`LEARN`FAILED))); @assert not(member(%q<dt_failed>,[ucstr(%q<dt_id>)]~%q<check_level>))=@pemit %#=notice(PF2E,[name(%q<sheet_target>)] failed to learn %q<dt_name> at level %q<check_level>: try again at the next level.,warn); think setq(dt_rank,if(%q<dt_cantrip>,1,firstof(json_query(%q<dt_prep>,extract,$.level),1))); think setqm(dt_cost,mul(100,first(extract(get({{core}}/DATA`LEARN`SPELL),%q<dt_rank>,1,|))),cmd_dc,add(last(extract(get({{core}}/DATA`LEARN`SPELL),%q<dt_rank>,1,|)),firstof(after(grab(get({{core}}/DATA`DC`RARITY),%q<dt_rarity>~*),~),0)),roll_stat,switch(%q<cast_trad>,arcane,arcana,divine,religion,occult,occultism,nature),cmd_with,,roll_extra,action:learn-a-spell); @assert lte(%q<dt_cost>,u(%!/FUN`PURSE`TOTAL,%q<sheet_target>,money))=@pemit %#=notice(PF2E,Learning %q<dt_name> needs [u(%!/FUN`SHOW`MONEY,%q<dt_cost>)] of materials%, and the sheet has [u(%!/FUN`SHOW`MONEY,u(%!/FUN`PURSE`TOTAL,%q<sheet_target>,money))].,warn); think u(%!/FUN`CHECK`PREPARE); think u({{core}}/FUN`ROLL`CHECK,%q<roll_total>,%q<roll_domains>,%q<roll_options> %q<roll_extra>,%q<cmd_dc>); think setq(dt_spend,switch(%q<roll_degree>,2,%q<dt_cost>,1,0,ceil(fdiv(%q<dt_cost>,2)))); think setqm(purse_kind,money,purse_amount,-%q<dt_spend>,purse_reason,Learn a Spell: %q<dt_name>); @include/nobreak %!/INC`DOWNTIME`PAY; @break lt(%q<roll_degree>,2)={&PF2E`LEARN`FAILED %q<sheet_target>=[setunion(%q<dt_failed> [ucstr(%q<dt_id>)]~%q<check_level>,)]; @set %q<sheet_target>/PF2E`LEARN`FAILED=wizard; @pemit/list %q<dt_tell>=notice(PF2E,[u(%!/FUN`SHOW`CHECK)]%r[name(%q<sheet_target>)] fails to learn %q<dt_name>[if(%q<dt_spend>,%, spending [u(%!/FUN`SHOW`MONEY,%q<dt_spend>)] of materials)]%, and can try again at the next level.)}; @include %!/INC`BUILD`BEGIN; think setq(entry_json,json(object,kind,"learned",id,json(string,%q<dt_id>),step,"learned")); @include %!/INC`BUILD`PUT; think setq(dt_learned,%q<build_last>); think if(not(strmatch(%q<cast_kind>,spontaneous)),null(setq(entry_json,json(object,kind,"grant",pack,"spells",id,json(string,%q<dt_id>),parent,%q<dt_learned>,step,"learned")))); @include/nobreak %!/INC`DOWNTIME`GRANT; @pemit/list %q<dt_tell>=notice(PF2E,[u(%!/FUN`SHOW`CHECK)]%r[name(%q<sheet_target>)] learns %q<dt_name> after %q<dt_rank> hour[if(neq(%q<dt_rank>,1),s)] of study%, spending [u(%!/FUN`SHOW`MONEY,%q<dt_spend>)] of materials.[if(strmatch(%q<cast_kind>,spontaneous),%bChoose it with +build/spell when you add or swap a spell.)])
+        flags: [cmdsyntax]
+      # The spell grant Learn a Spell makes, when entry_json is one.
+      INC`DOWNTIME`GRANT:
+        value: |-
+          @break not(strmatch(json_query(%q<entry_json>,extract,$.kind),grant)); @include %!/INC`BUILD`PUT
+        flags: [cmdsyntax]
       CMD`CHECK:
         value: |-
           $(?is)^\+check +([^=]+?)(?\: *= *(.*))?$:think setqm(cmd_target,,cmd_stat,trim(%1),cmd_dc,trim(%2)); @include %!/INC`TARGET`VIEW; @include %!/INC`CHECK`ROLL
@@ -4511,10 +4612,10 @@ objects:
         value: |-
           think setq(sheet_target,if(strlen(%q<cmd_target>),pmatch(%q<cmd_target>),%#)); @assert hastype(%q<sheet_target>,player)=@pemit %#=notice(PF2E,There is no player called %q<cmd_target>.,warn); @assert permission(%#,softcode.pf2e.staff)=@pemit %#=notice(PF2E,Only staff change a sheet by hand. +build makes your own.,error); think setq(sheet_ledger,u(%!/FUN`LEDGER`OF,%q<sheet_target>))
         flags: [cmdsyntax]
-      # +pf2e/award <players>=<amount> <xp|pp|gp|sp|cp> <reason>: experience or money for each player, each an entry in their experience or money ledger with the reason and who gave it.
+      # +pf2e/award <players>=<amount> <xp|pp|gp|sp|cp|days> <reason>: experience, money or downtime days for each player, each an entry in their ledger of it with the reason and who gave it.
       INC`PF2E`AWARD:
         value: |-
-          @assert permission(%#,softcode.pf2e.staff)=@pemit %#=notice(PF2E,Only staff give awards.,error); think setqm(award_who,trim(before(%q<cmd_args>,=)),award_amount,first(trim(after(%q<cmd_args>,=))),award_unit,lcstr(extract(trim(after(%q<cmd_args>,=)),2,1)),award_reason,trim(extract(trim(after(%q<cmd_args>,=)),3,999))); @assert cand(strlen(%q<award_who>),isint(%q<award_amount>),neq(%q<award_amount>,0),match(xp pp gp sp cp,%q<award_unit>))=@pemit %#=notice(PF2E,+pf2e/award <players>=<amount> <xp%, pp%, gp%, sp or cp> <reason>%, such as +pf2e/award Amiri Lini=80 xp Drove off the goblins. A negative amount takes away.,warn); @assert strlen(%q<award_reason>)=@pemit %#=notice(PF2E,Give a reason: it goes in each ledger.,warn); think setq(award_missing,squish(iter(%q<award_who>,if(hastype(pmatch(%i0),player),,%i0)))); @assert not(words(%q<award_missing>))=@pemit %#=notice(PF2E,There is no player called [itemize(%q<award_missing>,%b,or)].,warn); think setqm(purse_kind,if(strmatch(%q<award_unit>,xp),xp,money),purse_amount,if(strmatch(%q<award_unit>,xp),%q<award_amount>,mul(%q<award_amount>,switch(%q<award_unit>,pp,1000,gp,100,sp,10,1))),purse_reason,%q<award_reason>,award_text,[u(%!/FUN`SHOW`SIGNED,%q<award_amount>)] [if(strmatch(%q<award_unit>,xp),XP,%q<award_unit>)]: %q<award_reason>); @dolist/inplace [setunion(iter(%q<award_who>,pmatch(%i0)),)]={think setq(sheet_target,##); @include %!/INC`PURSE`PUT; @pemit %#=notice(PF2E,[name(##)]: %q<award_text> %(entry %q<purse_n>%).,ok); @pemit ##=notice(PF2E,[name(%#)] gives you %q<award_text>[if(strmatch(%q<award_unit>,xp),. [u(%!/FUN`SHOW`XP,u(%!/FUN`PURSE`TOTAL,##,xp))])],ok)}
+          @assert permission(%#,softcode.pf2e.staff)=@pemit %#=notice(PF2E,Only staff give awards.,error); think setqm(award_who,trim(before(%q<cmd_args>,=)),award_amount,first(trim(after(%q<cmd_args>,=))),award_unit,lcstr(extract(trim(after(%q<cmd_args>,=)),2,1)),award_reason,trim(extract(trim(after(%q<cmd_args>,=)),3,999))); @assert cand(strlen(%q<award_who>),isint(%q<award_amount>),neq(%q<award_amount>,0),match(xp pp gp sp cp days day,%q<award_unit>))=@pemit %#=notice(PF2E,+pf2e/award <players>=<amount> <xp%, pp%, gp%, sp%, cp or days> <reason>%, such as +pf2e/award Amiri Lini=80 xp Drove off the goblins. A negative amount takes away.,warn); @assert strlen(%q<award_reason>)=@pemit %#=notice(PF2E,Give a reason: it goes in each ledger.,warn); think setq(award_missing,squish(iter(%q<award_who>,if(hastype(pmatch(%i0),player),,%i0)))); @assert not(words(%q<award_missing>))=@pemit %#=notice(PF2E,There is no player called [itemize(%q<award_missing>,%b,or)].,warn); think setqm(purse_kind,switch(%q<award_unit>,xp,xp,day*,days,money),purse_amount,mul(%q<award_amount>,switch(%q<award_unit>,pp,1000,gp,100,sp,10,1)),purse_reason,%q<award_reason>,award_text,[u(%!/FUN`SHOW`SIGNED,%q<award_amount>)] [switch(%q<award_unit>,xp,XP,day*,day[if(neq(abs(%q<award_amount>),1),s)],%q<award_unit>)]: %q<award_reason>); @dolist/inplace [setunion(iter(%q<award_who>,pmatch(%i0)),)]={think setq(sheet_target,##); @include %!/INC`PURSE`PUT; @pemit %#=notice(PF2E,[name(##)]: %q<award_text> %(entry %q<purse_n>%).,ok); @pemit ##=notice(PF2E,[name(%#)] gives you %q<award_text>[if(strmatch(%q<award_unit>,xp),. [u(%!/FUN`SHOW`XP,u(%!/FUN`PURSE`TOTAL,##,xp))])],ok)}
         flags: [cmdsyntax]
       INC`PF2E`LEVEL:
         value: |-
@@ -4538,7 +4639,7 @@ objects:
         flags: [cmdsyntax]
       INC`PF2E`LEDGER:
         value: |-
-          think setqm(ledger_book,lcstr(trim(if(strmatch(%q<cmd_args>,*=*),after(%q<cmd_args>,=),if(match(money xp,lcstr(trim(%q<cmd_args>))),%q<cmd_args>)))),cmd_target,trim(if(strmatch(%q<cmd_args>,*=*),before(%q<cmd_args>,=),if(match(money xp,lcstr(trim(%q<cmd_args>))),,%q<cmd_args>)))); @assert cor(not(strlen(%q<ledger_book>)),match(money xp,%q<ledger_book>))=@pemit %#=notice(PF2E,+pf2e/ledger \[<player>\]\[=money or xp\].,warn); @include %!/INC`TARGET`VIEW; @pemit %#=if(strlen(%q<ledger_book>),u(%!/FUN`SHOW`PURSE,%q<ledger_book>),u(%!/FUN`SHOW`LEDGER))
+          think setqm(ledger_book,lcstr(trim(if(strmatch(%q<cmd_args>,*=*),after(%q<cmd_args>,=),if(match(money xp days,lcstr(trim(%q<cmd_args>))),%q<cmd_args>)))),cmd_target,trim(if(strmatch(%q<cmd_args>,*=*),before(%q<cmd_args>,=),if(match(money xp days,lcstr(trim(%q<cmd_args>))),,%q<cmd_args>)))); @assert cor(not(strlen(%q<ledger_book>)),match(money xp days,%q<ledger_book>))=@pemit %#=notice(PF2E,+pf2e/ledger \[<player>\]\[=money%, xp or days\].,warn); @include %!/INC`TARGET`VIEW; @pemit %#=if(strlen(%q<ledger_book>),u(%!/FUN`SHOW`PURSE,%q<ledger_book>),u(%!/FUN`SHOW`LEDGER))
         flags: [cmdsyntax]
       # +pf2e/hp <player>/<hit points>: the character's Hit Points now, outside an encounter.
       INC`PF2E`HP:
@@ -4680,30 +4781,31 @@ objects:
         value: |-
           @break not(strmatch(json_query(%q<entry_json>,type),object))=@pemit %#=notice(PF2E,The entry could not be written: %q<entry_json>,error); think setq(build_last,inc(lmax(0 [iter(lattr(%q<sheet_target>/PF2E`LEDGER`*),last(%i0,`))]))); &PF2E`LEDGER`%q<build_last> %q<sheet_target>=[json_mod(%q<entry_json>,patch,json(object,n,%q<build_last>,by,json(string,objid(%#))))]; @set %q<sheet_target>/PF2E`LEDGER`%q<build_last>=wizard; think setq(build_next,inc(%q<build_last>))
         flags: [cmdsyntax]
-      # Money and experience have ledgers of their own beside the sheet's: PF2E`MONEY`<n> ({cp, reason,
-      # by, at}) and PF2E`XP`<n> ({xp, reason, by, at}), each with the wizard flag. PF2E`TOTAL`MONEY and
-      # PF2E`TOTAL`XP cache their sums, written again from the whole ledger with every entry.
+      # Money, experience and downtime have ledgers of their own beside the sheet's: PF2E`MONEY`<n> ({cp,
+      # reason, by, at}), PF2E`XP`<n> ({xp, ...}) and PF2E`DAYS`<n> ({days, ...}), each with the wizard flag.
+      # PF2E`TOTAL`MONEY, PF2E`TOTAL`XP and PF2E`TOTAL`DAYS cache their sums, written again from the whole
+      # ledger with every entry.
       FUN`PURSE`TOTAL:
         value: |-
-          @@(%0 a character, %1 money or xp: the cached total, or the ledger's sum when there is no cache)[
+          @@(%0 a character, %1 money, xp or days: the cached total, or the ledger's sum when there is no cache)[
           if(cand(hasattr(%0/PF2E`TOTAL`%1),hasflag(%0/PF2E`TOTAL`%1,wizard)),get(%0/PF2E`TOTAL`%1),u(FUN`PURSE`SUM,%0,%1))]
         flags: [funsyntax]
       FUN`PURSE`SUM:
         value: |-
-          @@(%0 a character, %1 money or xp: the sum of the ledger's entries that have the wizard flag)[
-          ladd(0 [iter(u(FUN`PURSE`ENTRIES,%0,%1),json_query(get(%0/PF2E`[ucstr(%1)]`%i0),extract,$.[switch(%1,money,cp,xp)]))])]
+          @@(%0 a character, %1 money, xp or days: the sum of the ledger's entries that have the wizard flag)[
+          ladd(0 [iter(u(FUN`PURSE`ENTRIES,%0,%1),json_query(get(%0/PF2E`[ucstr(%1)]`%i0),extract,$.[switch(%1,money,cp,%1)]))])]
         flags: [funsyntax]
       FUN`PURSE`ENTRIES:
         value: |-
-          @@(%0 a character, %1 money or xp: the numbers of the ledger's entries with the wizard flag, oldest first)[
+          @@(%0 a character, %1 money, xp or days: the numbers of the ledger's entries with the wizard flag, oldest first)[
           sort(iter(lattr(%0/PF2E`[ucstr(%1)]`*),if(cand(isint(setr(purse_one,last(%i0,`))),hasflag(%0/%i0,wizard)),%q<purse_one>)),n)]
         flags: [funsyntax]
-      # An entry in sheet_target's money or XP ledger: purse_kind (money or xp), purse_amount (copper
-      # pieces or XP, negative to spend) and purse_reason; the total cached again from the whole ledger.
+      # An entry in sheet_target's money, XP or downtime ledger: purse_kind (money, xp or days), purse_amount
+      # (copper pieces, XP or days, negative to spend) and purse_reason; the total cached again from the whole ledger.
       # purse_n ends as the entry's number.
       INC`PURSE`PUT:
         value: |-
-          @assert cand(match(money xp,%q<purse_kind>),isint(%q<purse_amount>))=@pemit %#=notice(PF2E,The [firstof(%q<purse_kind>,money)] entry could not be written: %q<purse_amount>,error); think setqm(purse_attr,PF2E`[ucstr(%q<purse_kind>)],purse_n,inc(lmax(0 [u({{commands}}/FUN`PURSE`ENTRIES,%q<sheet_target>,%q<purse_kind>)]))); &%q<purse_attr>`%q<purse_n> %q<sheet_target>=[json(object,switch(%q<purse_kind>,money,cp,xp),%q<purse_amount>,reason,json(string,%q<purse_reason>),by,json(string,objid(%#)),at,secs())]; @set %q<sheet_target>/%q<purse_attr>`%q<purse_n>=wizard; &PF2E`TOTAL`[ucstr(%q<purse_kind>)] %q<sheet_target>=[u({{commands}}/FUN`PURSE`SUM,%q<sheet_target>,%q<purse_kind>)]; @set %q<sheet_target>/PF2E`TOTAL`[ucstr(%q<purse_kind>)]=wizard
+          @assert cand(match(money xp days,%q<purse_kind>),isint(%q<purse_amount>))=@pemit %#=notice(PF2E,The [firstof(%q<purse_kind>,money)] entry could not be written: %q<purse_amount>,error); think setqm(purse_attr,PF2E`[ucstr(%q<purse_kind>)],purse_n,inc(lmax(0 [u({{commands}}/FUN`PURSE`ENTRIES,%q<sheet_target>,%q<purse_kind>)]))); &%q<purse_attr>`%q<purse_n> %q<sheet_target>=[json(object,switch(%q<purse_kind>,money,cp,%q<purse_kind>),%q<purse_amount>,reason,json(string,%q<purse_reason>),by,json(string,objid(%#)),at,secs())]; @set %q<sheet_target>/%q<purse_attr>`%q<purse_n>=wizard; &PF2E`TOTAL`[ucstr(%q<purse_kind>)] %q<sheet_target>=[u({{commands}}/FUN`PURSE`SUM,%q<sheet_target>,%q<purse_kind>)]; @set %q<sheet_target>/PF2E`TOTAL`[ucstr(%q<purse_kind>)]=wizard
         flags: [cmdsyntax]
       # @trigger/args with target (a character), kind (money or xp), amount (copper pieces or XP), reason and
       # shown (the amount as the character reads it, such as 5 gp): the entry INC`PURSE`PUT writes, for a
@@ -4883,7 +4985,7 @@ objects:
             not(strlen(%q<cast_kind>)),Your class casts no spells from slots.,
             cand(match(cleric druid,%q<cast_class>),not(%q<build_cantrip>)),As a [capstr(%q<cast_class>)] you prepare any common [capstr(%q<cast_trad>)] spell without learning it: +prepare %q<build_name>.,
             not(member(%q<build_trads>,%q<cast_trad>)),%q<build_name> is not on the %q<cast_trad> spell list.,
-            not(member(%q<build_opts>,item:rarity:common)),%q<build_name> is not common: staff add it.,
+            cand(not(member(%q<build_opts>,item:rarity:common)),not(words(graball(%q<check_entries>,learned~[ucstr(%0)]~*)))),%q<build_name> is not common: staff add it.,
             cand(not(%q<build_cantrip>),strlen(%1),lt(%1,%q<build_base>)),!%q<build_name> is rank %q<build_base>%, so it cannot be learned lower.,
             cand(not(%q<build_cantrip>),gt(firstof(%q<build_badge>,%q<build_base>),%q<cast_top>)),%q<build_name> is rank [firstof(%q<build_badge>,%q<build_base>)]. At level %q<check_level> the highest rank is %q<cast_top>.,
             t(strlen(setr(build_have,u(%!/FUN`BUILD`SPELL`HAVE,%0)))),%q<build_have>,
@@ -4905,8 +5007,9 @@ objects:
         flags: [funsyntax]
       FUN`BUILD`SPELLS`COUNT:
         value: |-
-          @@(%0 0 for cantrips, a rank for a spontaneous caster's spells of that rank, -1 for every other spell: how many are known)[
-          words(iter(%q<cast_known>,[setq(count_opts,json_query(get(u({{core}}/DATA`PACK`SPELLS)/ITEM`[first(%i0,~)]`PREP),extract,$.opts))][if(switch(%0,0,member(%q<count_opts>,item:trait:cantrip),-1,not(member(%q<count_opts>,item:trait:cantrip)),cand(not(member(%q<count_opts>,item:trait:cantrip)),eq(firstof(elements(%i0,2,~),json_query(get(u({{core}}/DATA`PACK`SPELLS)/ITEM`[first(%i0,~)]`PREP),extract,$.level)),%0))),x)]))]
+          @@(%0 0 for cantrips, a rank for a spontaneous caster's spells of that rank, -1 for every other spell: how many are known, leaving out those a prepared caster Learned)[
+          setq(count_learned,if(strmatch(%q<cast_kind>,spontaneous),,iter(graball(%q<check_entries>,learned~*),elements(%i0,2,~))))][
+          words(iter(%q<cast_known>,if(member(%q<count_learned>,ucstr(first(%i0,~))),,[setq(count_opts,json_query(get(u({{core}}/DATA`PACK`SPELLS)/ITEM`[first(%i0,~)]`PREP),extract,$.opts))][if(switch(%0,0,member(%q<count_opts>,item:trait:cantrip),-1,not(member(%q<count_opts>,item:trait:cantrip)),cand(not(member(%q<count_opts>,item:trait:cantrip)),eq(firstof(elements(%i0,2,~),json_query(get(u({{core}}/DATA`PACK`SPELLS)/ITEM`[first(%i0,~)]`PREP),extract,$.level)),%0))),x)])))]
         flags: [funsyntax]
       FUN`BUILD`SPELLS`MAX:
         value: |-
@@ -5841,10 +5944,10 @@ objects:
         flags: [funsyntax]
       FUN`COMMAND`STAT:
         value: |-
-          @@(%0 typed text: the statistic it names, else every statistic it is the start of)[
+          @@(%0 typed text: the statistic it names, a Lore for text ending in lore, else every statistic it is the start of)[
           setq(cmd_stat_text,lcstr(trim(%0)))][
           if(strlen(%q<cmd_stat_text>),
-            firstof(grab(get({{core}}/DATA`STATISTICS),%q<cmd_stat_text>),graball(get({{core}}/DATA`STATISTICS),%q<cmd_stat_text>*)))]
+            firstof(grab(get({{core}}/DATA`STATISTICS),%q<cmd_stat_text>),if(strmatch(%q<cmd_stat_text>,*%blore),u({{core}}/FUN`STAT`LORE,%q<cmd_stat_text>)),graball(get({{core}}/DATA`STATISTICS),%q<cmd_stat_text>*)))]
         flags: [funsyntax]
       FUN`COMMAND`RANK:
         value: |-
@@ -6087,7 +6190,7 @@ objects:
       FUN`SHOW`CHECK:
         value: |-
           @@(the check: who rolled what, its fortune, misfortune or substitution, the modifiers that counted, against a DC the degree and the rule that changed it, then the notes)[
-          name(%q<sheet_target>)] rolls [capstr(%q<roll_stat>)]: [json_query(%q<roll_record>,extract,$.text)][
+          name(%q<sheet_target>)] rolls [u(%!/FUN`SHOW`STAT,%q<roll_stat>)]: [json_query(%q<roll_record>,extract,$.text)][
           if(strlen(%q<roll_tags>),%b%([itemize(%q<roll_tags>,|)]%))][
           if(strlen(%q<cmd_dc>),%bvs DC %q<cmd_dc>: [tone(strong,u(%!/FUN`SHOW`DEGREE,%q<roll_degree>))][
             if(strlen(%q<roll_adjust>),%b%([u({{core}}/FUN`ROLLRULE`LABEL,rest(%q<roll_adjust>,~))]%, [lcstr(u(%!/FUN`SHOW`DEGREE,%q<roll_unadjusted>))] rolled%))])]%b(roll [json_query(%q<roll_record>,extract,$.id)])[
@@ -6117,9 +6220,9 @@ objects:
         flags: [funsyntax]
       FUN`SHOW`PURSE:
         value: |-
-          @@(%0 money or xp: that ledger, oldest first, with its total)[
+          @@(%0 money, xp or days: that ledger, oldest first, with its total)[
           setqm(purse_list,u(%!/FUN`PURSE`ENTRIES,%q<sheet_target>,%0),purse_sum,u(%!/FUN`PURSE`SUM,%q<sheet_target>,%0),purse_cache,get(%q<sheet_target>/PF2E`TOTAL`[ucstr(%0)]))][
-          box([if(words(%q<purse_list>),ldatatable(,>#|>Amount|Reason|By,iter(%q<purse_list>,[setq(purse_entry,get(%q<sheet_target>/PF2E`[ucstr(%0)]`%i0))]%i0|[if(strmatch(%0,xp),[u(%!/FUN`SHOW`SIGNED,json_query(%q<purse_entry>,extract,$.xp))] XP,[if(lt(json_query(%q<purse_entry>,extract,$.cp),0),-,+)][u(%!/FUN`SHOW`MONEY,abs(json_query(%q<purse_entry>,extract,$.cp)))])]|[json_query(%q<purse_entry>,extract,$.reason)]|[name(json_query(%q<purse_entry>,extract,$.by))],%b,%r),%r),tone(muted,No entries yet.))]%r[rule()]%r[if(strmatch(%0,xp),Total: %q<purse_sum> XP,Total: [u(%!/FUN`SHOW`MONEY,%q<purse_sum>)])][if(cand(strlen(%q<purse_cache>),neq(%q<purse_cache>,%q<purse_sum>)),%r[tone(warning,The cached total says %q<purse_cache>; the next entry writes it again.)])],[name(%q<sheet_target>)]'s [if(strmatch(%0,xp),experience,money)])]
+          box([if(words(%q<purse_list>),ldatatable(,>#|>Amount|Reason|By,iter(%q<purse_list>,[setq(purse_entry,get(%q<sheet_target>/PF2E`[ucstr(%0)]`%i0))]%i0|[switch(%0,xp,[u(%!/FUN`SHOW`SIGNED,json_query(%q<purse_entry>,extract,$.xp))] XP,days,[u(%!/FUN`SHOW`SIGNED,json_query(%q<purse_entry>,extract,$.days))] d,[if(lt(json_query(%q<purse_entry>,extract,$.cp),0),-,+)][u(%!/FUN`SHOW`MONEY,abs(json_query(%q<purse_entry>,extract,$.cp)))])]|[json_query(%q<purse_entry>,extract,$.reason)]|[name(json_query(%q<purse_entry>,extract,$.by))],%b,%r),%r),tone(muted,No entries yet.))]%r[rule()]%r[switch(%0,xp,Total: %q<purse_sum> XP,days,Total: %q<purse_sum> day[if(neq(%q<purse_sum>,1),s)],Total: [u(%!/FUN`SHOW`MONEY,%q<purse_sum>)])][if(cand(strlen(%q<purse_cache>),neq(%q<purse_cache>,%q<purse_sum>)),%r[tone(warning,The cached total says %q<purse_cache>; the next entry writes it again.)])],[name(%q<sheet_target>)]'s [switch(%0,xp,experience,days,downtime,money)])]
         flags: [funsyntax]
       FUN`SHOW`ENTRY:
         value: |-
@@ -6138,6 +6241,7 @@ objects:
             money, Money [u(%!/FUN`SHOW`SIGNED,json_query(%1,extract,$.cp))] cp[if(strlen(json_query(%1,extract,$.reason)),: [json_query(%1,extract,$.reason)])],
             xp, XP [u(%!/FUN`SHOW`SIGNED,json_query(%1,extract,$.xp))][if(strlen(json_query(%1,extract,$.reason)),: [json_query(%1,extract,$.reason)])],
             rune, [u(%!/FUN`SHOW`ITEM,equipment,json_query(%1,extract,$.id),)]: [u(%!/FUN`SHOW`RUNE,json_query(%1,extract,$.rune),json_query(%1,extract,$.value))] rune,
+            learned, Learned [u(%!/FUN`SHOW`ITEM,spells,json_query(%1,extract,$.id),)],
             lock, Sheet finished,
             json_query(%1,extract,$.kind))]|[name(json_query(%1,extract,$.by))]
         flags: [funsyntax]
@@ -8914,6 +9018,7 @@ objects:
         - `+hero` spends Hero Points on a reroll or to avoid death: `+help pf2e hero`.
         - `+familiar` shows your familiar and chooses its abilities each day: `+help pf2e familiar`.
         - `+companion` shows your animal companion and chooses its type and advancement: `+help pf2e companion`.
+        - `+downtime` spends the downtime days staff award on Earn Income, Crafting and Learn a Spell: `+help pf2e downtime`.
         - `+spells`, `+prepare` and `+cast` are for casters, `+rest` begins a new day: `+help pf2e spells`, `+help pf2e day`.
         - `+deity` lists the game's deities, which clerics and champions follow: `+help pf2e deity`.
         - `+alchemy` makes alchemical items from your formula book: `+help pf2e alchemy`.
@@ -8922,7 +9027,7 @@ objects:
         - `+dc` gives the DC for a task of a level.
         - Staff give experience and money with `+pf2e/award`, and you spend them with `+build/level` and `+build/upgrade`: `+help pf2e advance`.
 
-        Your sheet is a ledger: every choice is an entry, and nothing is ever overwritten. Money and experience have ledgers of their own. `+pf2e/ledger` shows the sheet's, `+pf2e/ledger money` and `+pf2e/ledger xp` the others with their totals.
+        Your sheet is a ledger: every choice is an entry, and nothing is ever overwritten. Money, experience and downtime days have ledgers of their own. `+pf2e/ledger` shows the sheet's, `+pf2e/ledger money`, `+pf2e/ledger xp` and `+pf2e/ledger days` the others with their totals.
       SEE`PF2E: |-
         pf2e build|pf2e sheet|pf2e enc|pf2e spells|pf2e cast|pf2e deity|pf2e alchemy
       HELP`PF2E`BUILD: |-
@@ -9275,6 +9380,23 @@ objects:
         `+companion/type bear`
 
         Output: `\[PF2E\] Done: Rook's animal companion is a Bear.`
+      HELP`PF2E`DOWNTIME: |-
+        `+downtime` shows your downtime days and what you are crafting. Staff award the days with `+pf2e/award <players>=7 days <reason>`, and each activity spends them.
+
+        - `+downtime/income <skill>=<task level>\[,<days>\]`: Earn Income. One check against the task level's DC sets the pay for every day; a critical failure ends the job after a day. The task level is at most yours. A Lore works too: `+downtime/income sailing lore=2,7`.
+        - `+downtime/craft <item>\[=<count>\]`: Craft. The item is your level or lower (master Crafting from level 9, legendary from 17), common, and alchemical, magical or snare items need the matching Crafting feat. Setting up takes 2 days, 1 with the item's formula, and the materials, half the Price, are paid on a success. Consumables come in batches of up to 4, ammunition up to 10.
+        - After a success, `+downtime/work \[<days>\]` takes your level's Income Earned off the rest of the materials each day, and `+downtime/finish` pays what is left. The items join your gear. `+downtime/drop` gives the project up.
+        - `+downtime/learn <spell>`: Learn a Spell of your tradition, with Arcana, Religion, Occultism or Nature. A wizard's or witch's spell goes beside the ones the class gives, a cleric's or druid's joins what they prepare from, and a spontaneous caster chooses it with `+build/spell`. A failure waits for your next level.
+        - Uncommon items and spells need staff, who run the command for you: `+downtime/learn Wren/fireball`.
+        - `+pf2e/ledger days` lists the days awarded and spent.
+
+        Example:
+
+        `+downtime/income religion=1,2`
+
+        Output: `\[PF2E\] Wren rolls Religion: 1d20\[19\] + 6 = 25 vs DC 15: Critical success (roll 602)`, then `Wisdom +1, Trained +5` and `Wren earns 3 sp a day for 2 days: 6 sp. 5 days of downtime left.`
+      SEE`PF2E`DOWNTIME: |-
+        pf2e advance|pf2e alchemy|pf2e spells
       SEE`PF2E`COMPANION: |-
         pf2e familiar|pf2e enc
       SEE`PF2E`RITUAL: |-
@@ -9407,12 +9529,12 @@ objects:
       HELP`PF2E`STAFF: |-
         `+pf2e` is for staff: awards, changing a sheet by hand and reading the rules feed.
 
-        - `+pf2e/award <players>=<amount> <unit> <reason>`: experience (`xp`) or money (`pp`, `gp`, `sp`, `cp`) for each player named, written to their experience or money ledger with the reason and who gave it. A negative amount takes away: `+pf2e/award Amiri Lini=80 xp Drove off the goblins`.
+        - `+pf2e/award <players>=<amount> <unit> <reason>`: experience (`xp`), money (`pp`, `gp`, `sp`, `cp`) or downtime (`days`) for each player named, written to their ledger of it with the reason and who gave it. A negative amount takes away: `+pf2e/award Amiri Lini=80 xp Drove off the goblins`.
         - `+pf2e/level <player>/<level>`, `+pf2e/ability <player>/<attribute>=<modifier>`, `+pf2e/rank <player>/<statistic>=<rank>`, `+pf2e/grant <player>/<pack>/<item>\[=<value>\]` and `+pf2e/revoke <player>/<entry>` add entries to a ledger.
         - `+pf2e/hp <player>/<hit points>` sets Hit Points outside an encounter.
         - `+pf2e/time` shows the world clock and `+pf2e/time/advance <number> <rounds, minutes, hours, days or weeks>` moves it on. Immunities such as Treat Wounds' end by it.
         - `+hero/award <players>\[=<points>\]` gives Hero Points and `+hero/set <players>=<points>` sets them: `+help pf2e hero`.
-        - `+pf2e/ledger <player>\[=money or xp\]` lists the sheet's ledger, or the money or experience ledger with its total.
+        - `+pf2e/ledger <player>\[=money, xp or days\]` lists the sheet's ledger, or the money or experience ledger with its total.
         - `+pf2e/update` reads Foundry's content again from the feed.
         - `+deity/create`, `+deity/set`, `+deity/destroy` and `+deity/samples` keep the deity table: `+help pf2e deity staff`.
         - `+config pf2e/variants=<rules>` turns on GM Core variant rules: `+help pf2e variants`.
