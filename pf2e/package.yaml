@@ -1,7 +1,7 @@
 format: "1.20"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.10.16"
+version: "0.10.17"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, downtime (+downtime: Earn Income, Crafting, Learn a Spell, Retraining), loot, stashes and shops with unidentified magic items (+loot, +identify), and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -113,7 +113,7 @@ objects:
       # ledger read again costs a few hundred function calls. The key is the ledger with the package's
       # version, the books and CACHE`STAMP, which the updater and the deity table change. CACHE lists
       # the keys oldest first; past DATA`CACHE`KEEP the oldest goes.
-      DATA`CACHE`VERSION: "0.10.16"
+      DATA`CACHE`VERSION: "0.10.17"
       DATA`CACHE`KEEP: 200
       DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_itemalts check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_shieldrules check_bulkrules check_bulk check_bulk_enc check_bulk_max check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
       # The ItemAlteration properties the core applies, by the kind of item they reach.
@@ -7227,6 +7227,85 @@ objects:
         value: |-
           u({{commands}}/FUN`SHOW`NOTES,%q<roll_notes>)
         flags: [funsyntax]
+      # A note's text may link an effect, as Sympathetic Strike's links Effect: Sympathetic Strike. Foundry shows the
+      # link and leaves the player to drag it onto someone; here DATA`NOTEFX`<effect id> says who it is for (target,
+      # whoever the roll was against, or self, whoever rolled) and auto when the encounter puts it on them. It does so
+      # only when the note names the outcome rolled, and the effect then records that outcome and the note's item as
+      # its origin, so its own ChoiceSets answer themselves (Sympathetic Strike's -1, or -2 on a critical hit). Every
+      # other link is offered as the GM's +enc/effect, as is one for a target the roll had none of. An auto effect
+      # must answer all its ChoiceSets from parent: options; the others ask a choice or hold a condition the
+      # encounter does not test (the first time each round, until it is in your space). Divine Rebuttal is for
+      # every ally, so it is neither put on anyone nor offered.
+      DATA`NOTEFX`QBTJYPOPY3AWFFUJ: target auto
+      DATA`NOTEFX`SGQKNR94QDT5ILBX: target auto
+      DATA`NOTEFX`FGZ7LWG1XHSVW4DX: target auto
+      DATA`NOTEFX`CU10OJQUDY0A9GPJ: target auto
+      DATA`NOTEFX`7HRGBO0FRQBXMK7G: target auto
+      DATA`NOTEFX`UBJSXCZNHJE8M8JJ: self auto
+      DATA`NOTEFX`PAKKHPDS77FQ5VTH: self auto
+      DATA`NOTEFX`RNKQKEWUXRGRUE1E: self auto
+      DATA`NOTEFX`VTJ8D23SOIFAPET3: target
+      DATA`NOTEFX`ZZXIUVZQQIXKMFYA: target
+      DATA`NOTEFX`JUGX48XHMZ4QM4IR: target
+      DATA`NOTEFX`RGT9HH3W1OH9DVKU: target
+      DATA`NOTEFX`RFLBFZV44FD6ABLE: target
+      DATA`NOTEFX`X7CJBOQZUGZKW16M: target
+      DATA`NOTEFX`SLXHPGAEKB0W3K1D: target
+      DATA`NOTEFX`LDMZGBOTJCETE4F7: target
+      DATA`NOTEFX`HKC4IZOZBVTJSP77: target
+      DATA`NOTEFX`SF6UO6VGCEICGGOK: target
+      DATA`NOTEFX`CYMIPBELINUYMENB: self
+      DATA`NOTEFX`BTI4OBXA5UMNLTYU: self
+      DATA`NOTEFX`BJC494USEYM011P3: self
+      DATA`NOTEFX`Z3UYCMBDDRPK5UMR: self
+      DATA`NOTEFX`MAEPXESHIMOWDM7U: self
+      DATA`NOTEFX`O7OO1KWFEFV6VL3E: self
+      DATA`NOTEFX`JMQI2KDIRZGGDDTI: none
+      # Right after the roll, with whoever rolled prepared: its notes and degree, and their level and traits for the
+      # effects' origin, kept for FUN`ACT`NOTEFX.
+      FUN`ACT`NOTEFX`KEEP:
+        value: |-
+          setqm(nfx_notes,%q<roll_notes>,nfx_degree,%q<roll_degree>,nfx_level,%q<check_level>,nfx_traits,%q<check_traits>)
+        flags: [funsyntax]
+      # The effects the kept notes link, each put on or offered: a line for each. Every register it changes but enc
+      # is as it was after. +enc/check only offers them, as a Hero Point reroll of it leaves the encounter as it is.
+      FUN`ACT`NOTEFX:
+        value: |-
+          @@(%0 who rolled, %1 whom the roll was against or nothing, %2 1 to offer every effect; after FUN`ACT`NOTEFX`KEEP)[
+          setq(nfx_list,u(FUN`NOTEFX`LIST))][
+          if(words(%q<nfx_list>),
+            [u(FUN`ACT`HOLD,nfx)][
+            setqm(nfx_was_origin,%q<fx_origin>,nfx_was_outcome,%q<fx_outcome>,nfx_was_on,%q<fx_on>,nfx_was_sus,%q<fx_sus>,nfx_was_dc,%q<cast_dc>)][
+            setq(nfx_say,iter(%q<nfx_list>,u(FUN`NOTEFX`ONE,%0,%1,%i0,%2),%b,))][
+            u(FUN`ACT`TAKE,nfx)][
+            setqm(fx_origin,%q<nfx_was_origin>,fx_outcome,%q<nfx_was_outcome>,fx_on,%q<nfx_was_on>,fx_sus,%q<nfx_was_sus>,cast_dc,%q<nfx_was_dc>)][
+            %q<nfx_say>])]
+        flags: [funsyntax]
+      # Each effect a kept note everyone sees links, once: notepack~noteid~effectpack~effectid~1 when the note names
+      # its outcomes (0 when it shows on any). A link to an effect from a book the game lacks is left out.
+      FUN`NOTEFX`LIST:
+        value: |-
+          @@(nfx_notes, pack~id~badge~index~rule for each)[
+          setq(nfx_seen,)][
+          squish(iter(%q<nfx_notes>,if(not(u({{core}}/FUN`ROLL`NOTE`GM,%i0)),
+            [setq(nfx_rule,u({{core}}/FUN`ROLLRULE`GET,%i0))][
+            setq(nfx_text,u({{core}}/FUN`LANG,edit(json_query(%q<nfx_rule>,extract,$.text),",)))][
+            setq(nfx_named,t(strmatch(json_query(%q<nfx_rule>,extract,$.outcome),*"*)))][
+            iter(feat-effects spell-effects equipment-effects other-effects,iter(u(FUN`FX`LINKED,%q<nfx_text>,%i0),if(not(member(%q<nfx_seen>,%i0)),[setq(nfx_seen,%q<nfx_seen> %i0)][first(%i2,~)]~[elements(%i2,2,~)]~%i0~%q<nfx_named>)))])))]
+        flags: [funsyntax]
+      FUN`NOTEFX`ONE:
+        value: |-
+          @@(%0 who rolled, %1 whom it was against or nothing, %2 notepack~noteid~effectpack~effectid~named, %3 1 to offer it)[
+          setqm(nfx_row,v(DATA`NOTEFX`[ucstr(elements(%2,4,~))]),nfx_pack,elements(%2,3,~),nfx_id,elements(%2,4,~))][
+          setq(nfx_on,if(strmatch(first(%q<nfx_row>),self),%0,%1))][
+          switch(1,
+            strmatch(first(%q<nfx_row>),none),,
+            cand(not(t(%3)),member(%q<nfx_row>,auto),t(last(%2,~)),isint(%q<nfx_on>),isint(%q<nfx_degree>)),
+              [setqm(check_level,%q<nfx_level>,check_traits,%q<nfx_traits>)][
+              setqm(fx_origin,u(FUN`FX`ORIGIN,first(%2,~),elements(%2,2,~)),fx_outcome,%q<nfx_degree>,fx_on,,fx_sus,,cast_dc,)][
+              %b[u(FUN`FX`ADD,%q<nfx_on>,%q<nfx_pack>,%q<nfx_id>,,,u(FUN`ENC`C,%0,k))]],
+            %bFor the GM: +enc/effect [if(isint(%q<nfx_on>),u(FUN`ENC`C,%q<nfx_on>,name),<target>)]=[u(FUN`FX`NAME,%q<nfx_pack>,%q<nfx_id>)].)]
+        flags: [funsyntax]
       FUN`ACT`DEGREE:
         value: |-
           extract(Critical failure|Failure|Success|Critical success,inc(%0),1,|)
@@ -7422,6 +7501,7 @@ objects:
           @@(%0 a combatant's index, with save_stat, save_dc and save_parts: their save and the damage they take, as a line; adds %0 to save_ok when a Hero Point may reroll it)[
           u(FUN`ENC`PREPARE,%0)][
           u(FUN`ACT`CHECK,%q<save_stat>,%q<save_dc>)][
+          u(FUN`ACT`NOTEFX`KEEP)][
           if(cand(strmatch(u(FUN`ENC`C,%0,kind),pc),u({{commands}}/FUN`HERO`CAN)),setq(save_ok,%q<save_ok> %0))][
           setq(save_line,[u(FUN`ENC`C,%0,name)]: [json_query(%q<roll_record>,extract,$.text)][u(FUN`ACT`TAGS)]%, [lcstr(u(FUN`ACT`DEGREE,%q<roll_degree>))][u(FUN`ACT`ADJUSTED)])][
           if(strlen(%q<save_parts>),
@@ -7433,7 +7513,7 @@ objects:
               u(FUN`ACT`IWR,%0)][
               u(FUN`ACT`HARM,%0,%q<dmg_total>,eq(%q<roll_degree>,0))][
               setq(save_line,%q<save_line>%, [switch(%q<roll_degree>,2,half,0,double,full)] damage %q<dmg_raw>[u(FUN`ACT`IWR`TEXT)]. %q<harm_text>)]))][
-          %q<save_line>.[u(FUN`ACT`NOTES)]]
+          %q<save_line>.[u(FUN`ACT`NOTES)][u(FUN`ACT`NOTEFX,%0,if(cand(isint(%q<act_at>),gte(%q<act_at>,0),neq(%q<act_at>,%0)),%q<act_at>))]]
         flags: [funsyntax]
 
       # +enc/init: everyone without initiative rolls it; +enc/init <who>=<skill> rolls one with a skill.
@@ -7469,6 +7549,7 @@ objects:
           u(FUN`ACT`HOLD,on)][u(FUN`ACT`TAKE,by)][
           u(FUN`ACT`ROLL,%q<strike_total>,%q<strike_ac>,,%q<act_tgtopts>)][
           u(FUN`ACT`RUNE`DOS)][
+          u(FUN`ACT`NOTEFX`KEEP)][
           if(t(%q<strike_react>),[u(FUN`ENC`SET,%q<act_at>,react,1)][setq(spend_warn,)],[u(FUN`ENC`SET,%q<act_at>,map,inc(u(FUN`ENC`C,%q<act_at>,map)))][u(FUN`ACTION`SPEND,%q<act_at>,1)])][
           setq(strike_crit,cand(eq(%q<roll_degree>,3),not(u(FUN`ACT`IMMUNE,%q<act_target>,critical-hits))))][
           setq(enc_say,[u(FUN`ENC`C,%q<act_at>,name)] Strikes [u(FUN`ENC`C,%q<act_target>,name)] with [first(%q<act_strike>,|)][if(t(%q<strike_react>),%bas a reaction)]: [json_query(%q<roll_record>,extract,$.text)][u(FUN`ACT`TAGS)][if(%q<strike_map>,%b%(MAP -%q<strike_map>%))] vs AC [if(cor(%q<enc_gm>,strmatch(u(FUN`ENC`C,%q<act_target>,kind),pc)),%q<strike_ac>,?)]: [tone(strong,u(FUN`ACT`DEGREE,%q<roll_degree>))][u(FUN`ACT`ADJUSTED)][if(strlen(%q<rune_dos>),%b%(%q<rune_dos>%, [lcstr(u(FUN`ACT`DEGREE,%q<rune_dos_was>))] rolled%))][if(cand(eq(%q<roll_degree>,3),not(%q<strike_crit>)),%, but [u(FUN`ENC`C,%q<act_target>,name)] is immune to critical hits)].[u(FUN`ACT`NOTES)])][
@@ -7482,7 +7563,7 @@ objects:
             u(FUN`ACT`HARM,%q<act_target>,%q<dmg_total>,%q<strike_crit>)][
             setq(enc_say,%q<enc_say>%r[if(gte(%q<strike_degree>,2),Damage,Splash)]: %q<dmg_text>[if(gt(words(%q<dmg_parts>,|),1),%b= %q<dmg_raw>)][u(FUN`ACT`IWR`TEXT)]. %q<harm_text>.[iter(%q<dmg_pers>,u(FUN`CAST`PERSIST,%q<act_target>,first(%i0,~),rest(%i0,~)),|,)][if(%q<dmg_splash>,%bEach other creature within 5 feet takes %q<dmg_splash> %q<dmg_splash_type> splash damage: +enc/damage.)])])][
           setq(enc_say,%q<enc_say>[u(FUN`ACT`RUNE`NOTES,%q<strike_degree>)])][
-          setq(enc_say,%q<enc_say>[u(FUN`ACT`ATTACKFX,%q<strike_degree>)]%q<spend_warn>)][
+          setq(enc_say,%q<enc_say>[u(FUN`ACT`ATTACKFX,%q<strike_degree>)][u(FUN`ACT`NOTEFX,%q<act_at>,%q<act_target>)]%q<spend_warn>)][
           setq(dmg_ignore,)]
         flags: [funsyntax]
       # A PC's Strike's property runes after its attack roll: rune_list their slugs, rune_opts the roll options
@@ -7569,7 +7650,7 @@ objects:
       # +enc/check <who>=<statistic>[ vs <DC>]: a check for a combatant, with their conditions.
       INC`ENC`CHECK:
         value: |-
-          @include %!/INC`ENC`NEED; think setqm(check_who,trim(before(%q<cmd_args>,=)),check_what,trim(after(%q<cmd_args>,=))); think setqm(act_at,if(strlen(setr(check_found,u(%!/FUN`ENC`FIND,%q<check_who>))),%q<check_found>,-1),check_stat,u({{commands}}/FUN`COMMAND`STAT,trim(before(%q<check_what>,%bvs))),check_dc,trim(after(%q<check_what>,%bvs))); @assert gte(%q<act_at>,0)=@pemit %#=notice(PF2E,No one in the encounter is called %q<check_who>.,warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,You make checks only for yourself.,warn); @assert eq(words(%q<check_stat>),1)=@pemit %#=notice(PF2E,+enc/check <who>=<statistic> [vs <DC>]%, such as +enc/check 2=reflex vs 18.,warn); @assert cor(not(strlen(%q<check_dc>)),isint(%q<check_dc>))=@pemit %#=notice(PF2E,A DC is a whole number.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think u(%!/FUN`ACT`CHECK,%q<check_stat>,%q<check_dc>); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,[u(%!/FUN`ENC`C,%q<act_at>,name)] rolls [u({{commands}}/FUN`SHOW`STAT,%q<check_stat>)]: [json_query(%q<roll_record>,extract,$.text)][u(%!/FUN`ACT`TAGS)][if(strlen(%q<check_dc>),%bvs DC %q<check_dc>: [tone(strong,u(%!/FUN`ACT`DEGREE,%q<roll_degree>))][u(%!/FUN`ACT`ADJUSTED)])].[u(%!/FUN`ACT`NOTES)]); think setqm(rr_sw,check,rr_at,if(strmatch(u(%!/FUN`ENC`C,%q<act_at>,kind),pc),%q<act_at>),rr_save,); think setq(rr_ok,if(cand(strlen(%q<rr_at>),u({{commands}}/FUN`HERO`CAN)),%q<act_at>)); @include %!/INC`HERO`MARK
+          @include %!/INC`ENC`NEED; think setqm(check_who,trim(before(%q<cmd_args>,=)),check_what,trim(after(%q<cmd_args>,=))); think setqm(act_at,if(strlen(setr(check_found,u(%!/FUN`ENC`FIND,%q<check_who>))),%q<check_found>,-1),check_stat,u({{commands}}/FUN`COMMAND`STAT,trim(before(%q<check_what>,%bvs))),check_dc,trim(after(%q<check_what>,%bvs))); @assert gte(%q<act_at>,0)=@pemit %#=notice(PF2E,No one in the encounter is called %q<check_who>.,warn); @assert u(%!/FUN`ENC`MAY,%q<act_at>)=@pemit %#=notice(PF2E,You make checks only for yourself.,warn); @assert eq(words(%q<check_stat>),1)=@pemit %#=notice(PF2E,+enc/check <who>=<statistic> [vs <DC>]%, such as +enc/check 2=reflex vs 18.,warn); @assert cor(not(strlen(%q<check_dc>)),isint(%q<check_dc>))=@pemit %#=notice(PF2E,A DC is a whole number.,warn); think u(%!/FUN`ENC`PREPARE,%q<act_at>); think u(%!/FUN`ACT`CHECK,%q<check_stat>,%q<check_dc>); think u(%!/FUN`ACT`NOTEFX`KEEP); think setq(chk_line,[u(%!/FUN`ENC`C,%q<act_at>,name)] rolls [u({{commands}}/FUN`SHOW`STAT,%q<check_stat>)]: [json_query(%q<roll_record>,extract,$.text)][u(%!/FUN`ACT`TAGS)][if(strlen(%q<check_dc>),%bvs DC %q<check_dc>: [tone(strong,u(%!/FUN`ACT`DEGREE,%q<roll_degree>))][u(%!/FUN`ACT`ADJUSTED)])].[u(%!/FUN`ACT`NOTES)][u(%!/FUN`ACT`NOTEFX,%q<act_at>,,1)]); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,%q<chk_line>); think setqm(rr_sw,check,rr_at,if(strmatch(u(%!/FUN`ENC`C,%q<act_at>,kind),pc),%q<act_at>),rr_save,); think setq(rr_ok,if(cand(strlen(%q<rr_at>),u({{commands}}/FUN`HERO`CAN)),%q<act_at>)); @include %!/INC`HERO`MARK
         flags: [cmdsyntax]
       # +enc/save <who>=<save> vs <DC>[ <damage>]: a save for several combatants; with damage, a basic save from one
       # damage roll: none on a critical success, half on a success, double on a critical failure.
@@ -8071,7 +8152,7 @@ objects:
           u(FUN`ENC`PATCH,%0,json(object,fx,json(object,%2,json(object,pack,json(string,%1),lvl,firstof(%3,json_query(%q<fxa_prep>,extract,$.level),1),ch,%q<fxa_ch>,badge,firstof(%q<fxa_badge>,null),end,if(gt(%q<fxa_rounds>,0),json(string,%5~%q<fxa_rounds>),null),sus,if(strlen(%q<fx_sus>),json(string,%q<fx_sus>),null),susn,if(strlen(%q<fx_sus>),2,null),dc,if(isint(%q<cast_dc>),%q<cast_dc>,null)))))][
           if(isint(%q<fxa_badge>),if(neq(%q<fxa_badge>,setr(fxa_kept,firstof(u(FUN`FX`BADGE`CLAMP,%0,%1,%2,%q<fxa_badge>),1))),[setq(fxa_badge,%q<fxa_kept>)][u(FUN`ENC`PATCH,%0,json(object,fx,json(object,%2,json(object,badge,%q<fxa_badge>))))]))][
           u(FUN`ENC`PREPARE,%0)][
-          setq(fxa_temp,max(firstof(u({{core}}/FUN`CHECK`FORM`GET,tempHP),0),u(FUN`FX`TEMPHP,%q<fxa_item>)))][
+          setq(fxa_temp,max(firstof(u({{core}}/FUN`CHECK`FORM`GET,tempHP),0),u(FUN`FX`TEMPHP,%q<fxa_item>,%2)))][
           if(gt(%q<fxa_temp>,u(FUN`ENC`C,%0,temp)),u(FUN`ENC`SET,%0,temp,%q<fxa_temp>))][
           [u(FUN`ENC`C,%0,name)] gains [u(FUN`FX`NAME,%1,%2)][u(FUN`FX`BADGE`SHOW,%1,%2,%q<fxa_badge>)][if(strlen(%q<fxa_on>),%bon [itemize(%q<fxa_on>,|)])][if(%q<fxa_temp>,%band %q<fxa_temp> temporary Hit Points)][if(gt(%q<fxa_rounds>,0),%bfor %q<fxa_rounds> round[if(neq(%q<fxa_rounds>,1),s)])][if(strlen(%q<fx_sus>),%bwhile it is sustained)].[if(strlen(%q<fxa_note>),%b[trim(%q<fxa_note>)])]]
         flags: [funsyntax]
@@ -8198,16 +8279,27 @@ objects:
           if(lt(%q<fxr_value>,1),0,switch(edit(json_query(%0,extract,$.unit),",),rounds,%q<fxr_value>,minutes,mul(10,%q<fxr_value>),0))]
         flags: [funsyntax]
       # The temporary Hit Points an effect's TempHP rule gives, after FUN`ENC`PREPARE: a value that reads one of
-      # the actor's flags takes the highest value the effect's own ActiveEffectLike rules give that flag.
+      # the actor's flags takes the highest value the effect's own ActiveEffectLike rules give that flag, or the
+      # bearer's other effects give it (Revel in Retribution's for its temporary Hit Points), each at its own level.
       FUN`FX`TEMPHP:
         value: |-
-          @@(%0 the effect)[
+          @@(%0 the effect, %1 its id; fxa_old the bearer's effects)[
           setqm(fxt_rules,firstof(json_query(%0,extract,$.system.rules),json(array)),fxt_data,json(object,actor,%q<check_actor>,item,u({{core}}/FUN`ITEM`DATA,%0,%q<fxa_badge>,json(object))))][
           lmax(0 [iter(json_map(me/FUN`FX`TEMPHP`RULE,%q<fxt_rules>,%b),
             [setq(fxt_value,edit(json_query(%q<fxt_rules>,extract,$\[%i0\].value),",))][setq(fxt_json,json_query(json_query(%q<fxt_rules>,extract,$\[%i0\]),get,value))][
             if(strmatch(%q<fxt_value>,@actor.flags.system.*),
-              lmax(0 [iter(json_map(me/FUN`FX`FLAG`RULE,%q<fxt_rules>,%b,after(%q<fxt_value>,@actor.)),u({{core}}/FUN`FORMULA`VALUE,json_query(json_query(%q<fxt_rules>,extract,$\[%i0\]),get,value),%q<fxt_data>,0))]),
+              lmax(0 [iter(json_map(me/FUN`FX`FLAG`RULE,%q<fxt_rules>,%b,after(%q<fxt_value>,@actor.)),u({{core}}/FUN`FORMULA`VALUE,json_query(json_query(%q<fxt_rules>,extract,$\[%i0\]),get,value),%q<fxt_data>,0))] [u(FUN`FX`TEMPHP`FLAG,after(%q<fxt_value>,@actor.),%1)]),
               u({{core}}/FUN`FORMULA`VALUE,%q<fxt_json>,%q<fxt_data>,0))])])]
+        flags: [funsyntax]
+      FUN`FX`TEMPHP`FLAG:
+        value: |-
+          @@(%0 a flags path, %1 the effect's own id, left out; fxa_old the bearer's effects, check_actor the bearer: what each ActiveEffectLike rule of theirs gives it)[
+          iter(json_map(me/FUN`JSON`KEY,firstof(%q<fxa_old>,json(object)),%b),if(comp(%i0,%1),
+            [setq(fxf_item,u({{core}}/FUN`ITEM`GET,edit(json_query(%q<fxa_old>,extract,$\["%i0"\].pack),",),%i0))][
+            setq(fxf_rules,firstof(json_query(%q<fxf_item>,extract,$.system.rules),json(array)))][
+            if(strmatch(%q<fxf_rules>,*"%0"*),
+              [setq(fxf_data,json(object,actor,%q<check_actor>,item,json_mod(u({{core}}/FUN`ITEM`DATA,%q<fxf_item>,json_query(%q<fxa_old>,extract,$\["%i0"\].badge),firstof(json_query(%q<fxa_old>,extract,$\["%i0"\].ch),json(object))),set,$.level,firstof(json_query(%q<fxa_old>,extract,$\["%i0"\].lvl),1))))][
+              iter(json_map(me/FUN`FX`FLAG`RULE,%q<fxf_rules>,%b,%0),u({{core}}/FUN`FORMULA`VALUE,json_query(json_query(%q<fxf_rules>,extract,$\[%i0\]),get,value),%q<fxf_data>,0))])]))]
         flags: [funsyntax]
       FUN`FX`TEMPHP`RULE:
         value: |-
@@ -8375,11 +8467,12 @@ objects:
           setq(act_tgtopts,u(FUN`ACT`TARGET`OPTIONS))][
           u(FUN`ACT`HOLD,on)][u(FUN`ACT`TAKE,by)][
           u(FUN`ACT`CHECK,%q<actn_stat>,%q<actn_dc>,sub(%q<actn_add>,%q<actn_map>),,squish(action:[lcstr(%q<actn_slug>)] [iter(%q<actn_traits>,%i0 item:trait:%i0)] [if(%q<actn_attack>,trait:attack)] [if(strlen(%q<actn_optname>),action:[lcstr(%q<actn_slug>)]:%q<actn_optname>)] [if(json_query(%q<actn>,extract,$.pick),action:[lcstr(%q<actn_slug>)]:%q<actn_stat>)] %q<act_tgtopts>))][
+          u(FUN`ACT`NOTEFX`KEEP)][
           if(%q<actn_attack>,u(FUN`ENC`SET,%q<act_at>,map,inc(firstof(u(FUN`ENC`C,%q<act_at>,map),0))))][
           setq(actn_deg,if(isint(%q<roll_degree>),extract(cf f s cs,inc(%q<roll_degree>),1),x))][
           null(iter(json_query(%q<actn>,extract,$.%q<actn_deg>),u(FUN`ACTION`APPLY,%i0)))][
           if(cand(json_query(%q<actn>,extract,$.imm),strmatch(%q<actn_tgt>,one)),u(FUN`ENC`SET,%q<act_target>,imm,json_mod(firstof(u(FUN`ENC`C,%q<act_target>,imm),json(object)),set,$\["[lcstr(%q<actn_slug>)]_%q<actn_k>"\],1)))][
-          setq(actn_line,[u(FUN`ENC`C,%q<act_at>,name)] uses %q<actn_name>[if(cand(not(%q<actn_self>),strmatch(%q<actn_tgt>,one)),%bon [u(FUN`ENC`C,%q<act_target>,name)])] with [u({{commands}}/FUN`SHOW`STAT,%q<actn_stat>)]: [json_query(%q<roll_record>,extract,$.text)][u(FUN`ACT`TAGS)][if(%q<actn_map>,%b%(MAP -%q<actn_map>%))][if(strlen(%q<actn_optname>),%b%(%q<actn_optname>[if(%q<actn_add>,%b[u(FUN`SHOW`SIGNED,%q<actn_add>)])]%))][if(strlen(%q<actn_dcfix>),%bvs DC %q<actn_dc>,if(strlen(%q<actn_dc>),%bvs [if(%q<actn_self>,[u(FUN`ENC`C,%q<act_target>,name)]'s%b)][u({{commands}}/FUN`SHOW`STAT,%q<actn_dcstat>)] DC [if(cor(%q<enc_gm>,strmatch(u(FUN`ENC`C,%q<act_target>,kind),pc)),%q<actn_dc>,?)]))][if(strlen(%q<actn_dc>),: [tone(strong,u(FUN`ACT`DEGREE,%q<roll_degree>))][u(FUN`ACT`ADJUSTED)])].[if(strlen(setr(actn_note,json_query(%q<actn>,extract,$.n%q<actn_deg>))),%b%q<actn_note>)]%q<actn_fx>[if(strlen(setr(actn_note,json_query(%q<actn>,extract,$.ni))),%b%q<actn_note>)][u(FUN`ACT`NOTES)])]
+          setq(actn_line,[u(FUN`ENC`C,%q<act_at>,name)] uses %q<actn_name>[if(cand(not(%q<actn_self>),strmatch(%q<actn_tgt>,one)),%bon [u(FUN`ENC`C,%q<act_target>,name)])] with [u({{commands}}/FUN`SHOW`STAT,%q<actn_stat>)]: [json_query(%q<roll_record>,extract,$.text)][u(FUN`ACT`TAGS)][if(%q<actn_map>,%b%(MAP -%q<actn_map>%))][if(strlen(%q<actn_optname>),%b%(%q<actn_optname>[if(%q<actn_add>,%b[u(FUN`SHOW`SIGNED,%q<actn_add>)])]%))][if(strlen(%q<actn_dcfix>),%bvs DC %q<actn_dc>,if(strlen(%q<actn_dc>),%bvs [if(%q<actn_self>,[u(FUN`ENC`C,%q<act_target>,name)]'s%b)][u({{commands}}/FUN`SHOW`STAT,%q<actn_dcstat>)] DC [if(cor(%q<enc_gm>,strmatch(u(FUN`ENC`C,%q<act_target>,kind),pc)),%q<actn_dc>,?)]))][if(strlen(%q<actn_dc>),: [tone(strong,u(FUN`ACT`DEGREE,%q<roll_degree>))][u(FUN`ACT`ADJUSTED)])].[if(strlen(setr(actn_note,json_query(%q<actn>,extract,$.n%q<actn_deg>))),%b%q<actn_note>)]%q<actn_fx>[if(strlen(setr(actn_note,json_query(%q<actn>,extract,$.ni))),%b%q<actn_note>)][u(FUN`ACT`NOTES)][u(FUN`ACT`NOTEFX,%q<act_at>,if(cand(not(%q<actn_self>),strmatch(%q<actn_tgt>,one)),%q<act_target>))])]
         flags: [funsyntax]
       # An action not rolled: what its success does.
       FUN`ACTION`AUTO:
@@ -9662,6 +9755,7 @@ objects:
 
         - `+enc/strike <target>\[=<Strike>\]`: a Strike against the target's AC, with the multiple attack penalty. A hit deals damage, doubled on a critical hit, and weaknesses, resistances and immunities count the way Foundry applies them: each damage type on its own, with exceptions such as physical except silver, resistance doubled against non-magical damage, the weapon's material and runes, holy and unholy, and vitality and void that only harm some creatures. Damage dice and changes from feats and effects count too, such as deadly and fatal dice, precision damage against an off-guard target, or a die size raised. The line shows the formula that was rolled, such as `2*(1d10+4)+2d10 piercing, 2d10 bleed`.
         - `+enc/check <who>=<statistic> \[vs <DC>\]`: a check or save with your conditions.
+        - A note that follows a Strike, a save or `+act` may link an effect, such as Sympathetic Strike's. The encounter puts the ones it can on whoever they are for, with the outcome you rolled: Sympathetic Strike, Exemplary Finisher, Distracting Feint, Panache and Revel in Retribution's temporary Hit Points. For any other, the line ends with the GM's `+enc/effect` for it, as it asks a choice or a condition the encounter does not test. After `+enc/check` every one is offered that way.
         - `+enc/toggle \[<who>:\]<name>\[=<choice>\]`: a toggle in the encounter's copy, as `+help pf2e toggle` has it.
         - `+enc/save <who>=<save> vs <DC> \[<damage>\]`: a save for everyone named, such as a spell's targets. Name several with commas, or `foes`, `characters` or `everyone`. With damage it is a basic save from one roll: none on a critical success, half on a success, double on a critical failure.
         - `+enc/use <item>`: drinks, eats or uses a consumable from the encounter's copy, or an item you made today. A healing item heals, and a mutagen or elixir gives its effect. An oil or talisman goes on the item you name: `+enc/use oil of potency on longsword`. `+enc/act` takes `on <item>` the same way.
@@ -9803,7 +9897,7 @@ objects:
         - `+enc/damage <who>=<amount or formula>` and `+enc/heal <who>=<amount or formula>`. A typed formula such as `2d6 fire` meets weaknesses, resistances and immunities. `+enc/damage/half` halves the damage, rounded down, and `+enc/damage/double` doubles it, both before weaknesses and resistances.
         - `+enc/cond <who>=<condition>\[ <value>\]\[/<rounds>\]`, where a value of 0 takes it off, and `+enc/persist <who>=<formula> <type>`, where `0 <type>` ends it.
         - `+enc/afflict <who>=<poison or disease>` exposes anyone to an affliction from the game's items, such as `+enc/afflict Amiri=arsenic`; `=-<name>` ends one. A failed save starts stage 1, a critical failure stage 2, after the onset. At the end of the afflicted one's turn, when the stage's time is up, they save again: two stages better on a critical success, one on a success, one worse on a failure, two on a critical failure. Each stage brings its damage and conditions; the maximum duration ends it.
-        - `+enc/effect <who>=<effect>` gives anyone an effect from Foundry's effects, such as `+enc/effect Amiri=Inspire Courage`; `=-<effect>` ends it. An effect with a choice takes `as <choice>`, and one on an item `on <item>`: `+enc/effect Amiri=Precious Metals as silver on greataxe`. Without `on`, it goes on the only item that fits.
+        - `+enc/effect <who>=<effect>` gives anyone an effect from Foundry's effects, such as `+enc/effect Amiri=Inspire Courage`; `=-<effect>` ends it. An effect with a choice takes `as <choice>`, and one on an item `on <item>`: `+enc/effect Amiri=Precious Metals as silver on greataxe`. Without `on`, it goes on the only item that fits. A roll's note that links an effect the encounter does not put on anyone ends with this command for it.
         - `+enc/badge <who>=<effect> <value>` sets an effect's badge, the number Foundry shows on it, such as Bless's aura or the hydra's heads; `+1` and `-1` move it. A counter starts at its own value and a formula, such as Devise a Stratagem's d20, is rolled when the effect starts. A counter taken below its least ends the effect. Effects end on their own when their rounds are over.
         - `+enc/keep \[<who>\]` writes characters' Hit Points, wounded, the day's spells, Focus Points and items made, and the consumables used, and the damage their shields took, back to their sheets. Without it, a fight leaves sheets as they were.
         - `+enc/undo` and `+enc/redo` step through the last 20 changes.
