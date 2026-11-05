@@ -710,15 +710,35 @@ objects:
       # substitute:<slug> among them, which AdjustModifier rules such as Assurance's read).
       FUN`ROLL`PLAN:
         value: |-
-          @@(%0 the domains, %1 the roll options, %2 the substitution asked for, a slug or nothing)[
-          setq(roll_twice,u(FUN`ROLL`TWICE,%0,%1))][
-          setq(roll_sub,u(FUN`ROLL`CHOOSE,%0,%1,%2))][
+          @@(%0 the domains, %1 the roll options, %2 the substitution asked for, a slug or nothing; roll_extra gets the RollOptions the roll's own options turn on)[
+          setq(roll_before,u(FUN`ROLLOPTION`BEFOREROLL,%0,%1))][
+          setq(roll_twice,u(FUN`ROLL`TWICE,%0,%1 %q<roll_before>))][
+          setq(roll_sub,u(FUN`ROLL`CHOOSE,%0,%1 %q<roll_before>,%2))][
           setq(roll_effects,setunion(elements(%q<roll_sub>,4,~) [switch(%q<roll_twice>,higher,fortune,lower,misfortune)] [if(%q<roll_hero>,fortune)],))][
           switch(1,
             eq(words(%q<roll_effects>),2), setqm(roll_sub,,roll_twice,,roll_dice,1d20,roll_tags,Fortune|Misfortune,roll_extra,fortune misfortune),
             t(strlen(%q<roll_sub>)), setqm(roll_dice,elements(%q<roll_sub>,3,~),roll_tags,[capstr(elements(%q<roll_sub>,4,~))] %([u(FUN`ROLLRULE`LABEL,elements(%q<roll_sub>,5 6 7 8 9,~,~))]%),roll_extra,%q<roll_effects> substitute:[first(%q<roll_sub>,~)]),
             setqm(roll_dice,switch(%q<roll_twice>,higher,2d20kh1,lower,2d20kl1,1d20),roll_tags,switch(%q<roll_twice>,higher,Fortune,lower,Misfortune),roll_extra,%q<roll_effects>))][
+          setq(roll_extra,squish(%q<roll_extra> %q<roll_before>))][
           if(%q<roll_hero>,setq(roll_tags,Hero Point reroll[if(strlen(%q<roll_tags>),|%q<roll_tags>)]))]
+        flags: [funsyntax]
+      # Foundry's RollOptionRuleElement.beforeRoll: a RollOption that is not a toggle, for a domain the roll reads
+      # or all, whose predicate holds for the roll's own options, such as Fencer's bravado trait on a Feint
+      # (action:feint), which the sheet's options alone never meet. The options it adds, each once.
+      FUN`ROLLOPTION`BEFOREROLL:
+        value: |-
+          @@(%0 the domains, %1 the roll options; check_rollopts the grants)[
+          setunion(iter(%q<check_rollopts>,u(FUN`ROLLOPTION`BEFORE`GRANT,%i0,%0 all,%1)),)]
+        flags: [funsyntax]
+      FUN`ROLLOPTION`BEFORE`GRANT:
+        value: |-
+          @@(%0 pack~id~badge~index, %1 the domains, %2 the roll options)[
+          setq(rb_item,u(FUN`ITEM`GET,first(%0,~),elements(%0,2,~)))][
+          setq(rb_rules,firstof(json_query(%q<rb_item>,extract,$.system.rules),json(array)))][
+          setq(rb_data,json(object,actor,firstof(%q<check_actor>,json(object)),item,u(FUN`ITEM`DATA,%q<rb_item>,elements(%0,3,~),u(FUN`CHECK`CHOICES,elements(%0,4,~)))))][
+          iter(json_map(me/FUN`CHECK`RULEKEY,%q<rb_rules>,%b,RollOption),
+            [setq(rb_rule,json_query(%q<rb_rules>,extract,$\[%i0\]))][
+            if(cand(not(t(json_query(%q<rb_rule>,extract,$.toggleable))),not(strmatch(json_query(%q<rb_rule>,extract,$.value),false)),not(strmatch(json_query(%q<rb_rule>,extract,$.count),true)),strlen(json_query(%q<rb_rule>,extract,$.predicate)),member(%1,u(FUN`FORMULA`INJECT,firstof(json_query(%q<rb_rule>,extract,$.domain),all),%q<rb_data>)),strlen(setr(rb_option,u(FUN`ROLLOPTION`CLEAN,u(FUN`FORMULA`INJECT,json_query(%q<rb_rule>,extract,$.option),%q<rb_data>)))),not(member(%2,%q<rb_option>)),u(FUN`PREDICATE`TEST,u(FUN`FORMULA`INJECT,json_query(%q<rb_rule>,get,predicate),%q<rb_data>),%2)),%q<rb_option>)])]
         flags: [funsyntax]
       # The check's roll options: the sheet's, its domains', and the statistic's, as Foundry's Statistic adds them.
       FUN`ROLL`OPTIONS:
@@ -1914,7 +1934,7 @@ objects:
             setq(alt_data,json(object,actor,%q<check_actor>,item,u(FUN`ITEM`DATA,%q<alt_item>,elements(%i0,4,~),u(FUN`CHECK`CHOICES,elements(%i0,5,~)))))][
             if(cand(cor(strmatch(json_query(%q<alt_rule>,extract,$.itemType),%0),
                 match(%1 [if(strmatch(%1,fist),xxxxxxFISTxxxxxx)],edit(u(FUN`FORMULA`INJECT,json_query(%q<alt_rule>,extract,$.itemId),%q<alt_data>),",))),
-              u(FUN`PREDICATE`TEST,firstof(json_query(%q<alt_rule>,get,predicate),json(array)),%q<check_options> [u(%2)])),
+              u(FUN`PREDICATE`TEST,u(FUN`FORMULA`INJECT,firstof(json_query(%q<alt_rule>,get,predicate),json(array)),%q<alt_data>),%q<check_options> [u(%2)])),
               u(%3,%q<alt_rule>,%q<alt_data>))]))]
         flags: [funsyntax]
       # A number an ItemAlteration changes: upgrade keeps the larger, downgrade the smaller.
@@ -2909,7 +2929,7 @@ objects:
             iter(%q<check_gear>,if(cand(not(strmatch(elements(%i0,3,~),held)),strmatch(json_query(get(u(DATA`PACK`EQUIPMENT)/ITEM`[first(%i0,~)]`PREP),extract,$.kind),weapon)),u(FUN`STRIKE`USE,json_mod(u(FUN`STRIKE`WEAPON,u(FUN`ITEM`ABP,u(FUN`ITEM`RUNED,first(%i0,~)))),patch,json(object,where,json(string,elements(%i0,3,~)))),gear,elements(%i0,2,~),first(%i0,~))),%b,|)]|[
             iter(u(FUN`CHECK`MADE),if(strmatch(json_query(get(u(DATA`PACK`EQUIPMENT)/ITEM`[first(%i0,~)]`PREP),extract,$.kind),weapon),u(FUN`STRIKE`USE,u(FUN`STRIKE`WEAPON,u(FUN`ITEM`GET,equipment,first(%i0,~))),made,rest(%i0,~),first(%i0,~))),%b,|)]|[
             iter(%q<check_resources>,if(cand(strlen(elements(%i0,3,~)),strmatch(json_query(get(u(DATA`PACK`EQUIPMENT)/ITEM`[elements(%i0,3,~)]`PREP),extract,$.kind),weapon),gt(setr(strike_left,sub(elements(%i0,2,~),firstof(json_query(%q<check_daily>,extract,$.res\["[first(%i0,~)]"\]),0))),0)),u(FUN`STRIKE`USE,u(FUN`STRIKE`LEVELED,u(FUN`STRIKE`WEAPON,u(FUN`ITEM`GET,equipment,elements(%i0,3,~))),elements(%i0,3,~),elements(%i0,4,~)),res:[first(%i0,~)],%q<strike_left>,elements(%i0,3,~))),%b,|)]|[
-            iter(%q<check_strikes>,[setq(strike_rule,json_query(u(FUN`ITEM`GET,elements(%i0,2,~),elements(%i0,3,~)),extract,$.system.rules\[[elements(%i0,4,~)]\]))][if(cand(not(t(json_query(%q<strike_rule>,extract,$.fist))),u(FUN`PREDICATE`TEST,firstof(json_query(%q<strike_rule>,get,predicate),json(array)),%q<check_options>)),u(FUN`STRIKE`RULE,%q<strike_rule>))],%b,|)]|[
+            iter(%q<check_strikes>,[setq(strike_rule,json_query(u(FUN`ITEM`GET,elements(%i0,2,~),elements(%i0,3,~)),extract,$.system.rules\[[elements(%i0,4,~)]\]))][if(cand(not(t(json_query(%q<strike_rule>,extract,$.fist))),u(FUN`PREDICATE`TEST,firstof(json_query(%q<strike_rule>,get,predicate),json(array)),%q<check_options>)),u(FUN`STRIKE`RULE,%q<strike_rule>,json_query(u(FUN`ITEM`GET,elements(%i0,2,~),elements(%i0,3,~)),extract,$._id)))],%b,|)]|[
             u(FUN`STRIKE`FIST)],|),|)))][
           if(words(%q<check_adjstrike>),setq(strikes_all,iter(%q<strikes_all>,u(FUN`STRIKE`ADJUST,%i0),|,|)))][
           if(words(%q<check_itemalts>),setq(strikes_all,iter(%q<strikes_all>,u(FUN`STRIKE`ALTER,%i0),|,|)))][
@@ -3009,11 +3029,11 @@ objects:
         flags: [funsyntax]
       FUN`STRIKE`RULE:
         value: |-
-          @@(%0 a Strike rule element)[
+          @@(%0 a Strike rule element, %1 the id of the item it is on, which Foundry gives the weapon it makes)[
           json(object,
             name,json(string,u(FUN`STRIKE`LABEL,firstof(json_query(%0,extract,$.label),json_query(%0,extract,$.slug)))),
-            slug,json(string,firstof(json_query(%0,extract,$.slug),u(FUN`ITEM`SLUGGIFY,json_query(%0,extract,$.label)))),
-            id,json(string,firstof(json_query(%0,extract,$.slug),strike)),
+            slug,json(string,firstof(json_query(%0,extract,$.slug),u(FUN`ITEM`SLUGGIFY,u(FUN`STRIKE`LABEL,json_query(%0,extract,$.label))))),
+            id,json(string,firstof(%1,json_query(%0,extract,$.slug),strike)),
             category,json(string,firstof(json_query(%0,extract,$.category),unarmed)),
             group,json(string,firstof(json_query(%0,extract,$.group),brawling)),
             base,json(string,firstof(json_query(%0,extract,$.baseType),json_query(%0,extract,$.slug))),
@@ -3068,9 +3088,9 @@ objects:
           setqm(strike_traits,json_query(%0,extract,$.traits),strike_slug,json_query(%0,extract,$.slug),strike_category,json_query(%0,extract,$.category))][
           setq(strike_ranged,gt(firstof(json_query(%0,extract,$.range),0),0))][
           setq(strike_attribute,if(%q<strike_ranged>,dex,if(cand(member(%q<strike_traits>,finesse),gt(u(FUN`CHECK`ABILITY,dex),u(FUN`CHECK`ABILITY,str))),dex,str)))][
-          setq(strike_options,squish(item:slug:%q<strike_slug> item:category:%q<strike_category> item:group:[json_query(%0,extract,$.group)] item:base:[json_query(%0,extract,$.base)] [if(member(%q<check_deity_weapons>,json_query(%0,extract,$.base)),item:deity-favored)] [if(%q<strike_ranged>,item:ranged,item:melee)] item:damage:type:[firstof(json_query(%0,extract,$.type),bludgeoning)] [iter(%q<strike_traits>,item:trait:%i0)] [if(strlen(json_query(%0,extract,$.material)),item:material:[json_query(%0,extract,$.material)])] [if(cor(member(%q<strike_traits>,magical),gt(json_query(%0,extract,$.potency),0),gt(json_query(%0,extract,$.striking),0),words(json_query(%0,extract,$.property))),item:magical)] [iter(json_query(%0,extract,$.property),item:rune:property:[u(FUN`RUNE`KEBAB,%i0)])]))][
+          setq(strike_options,squish(item:slug:%q<strike_slug> [if(strlen(setr(strike_id,json_query(%0,extract,$.id))),item:id:%q<strike_id>)] [iter(json_query(%0,extract,$.tags),item:tag:%i0)] item:category:%q<strike_category> item:group:[json_query(%0,extract,$.group)] item:base:[json_query(%0,extract,$.base)] [if(member(%q<check_deity_weapons>,json_query(%0,extract,$.base)),item:deity-favored)] [if(%q<strike_ranged>,item:ranged,item:melee)] item:damage:type:[firstof(json_query(%0,extract,$.type),bludgeoning)] [iter(%q<strike_traits>,item:trait:%i0)] [if(strlen(json_query(%0,extract,$.material)),item:material:[json_query(%0,extract,$.material)])] [if(cor(member(%q<strike_traits>,magical),gt(json_query(%0,extract,$.potency),0),gt(json_query(%0,extract,$.striking),0),words(json_query(%0,extract,$.property))),item:magical)] [iter(json_query(%0,extract,$.property),item:rune:property:[u(FUN`RUNE`KEBAB,%i0)])]))][
           setq(strike_rank,max(u(FUN`CHECK`RANK,%q<strike_category>),u(FUN`CHECK`RANK,weapon-base-[json_query(%0,extract,$.base)]),u(FUN`STRIKE`MARTIAL),if(member(%q<strike_options>,item:deity-favored),%q<check_favored>,0)))][
-          setq(strike_domains,attack attack-roll strike-attack-roll mundane-attack [if(%q<strike_ranged>,ranged,melee)]-strike-attack-roll [if(strmatch(%q<strike_category>,unarmed),unarmed-attack-roll)] %q<strike_attribute>-attack %q<strike_slug>-attack all check)][
+          setq(strike_domains,attack attack-roll strike-attack-roll mundane-attack [if(%q<strike_ranged>,ranged,melee)]-strike-attack-roll [if(strmatch(%q<strike_category>,unarmed),unarmed-attack-roll)] %q<strike_attribute>-attack %q<strike_slug>-attack [if(strlen(%q<strike_id>),%q<strike_id>-attack)] all check)][
           setq(strike_mods,u(FUN`CHECK`MODS,ability~[u(FUN`CHECK`ABILITY,%q<strike_attribute>)]~%q<strike_attribute>~0 proficiency~[u(FUN`CHECK`PROFICIENCY,%q<strike_rank>)]~proficiency~0 [if(gt(json_query(%0,extract,$.potency),0),item~[json_query(%0,extract,$.potency)]~potency~0)] [if(cand(strlen(u(FUN`ABP`MODE)),t(setr(strike_abp,u(FUN`ABP`ATTACK,%q<check_level>)))),potency~%q<strike_abp>~attack-potency~0)],%q<strike_domains>,%q<strike_options>))][
           if(cand(isint(setr(strike_form,json_query(%0,extract,$.form))),gt(%q<strike_form>,u(FUN`CHECK`TOTAL,%q<strike_mods>))),
             u(FUN`CHECK`FORMONLY,u(FUN`CHECK`MODS,untyped~%q<strike_form>~battle-form~0,%q<strike_domains>,%q<strike_options>),status circumstance),
@@ -6792,6 +6812,7 @@ objects:
           setq(find_text,trim(%0))][
           setq(find_at,squish(iter(u(FUN`ENC`INDEXES),if(strmatch(u(FUN`ENC`C,%i0,k),%q<find_text>),%i0))))][
           if(not(strlen(%q<find_at>)),setq(find_at,if(hastype(setr(find_player,pmatch(%q<find_text>)),player),squish(iter(u(FUN`ENC`INDEXES),if(strmatch(u(FUN`ENC`C,%i0,who),objid(%q<find_player>)),%i0))))))][
+          if(not(strlen(%q<find_at>)),setq(find_at,first(squish(iter(u(FUN`ENC`INDEXES),if(strmatch(u(FUN`ENC`C,%i0,name),%q<find_text>),%i0))))))][
           if(not(strlen(%q<find_at>)),setq(find_at,if(eq(words(setunion(iter(setr(find_named,squish(iter(u(FUN`ENC`INDEXES),if(strmatch(u(FUN`ENC`C,%i0,name),%q<find_text>*),%i0)))),[u(FUN`ENC`C,%i0,who)][u(FUN`ENC`C,%i0,id)]),)),1),first(%q<find_named>))))][
           if(not(strlen(%q<find_at>)),setq(find_at,if(eq(words(setunion(iter(setr(find_named,squish(iter(u(FUN`ENC`INDEXES),if(strmatch(u(FUN`ENC`C,%i0,name),*%q<find_text>*),%i0)))),[u(FUN`ENC`C,%i0,who)][u(FUN`ENC`C,%i0,id)]),)),1),first(%q<find_named>))))][
           first(%q<find_at>)]
@@ -7279,7 +7300,7 @@ objects:
             setq(nfx_say,iter(%q<nfx_list>,u(FUN`NOTEFX`ONE,%0,%1,%i0,%2),%b,))][
             u(FUN`ACT`TAKE,nfx)][
             setqm(fx_origin,%q<nfx_was_origin>,fx_outcome,%q<nfx_was_outcome>,fx_on,%q<nfx_was_on>,fx_sus,%q<nfx_was_sus>,cast_dc,%q<nfx_was_dc>)][
-            %q<nfx_say>])]
+            if(strlen(trim(%q<nfx_say>)),%r[trim(%q<nfx_say>)])])]
         flags: [funsyntax]
       # Each effect a kept note everyone sees links, once: notepack~noteid~effectpack~effectid~1 when the note names
       # its outcomes (0 when it shows on any). A link to an effect from a book the game lacks is left out.
@@ -7547,7 +7568,9 @@ objects:
           setq(strike_ac,u(FUN`ACT`AC))][
           setq(act_tgtopts,u(FUN`ACT`TARGET`OPTIONS))][
           u(FUN`ACT`HOLD,on)][u(FUN`ACT`TAKE,by)][
-          u(FUN`ACT`ROLL,%q<strike_total>,%q<strike_ac>,,%q<act_tgtopts>)][
+          setq(strike_pc,not(strmatch(last(%q<act_strike>,|),npc:*)))][
+          if(%q<strike_pc>,null(u({{core}}/FUN`STRIKE`ATTACK,last(%q<act_strike>,|))))][
+          u(FUN`ACT`ROLL,%q<strike_total>,%q<strike_ac>,if(%q<strike_pc>,%q<strike_domains>),%q<act_tgtopts> [if(%q<strike_pc>,%q<strike_options>)])][
           u(FUN`ACT`RUNE`DOS)][
           u(FUN`ACT`NOTEFX`KEEP)][
           if(t(%q<strike_react>),[u(FUN`ENC`SET,%q<act_at>,react,1)][setq(spend_warn,)],[u(FUN`ENC`SET,%q<act_at>,map,inc(u(FUN`ENC`C,%q<act_at>,map)))][u(FUN`ACTION`SPEND,%q<act_at>,1)])][
