@@ -1,7 +1,7 @@
 format: "1.20"
 package: duties-ironsworn
 title: "Duties: Ironsworn rolls"
-version: 1.1.1
+version: 1.1.2
 authors: [SharpMUSH]
 description: "Lets Duties roll on the Ironsworn sheet: a roll provider called ironsworn, so a duty's checks make action rolls with a stat against two challenge dice, with help adding to the action score, and experience or momentum as rewards. Pick it with +config duties/system=ironsworn."
 license: MIT
@@ -19,8 +19,8 @@ depends:
   - package: duties
     version: ">=1.0 <2.0"
     source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/duties/
+      repo: https://github.com/SharpMUSH/SharpMUSH.Packages
+      path: duties/
       branch: main
   - package: sheet-ironsworn
     version: ">=2.0 <3.0"

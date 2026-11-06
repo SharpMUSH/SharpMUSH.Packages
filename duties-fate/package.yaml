@@ -1,7 +1,7 @@
 format: "1.20"
 package: duties-fate
 title: "Duties: Fate sheet rolls"
-version: 1.0.1
+version: 1.0.2
 authors: [SharpMUSH]
 description: "Lets Duties roll on the Fate sheet: a roll provider called fate, so a duty's checks roll four Fate dice plus a skill or approach against an opposition on the ladder, with teamwork, paid invokes and fate points as rewards. Pick it with +config duties/system=fate."
 license: MIT
@@ -19,8 +19,8 @@ depends:
   - package: duties
     version: ">=1.0 <2.0"
     source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/duties/
+      repo: https://github.com/SharpMUSH/SharpMUSH.Packages
+      path: duties/
       branch: main
   - package: sheet-fate
     version: ">=1.0 <2.0"

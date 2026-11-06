@@ -81,6 +81,15 @@ jobs:
       - name: Check the README package table matches index.yaml
         run: python3 tools/readme-packages-table.py --check
 
+      # duties keeps its behaviour tests in the engine; they install it from this checkout.
+      - name: Duties integration tests
+        working-directory: sharpmush
+        env:
+          SHARPMUSH_PACKAGES_PATH: ${{ github.workspace }}/packages
+          TUNIT_DISABLE_HTML_REPORTER: "true"
+        timeout-minutes: 30
+        run: dotnet run --project SharpMUSH.Tests.Integration -- --treenode-filter "/*/*/Duties*/*" --output Detailed
+
       - name: Check PF2e navigation and notice links
         run: python3 tools/check-pf2e-navigation.py
 

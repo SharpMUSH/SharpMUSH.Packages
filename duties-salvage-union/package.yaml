@@ -1,7 +1,7 @@
 format: "1.20"
 package: duties-salvage-union
 title: "Duties: Salvage Union rolls"
-version: 1.0.3
+version: 1.0.4
 authors: [SharpMUSH]
 description: "Lets Duties roll on the Salvage Union sheet: a roll provider called salvage, so a duty's checks roll the d20 on the Core Mechanic table with one of the pilot's abilities or the mech's systems and modules, and Training Points or scrap for the Union Crawler as rewards. Pick it with +config duties/system=salvage."
 license: MIT
@@ -19,8 +19,8 @@ depends:
   - package: duties
     version: ">=1.0 <2.0"
     source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/duties/
+      repo: https://github.com/SharpMUSH/SharpMUSH.Packages
+      path: duties/
       branch: main
   - package: sheet-salvage-union
     version: ">=1.0 <2.0"
