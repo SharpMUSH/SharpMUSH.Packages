@@ -1,7 +1,7 @@
 format: "1.20"
 package: sheet-pbta-chargen
 title: "PbtA sheet: character applications"
-version: 1.1.1
+version: 1.1.2
 authors: [SharpMUSH]
 description: "Joins the PbtA sheet to character applications: a player changes their sheet only while their +app application is theirs to change, reviewers read the sheets of the characters they review, and the sheet's messages point at +app."
 license: MIT
@@ -10,7 +10,8 @@ keywords: [sheet, pbta, chargen, approval, bridge]
 category: Game System
 subcategory: PbtA
 bridge: true
-requires_server: ">=0.1"
+requires_server: ">=1.0"
+verified_server: "1.0"
 
 # A bridge: it joins two packages that do not know about each other. sheet-pbta lets a player fill in their own
 # sheet until they are approved; this adds the lines that tie that to the state of their application on the

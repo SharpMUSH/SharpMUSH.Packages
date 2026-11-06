@@ -1,7 +1,7 @@
 format: "1.20"
 package: sheet-fitd
 title: "Forged in the Dark sheet"
-version: 2.2.2
+version: 2.2.3
 authors: [SharpMUSH]
 description: "A Forged in the Dark character sheet: twelve action ratings under three attributes, built from a ledger, with XP for each attribute spent on advances, stress, trauma, harm and coin, separate audited ledgers for XP and coin, encounters that play from copies of the sheets, with threats from a list the game edits and positions and effect, and progress clocks. +check rolls a pool of six-sided dice and reads the highest against a position for the room; +check/resist rolls an attribute to resist a consequence. Based on the Blades in the Dark SRD under CC BY 3.0."
 license: MIT
@@ -9,7 +9,8 @@ homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, fitd, forged in the dark, dice, clocks]
 category: Game System
 subcategory: Forged in the Dark
-requires_server: ">=0.1"
+requires_server: ">=1.0"
+verified_server: "1.0"
 
 # One permission, for the people who keep sheets: change any character's sheet at any time, read every sheet,
 # give XP and coin, take traumas off, revoke and clear ledger entries, run any encounter, and change anyone's

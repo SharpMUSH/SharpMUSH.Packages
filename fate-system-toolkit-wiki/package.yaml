@@ -1,7 +1,7 @@
 format: "1.20"
 package: fate-system-toolkit-wiki
 title: "Fate System Toolkit rules (unofficial)"
-version: 1.1.1
+version: 1.1.2
 wiki_landing_page: category:fate_system_toolkit_start_here
 wiki_collection_name: Fate System Toolkit (unofficial)
 authors: [SharpMUSH]
@@ -11,7 +11,8 @@ homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [fate, rules, wiki, supers, cyberware]
 category: Game System
 subcategory: Fate
-requires_server: ">=0.1"
+requires_server: ">=1.0"
+verified_server: "1.0"
 
 # A content pack: wiki pages only. Its pages link to the Fate rules pages, so it brings those too.
 depends:

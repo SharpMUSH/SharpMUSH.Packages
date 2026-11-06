@@ -1,7 +1,7 @@
 format: "1.20"
 package: fate-system-toolkit-help
 title: "Fate System Toolkit: +help topics"
-version: 1.1.1
+version: 1.1.2
 authors: [SharpMUSH]
 description: "Puts the Fate System Toolkit topics (conditions, treatment, Wealth, Stormcallers and their rolls, super skills and power bids, gadgets, cyberware and surgery, settings and credits) into +help: registers the fate-system-toolkit package's help with the +help librarian, and points its messages at +help."
 license: MIT
@@ -10,7 +10,8 @@ keywords: [sheet, fate, help, bridge]
 category: Game System
 subcategory: Fate
 bridge: true
-requires_server: ">=0.1"
+requires_server: ">=1.0"
+verified_server: "1.0"
 
 # A bridge: it joins two packages that do not know about each other. fate-system-toolkit keeps its topics on
 # its own help object, and plus-help reads any object registered with its librarian. This package is that

@@ -1,7 +1,7 @@
 format: "1.20"
 package: sheet-salvage-union
 title: "Salvage Union sheet (unofficial)"
-version: 1.3.1
+version: 1.3.2
 authors: [SharpMUSH]
 description: "An unofficial Salvage Union pilot and mech sheet: a class, abilities bought down their trees with training points, HP, AP and pilot equipment; a mech built from a chassis, systems and modules, with SP, EP and heat; and the Union Crawler the pilots share. Encounters bring in the Core Book's NPCs, vehicles, drones, Bio-Titans and enemy mechs, with Group Initiative, NPC attacks and salvage. +check rolls the one d20 against the core mechanic table, spends the AP, EP and heat it costs, and lets a mech Push for a re-roll and a heat check. The Core Book's abilities, chassis, systems, modules, equipment and tables come from the Salvage Union (Unofficial) Foundry VTT system, under the Salvage Union Open Game Licence 1.0b."
 license: MIT
@@ -9,7 +9,8 @@ homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, salvage-union, mech, d20, dice]
 category: Game System
 subcategory: Salvage Union
-requires_server: ">=0.1"
+requires_server: ">=1.0"
+verified_server: "1.0"
 
 # One permission, for the people who keep sheets: change any character's sheet and mech and the Union Crawler,
 # and read every sheet. A player builds their own pilot and mech until they are approved, and keeps their own
