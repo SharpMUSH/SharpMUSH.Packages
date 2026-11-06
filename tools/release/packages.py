@@ -10,7 +10,8 @@ A package is a top-level directory holding a package.yaml. Its release tag is
   pending-tags            Print "<tag> <commit>" for every package version on HEAD
                           that has no tag yet. The commit is the last one that
                           touched the package's directory, so a version is tagged
-                          where its content was last changed.
+                          where its content was last changed. Exits 1 when a tagged
+                          version's directory changed after its tag.
 
 Run from the repository root with the tags fetched (git fetch --tags).
 """
@@ -56,7 +57,7 @@ def compare(a: tuple[int, int, int, str | None], b: tuple[int, int, int, str | N
     for x, y in zip(pa.split("."), pb.split(".")):
         if x == y:
             continue
-        xn, yn = x.isdigit(), y.isdigit()
+        xn, yn = x.isascii() and x.isdigit(), y.isascii() and y.isdigit()
         if xn and yn:
             return -1 if int(x) < int(y) else 1
         if xn != yn:
@@ -81,7 +82,8 @@ def tags() -> set[str]:
 
 
 def check_bumps(base: str, head: str) -> int:
-    changed = git("diff", "--name-only", f"{base}...{head}").splitlines()
+    # --no-renames: a file moved out of a package changes that package too.
+    changed = [p for p in git("diff", "--name-only", "--no-renames", "-z", f"{base}...{head}").split("\0") if p]
     directories = sorted({path.split("/", 1)[0] for path in changed if "/" in path})
     merge_base = git("merge-base", base, head).strip()
     existing = tags()
@@ -122,6 +124,7 @@ def check_bumps(base: str, head: str) -> int:
 
 def pending_tags() -> int:
     existing = tags()
+    drift = 0
     for manifest in sorted(Path(".").glob("*/package.yaml")):
         directory = manifest.parent.name
         match = VERSION_LINE.search(manifest.read_text(encoding="utf-8"))
@@ -134,8 +137,9 @@ def pending_tags() -> int:
         if tag not in existing:
             print(f"{tag} {last}")
         elif git("rev-parse", f"{tag}:{directory}") != git("rev-parse", f"HEAD:{directory}"):
-            print(f"::warning::{directory} changed after {tag} without a new version", file=sys.stderr)
-    return 0
+            print(f"::error::{directory} changed after {tag} without a new version; raise its version", file=sys.stderr)
+            drift += 1
+    return 1 if drift else 0
 
 
 def main(argv: list[str]) -> int:
