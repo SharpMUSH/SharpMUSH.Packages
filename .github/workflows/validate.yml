@@ -78,6 +78,9 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: python3 -I tools/release/packages.py check-bumps "$BASE_SHA" "$HEAD_SHA"
 
+      - name: Check the README package table matches index.yaml
+        run: python3 tools/readme-packages-table.py --check
+
       - name: Check PF2e navigation and notice links
         run: python3 tools/check-pf2e-navigation.py
 
