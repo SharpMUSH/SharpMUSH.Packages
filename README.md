@@ -111,7 +111,7 @@ The table is generated from [`index.yaml`](index.yaml); edit that file, then run
 | [`sheet-salvage-union-chargen/`](sheet-salvage-union-chargen/) | 1.0.2 | Joins the Salvage Union sheet to +app character applications |
 | [`duties-salvage-union/`](duties-salvage-union/) | 1.0.3 | Duties roll provider "salvage" on the Salvage Union sheet |
 | [`salvage-union-wiki/`](salvage-union-wiki/) | 1.0.5 | Salvage Union rules as wiki pages (core rules, Pilot Bay, Mech Workshop, chassis, Union Crawler, salvaging, denizens, and every ability, system, module, equipment and table); Salvage Union Open Game Licence 1.0b, unofficial |
-| [`sheet-charge/`](sheet-charge/) | 1.2.2 | Charge character sheet (details, action dots, momentum, stress clock, milestones and talents) with +check action rolls, assists, determination and fortune rolls, encounters with threats and consequences, and clocks; Charge SRD under CC BY 4.0 |
+| [`sheet-charge/`](sheet-charge/) | 1.2.3 | Charge character sheet (details, action dots, momentum, stress clock, milestones and talents) with +check action rolls, assists, determination and fortune rolls, encounters with threats and consequences, and clocks; Charge SRD under CC BY 4.0 |
 | [`sheet-charge-help/`](sheet-charge-help/) | 1.0.2 | Puts the Charge sheet topics into +help |
 | [`sheet-charge-config/`](sheet-charge-config/) | 1.0.2 | Puts the Charge sheet settings and action and detail tables into +config |
 | [`sheet-charge-chargen/`](sheet-charge-chargen/) | 1.0.2 | Joins the Charge sheet to +app character applications |
