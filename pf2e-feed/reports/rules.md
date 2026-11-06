@@ -1,6 +1,6 @@
 # Rule elements and licence filter
 
-Foundry pf2e commit `41aecb4e337e18c1ba32604ba292613ff2ba2086`.
+Foundry pf2e commit `ae999ce5d5c4c5cad2359d9710af5a8522a7083d`.
 
 Every rule element kind in the feed, with how often it appears and on how many items. The pf2e package
 applies the kinds it has a handler for and shows the others as unsupported on the sheet.
@@ -8,20 +8,20 @@ applies the kinds it has a handler for and shows the others as unsupported on th
 | Kind | Rule elements | Items |
 | --- | --- | --- |
 | FlatModifier | 1179 | 915 |
-| RollOption | 688 | 560 |
+| RollOption | 689 | 561 |
 | ItemAlteration | 527 | 328 |
 | ActiveEffectLike | 504 | 356 |
 | GrantItem | 399 | 325 |
 | Note | 359 | 270 |
 | ChoiceSet | 325 | 277 |
-| DamageDice | 230 | 195 |
+| DamageDice | 229 | 195 |
 | AdjustModifier | 169 | 114 |
 | Resistance | 161 | 116 |
 | AdjustDegreeOfSuccess | 150 | 122 |
 | Aura | 134 | 130 |
 | Strike | 123 | 64 |
 | BaseSpeed | 95 | 76 |
-| AdjustStrike | 76 | 55 |
+| AdjustStrike | 78 | 57 |
 | Sense | 64 | 51 |
 | CreatureSize | 50 | 39 |
 | DamageAlteration | 46 | 35 |
@@ -49,7 +49,7 @@ applies the kinds it has a handler for and shows the others as unsupported on th
 
 | Licence | Book | Items |
 | --- | --- | --- |
-| ORC | Pathfinder Impossible Magic | 1258 |
+| ORC | Pathfinder Impossible Magic | 1259 |
 | ORC | Pathfinder Treasure Vault (Remastered) | 1252 |
 | ORC | Pathfinder Guns & Gears | 771 |
 | ORC | Pathfinder Battlecry! | 757 |
@@ -58,12 +58,13 @@ applies the kinds it has a handler for and shows the others as unsupported on th
 | ORC | Pathfinder Howl of the Wild | 547 |
 | ORC | Pathfinder Dark Archive (Remastered) | 511 |
 | ORC | Pathfinder Lost Omens Tian Xia Character Guide | 508 |
-| OGL | Pathfinder Lost Omens The Grand Bazaar | 401 |
-| OGL | Pathfinder Lost Omens Ancestry Guide | 337 |
+| OGL | Pathfinder Lost Omens The Grand Bazaar | 398 |
+| OGL | Pathfinder Lost Omens Ancestry Guide | 316 |
 | OGL | Pathfinder Core Rulebook | 302 |
+| ORC | Pathfinder Lost Omens Cheliax, Infernal Inheritance | 274 |
 | OGL | Pathfinder Lost Omens Impossible Lands | 272 |
 | ORC | Pathfinder Lost Omens Divine Mysteries | 266 |
-| ORC | Pathfinder Lost Omens Cheliax, Infernal Inheritance | 260 |
+| ORC | Pathfinder Feybound | 256 |
 | ORC | Pathfinder Lost Omens Rival Academies | 241 |
 | OGL | Pathfinder Secrets of Magic | 230 |
 | OGL | Pathfinder Lost Omens Character Guide | 222 |
@@ -258,5 +259,6 @@ applies the kinds it has a handler for and shows the others as unsupported on th
 | OGL | Pathfinder Society Scenario #4-11: Prisoners of the Electric Castle | 1 |
 | ORC |  Pathfinder Treasure Vault (Remastered) | 1 |
 | ORC | Pathfinder #223: Hell's Destiny | 1 |
+| ORC | Pathfinder Lost Omens Legends | 1 |
 | ORC | Pathfinder Lost Omens Pathfinder Society Guide | 1 |
 | ORC | Starfinder Player Core | 1 |
