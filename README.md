@@ -147,6 +147,19 @@ are **immutable**: never move or delete one — publish a fix as a new version.
 Installers record the exact commit they applied and warn loudly if a release
 tag later points elsewhere.
 
+Tags are made by CI. A pull request that changes anything in a package's
+directory fails unless it raises that package's `version` (in `package.yaml`
+and `index.yaml`) above the last one. Once it merges, the release job tags
+`<package-dir>/v<version>` at the last commit that touched the directory.
+Every manifest is validated against SharpMUSH `main` and, once SharpMUSH has
+a release, against its latest one. To check a branch by hand:
+
+```
+git fetch --tags origin
+python3 tools/release/packages.py check-bumps origin/main HEAD
+python3 tools/release/packages.py pending-tags
+```
+
 ## The manifest format, in brief
 
 Manifests are **desired state**, not command scripts — and they never contain
@@ -211,7 +224,8 @@ mode: warnings fail).
 4. Open a pull request. Keep attribute namespaces behind a
    `convention_prefix`, never hardcode dbrefs, declare every `{{?configure}}`
    ref with a label and type, and use block scalars for all code.
-5. Once merged, a maintainer tags the release `<package>/v<version>`.
+5. Raise the package's version in the same pull request; once it merges, CI
+   tags the release `<package>/v<version>`.
 
 Package ids are first-come within this repo, must not collide with an
 existing id even with punctuation stripped (`who-where` blocks `whowhere`),
