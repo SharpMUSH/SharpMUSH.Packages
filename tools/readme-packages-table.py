@@ -7,6 +7,7 @@ source: add, bump or describe a package there and run this script.
     python3 tools/readme-packages-table.py          # rewrite README.md
     python3 tools/readme-packages-table.py --check  # fail if README.md is out of date
 """
+import argparse
 import pathlib
 import sys
 
@@ -41,9 +42,12 @@ def render(readme):
 
 
 def main():
+	parser = argparse.ArgumentParser(allow_abbrev=False)
+	parser.add_argument("--check", action="store_true", help="fail if README.md is out of date")
+	args = parser.parse_args()
 	current = README.read_text(encoding="utf-8")
 	wanted = render(current)
-	if "--check" in sys.argv[1:]:
+	if args.check:
 		if current != wanted:
 			print("::error file=README.md::The package table is out of date. Run: python3 tools/readme-packages-table.py")
 			return 1

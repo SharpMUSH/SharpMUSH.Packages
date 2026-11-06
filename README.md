@@ -118,9 +118,10 @@ The table is generated from [`index.yaml`](index.yaml); edit that file, then run
 | [`duties-charge/`](duties-charge/) | 1.0.1 | Duties roll provider "charge" on the Charge sheet |
 <!-- packages-table:end -->
 
-The packages every game starts with (`+who`/`+where`, the HTTP handler, the
-character profile API, bulletin boards and others) ship inside SharpMUSH and
-are not in this repo. Small teaching examples for package authors are in the
+Packages bundled with SharpMUSH (`+who`/`+where`, the HTTP handler, the
+character profile API, bulletin boards and others) ship inside the server and
+are not in this repo; some install on a new game, the rest from the admin
+panel. Small teaching examples for package authors are in the
 SharpMUSH Guide.
 
 ## PF2e feed
