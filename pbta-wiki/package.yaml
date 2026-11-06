@@ -1,7 +1,7 @@
 format: "1.20"
 package: pbta-wiki
 title: "PbtA rules"
-version: 1.1.1
+version: 1.1.2
 wiki_landing_page: category:pbta_start_here
 wiki_collection_name: PbtA
 authors: [SharpMUSH]
@@ -11,7 +11,8 @@ homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [pbta, wiki, rules, moves]
 category: Game System
 subcategory: PbtA
-requires_server: ">=0.1"
+requires_server: ">=1.0"
+verified_server: "1.0"
 locale: en
 
 # A content package: wiki pages only. The move pages quote the moves as sheet-pbta's store holds them, so the two

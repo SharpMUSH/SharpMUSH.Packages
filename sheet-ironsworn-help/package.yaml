@@ -1,7 +1,7 @@
 format: "1.20"
 package: sheet-ironsworn-help
 title: "Ironsworn sheet: +help topics"
-version: 1.0.2
+version: 1.0.3
 authors: [SharpMUSH]
 description: "Puts the Ironsworn sheet topics into +help: registers the sheet-ironsworn package's help with the +help librarian, and points its messages at +help."
 license: MIT
@@ -10,7 +10,8 @@ keywords: [sheet, ironsworn, help, bridge]
 category: Game System
 subcategory: Ironsworn
 bridge: true
-requires_server: ">=0.1"
+requires_server: ">=1.0"
+verified_server: "1.0"
 
 # A bridge: it joins two packages that do not know about each other. sheet-ironsworn keeps its topics on its own
 # help object, and plus-help reads any object registered with its librarian. This package is that

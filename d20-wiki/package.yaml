@@ -1,7 +1,7 @@
 format: "1.20"
 package: d20-wiki
 title: "D20 rules"
-version: 1.1.1
+version: 1.1.2
 wiki_landing_page: category:d20_start_here
 wiki_collection_name: d20
 authors: [SharpMUSH]
@@ -11,7 +11,8 @@ homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [d20, wiki, rules]
 category: Game System
 subcategory: D20
-requires_server: ">=0.1"
+requires_server: ">=1.0"
+verified_server: "1.0"
 locale: en
 
 # A content package: wiki pages only. The trait page lists the traits sheet-d20 ships; a game that edits them in

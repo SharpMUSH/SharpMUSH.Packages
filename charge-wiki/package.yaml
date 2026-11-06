@@ -1,7 +1,7 @@
 format: "1.20"
 package: charge-wiki
 title: Charge rules
-version: 1.0.3
+version: 1.0.4
 wiki_landing_page: category:charge_start_here
 wiki_collection_name: Charge
 authors: [SharpMUSH]
@@ -15,6 +15,8 @@ homepage: https://github.com/SharpMUSH/SharpMUSH.Packages/tree/main/charge-wiki
 keywords: [charge, rules, wiki, forged in the dark]
 category: Game System
 subcategory: Charge
+requires_server: ">=1.0"
+verified_server: "1.0"
 locale: en
 
 # A content pack: wiki pages only, no objects or softcode. Softcode never reads these pages. The sheet that

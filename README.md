@@ -42,79 +42,80 @@ The table is generated from [`index.yaml`](index.yaml); edit that file, then run
 <!-- packages-table:begin (generated from index.yaml by tools/readme-packages-table.py) -->
 | Package | Version | Description |
 |---|---|---|
-| [`roll-tables/`](roll-tables/) | 1.0.0 | Random tables as softcode data, rolled in the room with +table/roll and publishable to the wiki |
-| [`pf2e-remaster/`](pf2e-remaster/) | 1.6.3 | Pathfinder Second Edition (Remaster) core rules as wiki pages (classes, ancestries, feats, spells, equipment, skills, conditions, DC tables; ORC License) |
-| [`sheet-d20/`](sheet-d20/) | 2.2.2 | d20 character sheet built from a ledger (abilities, skills, training, level, hit points, coin, gear), guided character creation, +check against a DC or a foe, and encounters with their own sheet copies, foes from a bestiary, initiative and conditions |
-| [`sheet-d20-help/`](sheet-d20-help/) | 1.0.2 | Puts the D20 sheet topics into +help |
-| [`sheet-d20-config/`](sheet-d20-config/) | 1.0.3 | Puts the D20 sheet settings, trait table and bestiary into +config |
-| [`sheet-d20-chargen/`](sheet-d20-chargen/) | 1.1.1 | Joins the D20 sheet to +app character applications |
-| [`sheet-fate/`](sheet-fate/) | 1.6.1 | Fate character sheet (skills or approaches, aspects, stunts, stress, consequences, fate points) with +check on four Fate dice, a grant ledger, guided +chargen, encounters with their own sheet copies, NPC opposition from +npc and the commands to run a conflict, and audited milestones and breakthroughs that players spend with +sheet/advance; Fate SRD text under CC BY 3.0 |
-| [`sheet-fate-help/`](sheet-fate-help/) | 1.0.1 | Puts the Fate sheet topics into +help |
-| [`sheet-fate-config/`](sheet-fate-config/) | 1.0.1 | Puts the Fate sheet settings and its skill, approach, stress and consequence tables into +config |
-| [`sheet-fate-chargen/`](sheet-fate-chargen/) | 1.1.1 | Joins the Fate sheet to +app character applications |
-| [`sheet-fate-wiki/`](sheet-fate-wiki/) | 1.1.1 | Fate rules reference as wiki pages; Fate SRD text under CC BY 3.0 |
-| [`atomic-robo/`](atomic-robo/) | 1.1.1 | Unofficial Atomic Robo pack, pulp action science and giant robots on the Fate sheet (modes, mega-stunts, invention, brainstorms, machines and enemy robots at scale); Atomic Robo RPG SRD and Fate System Toolkit text under CC BY 3.0 |
-| [`atomic-robo-help/`](atomic-robo-help/) | 1.0.1 | Puts the Atomic Robo topics into +help |
-| [`atomic-robo-config/`](atomic-robo-config/) | 1.0.1 | Puts the Atomic Robo settings and its modes and scales tables into +config |
-| [`atomic-robo-wiki/`](atomic-robo-wiki/) | 1.1.1 | Unofficial Atomic Robo rules reference as wiki pages; Atomic Robo RPG SRD and Fate System Toolkit text under CC BY 3.0 |
-| [`fate-adversary-toolkit/`](fate-adversary-toolkit/) | 1.0.1 | Unofficial Fate Adversary Toolkit pack, opposition for the Fate sheet (ready adversaries scaled to your game, adversaries built by type, filler mobs, hazards, blocks, distractions, countdowns, limitations and resistances); Fate Adversary Toolkit SRD text under CC BY 3.0 |
-| [`fate-adversary-toolkit-help/`](fate-adversary-toolkit-help/) | 1.0.1 | Puts the Fate Adversary Toolkit topics into +help |
-| [`fate-adversary-toolkit-config/`](fate-adversary-toolkit-config/) | 1.0.1 | Puts the Fate Adversary Toolkit settings and its adversary and obstacle libraries into +config |
-| [`fate-adversary-toolkit-wiki/`](fate-adversary-toolkit-wiki/) | 1.0.1 | Unofficial Fate Adversary Toolkit rules reference as wiki pages; Fate Adversary Toolkit SRD text under CC BY 3.0 |
-| [`fate-system-toolkit/`](fate-system-toolkit/) | 1.1.1 | Unofficial Fate System Toolkit pack for the Fate sheet (conditions that soak stress, a Wealth track for money on an audited ledger, Stormcallers' storm magic with barriers, super skills with fate-point bids between powers, gadgets and magic items, and cyberware with surgery); Fate System Toolkit SRD text under CC BY 3.0 |
-| [`fate-system-toolkit-help/`](fate-system-toolkit-help/) | 1.1.1 | Puts the Fate System Toolkit topics into +help |
-| [`fate-system-toolkit-config/`](fate-system-toolkit-config/) | 1.1.1 | Puts the Fate System Toolkit settings, conditions, storms and augs into +config |
-| [`fate-system-toolkit-wiki/`](fate-system-toolkit-wiki/) | 1.1.1 | Unofficial Fate System Toolkit rules reference as wiki pages; Fate System Toolkit SRD text under CC BY 3.0 |
+| [`roll-tables/`](roll-tables/) | 1.1.0 | Random tables as softcode data, rolled in the room with +table/roll and publishable to the wiki |
+| [`roll-tables-help/`](roll-tables-help/) | 1.0.0 | Puts the roll table topics into +help |
+| [`pf2e-remaster/`](pf2e-remaster/) | 1.6.4 | Pathfinder Second Edition (Remaster) core rules as wiki pages (classes, ancestries, feats, spells, equipment, skills, conditions, DC tables; ORC License) |
+| [`sheet-d20/`](sheet-d20/) | 2.2.3 | d20 character sheet built from a ledger (abilities, skills, training, level, hit points, coin, gear), guided character creation, +check against a DC or a foe, and encounters with their own sheet copies, foes from a bestiary, initiative and conditions |
+| [`sheet-d20-help/`](sheet-d20-help/) | 1.0.3 | Puts the D20 sheet topics into +help |
+| [`sheet-d20-config/`](sheet-d20-config/) | 1.0.4 | Puts the D20 sheet settings, trait table and bestiary into +config |
+| [`sheet-d20-chargen/`](sheet-d20-chargen/) | 1.1.2 | Joins the D20 sheet to +app character applications |
+| [`sheet-fate/`](sheet-fate/) | 1.6.2 | Fate character sheet (skills or approaches, aspects, stunts, stress, consequences, fate points) with +check on four Fate dice, a grant ledger, guided +chargen, encounters with their own sheet copies, NPC opposition from +npc and the commands to run a conflict, and audited milestones and breakthroughs that players spend with +sheet/advance; Fate SRD text under CC BY 3.0 |
+| [`sheet-fate-help/`](sheet-fate-help/) | 1.0.2 | Puts the Fate sheet topics into +help |
+| [`sheet-fate-config/`](sheet-fate-config/) | 1.0.2 | Puts the Fate sheet settings and its skill, approach, stress and consequence tables into +config |
+| [`sheet-fate-chargen/`](sheet-fate-chargen/) | 1.1.2 | Joins the Fate sheet to +app character applications |
+| [`sheet-fate-wiki/`](sheet-fate-wiki/) | 1.1.2 | Fate rules reference as wiki pages; Fate SRD text under CC BY 3.0 |
+| [`atomic-robo/`](atomic-robo/) | 1.1.2 | Unofficial Atomic Robo pack, pulp action science and giant robots on the Fate sheet (modes, mega-stunts, invention, brainstorms, machines and enemy robots at scale); Atomic Robo RPG SRD and Fate System Toolkit text under CC BY 3.0 |
+| [`atomic-robo-help/`](atomic-robo-help/) | 1.0.2 | Puts the Atomic Robo topics into +help |
+| [`atomic-robo-config/`](atomic-robo-config/) | 1.0.2 | Puts the Atomic Robo settings and its modes and scales tables into +config |
+| [`atomic-robo-wiki/`](atomic-robo-wiki/) | 1.1.2 | Unofficial Atomic Robo rules reference as wiki pages; Atomic Robo RPG SRD and Fate System Toolkit text under CC BY 3.0 |
+| [`fate-adversary-toolkit/`](fate-adversary-toolkit/) | 1.0.2 | Unofficial Fate Adversary Toolkit pack, opposition for the Fate sheet (ready adversaries scaled to your game, adversaries built by type, filler mobs, hazards, blocks, distractions, countdowns, limitations and resistances); Fate Adversary Toolkit SRD text under CC BY 3.0 |
+| [`fate-adversary-toolkit-help/`](fate-adversary-toolkit-help/) | 1.0.2 | Puts the Fate Adversary Toolkit topics into +help |
+| [`fate-adversary-toolkit-config/`](fate-adversary-toolkit-config/) | 1.0.2 | Puts the Fate Adversary Toolkit settings and its adversary and obstacle libraries into +config |
+| [`fate-adversary-toolkit-wiki/`](fate-adversary-toolkit-wiki/) | 1.0.2 | Unofficial Fate Adversary Toolkit rules reference as wiki pages; Fate Adversary Toolkit SRD text under CC BY 3.0 |
+| [`fate-system-toolkit/`](fate-system-toolkit/) | 1.1.2 | Unofficial Fate System Toolkit pack for the Fate sheet (conditions that soak stress, a Wealth track for money on an audited ledger, Stormcallers' storm magic with barriers, super skills with fate-point bids between powers, gadgets and magic items, and cyberware with surgery); Fate System Toolkit SRD text under CC BY 3.0 |
+| [`fate-system-toolkit-help/`](fate-system-toolkit-help/) | 1.1.2 | Puts the Fate System Toolkit topics into +help |
+| [`fate-system-toolkit-config/`](fate-system-toolkit-config/) | 1.1.2 | Puts the Fate System Toolkit settings, conditions, storms and augs into +config |
+| [`fate-system-toolkit-wiki/`](fate-system-toolkit-wiki/) | 1.1.2 | Unofficial Fate System Toolkit rules reference as wiki pages; Fate System Toolkit SRD text under CC BY 3.0 |
 | [`duties-d20/`](duties-d20/) | 1.0.2 | Duties roll provider "d20" on the D20 sheet |
 | [`duties-pf2e/`](duties-pf2e/) | 1.0.1 | Duties roll provider "pf2e" on the Pathfinder 2e sheet |
 | [`duties-fate/`](duties-fate/) | 1.0.1 | Duties roll provider "fate" on the Fate sheet |
-| [`sheet-pbta/`](sheet-pbta/) | 2.3.2 | Powered by the Apocalypse character sheet built from a ledger (playbooks, stats, moves, guided character creation, advances, forward, ongoing, hold, harm, XP), +check on 2d6 and encounters on sheet copies with foes and GM moves; Dungeon World moves under CC BY 3.0 |
-| [`sheet-pbta-help/`](sheet-pbta-help/) | 1.0.2 | Puts the PbtA sheet topics into +help |
-| [`sheet-pbta-config/`](sheet-pbta-config/) | 1.0.3 | Puts the PbtA sheet settings and its stats, moves, playbooks, foes and GM moves tables into +config |
-| [`sheet-pbta-chargen/`](sheet-pbta-chargen/) | 1.1.1 | Joins the PbtA sheet to +app character applications |
+| [`sheet-pbta/`](sheet-pbta/) | 2.3.3 | Powered by the Apocalypse character sheet built from a ledger (playbooks, stats, moves, guided character creation, advances, forward, ongoing, hold, harm, XP), +check on 2d6 and encounters on sheet copies with foes and GM moves; Dungeon World moves under CC BY 3.0 |
+| [`sheet-pbta-help/`](sheet-pbta-help/) | 1.0.3 | Puts the PbtA sheet topics into +help |
+| [`sheet-pbta-config/`](sheet-pbta-config/) | 1.0.4 | Puts the PbtA sheet settings and its stats, moves, playbooks, foes and GM moves tables into +config |
+| [`sheet-pbta-chargen/`](sheet-pbta-chargen/) | 1.1.2 | Joins the PbtA sheet to +app character applications |
 | [`duties-pbta/`](duties-pbta/) | 1.0.3 | Duties roll provider "pbta" on the PbtA sheet |
-| [`pbta-wiki/`](pbta-wiki/) | 1.1.1 | Wiki pages for the PbtA sheet (how to play, making a character, playbooks, moves, advancement, encounters, foes); Dungeon World moves under CC BY 3.0 |
-| [`d20-wiki/`](d20-wiki/) | 1.1.1 | Wiki pages for the d20 sheet (checks and DCs, making a character, abilities and skills, hit points, gear and advancement, encounters) |
-| [`fitd-wiki/`](fitd-wiki/) | 1.1.1 | Wiki pages for the FitD sheet (how to play, making a character, actions and attributes, stress, harm and advancement, encounters, threats, clocks); based on the Blades in the Dark SRD under CC BY 3.0 |
-| [`brp-wiki/`](brp-wiki/) | 1.1.1 | Wiki pages for the BRP sheet (how to play, making a character, characteristics and skills, hit points, coin and experience, encounters, creatures); ORC Licensed Material |
-| [`ironsworn-wiki/`](ironsworn-wiki/) | 1.1.1 | Wiki pages for the Ironsworn sheet (how to play, making a character, assets and experience, meters and momentum, vows, encounters, foes); based on the Ironsworn SRD under CC BY 4.0 |
-| [`pf2e/`](pf2e/) | 0.10.17 | Pathfinder Second Edition rules read the way Foundry VTT's pf2e system reads them, with ledger character sheets, a character builder, spellcasting, a deity table the game fills, alchemy, encounters with a bestiary, hazards, effects and GM tools, exploration, skill challenges, downtime, loot and shops with unidentified items, audited awards and levels (ORC License) |
-| [`pf2e-portal/`](pf2e-portal/) | 1.0.0 | Joins the Pathfinder 2e rules to the HTTP handler, for the pf2e-app sheet page |
-| [`pf2e-app/`](pf2e-app/) | 1.0.0 | The Pathfinder 2e sheet as a portal page at /apps/pf2e |
-| [`pf2e-help/`](pf2e-help/) | 1.0.1 | Puts the Pathfinder 2e topics into +help |
-| [`pf2e-config/`](pf2e-config/) | 1.0.1 | Puts the Pathfinder 2e settings into +config |
-| [`sheet-fitd/`](sheet-fitd/) | 2.2.2 | Forged in the Dark character sheet (ledger-built actions, XP advances, stress, trauma, harm, coin, audited log, encounters with threats and positions, clocks) with +check on a d6 pool; Blades in the Dark SRD under CC BY 3.0 |
-| [`sheet-fitd-help/`](sheet-fitd-help/) | 1.0.2 | Puts the FitD sheet topics into +help |
-| [`sheet-fitd-config/`](sheet-fitd-config/) | 1.0.3 | Puts the FitD sheet settings and action, attribute and threat tables into +config |
-| [`sheet-fitd-chargen/`](sheet-fitd-chargen/) | 1.1.1 | Joins the FitD sheet to +app character applications |
-| [`sheet-brp/`](sheet-brp/) | 2.3.1 | Percentile character sheet on Basic Roleplaying (ledger-built characteristics and skills, point-buy chargen, experience checks, hit points, power points, coin, audited log, encounters with creatures, hit locations and strike ranks) with +check on 1d100; ORC Licensed Material |
-| [`sheet-brp-help/`](sheet-brp-help/) | 1.0.2 | Puts the BRP sheet topics into +help |
-| [`sheet-brp-config/`](sheet-brp-config/) | 1.0.3 | Puts the BRP sheet settings, skill table and bestiary into +config |
-| [`sheet-brp-chargen/`](sheet-brp-chargen/) | 1.1.1 | Joins the BRP sheet to +app character applications |
-| [`sheet-ironsworn/`](sheet-ironsworn/) | 2.2.2 | Ironsworn character sheet (stats and assets built from a ledger, meters, experience spent on assets with an audited log, companion health, iron vows, encounters with their own copies, foes on progress tracks) with +check action rolls and +vow; Ironsworn SRD under CC BY 4.0 |
-| [`sheet-ironsworn-help/`](sheet-ironsworn-help/) | 1.0.2 | Puts the Ironsworn sheet topics into +help |
-| [`sheet-ironsworn-config/`](sheet-ironsworn-config/) | 1.0.3 | Puts the Ironsworn sheet settings, stat and asset tables and bestiary into +config |
-| [`sheet-ironsworn-chargen/`](sheet-ironsworn-chargen/) | 1.1.1 | Joins the Ironsworn sheet to +app character applications |
+| [`pbta-wiki/`](pbta-wiki/) | 1.1.2 | Wiki pages for the PbtA sheet (how to play, making a character, playbooks, moves, advancement, encounters, foes); Dungeon World moves under CC BY 3.0 |
+| [`d20-wiki/`](d20-wiki/) | 1.1.2 | Wiki pages for the d20 sheet (checks and DCs, making a character, abilities and skills, hit points, gear and advancement, encounters) |
+| [`fitd-wiki/`](fitd-wiki/) | 1.1.2 | Wiki pages for the FitD sheet (how to play, making a character, actions and attributes, stress, harm and advancement, encounters, threats, clocks); based on the Blades in the Dark SRD under CC BY 3.0 |
+| [`brp-wiki/`](brp-wiki/) | 1.1.2 | Wiki pages for the BRP sheet (how to play, making a character, characteristics and skills, hit points, coin and experience, encounters, creatures); ORC Licensed Material |
+| [`ironsworn-wiki/`](ironsworn-wiki/) | 1.1.2 | Wiki pages for the Ironsworn sheet (how to play, making a character, assets and experience, meters and momentum, vows, encounters, foes); based on the Ironsworn SRD under CC BY 4.0 |
+| [`pf2e/`](pf2e/) | 0.10.18 | Pathfinder Second Edition rules read the way Foundry VTT's pf2e system reads them, with ledger character sheets, a character builder, spellcasting, a deity table the game fills, alchemy, encounters with a bestiary, hazards, effects and GM tools, exploration, skill challenges, downtime, loot and shops with unidentified items, audited awards and levels (ORC License) |
+| [`pf2e-portal/`](pf2e-portal/) | 1.0.1 | Joins the Pathfinder 2e rules to the HTTP handler, for the pf2e-app sheet page |
+| [`pf2e-app/`](pf2e-app/) | 1.0.1 | The Pathfinder 2e sheet as a portal page at /apps/pf2e |
+| [`pf2e-help/`](pf2e-help/) | 1.0.2 | Puts the Pathfinder 2e topics into +help |
+| [`pf2e-config/`](pf2e-config/) | 1.0.2 | Puts the Pathfinder 2e settings into +config |
+| [`sheet-fitd/`](sheet-fitd/) | 2.2.3 | Forged in the Dark character sheet (ledger-built actions, XP advances, stress, trauma, harm, coin, audited log, encounters with threats and positions, clocks) with +check on a d6 pool; Blades in the Dark SRD under CC BY 3.0 |
+| [`sheet-fitd-help/`](sheet-fitd-help/) | 1.0.3 | Puts the FitD sheet topics into +help |
+| [`sheet-fitd-config/`](sheet-fitd-config/) | 1.0.4 | Puts the FitD sheet settings and action, attribute and threat tables into +config |
+| [`sheet-fitd-chargen/`](sheet-fitd-chargen/) | 1.1.2 | Joins the FitD sheet to +app character applications |
+| [`sheet-brp/`](sheet-brp/) | 2.3.2 | Percentile character sheet on Basic Roleplaying (ledger-built characteristics and skills, point-buy chargen, experience checks, hit points, power points, coin, audited log, encounters with creatures, hit locations and strike ranks) with +check on 1d100; ORC Licensed Material |
+| [`sheet-brp-help/`](sheet-brp-help/) | 1.0.3 | Puts the BRP sheet topics into +help |
+| [`sheet-brp-config/`](sheet-brp-config/) | 1.0.4 | Puts the BRP sheet settings, skill table and bestiary into +config |
+| [`sheet-brp-chargen/`](sheet-brp-chargen/) | 1.1.2 | Joins the BRP sheet to +app character applications |
+| [`sheet-ironsworn/`](sheet-ironsworn/) | 2.2.3 | Ironsworn character sheet (stats and assets built from a ledger, meters, experience spent on assets with an audited log, companion health, iron vows, encounters with their own copies, foes on progress tracks) with +check action rolls and +vow; Ironsworn SRD under CC BY 4.0 |
+| [`sheet-ironsworn-help/`](sheet-ironsworn-help/) | 1.0.3 | Puts the Ironsworn sheet topics into +help |
+| [`sheet-ironsworn-config/`](sheet-ironsworn-config/) | 1.0.4 | Puts the Ironsworn sheet settings, stat and asset tables and bestiary into +config |
+| [`sheet-ironsworn-chargen/`](sheet-ironsworn-chargen/) | 1.1.2 | Joins the Ironsworn sheet to +app character applications |
 | [`duties-fitd/`](duties-fitd/) | 1.0.2 | Duties roll provider "fitd" on the FitD sheet |
 | [`duties-brp/`](duties-brp/) | 1.0.3 | Duties roll provider "brp" on the BRP sheet |
 | [`duties-ironsworn/`](duties-ironsworn/) | 1.1.1 | Duties roll provider "ironsworn" on the Ironsworn sheet |
-| [`sheet-fabula/`](sheet-fabula/) | 1.2.1 | JRPG character sheet compatible with Fabula Ultima (four attribute dice, the Core Rulebook's and the Atlases' classes, HP/MP/IP, Fabula Points, status effects, bonds) with +check against a Difficulty Level, and conflicts in turns against a bestiary of foes on a battle screen with pictures; requires the Fabula Ultima Core Rulebook |
-| [`sheet-fabula-help/`](sheet-fabula-help/) | 1.0.1 | Puts the JRPG sheet topics into +help |
-| [`sheet-fabula-config/`](sheet-fabula-config/) | 1.0.1 | Puts the JRPG sheet settings and class table into +config |
-| [`sheet-fabula-chargen/`](sheet-fabula-chargen/) | 1.0.1 | Joins the JRPG sheet to +app character applications |
+| [`sheet-fabula/`](sheet-fabula/) | 1.2.2 | JRPG character sheet compatible with Fabula Ultima (four attribute dice, the Core Rulebook's and the Atlases' classes, HP/MP/IP, Fabula Points, status effects, bonds) with +check against a Difficulty Level, and conflicts in turns against a bestiary of foes on a battle screen with pictures; requires the Fabula Ultima Core Rulebook |
+| [`sheet-fabula-help/`](sheet-fabula-help/) | 1.0.2 | Puts the JRPG sheet topics into +help |
+| [`sheet-fabula-config/`](sheet-fabula-config/) | 1.0.2 | Puts the JRPG sheet settings and class table into +config |
+| [`sheet-fabula-chargen/`](sheet-fabula-chargen/) | 1.0.2 | Joins the JRPG sheet to +app character applications |
 | [`duties-fabula/`](duties-fabula/) | 1.0.1 | Duties roll provider "fabula" on the JRPG sheet |
-| [`fabula-wiki/`](fabula-wiki/) | 1.2.1 | JRPG sheet rules as wiki pages (checks, Fabula Points, bonds, resources, statuses, conflicts, classes); requires the Fabula Ultima Core Rulebook |
-| [`sheet-salvage-union/`](sheet-salvage-union/) | 1.3.1 | Salvage Union pilots, mechs and the Union Crawler (class ability trees, chassis, systems, modules, scrap, heat) with d20 +check on the Core Mechanic table; Salvage Union Open Game Licence 1.0b, unofficial |
-| [`sheet-salvage-union-help/`](sheet-salvage-union-help/) | 1.0.1 | Puts the Salvage Union sheet topics into +help |
-| [`sheet-salvage-union-config/`](sheet-salvage-union-config/) | 1.0.1 | Puts the Salvage Union sheet settings into +config |
-| [`sheet-salvage-union-chargen/`](sheet-salvage-union-chargen/) | 1.0.1 | Joins the Salvage Union sheet to +app character applications |
+| [`fabula-wiki/`](fabula-wiki/) | 1.2.2 | JRPG sheet rules as wiki pages (checks, Fabula Points, bonds, resources, statuses, conflicts, classes); requires the Fabula Ultima Core Rulebook |
+| [`sheet-salvage-union/`](sheet-salvage-union/) | 1.3.2 | Salvage Union pilots, mechs and the Union Crawler (class ability trees, chassis, systems, modules, scrap, heat) with d20 +check on the Core Mechanic table; Salvage Union Open Game Licence 1.0b, unofficial |
+| [`sheet-salvage-union-help/`](sheet-salvage-union-help/) | 1.0.2 | Puts the Salvage Union sheet topics into +help |
+| [`sheet-salvage-union-config/`](sheet-salvage-union-config/) | 1.0.2 | Puts the Salvage Union sheet settings into +config |
+| [`sheet-salvage-union-chargen/`](sheet-salvage-union-chargen/) | 1.0.2 | Joins the Salvage Union sheet to +app character applications |
 | [`duties-salvage-union/`](duties-salvage-union/) | 1.0.3 | Duties roll provider "salvage" on the Salvage Union sheet |
-| [`salvage-union-wiki/`](salvage-union-wiki/) | 1.0.4 | Salvage Union rules as wiki pages (core rules, Pilot Bay, Mech Workshop, chassis, Union Crawler, salvaging, denizens, and every ability, system, module, equipment and table); Salvage Union Open Game Licence 1.0b, unofficial |
-| [`sheet-charge/`](sheet-charge/) | 1.2.1 | Charge character sheet (details, action dots, momentum, stress clock, milestones and talents) with +check action rolls, assists, determination and fortune rolls, encounters with threats and consequences, and clocks; Charge SRD under CC BY 4.0 |
-| [`sheet-charge-help/`](sheet-charge-help/) | 1.0.1 | Puts the Charge sheet topics into +help |
-| [`sheet-charge-config/`](sheet-charge-config/) | 1.0.1 | Puts the Charge sheet settings and action and detail tables into +config |
-| [`sheet-charge-chargen/`](sheet-charge-chargen/) | 1.0.1 | Joins the Charge sheet to +app character applications |
-| [`charge-wiki/`](charge-wiki/) | 1.0.3 | Charge rules as wiki pages (action rolls, momentum, consequences, stress, clocks, progression; CC BY 4.0) |
+| [`salvage-union-wiki/`](salvage-union-wiki/) | 1.0.5 | Salvage Union rules as wiki pages (core rules, Pilot Bay, Mech Workshop, chassis, Union Crawler, salvaging, denizens, and every ability, system, module, equipment and table); Salvage Union Open Game Licence 1.0b, unofficial |
+| [`sheet-charge/`](sheet-charge/) | 1.2.2 | Charge character sheet (details, action dots, momentum, stress clock, milestones and talents) with +check action rolls, assists, determination and fortune rolls, encounters with threats and consequences, and clocks; Charge SRD under CC BY 4.0 |
+| [`sheet-charge-help/`](sheet-charge-help/) | 1.0.2 | Puts the Charge sheet topics into +help |
+| [`sheet-charge-config/`](sheet-charge-config/) | 1.0.2 | Puts the Charge sheet settings and action and detail tables into +config |
+| [`sheet-charge-chargen/`](sheet-charge-chargen/) | 1.0.2 | Joins the Charge sheet to +app character applications |
+| [`charge-wiki/`](charge-wiki/) | 1.0.4 | Charge rules as wiki pages (action rolls, momentum, consequences, stress, clocks, progression; CC BY 4.0) |
 | [`duties-charge/`](duties-charge/) | 1.0.1 | Duties roll provider "charge" on the Charge sheet |
 <!-- packages-table:end -->
 

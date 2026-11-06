@@ -1,7 +1,7 @@
 format: "1.20"
 package: pf2e-help
 title: "Pathfinder 2e: +help topics"
-version: 1.0.1
+version: 1.0.2
 authors: [SharpMUSH]
 description: "Puts the Pathfinder 2e topics into +help: registers the pf2e package's help with the +help librarian."
 license: MIT
@@ -10,7 +10,8 @@ keywords: [pathfinder, pf2e, help, bridge]
 category: Game System
 subcategory: Pathfinder 2e
 bridge: true
-requires_server: ">=0.1"
+requires_server: ">=1.0"
+verified_server: "1.0"
 
 # A bridge: pf2e keeps its topics on its own help object, and plus-help reads any object registered
 # with its librarian. This package is that registration; uninstalling it takes the topics out of

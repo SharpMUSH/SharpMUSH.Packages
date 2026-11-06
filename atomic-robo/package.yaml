@@ -1,7 +1,7 @@
 format: "1.20"
 package: atomic-robo
 title: "Atomic Robo (unofficial)"
-version: 1.1.1
+version: 1.1.2
 authors: [SharpMUSH]
 description: "Pulp action science and super robots on the Fate sheet: characters pick three modes (Action, Banter, Intrigue, Science, or weird ones such as Robot and Pilot) that rate their skills, take mega-stunts, invent gadgets with catches and flaws, brainstorm a hypothesis together, and pilot giant machines whose scale counts in a fight, against enemy robots and monsters with a scale of their own. Based on the Atomic Robo RPG SRD and the Fate System Toolkit, both under CC BY 3.0. An unofficial fan package, not affiliated with or endorsed by Evil Hat Productions or the creators of Atomic Robo."
 license: MIT
@@ -9,7 +9,8 @@ homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, fate, invention, robots, mecha]
 category: Game System
 subcategory: Fate
-requires_server: ">=0.1"
+requires_server: ">=1.0"
+verified_server: "1.0"
 
 # It works the Fate sheet's skill ratings out from modes, so it needs the sheet's stunts, per-character stress
 # boxes, its GATE`SET and SECTION` hooks, and the NPCFIELD` and NPC` hooks that give opposition a scale
