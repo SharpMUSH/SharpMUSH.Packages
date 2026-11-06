@@ -37,6 +37,10 @@ jobs:
         working-directory: sharpmush
         run: dotnet run --project tools/PackageValidator -- ../packages --strict
 
+      - name: Check the README package table matches index.yaml
+        working-directory: packages
+        run: python3 tools/readme-packages-table.py --check
+
       - name: Check PF2e navigation and notice links
         working-directory: packages
         run: python3 tools/check-pf2e-navigation.py
