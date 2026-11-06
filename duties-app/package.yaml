@@ -9,7 +9,8 @@ license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [portal, application, duties, editor, review]
 category: Roleplay
-requires_server: ">=0.1"
+requires_server: ">=1.0"
+verified_server: "1.0"
 
 # An application package owns no objects. The duties package serves the routes it points at:
 # GET /http/duties/schema and /http/duties/data, and POST /http/duties/act, /check and /note. Everything the

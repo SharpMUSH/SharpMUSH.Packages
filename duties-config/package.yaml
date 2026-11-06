@@ -9,7 +9,8 @@ homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [duties, config, bridge]
 category: Roleplay
 bridge: true
-requires_server: ">=0.1"
+requires_server: ">=1.0"
+verified_server: "1.0"
 
 # A bridge: it joins two packages that do not know about each other. duties declares its settings as
 # DATA`CONFIG`<NAME>, with their types and limits, and reads them with get() whether or not +config is installed.

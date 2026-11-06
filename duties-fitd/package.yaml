@@ -10,7 +10,8 @@ keywords: [duties, fitd, sheet, dice, bridge]
 category: Game System
 subcategory: Forged in the Dark
 bridge: true
-requires_server: ">=0.1"
+requires_server: ">=1.0"
+verified_server: "1.0"
 
 # A bridge: it joins two packages that do not know about each other. Duties asks the game's one active roll
 # provider for every check, and sheet-fitd holds the sheet and rolls against it. This package is a provider

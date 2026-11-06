@@ -9,7 +9,8 @@ homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [duties, scene, logging, bridge]
 category: Scenes
 bridge: true
-requires_server: ">=0.1"
+requires_server: ">=1.0"
+verified_server: "1.0"
 
 # It makes scenes and writes poses through the Scene plugin, so it installs only while the plugin runs.
 plugins: [scene]

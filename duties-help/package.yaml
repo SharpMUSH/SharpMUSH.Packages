@@ -9,7 +9,8 @@ homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [duties, help, bridge]
 category: Roleplay
 bridge: true
-requires_server: ">=0.1"
+requires_server: ">=1.0"
+verified_server: "1.0"
 
 # A bridge: it joins two packages that do not know about each other. duties keeps its topics on its own help
 # object, and plus-help reads any object registered with its librarian. This package is only that registration;
