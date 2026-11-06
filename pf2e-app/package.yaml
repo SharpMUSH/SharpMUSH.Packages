@@ -1,7 +1,7 @@
 format: "1.20"
 package: pf2e-app
 title: "Pathfinder 2e sheets in the portal"
-version: 1.0.0
+version: 1.0.1
 kind: application
 authors: [SharpMUSH]
 description: "Registers the Pathfinder 2e sheet as a portal page at /apps/pf2e: your character's sheet as +sheet shows it, and for staff anyone's at /apps/pf2e/<name>."
@@ -11,6 +11,7 @@ keywords: [pf2e, pathfinder, portal, application, sheet]
 category: Game System
 subcategory: Pathfinder 2e
 requires_server: ">=1.0"
+verified_server: "1.0"
 
 # An application package owns no objects. pf2e-portal serves the routes it points at: GET /http/pf2e/schema and
 # /http/pf2e/data. {path} is what follows /apps/pf2e/: nothing for the viewer's own sheet, or a character's name.

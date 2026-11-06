@@ -1,7 +1,7 @@
 format: "1.20"
 package: atomic-robo-wiki
 title: "Atomic Robo rules (unofficial)"
-version: 1.1.1
+version: 1.1.2
 wiki_landing_page: category:atomic_robo_start_here
 wiki_collection_name: Atomic Robo (unofficial)
 authors: [SharpMUSH]
@@ -11,7 +11,8 @@ homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [fate, rules, wiki, invention, robots]
 category: Game System
 subcategory: Fate
-requires_server: ">=0.1"
+requires_server: ">=1.0"
+verified_server: "1.0"
 
 # A content pack: wiki pages only. Its pages link to the Fate rules pages, so it brings those too.
 depends:

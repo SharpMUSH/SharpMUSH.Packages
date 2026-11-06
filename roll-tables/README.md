@@ -6,9 +6,8 @@ make and change them with commands, so nobody has to set attributes by hand (tho
 A table can be written to a wiki page for the portal; the page is output, and the package never
 reads it back.
 
-Requires [`plus-help`](https://github.com/SharpMUSH/SharpMUSH/tree/main/examples/packages/plus-help)
-for its `+help tables` topics. Manifest format 1.3 (objects and attributes, plus a permission and a
-role).
+Its `+help tables` topics reach `+help` through the [`roll-tables-help`](../roll-tables-help/) bridge,
+for a game that also has `plus-help`.
 
 ## Commands
 

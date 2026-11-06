@@ -1,7 +1,7 @@
 format: "1.20"
 package: atomic-robo-config
 title: "Atomic Robo: +config settings"
-version: 1.0.1
+version: 1.0.2
 authors: [SharpMUSH]
 description: "Puts the Atomic Robo settings and its modes and scales tables into +config: registers them with the +config registry, so staff see and change them with +config atomic-robo."
 license: MIT
@@ -10,7 +10,8 @@ keywords: [sheet, fate, config, bridge]
 category: Game System
 subcategory: Fate
 bridge: true
-requires_server: ">=0.1"
+requires_server: ">=1.0"
+verified_server: "1.0"
 
 # A bridge: it joins two packages that do not know about each other. atomic-robo declares its settings
 # as DATA`CONFIG`<NAME>, with their types and limits, and reads them with get() whether or not +config is

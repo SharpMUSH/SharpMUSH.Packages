@@ -1,7 +1,7 @@
 format: "1.20"
 package: sheet-pbta
 title: "PbtA sheet"
-version: 2.3.2
+version: 2.3.3
 authors: [SharpMUSH]
 description: "A Powered by the Apocalypse character sheet built from a ledger: playbooks, stats and moves the game edits, guided character creation, advances, forward, ongoing, hold, harm, and XP with its own audited ledger. +sheet shows and builds it, +check rolls 2d6 plus a stat for a move, and +encounter plays a scene from copies of the sheets, with foes from a bestiary the game edits, and GM moves. Ships the Dungeon World basic and special moves (CC BY 3.0) as its example set."
 license: MIT
@@ -9,7 +9,8 @@ homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, pbta, dice, moves, playbooks]
 category: Game System
 subcategory: PbtA
-requires_server: ">=0.1"
+requires_server: ">=1.0"
+verified_server: "1.0"
 
 # One permission, for the people who keep sheets: change any character's sheet at any time, read every sheet,
 # and give XP. A player fills in their own stats, playbook and moves until they are approved, and keeps their

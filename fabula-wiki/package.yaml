@@ -1,7 +1,7 @@
 format: "1.20"
 package: fabula-wiki
 title: JRPG rules
-version: 1.2.1
+version: 1.2.2
 wiki_landing_page: category:fabula_start_here
 wiki_collection_name: JRPG
 authors: [SharpMUSH]
@@ -15,6 +15,8 @@ homepage: https://github.com/SharpMUSH/SharpMUSH.Packages/tree/main/fabula-wiki
 keywords: [fabula, rules, wiki, jrpg]
 category: Game System
 subcategory: JRPG
+requires_server: ">=1.0"
+verified_server: "1.0"
 locale: en
 
 # A content pack: wiki pages only, no objects or softcode. Softcode never reads these pages. The sheet that

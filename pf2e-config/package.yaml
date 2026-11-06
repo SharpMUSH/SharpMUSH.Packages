@@ -1,7 +1,7 @@
 format: "1.20"
 package: pf2e-config
 title: "Pathfinder 2e: +config settings"
-version: 1.0.1
+version: 1.0.2
 authors: [SharpMUSH]
 description: "Puts the Pathfinder 2e settings (source books, variant rules, the feed's repository and branch) into +config: registers them with the +config registry, so staff see and change them with +config pf2e."
 license: MIT
@@ -10,7 +10,8 @@ keywords: [pathfinder, pf2e, config, bridge]
 category: Game System
 subcategory: Pathfinder 2e
 bridge: true
-requires_server: ">=0.1"
+requires_server: ">=1.0"
+verified_server: "1.0"
 
 # A bridge: pf2e declares its settings as DATA`CONFIG`<NAME> on its rules core, with their types and
 # limits, and reads them with get() whether or not +config is installed. This package is the one leaf

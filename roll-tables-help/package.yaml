@@ -1,0 +1,44 @@
+format: "1.20"
+package: roll-tables-help
+title: "Roll tables: +help topics"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Puts the roll table topics into +help: registers the roll-tables package's help with the +help librarian, and points its messages at +help."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [tables, help, bridge]
+bridge: true
+requires_server: ">=1.0"
+verified_server: "1.0"
+
+# A bridge: it joins two packages that do not know about each other. roll-tables keeps its topics on its own
+# help object, and plus-help reads any object registered with its librarian. This package is that
+# registration, and the line that points a message at +help; uninstalling it takes the topics out of +help,
+# and neither package changes.
+depends:
+  - package: roll-tables
+    version: ">=1.1 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH.Packages
+      path: roll-tables/
+      branch: main
+  - package: plus-help
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+
+objects:
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`ROLL-TABLES: |-
+        {{roll-tables/table_help}}
+
+  # Lines the command's messages end with when +help is here, through its FN`HINT: HINT`<message>.
+  - ref: message_hints
+    target: "{{roll-tables/roll_tables}}"
+    attributes:
+      HINT`SWITCHES: |-
+        +help tables lists the switches.

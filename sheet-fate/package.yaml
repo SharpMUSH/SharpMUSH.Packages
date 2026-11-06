@@ -1,7 +1,7 @@
 format: "1.20"
 package: sheet-fate
 title: "Fate sheet"
-version: 1.6.1
+version: 1.6.2
 authors: [SharpMUSH]
 description: "A Fate character sheet: skills or the six approaches on the ladder, aspects, stunts, stress tracks, consequences and fate points. +sheet shows and fills it in, +chargen walks a player through it, and +check rolls four Fate dice plus a rating against an opposition for the room. The build is a ledger of grants; staff give milestones and breakthroughs that stay on a log, and players spend them with +sheet/advance. +encounter gives each encounter its own copy of fate points, stress and consequences, and runs a conflict: NPCs a GM builds with +npc, exchanges, harm, concessions, aspects on the scene and the GM's fate points. Fate Core and Fate Accelerated SRD material under CC BY 3.0."
 license: MIT
@@ -9,7 +9,8 @@ homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, fate, dice, checks, aspects]
 category: Game System
 subcategory: Fate
-requires_server: ">=0.1"
+requires_server: ">=1.0"
+verified_server: "1.0"
 
 # One permission, for the people who keep sheets: change any character's sheet at any time, read every sheet,
 # and hand out fate points. A player fills in their own skills and aspects until they are approved, and marks

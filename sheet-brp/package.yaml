@@ -1,7 +1,7 @@
 format: "1.20"
 package: sheet-brp
 title: "Percentile sheet (BRP)"
-version: 2.3.1
+version: 2.3.2
 authors: [SharpMUSH]
 description: "A percentile character sheet on the Basic Roleplaying rules: seven characteristics and a skill list with base chances the game edits, built from a ledger, with point-buy character creation, experience checks that raise skills, hit points, power points and coin, an audited coin ledger, and encounters that play from copies of the sheets, with creatures from a bestiary the game edits, hit locations and an order of play. +check rolls 1d100 under a skill or a characteristic roll, doubled or halved for difficulty, and reads critical, special, success, failure or fumble. The skill list is ORC Licensed Material from Basic Roleplaying: Universal Game Engine."
 license: MIT
@@ -9,7 +9,8 @@ homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
 keywords: [sheet, brp, percentile, d100, skills]
 category: Game System
 subcategory: Percentile (BRP)
-requires_server: ">=0.1"
+requires_server: ">=1.0"
+verified_server: "1.0"
 
 # One permission, for the people who keep sheets: change any character's sheet at any time, read every sheet,
 # give coin, mark experience checks, revoke and clear ledger entries, and run any encounter. A player shares out
