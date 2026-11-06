@@ -19,7 +19,7 @@ done in the game with `+duty`.
 kind: application
 depends:
   - package: duties
-    version: ">=1.1"
+    version: ">=1.3"
 application:
   slug: duties
   type: page
