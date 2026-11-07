@@ -122,6 +122,11 @@ The table is generated from [`index.yaml`](index.yaml); edit that file, then run
 | [`sheet-charge-chargen/`](sheet-charge-chargen/) | 1.0.2 | Joins the Charge sheet to +app character applications |
 | [`charge-wiki/`](charge-wiki/) | 1.0.4 | Charge rules as wiki pages (action rolls, momentum, consequences, stress, clocks, progression; CC BY 4.0) |
 | [`duties-charge/`](duties-charge/) | 1.0.2 | Duties roll provider "charge" on the Charge sheet |
+| [`radio/`](radio/) | 1.8.1 | +radio — frequencies to tune in to, speak on and recall, with moderators, admins and locks; the worked example of a system built on @feed |
+| [`radio-help/`](radio-help/) | 1.1.1 | Registers the radio topics with +help (requires radio and plus-help) |
+| [`radio-config/`](radio-config/) | 1.0.1 | Registers the radio settings with +config (requires radio and plus-config) |
+| [`radio-scene/`](radio-scene/) | 1.4.3 | +radio/log — what a listener hears on a frequency goes into their scene, through a tap on the radio feed kind (requires radio and scene) |
+| [`scene-verse/`](scene-verse/) | 2.0.0 | Verse and canon on scenes, and +scene/verses (requires scene) |
 <!-- packages-table:end -->
 
 Packages bundled with SharpMUSH (`+who`/`+where`, the HTTP handler, the
