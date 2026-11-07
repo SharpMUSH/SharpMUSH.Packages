@@ -1,7 +1,7 @@
 format: "1.20"
 package: duties-fabula
 title: "Duties: JRPG rolls"
-version: 1.0.1
+version: 1.0.2
 authors: [SharpMUSH]
 description: "Lets Duties roll on the JRPG sheet: a roll provider called fabula, so a duty's checks roll two attribute dice against a Difficulty Level, with help and bonds adding to the total, Fabula Points paying for rerolls, and experience, zenit or Fabula Points as rewards. Pick it with +config duties/system=fabula."
 license: MIT
@@ -10,7 +10,8 @@ keywords: [duties, fabula, sheet, dice, bridge]
 category: Game System
 subcategory: JRPG
 bridge: true
-requires_server: ">=0.1"
+requires_server: ">=1.0"
+verified_server: "1.0"
 
 # A bridge: it joins two packages that do not know about each other. Duties asks the game's one active roll
 # provider for every check, and sheet-fabula holds the sheet and rolls against it. This package is a provider that
@@ -19,8 +20,8 @@ depends:
   - package: duties
     version: ">=1.0 <2.0"
     source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/duties/
+      repo: https://github.com/SharpMUSH/SharpMUSH.Packages
+      path: duties/
       branch: main
   - package: sheet-fabula
     version: ">=1.0 <2.0"

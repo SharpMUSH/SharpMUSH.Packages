@@ -62,6 +62,15 @@ jobs:
         working-directory: sharpmush
         run: dotnet run --project tools/PackageValidator -- ../packages --strict
 
+      # duties keeps its behaviour tests in the engine; they install it from this checkout.
+      - name: Duties integration tests
+        working-directory: sharpmush
+        env:
+          SHARPMUSH_PACKAGES_PATH: ${{ github.workspace }}/packages
+          TUNIT_DISABLE_HTML_REPORTER: "true"
+        timeout-minutes: 30
+        run: dotnet run --project SharpMUSH.Tests.Integration -- --treenode-filter "/*/*/Duties*/*" --output Detailed
+
   checks:
     runs-on: ubuntu-latest
     steps:

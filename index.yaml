@@ -104,17 +104,42 @@ packages:
     package: fate-system-toolkit-wiki
     version: 1.1.2
     description: Unofficial Fate System Toolkit rules reference as wiki pages; Fate System Toolkit SRD text under CC BY 3.0
+  - path: duties/
+    name: Duties
+    package: duties
+    version: 1.3.2
+    description: +duty — short adventures a party plays from challenge to challenge, written by players, approved by duty reviewers and put on a seasonal roster; rolls come from a sheet system bridge
+  - path: duties-help/
+    name: Duties help
+    package: duties-help
+    version: 1.0.2
+    description: Registers the duties topics with +help (requires duties and plus-help)
+  - path: duties-config/
+    name: Duties settings
+    package: duties-config
+    version: 1.0.2
+    description: Registers the duties settings and active roster with +config (requires duties and plus-config)
+  - path: duties-app/
+    name: Duties in the portal
+    package: duties-app
+    version: 1.1.1
+    description: Application package — registers duties as a portal page at /apps/duties, with a map editor for a duty's steps, the review of submitted duties and the active roster (requires duties)
+  - path: duties-scene/
+    name: Duties in scenes
+    package: duties-scene
+    version: 1.0.3
+    description: +duty/start/scene and +duty/scene — a party plays its duty in a scene, and setting out, each step, roll and outcome go into it as narration (requires duties and scene)
   - path: duties-d20/
     package: duties-d20
-    version: 1.0.2
+    version: 1.0.3
     description: Duties roll provider "d20" on the D20 sheet
   - path: duties-pf2e/
     package: duties-pf2e
-    version: 1.0.1
+    version: 1.0.2
     description: Duties roll provider "pf2e" on the Pathfinder 2e sheet
   - path: duties-fate/
     package: duties-fate
-    version: 1.0.1
+    version: 1.0.2
     description: Duties roll provider "fate" on the Fate sheet
   - path: sheet-pbta/
     name: PbtA Sheet
@@ -135,7 +160,7 @@ packages:
     description: Joins the PbtA sheet to +app character applications
   - path: duties-pbta/
     package: duties-pbta
-    version: 1.0.3
+    version: 1.0.4
     description: Duties roll provider "pbta" on the PbtA sheet
   - path: pbta-wiki/
     name: PbtA rules
@@ -238,15 +263,15 @@ packages:
     description: Joins the Ironsworn sheet to +app character applications
   - path: duties-fitd/
     package: duties-fitd
-    version: 1.0.2
+    version: 1.0.3
     description: Duties roll provider "fitd" on the FitD sheet
   - path: duties-brp/
     package: duties-brp
-    version: 1.0.3
+    version: 1.0.4
     description: Duties roll provider "brp" on the BRP sheet
   - path: duties-ironsworn/
     package: duties-ironsworn
-    version: 1.1.1
+    version: 1.1.2
     description: Duties roll provider "ironsworn" on the Ironsworn sheet
   - path: sheet-fabula/
     name: JRPG Sheet
@@ -267,7 +292,7 @@ packages:
     description: Joins the JRPG sheet to +app character applications
   - path: duties-fabula/
     package: duties-fabula
-    version: 1.0.1
+    version: 1.0.2
     description: Duties roll provider "fabula" on the JRPG sheet
   - path: fabula-wiki/
     name: JRPG rules
@@ -293,7 +318,7 @@ packages:
     description: Joins the Salvage Union sheet to +app character applications
   - path: duties-salvage-union/
     package: duties-salvage-union
-    version: 1.0.3
+    version: 1.0.4
     description: Duties roll provider "salvage" on the Salvage Union sheet
   - path: salvage-union-wiki/
     name: Salvage Union rules
@@ -324,5 +349,5 @@ packages:
     description: Charge rules as wiki pages (action rolls, momentum, consequences, stress, clocks, progression; CC BY 4.0)
   - path: duties-charge/
     package: duties-charge
-    version: 1.0.1
+    version: 1.0.2
     description: Duties roll provider "charge" on the Charge sheet

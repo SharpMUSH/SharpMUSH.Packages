@@ -66,14 +66,19 @@ The table is generated from [`index.yaml`](index.yaml); edit that file, then run
 | [`fate-system-toolkit-help/`](fate-system-toolkit-help/) | 1.1.2 | Puts the Fate System Toolkit topics into +help |
 | [`fate-system-toolkit-config/`](fate-system-toolkit-config/) | 1.1.2 | Puts the Fate System Toolkit settings, conditions, storms and augs into +config |
 | [`fate-system-toolkit-wiki/`](fate-system-toolkit-wiki/) | 1.1.2 | Unofficial Fate System Toolkit rules reference as wiki pages; Fate System Toolkit SRD text under CC BY 3.0 |
-| [`duties-d20/`](duties-d20/) | 1.0.2 | Duties roll provider "d20" on the D20 sheet |
-| [`duties-pf2e/`](duties-pf2e/) | 1.0.1 | Duties roll provider "pf2e" on the Pathfinder 2e sheet |
-| [`duties-fate/`](duties-fate/) | 1.0.1 | Duties roll provider "fate" on the Fate sheet |
+| [`duties/`](duties/) | 1.3.2 | +duty — short adventures a party plays from challenge to challenge, written by players, approved by duty reviewers and put on a seasonal roster; rolls come from a sheet system bridge |
+| [`duties-help/`](duties-help/) | 1.0.2 | Registers the duties topics with +help (requires duties and plus-help) |
+| [`duties-config/`](duties-config/) | 1.0.2 | Registers the duties settings and active roster with +config (requires duties and plus-config) |
+| [`duties-app/`](duties-app/) | 1.1.1 | Application package — registers duties as a portal page at /apps/duties, with a map editor for a duty's steps, the review of submitted duties and the active roster (requires duties) |
+| [`duties-scene/`](duties-scene/) | 1.0.3 | +duty/start/scene and +duty/scene — a party plays its duty in a scene, and setting out, each step, roll and outcome go into it as narration (requires duties and scene) |
+| [`duties-d20/`](duties-d20/) | 1.0.3 | Duties roll provider "d20" on the D20 sheet |
+| [`duties-pf2e/`](duties-pf2e/) | 1.0.2 | Duties roll provider "pf2e" on the Pathfinder 2e sheet |
+| [`duties-fate/`](duties-fate/) | 1.0.2 | Duties roll provider "fate" on the Fate sheet |
 | [`sheet-pbta/`](sheet-pbta/) | 2.3.3 | Powered by the Apocalypse character sheet built from a ledger (playbooks, stats, moves, guided character creation, advances, forward, ongoing, hold, harm, XP), +check on 2d6 and encounters on sheet copies with foes and GM moves; Dungeon World moves under CC BY 3.0 |
 | [`sheet-pbta-help/`](sheet-pbta-help/) | 1.0.3 | Puts the PbtA sheet topics into +help |
 | [`sheet-pbta-config/`](sheet-pbta-config/) | 1.0.4 | Puts the PbtA sheet settings and its stats, moves, playbooks, foes and GM moves tables into +config |
 | [`sheet-pbta-chargen/`](sheet-pbta-chargen/) | 1.1.2 | Joins the PbtA sheet to +app character applications |
-| [`duties-pbta/`](duties-pbta/) | 1.0.3 | Duties roll provider "pbta" on the PbtA sheet |
+| [`duties-pbta/`](duties-pbta/) | 1.0.4 | Duties roll provider "pbta" on the PbtA sheet |
 | [`pbta-wiki/`](pbta-wiki/) | 1.1.2 | Wiki pages for the PbtA sheet (how to play, making a character, playbooks, moves, advancement, encounters, foes); Dungeon World moves under CC BY 3.0 |
 | [`d20-wiki/`](d20-wiki/) | 1.1.2 | Wiki pages for the d20 sheet (checks and DCs, making a character, abilities and skills, hit points, gear and advancement, encounters) |
 | [`fitd-wiki/`](fitd-wiki/) | 1.1.2 | Wiki pages for the FitD sheet (how to play, making a character, actions and attributes, stress, harm and advancement, encounters, threats, clocks); based on the Blades in the Dark SRD under CC BY 3.0 |
@@ -96,27 +101,27 @@ The table is generated from [`index.yaml`](index.yaml); edit that file, then run
 | [`sheet-ironsworn-help/`](sheet-ironsworn-help/) | 1.0.3 | Puts the Ironsworn sheet topics into +help |
 | [`sheet-ironsworn-config/`](sheet-ironsworn-config/) | 1.0.4 | Puts the Ironsworn sheet settings, stat and asset tables and bestiary into +config |
 | [`sheet-ironsworn-chargen/`](sheet-ironsworn-chargen/) | 1.1.2 | Joins the Ironsworn sheet to +app character applications |
-| [`duties-fitd/`](duties-fitd/) | 1.0.2 | Duties roll provider "fitd" on the FitD sheet |
-| [`duties-brp/`](duties-brp/) | 1.0.3 | Duties roll provider "brp" on the BRP sheet |
-| [`duties-ironsworn/`](duties-ironsworn/) | 1.1.1 | Duties roll provider "ironsworn" on the Ironsworn sheet |
+| [`duties-fitd/`](duties-fitd/) | 1.0.3 | Duties roll provider "fitd" on the FitD sheet |
+| [`duties-brp/`](duties-brp/) | 1.0.4 | Duties roll provider "brp" on the BRP sheet |
+| [`duties-ironsworn/`](duties-ironsworn/) | 1.1.2 | Duties roll provider "ironsworn" on the Ironsworn sheet |
 | [`sheet-fabula/`](sheet-fabula/) | 1.2.2 | JRPG character sheet compatible with Fabula Ultima (four attribute dice, the Core Rulebook's and the Atlases' classes, HP/MP/IP, Fabula Points, status effects, bonds) with +check against a Difficulty Level, and conflicts in turns against a bestiary of foes on a battle screen with pictures; requires the Fabula Ultima Core Rulebook |
 | [`sheet-fabula-help/`](sheet-fabula-help/) | 1.0.2 | Puts the JRPG sheet topics into +help |
 | [`sheet-fabula-config/`](sheet-fabula-config/) | 1.0.2 | Puts the JRPG sheet settings and class table into +config |
 | [`sheet-fabula-chargen/`](sheet-fabula-chargen/) | 1.0.2 | Joins the JRPG sheet to +app character applications |
-| [`duties-fabula/`](duties-fabula/) | 1.0.1 | Duties roll provider "fabula" on the JRPG sheet |
+| [`duties-fabula/`](duties-fabula/) | 1.0.2 | Duties roll provider "fabula" on the JRPG sheet |
 | [`fabula-wiki/`](fabula-wiki/) | 1.2.2 | JRPG sheet rules as wiki pages (checks, Fabula Points, bonds, resources, statuses, conflicts, classes); requires the Fabula Ultima Core Rulebook |
 | [`sheet-salvage-union/`](sheet-salvage-union/) | 1.3.2 | Salvage Union pilots, mechs and the Union Crawler (class ability trees, chassis, systems, modules, scrap, heat) with d20 +check on the Core Mechanic table; Salvage Union Open Game Licence 1.0b, unofficial |
 | [`sheet-salvage-union-help/`](sheet-salvage-union-help/) | 1.0.2 | Puts the Salvage Union sheet topics into +help |
 | [`sheet-salvage-union-config/`](sheet-salvage-union-config/) | 1.0.2 | Puts the Salvage Union sheet settings into +config |
 | [`sheet-salvage-union-chargen/`](sheet-salvage-union-chargen/) | 1.0.2 | Joins the Salvage Union sheet to +app character applications |
-| [`duties-salvage-union/`](duties-salvage-union/) | 1.0.3 | Duties roll provider "salvage" on the Salvage Union sheet |
+| [`duties-salvage-union/`](duties-salvage-union/) | 1.0.4 | Duties roll provider "salvage" on the Salvage Union sheet |
 | [`salvage-union-wiki/`](salvage-union-wiki/) | 1.0.5 | Salvage Union rules as wiki pages (core rules, Pilot Bay, Mech Workshop, chassis, Union Crawler, salvaging, denizens, and every ability, system, module, equipment and table); Salvage Union Open Game Licence 1.0b, unofficial |
 | [`sheet-charge/`](sheet-charge/) | 1.2.3 | Charge character sheet (details, action dots, momentum, stress clock, milestones and talents) with +check action rolls, assists, determination and fortune rolls, encounters with threats and consequences, and clocks; Charge SRD under CC BY 4.0 |
 | [`sheet-charge-help/`](sheet-charge-help/) | 1.0.2 | Puts the Charge sheet topics into +help |
 | [`sheet-charge-config/`](sheet-charge-config/) | 1.0.2 | Puts the Charge sheet settings and action and detail tables into +config |
 | [`sheet-charge-chargen/`](sheet-charge-chargen/) | 1.0.2 | Joins the Charge sheet to +app character applications |
 | [`charge-wiki/`](charge-wiki/) | 1.0.4 | Charge rules as wiki pages (action rolls, momentum, consequences, stress, clocks, progression; CC BY 4.0) |
-| [`duties-charge/`](duties-charge/) | 1.0.1 | Duties roll provider "charge" on the Charge sheet |
+| [`duties-charge/`](duties-charge/) | 1.0.2 | Duties roll provider "charge" on the Charge sheet |
 <!-- packages-table:end -->
 
 Packages bundled with SharpMUSH (`+who`/`+where`, the HTTP handler, the
