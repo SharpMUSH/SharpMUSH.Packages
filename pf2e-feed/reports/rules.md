@@ -1,36 +1,36 @@
 # Rule elements and licence filter
 
-Foundry pf2e commit `ae999ce5d5c4c5cad2359d9710af5a8522a7083d`.
+Foundry pf2e commit `d2be8e53704e3d87c53498c504620337ccd61fa2`.
 
 Every rule element kind in the feed, with how often it appears and on how many items. The pf2e package
 applies the kinds it has a handler for and shows the others as unsupported on the sheet.
 
 | Kind | Rule elements | Items |
 | --- | --- | --- |
-| FlatModifier | 1179 | 915 |
+| FlatModifier | 1181 | 917 |
 | RollOption | 689 | 561 |
-| ItemAlteration | 527 | 328 |
+| ItemAlteration | 529 | 330 |
 | ActiveEffectLike | 504 | 356 |
 | GrantItem | 399 | 325 |
-| Note | 359 | 270 |
-| ChoiceSet | 325 | 277 |
+| Note | 354 | 268 |
+| ChoiceSet | 326 | 278 |
 | DamageDice | 229 | 195 |
 | AdjustModifier | 169 | 114 |
 | Resistance | 161 | 116 |
-| AdjustDegreeOfSuccess | 150 | 122 |
+| AdjustDegreeOfSuccess | 145 | 119 |
 | Aura | 134 | 130 |
 | Strike | 123 | 64 |
-| BaseSpeed | 95 | 76 |
-| AdjustStrike | 78 | 57 |
+| BaseSpeed | 97 | 78 |
+| AdjustStrike | 82 | 60 |
 | Sense | 64 | 51 |
 | CreatureSize | 50 | 39 |
 | DamageAlteration | 46 | 35 |
 | MartialProficiency | 41 | 25 |
 | TempHP | 41 | 39 |
+| BattleForm | 40 | 16 |
 | Weakness | 40 | 32 |
 | CriticalSpecialization | 38 | 38 |
 | FastHealing | 38 | 38 |
-| BattleForm | 36 | 24 |
 | EphemeralEffect | 34 | 34 |
 | TokenLight | 34 | 31 |
 | Immunity | 26 | 26 |
@@ -49,27 +49,27 @@ applies the kinds it has a handler for and shows the others as unsupported on th
 
 | Licence | Book | Items |
 | --- | --- | --- |
-| ORC | Pathfinder Impossible Magic | 1259 |
+| ORC | Pathfinder Impossible Magic | 1260 |
 | ORC | Pathfinder Treasure Vault (Remastered) | 1252 |
 | ORC | Pathfinder Guns & Gears | 771 |
 | ORC | Pathfinder Battlecry! | 757 |
 | ORC | Pathfinder War of Immortals | 638 |
 | OGL | Pathfinder Rage of Elements | 589 |
-| ORC | Pathfinder Howl of the Wild | 547 |
+| ORC | Pathfinder Howl of the Wild | 543 |
 | ORC | Pathfinder Dark Archive (Remastered) | 511 |
 | ORC | Pathfinder Lost Omens Tian Xia Character Guide | 508 |
 | OGL | Pathfinder Lost Omens The Grand Bazaar | 398 |
 | OGL | Pathfinder Lost Omens Ancestry Guide | 316 |
-| OGL | Pathfinder Core Rulebook | 302 |
+| OGL | Pathfinder Core Rulebook | 298 |
+| ORC | Pathfinder Feybound | 274 |
 | ORC | Pathfinder Lost Omens Cheliax, Infernal Inheritance | 274 |
 | OGL | Pathfinder Lost Omens Impossible Lands | 272 |
-| ORC | Pathfinder Lost Omens Divine Mysteries | 266 |
-| ORC | Pathfinder Feybound | 256 |
+| ORC | Pathfinder Lost Omens Divine Mysteries | 267 |
 | ORC | Pathfinder Lost Omens Rival Academies | 241 |
 | OGL | Pathfinder Secrets of Magic | 230 |
 | OGL | Pathfinder Lost Omens Character Guide | 222 |
 | OGL | Pathfinder Advanced Player's Guide | 199 |
-| ORC | Pathfinder Lost Omens Hellfire Dispatches | 195 |
+| ORC | Pathfinder Lost Omens Hellfire Dispatches | 196 |
 | OGL | Pathfinder Book of the Dead | 179 |
 | ORC | Pathfinder Lost Omens Shining Kingdoms | 166 |
 | OGL | Pathfinder Lost Omens Pathfinder Society Guide | 151 |
@@ -101,9 +101,9 @@ applies the kinds it has a handler for and shows the others as unsupported on th
 | OGL | Pathfinder #180: The Smoking Gun | 34 |
 | ORC | Pathfinder #218: Titanbane | 34 |
 | OGL | Pathfinder #170: Spoken on the Song Wind | 33 |
-| OGL | Pathfinder Lost Omens Gods & Magic | 33 |
 | ORC | Pathfinder #203: Shepherd of Decay | 33 |
 | ORC | Pathfinder Claws of the Tyrant | 33 |
+| OGL | Pathfinder Lost Omens Gods & Magic | 32 |
 | ORC | Pathfinder Adventure Path: Bastion of Blasphemies | 32 |
 | OGL | Pathfinder #156: The Apocalypse Prophet | 31 |
 | OGL | Pathfinder Stolen Fate Player's Guide | 31 |
