@@ -1,6 +1,6 @@
 # Reserved Material report
 
-Foundry pf2e commit `ae999ce5d5c4c5cad2359d9710af5a8522a7083d`.
+Foundry pf2e commit `d2be8e53704e3d87c53498c504620337ccd61fa2`.
 
 The ORC License does not license Paizo's proper nouns: deities, places, organizations, planes, named characters.
 Terms matched: every deity in the Foundry deities pack (less a few ordinary words) and the setting list in
