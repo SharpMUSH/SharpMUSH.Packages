@@ -1,0 +1,98 @@
+# .<frequency> <message> speaks on one of the player's frequencies, named without its spaces or by a start that
+# fits only that one. A name typed in full wins over a longer one it begins; a start that fits several sends
+# nothing. What follows is never evaluated.
+install: [radio, radio-help, radio-config]
+cleanup: ["@feed/undefine radio"]
+players:
+  admin: { roles: [radio-admin] }
+  ann:
+  bo:
+unique: [said, posed, unsent]
+steps:
+  - as: admin
+    run: +radio/create Wild
+  - as: admin
+    run: +radio/create Ops
+  - as: admin
+    run: +radio/create Opsec
+  - as: admin
+    run: +radio/create Night Watch
+  - as: ann
+    run: +radio/join Wild
+  - as: ann
+    run: +radio/join Ops
+  - as: ann
+    run: +radio/join Opsec
+  - as: ann
+    run: +radio/join Night Watch
+  - as: bo
+    run: +radio/join Wild
+  - as: bo
+    run: +radio/join Ops
+  - as: bo
+    run: +radio/join Opsec
+  - as: bo
+    run: +radio/join Night Watch
+
+  - as: ann
+    run: .wild ${said}-1, 50% off [add(1,2)]
+  - heard: bo
+    containing: ${said}-1,
+    lines: ['<Wild> ${ann.name} says, "${said}-1, 50% off [add(1,2)]"']
+  - as: ann
+    run: .WI ${said}-2, 50% off [add(1,2)]
+  - heard: bo
+    containing: ${said}-2,
+    lines: ['<Wild> ${ann.name} says, "${said}-2, 50% off [add(1,2)]"']
+  - as: ann
+    run: .w ${said}-3, 50% off [add(1,2)]
+  - heard: bo
+    containing: ${said}-3,
+    lines: ['<Wild> ${ann.name} says, "${said}-3, 50% off [add(1,2)]"']
+  - as: ann
+    run: .ops ${said}-4, 50% off [add(1,2)]
+  - heard: bo
+    containing: ${said}-4,
+    lines: ['<Ops> ${ann.name} says, "${said}-4, 50% off [add(1,2)]"']
+    because: a name typed in full wins over a longer one it begins
+  - as: ann
+    run: .opse ${said}-5, 50% off [add(1,2)]
+  - heard: bo
+    containing: ${said}-5,
+    lines: ['<Opsec> ${ann.name} says, "${said}-5, 50% off [add(1,2)]"']
+  - as: ann
+    run: .nightwatch ${said}-6, 50% off [add(1,2)]
+  - heard: bo
+    containing: ${said}-6,
+    lines: ['<Night Watch> ${ann.name} says, "${said}-6, 50% off [add(1,2)]"']
+  - as: ann
+    run: .n ${said}-7, 50% off [add(1,2)]
+  - heard: bo
+    containing: ${said}-7,
+    lines: ['<Night Watch> ${ann.name} says, "${said}-7, 50% off [add(1,2)]"']
+
+  - as: ann
+    run: .w :${posed}
+  - heard: bo
+    containing: ${posed}
+    lines: ['<Wild> ${ann.name} ${posed}']
+
+  - as: ann
+    run: .op ${unsent}
+    sees: ["'.op' could be", Opsec, Type more of it.]
+  - heard: bo
+    containing: ${unsent}
+    lines: []
+
+  - as: ann
+    run: .x hello
+    sees: There is no frequency called 'x'. +radio lists them.
+  - as: ann
+    run: .* hello
+    sees: There is no frequency called '*'.
+  - as: ann
+    run: .wild
+    sees: What do you want to say?
+  - as: ann
+    run: .
+    sees: .<frequency> <message> speaks on a frequency you are tuned in to.

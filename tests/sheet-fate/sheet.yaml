@@ -1,0 +1,96 @@
+# The Fate sheet: skills on the ladder, aspects, stunts, stress, consequences and fate points; only its player
+# and staff read it; staff award and refresh points; +config and +help reach it through the bridges; and the
+# chargen bridge locks the sheet while the application is with staff.
+install: [chargen, sheet-fate, sheet-fate-help, sheet-fate-config, sheet-fate-chargen]
+players:
+  keeper: { room: hall, roles: [fate-sheet-keeper] }
+  ann: { room: hall }
+  bo: { room: hall }
+steps:
+  - as: ann
+    run: +sheet/set fight=great
+    sees: Fight is Great (+4) on ${ann.name}'s sheet.
+  - as: ann
+    run: +sheet/set notice=3
+    sees: Notice is Good (+3) on ${ann.name}'s sheet.
+  - as: ann
+    run: +sheet/set will=9
+    sees: A rating goes from -2 to Great (+4).
+  - as: ann
+    run: +sheet/aspect concept=Retired starship pilot
+    sees: "High concept on ${ann.name}'s sheet: Retired starship pilot"
+  - as: ann
+    run: +sheet/aspect trouble=Owes the wrong people
+    sees: "Trouble on ${ann.name}'s sheet: Owes the wrong people"
+  - as: ann
+    run: +sheet/stunt 1=Steady hands
+    sees: "Stunt 1 on ${ann.name}'s sheet: Steady hands"
+  - as: ann
+    run: +sheet/stress physical=2
+    sees: ${ann.name} marks physical stress box 2.
+  - as: ann
+    run: +sheet/consequence mild=Bruised ribs
+    sees: "${ann.name} takes a mild consequence: Bruised ribs"
+  - as: ann
+    run: +sheet/spend for a declaration
+    sees: "${ann.name} spends a fate point: for a declaration. 2 left."
+  - heard: bo
+    containing: ${ann.name} spends a fate point
+    count: 1
+    because: the room sees a fate point spent
+  - as: ann
+    run: +sheet/recover
+    sees: Every stress box on ${ann.name}'s sheet is clear.
+
+  # Fight is Great (+4), so four Fate dice add 4.
+  - as: ann
+    run: +check fight
+    sees: ["${ann.name} rolls Fight: 4dF[", "] + 4 = "]
+  - as: ann
+    run: +sheet
+    sees: ["Fate points: 2", "High concept: Retired starship pilot", "Trouble:      Owes the wrong people", "Mild (2):     Bruised ribs"]
+
+  - as: keeper
+    run: +sheet/award ${ann.name}=2
+    sees: ${ann.name} has 4 fate points now.
+  - as: keeper
+    run: +sheet/refresh ${ann.name}
+    sees: ${ann.name} has 4 fate points, no fewer than their refresh of 3.
+  - as: bo
+    run: +sheet ${ann.name}
+    sees: Only ${ann.name} and staff can read their sheet.
+
+  - as: keeper
+    run: +config fate
+    sees: "Settings: Fate sheet"
+  - as: ann
+    run: +help sheet
+    sees: "+sheet shows your character's sheet: fate points, aspects, skills on the"
+
+  # sheet-fate-chargen: a reviewer reads the sheet of anyone with an application, and the sheet waits while the
+  # application is with staff.
+  - as: ann
+    run: +app/set concept=A courier with a past
+  - as: ann
+    run: +app/set archetype=rogue
+  - as: ann
+    run: +app/set background=Grew up on the docks.
+  - as: ann
+    run: +app/set personality=Wry, and wants to be left alone.
+  - as: ann
+    run: +app/set hooks=Owes a favour to the harbourmaster.
+  - god: "@permission/allow ${bo}=softcode.chargen.review"
+  - as: bo
+    run: +sheet ${ann.name}
+    sees: "Fate points: 4"
+  - as: ann
+    run: +app/submit
+    sees: Submitted.
+  - as: ann
+    run: +sheet/set fight=1
+    sees: Your application is with staff. +app/withdraw takes it back to change your sheet.
+  - as: ann
+    run: +app/withdraw
+  - as: ann
+    run: +sheet/set fight=1
+    sees: "Fight is Average (+1)"

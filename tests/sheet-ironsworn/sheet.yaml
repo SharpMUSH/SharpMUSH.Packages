@@ -1,0 +1,95 @@
+# The Ironsworn sheet: a new character gives out the starting stats, rolls against two challenge dice, and keeps
+# health, spirit, supply and momentum; only its player and staff read it; +config and +help reach it through the
+# bridges; and the chargen bridge locks the sheet while the application is with staff.
+install: [chargen, sheet-ironsworn, sheet-ironsworn-help, sheet-ironsworn-config, sheet-ironsworn-chargen]
+players:
+  keeper: { room: hall, roles: [ironsworn-sheet-keeper] }
+  ann: { room: hall }
+  bo: { room: hall }
+steps:
+  - as: ann
+    run: +sheet/set edge=3
+    sees: "Edge is 3 on ${ann.name}'s sheet. Next: +sheet/set <stat>=<value>. Left to give: 2, 2, 1, and 1."
+  - as: ann
+    run: +sheet/set heart=3
+    sees: "Your stats take 3, 2, 2, 1, and 1, one value each. Left to give: 2, 2, 1, and 1."
+  - as: ann
+    run: +sheet/set heart=2
+  - as: ann
+    run: +sheet/set iron=2
+  - as: ann
+    run: +sheet/set shadow=1
+  - as: ann
+    run: +sheet/set wits=1
+    sees: "Next: +sheet/asset <asset>, 3 more. +sheet/assets lists them."
+  - as: ann
+    run: +sheet/chargen
+    sees: "1. Stats done: 5 of 5 given: Edge 3, Heart 2, Iron 2, Shadow 1, and Wits"
+  - as: ann
+    run: +sheet/assets
+    sees: Ironsworn assets
+
+  # Edge 3 adds 3 to the action die.
+  - as: ann
+    run: +check edge
+    sees: ["${ann.name} rolls Edge: 1d6[", "] + 3 = "]
+  - heard: bo
+    containing: ${ann.name} rolls Edge
+    count: 1
+    because: the room sees a roll
+  - as: ann
+    run: +check/private wits=hard
+    sees: "You privately roll Wits"
+  - as: ann
+    run: +sheet/health 3
+    sees: ${ann.name}'s health is 3 of 5.
+  - as: ann
+    run: +sheet/momentum +3
+    sees: ${ann.name}'s momentum is +5.
+  - as: ann
+    run: +sheet/supply 4
+    sees: ${ann.name}'s supply is 4 of 5.
+  - as: ann
+    run: +sheet
+    sees: ["Health: 3/5", "Supply:   4/5", "Momentum: +5"]
+  - as: ann
+    run: +sheet/ledger
+    sees: Edge 3
+  - as: bo
+    run: +sheet ${ann.name}
+    sees: Only ${ann.name} and staff can read their sheet.
+
+  - as: keeper
+    run: +config ironsworn
+    sees: "Settings: Ironsworn sheet"
+  - as: ann
+    run: +help sheet
+    sees: "+sheet shows your character's sheet: five stats, Edge, Heart, Iron, Shadow and"
+
+  # sheet-ironsworn-chargen: a reviewer reads the sheet of anyone with an application, and the sheet waits while the
+  # application is with staff.
+  - as: ann
+    run: +app/set concept=A courier with a past
+  - as: ann
+    run: +app/set archetype=rogue
+  - as: ann
+    run: +app/set background=Grew up on the docks.
+  - as: ann
+    run: +app/set personality=Wry, and wants to be left alone.
+  - as: ann
+    run: +app/set hooks=Owes a favour to the harbourmaster.
+  - god: "@permission/allow ${bo}=softcode.chargen.review"
+  - as: bo
+    run: +sheet ${ann.name}
+    sees: "Momentum: +5"
+  - as: ann
+    run: +app/submit
+    sees: Submitted.
+  - as: ann
+    run: +sheet/set edge=
+    sees: Your application is with staff. +app/withdraw takes it back to change your sheet.
+  - as: ann
+    run: +app/withdraw
+  - as: ann
+    run: +sheet/set edge=
+    sees: "Edge is"

@@ -1,0 +1,97 @@
+# A frequency is created, tuned in to, spoken on, recalled, renamed, gagged and deleted.
+install: [radio, radio-help, radio-config]
+cleanup: ["@feed/undefine radio"]
+players:
+  admin: { roles: [radio-admin] }
+  ann:
+  bo:
+unique: [said, posed, raw, unit]
+steps:
+  - as: ann
+    run: +radio/create Police
+    sees: Only a radio admin can create frequencies.
+  - as: admin
+    run: +radio/create Police=Emergency
+    sees: Created Police.
+  - as: admin
+    run: +radio/create police
+    sees: There is a frequency called police already.
+  - as: ann
+    run: +radio
+    sees: [Police, Emergency]
+
+  - as: ann
+    run: +radio/join pol
+    sees: You tune in to Police.
+  - as: bo
+    run: +radio/join Police
+  - god: think [feedwho(radio/1)]
+    sees: "${ann}:"
+
+  - as: ann
+    run: +radio/title Police=Officer
+  - as: ann
+    run: +radio pol=${said}
+  - heard: bo
+    containing: ${said}
+    lines: ['<Police> Officer ${ann.name} says, "${said}"']
+  - as: ann
+    run: +radio pol=:${posed}
+  - heard: bo
+    containing: ${posed}
+    lines: ['<Police> Officer ${ann.name} ${posed}']
+
+  # What a player types is never evaluated.
+  - as: ann
+    run: +radio pol=${raw} [add(1,2)] 50% off
+  - heard: bo
+    containing: ${raw}
+    lines: ['<Police> Officer ${ann.name} says, "${raw} [add(1,2)] 50% off"']
+
+  - as: ann
+    run: +radio/alterego Police=Unit 4
+  - as: ann
+    run: +radio pol=${unit}
+  - heard: bo
+    containing: ${unit}
+    lines: ['<Police> Officer Unit 4 says, "${unit}"']
+
+  - as: bo
+    run: +radio/recall Police=2
+    sees:
+      - '<Police> Officer ${ann.name} says, "${raw} [add(1,2)] 50% off"'
+      - '<Police> Officer Unit 4 says, "${unit}"'
+    not_sees: ${posed}
+    because: recall=2 shows the last two lines
+
+  # A rename keeps the frequency and everything said on it.
+  - as: admin
+    run: +radio/rename Police=Dispatch
+    sees: Police is called Dispatch now.
+  - as: bo
+    run: +radio/recall dis=1
+    sees: '<Dispatch> Officer Unit 4 says, "${unit}"'
+
+  - as: bo
+    run: +radio/gag all
+    sees: You hear none of your frequencies
+  - as: ann
+    run: +radio dis=${said}-gagged
+  - heard: bo
+    containing: ${said}-gagged
+    lines: []
+  - as: bo
+    run: +radio/ungag Dispatch
+    sees: You hear Dispatch again.
+
+  - as: admin
+    run: +radio/delete Dispatch
+    sees: Type +radio/delete Dispatch=Dispatch to do it.
+  - as: admin
+    run: +radio/delete Dispatch=Dispatch
+    sees: Deleted Dispatch.
+  - god: think [feeds(radio)]
+    is: ""
+  - as: ann
+    run: +radio
+    sees: There are no frequencies you can tune in to.

@@ -1,0 +1,98 @@
+# A table keeper makes tables and changes their rows; players read, roll and look them up, and the room hears a
+# roll that is not private.
+install: [roll-tables, roll-tables-help]
+players:
+  keeper: { room: inn, roles: [table-keeper] }
+  ann: { room: inn }
+steps:
+  - as: ann
+    run: +table/create crossing=none
+    sees: Only a table keeper can change tables.
+  - as: keeper
+    run: +table/create crossing=none
+    sees: Table crossing is made.
+  - as: keeper
+    run: +table/title crossing=At the crossing
+  - as: keeper
+    run: +table/row crossing=fox|A red fox crosses the road.
+    sees: "Row 1 of At the crossing is fox: A red fox crosses the road."
+  - as: ann
+    run: +table crossing
+    sees: [At the crossing, fox, A red fox crosses the road., Every row is equally likely.]
+  - as: ann
+    run: +table/list
+    sees: [crossing, At the crossing, weather, Weather on the coast road]
+
+  # One row, so the roll is known; the room hears it.
+  - as: ann
+    run: +table/roll crossing
+    sees: "${ann.name} rolls on At the crossing: A red fox crosses the road."
+  - heard: keeper
+    containing: ${ann.name} rolls on At the crossing
+    lines: ["${ann.name} rolls on At the crossing: A red fox crosses the road."]
+  - as: ann
+    run: +table/roll/private crossing
+    sees: A red fox crosses the road.
+  - heard: keeper
+    containing: ${ann.name} rolls on At the crossing
+    lines: ["${ann.name} rolls on At the crossing: A red fox crosses the road."]
+    because: a private roll is told only to the roller
+  - as: ann
+    run: +table/lookup crossing=fox
+    sees: "At the crossing fox: A red fox crosses the road."
+
+  # A die table: each row holds a number or a range that fits the die.
+  - as: keeper
+    run: +table/create omen=d6
+  - as: keeper
+    run: +table/row omen=1-3|A crow on the gate.
+  - as: keeper
+    run: +table/row omen=4-6|Clear skies.
+  - as: keeper
+    run: +table/row omen=7|Never.
+    sees: 7 goes above 6, the most d6 can roll.
+  - as: ann
+    run: +table/lookup omen=2
+    sees: "Omen 1-3: A crow on the gate."
+  - as: ann
+    run: +table/lookup omen=5
+    sees: "Omen 4-6: Clear skies."
+  - as: keeper
+    run: +table/die omen=d4
+    sees: 4-6 goes above 4, the most d4 can roll.
+  - as: ann
+    run: +table/roll omen=3
+    sees: ${ann.name} rolls on Omen 3 times
+
+  # A lock keeps a table from players it does not pass; keepers read every table.
+  - as: keeper
+    run: +table/lock omen=role^table-keeper
+    sees: Only those who pass role^table-keeper can read Omen now.
+  - as: ann
+    run: +table omen
+    sees: There is no table called omen.
+  - as: ann
+    run: +table/list
+    not_sees: omen
+  - as: keeper
+    run: +table omen
+    sees: [1-3  A crow on the gate., "Rolled on d6"]
+
+  - as: keeper
+    run: +table/delrow crossing/1
+    sees: Row 1 of At the crossing is gone.
+  - as: keeper
+    run: +table/delete crossing
+    sees: This removes At the crossing and its 0 rows. +table/delete crossing=yes to go ahead.
+  - as: keeper
+    run: +table/delete crossing=yes
+    sees: Table crossing is gone.
+  - as: ann
+    run: +table crossing
+    sees: There is no table called crossing.
+  - as: keeper
+    run: +table/delete omen=yes
+
+  - as: ann
+    run: +help tables
+    sees: [+table/roll <name>, "Subtopics: code · format · publish · staff"]

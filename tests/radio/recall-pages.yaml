@@ -1,0 +1,31 @@
+# A long recall comes a screen at a time, the newest lines first; a page number goes only with a paged screen.
+install: [radio, radio-help, radio-config]
+cleanup: ["@feed/undefine radio"]
+players:
+  admin: { roles: [radio-admin] }
+unique: [marker]
+steps:
+  - as: admin
+    run: +radio/create Echo
+  - as: admin
+    run: +radio/join Echo
+  - as: admin
+    repeat: 40
+    run: +radio Echo=${marker}-${n:00}
+  - as: admin
+    run: +radio/recall Echo=40
+    sees: ["${marker}-40", page 1 of 2, +radio/recall/2 Echo=40 for the lines before]
+    not_sees: ${marker}-01
+  - as: admin
+    run: +radio/recall/2 Echo=40
+    sees: ["${marker}-01", page 2 of 2]
+    not_sees: ${marker}-40
+  - as: admin
+    run: +radio/recall/3 Echo=40
+    sees: There are 2 pages - you asked for page 3.
+  - as: admin
+    run: +radio/recall/0 Echo
+    sees: +radio/recall <frequency>=<lines> shows what was said last
+  - as: admin
+    run: +radio/join/2 Echo
+    sees: +radio/join takes no page number.

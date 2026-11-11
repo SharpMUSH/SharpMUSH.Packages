@@ -1,0 +1,28 @@
+# Speaking on a frequency you are not tuned in to says how to tune in, by the frequency's current name.
+install: [radio, radio-help, radio-config]
+cleanup: ["@feed/undefine radio"]
+players:
+  admin: { roles: [radio-admin] }
+unique: [said]
+steps:
+  - as: admin
+    run: +radio/create Radio 1
+  - as: admin
+    run: +radio/rename Radio 1=Wild
+    sees: Radio 1 is called Wild now.
+  - as: admin
+    run: +radio Wild=Stuff
+    sees: You are not tuned in to Wild. +radio/join Wild tunes in.
+  - as: admin
+    run: .wild Stuff
+    sees: You are not tuned in to Wild. +radio/join Wild tunes in.
+  - as: admin
+    run: +radio Nowhere=Stuff
+    sees: There is no frequency called 'Nowhere'. +radio lists them.
+  - as: admin
+    run: +radio/join Wild
+  - as: admin
+    run: +radio Wild=${said}
+  - heard: admin
+    containing: ${said}
+    lines: ['<Wild> ${admin.name} says, "${said}"']

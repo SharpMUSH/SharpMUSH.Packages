@@ -62,14 +62,22 @@ jobs:
         working-directory: sharpmush
         run: dotnet run --project tools/PackageValidator -- ../packages --strict
 
-      # duties keeps its behaviour tests in the engine; they install it from this checkout.
-      - name: Duties integration tests
+      # The behaviour tests: tests/<package>/*.yaml (see tests/README.md) and the tests the engine keeps for
+      # library packages, all in the SharpMUSH.Tests.PackageLibrary namespace. They install packages from this
+      # checkout. An engine from before that namespace (a release older than it) has only the duties tests.
+      - name: Package behaviour tests
         working-directory: sharpmush
         env:
           SHARPMUSH_PACKAGES_PATH: ${{ github.workspace }}/packages
           TUNIT_DISABLE_HTML_REPORTER: "true"
         timeout-minutes: 30
-        run: dotnet run --project SharpMUSH.Tests.Integration -- --treenode-filter "/*/*/Duties*/*" --output Detailed
+        run: |
+          if grep -rqs --include=*.cs "namespace SharpMUSH.Tests.PackageLibrary;" SharpMUSH.Tests.Integration; then
+            filter="/*/SharpMUSH.Tests.PackageLibrary/*/*"
+          else
+            filter="/*/*/Duties*/*"
+          fi
+          dotnet run --project SharpMUSH.Tests.Integration -- --treenode-filter "$filter" --output Detailed
 
   checks:
     runs-on: ubuntu-latest

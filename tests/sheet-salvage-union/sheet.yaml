@@ -1,0 +1,77 @@
+# The Salvage Union sheet: a new pilot picks a class and learns from its trees, keeps HP, AP and details, and
+# staff run downtime; only its player and staff read it; +config and +help reach it through the bridges; and the
+# chargen bridge locks the sheet while the application is with staff.
+install: [chargen, sheet-salvage-union, sheet-salvage-union-help, sheet-salvage-union-config, sheet-salvage-union-chargen]
+players:
+  keeper: { room: hall, roles: [salvage-sheet-keeper] }
+  ann: { room: hall }
+  bo: { room: hall }
+steps:
+  - as: ann
+    run: +sheet/class Engineer
+    sees: ${ann.name} is an Engineer. +sheet/trees shows the abilities they can learn.
+  - as: ann
+    run: +sheet/trees
+    sees: ["Engineer trees", "Mech-Tech (core)"]
+  - as: ann
+    run: +sheet/chargen
+    sees: "1  yes   Class                           Engineer"
+  - as: ann
+    run: +sheet/list 1
+    sees: ["Pilot equipment, Tech 1", First Aid Kit]
+  - as: ann
+    run: +sheet/hp -2
+    sees: ${ann.name}'s HP is 8/10.
+  - as: ann
+    run: +sheet/hp reset
+    sees: ${ann.name}'s HP is 10/10.
+  - as: ann
+    run: +sheet/callsign Wrench
+    sees: "${ann.name}'s callsign is: Wrench"
+  - as: ann
+    run: +sheet/motto Fix it
+    sees: "${ann.name}'s motto is: Fix it"
+  - as: ann
+    run: +sheet
+    sees: ["Class:    Engineer", "Callsign: Wrench"]
+  - as: bo
+    run: +sheet ${ann.name}
+    sees: Only ${ann.name} and staff can read their sheet.
+
+  - as: keeper
+    run: +sheet/downtime ${ann.name}
+    sees: "${ann.name} rests through downtime: HP 10, AP 5, re-rolls and uses back."
+  - as: keeper
+    run: +config salvage
+    sees: "Settings: Salvage Union sheet"
+  - as: ann
+    run: +help sheet
+    sees: "+sheet shows your pilot: class, HP, AP, training points, abilities, equipment,"
+
+  # sheet-salvage-union-chargen: a reviewer reads the sheet of anyone with an application, and the sheet waits while the
+  # application is with staff.
+  - as: ann
+    run: +app/set concept=A courier with a past
+  - as: ann
+    run: +app/set archetype=rogue
+  - as: ann
+    run: +app/set background=Grew up on the docks.
+  - as: ann
+    run: +app/set personality=Wry, and wants to be left alone.
+  - as: ann
+    run: +app/set hooks=Owes a favour to the harbourmaster.
+  - god: "@permission/allow ${bo}=softcode.chargen.review"
+  - as: bo
+    run: +sheet ${ann.name}
+    sees: "Callsign: Wrench"
+  - as: ann
+    run: +app/submit
+    sees: Submitted.
+  - as: ann
+    run: +sheet/class Hacker
+    sees: Your application is with staff. +app/withdraw takes it back to change your sheet.
+  - as: ann
+    run: +app/withdraw
+  - as: ann
+    run: +sheet/class Hacker
+    sees: "is a Hacker"
