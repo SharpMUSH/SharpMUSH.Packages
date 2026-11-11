@@ -56,7 +56,7 @@ steps:
     run: +check/private stealth=hard
     sees: ["You privately check Stealth: 1d20[", vs DC 20]
   - heard: bo
-    containing: Stealth
+    containing: ${ann.name} checks Stealth
     count: 0
     because: a private check is told only to the roller
 

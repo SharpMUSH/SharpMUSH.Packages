@@ -6,7 +6,6 @@ players:
   joiner: { room: scene, roles: [approved] }
 unique: [verse, scenename]
 steps:
-  - god: "@teleport ${object:scene/logger}=#2"
   - eval: scenedetail()
     is: verse canon
   - eval: scenedetail(verse)

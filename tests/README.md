@@ -68,9 +68,10 @@ Each step has one of these:
 | `eval: <expression>` | God evaluates the expression | Its value; `render: html` gives it as HTML |
 | `heard: <player>` with `containing: <text>` | Nothing | Checks every line the player heard so far that contains the text |
 | `install: <package>` | Installs a package at this point | |
-| `uninstall: <package>` | Takes a package out, with any bridge over it | |
+| `uninstall: <package>` | Takes out a package this test installed, with any bridge over it | |
 
-and may check its output with:
+An `as`, `god` or `eval` step may check its output with `sees`, `not_sees`, `is` and `capture`; a
+`heard` step takes `lines` or `count`. A key on the wrong kind of step fails the test.
 
 | Key | Passes when |
 |---|---|
@@ -79,9 +80,9 @@ and may check its output with:
 | `is: <text>` | The output, trimmed, is exactly the text |
 | `lines: [...]` | (`heard`) The lines heard are exactly these, in order; `[]` for none |
 | `count: <n>` | (`heard`) That many lines were heard, for a line not known in full, such as a die roll |
-| `capture: <name>` | Always; keeps the trimmed output as `${name}` for later steps |
+| `capture: <name>` | Always; keeps the trimmed output as `${name}` for later steps (not a player's name or `n`) |
 | `because: <text>` | Shown when the step fails |
-| `repeat: <n>` | Runs the step n times |
+| `repeat: <n>` | Runs the step n times (1 or more) |
 
 ### Substitutions
 
