@@ -56,4 +56,6 @@ steps:
     because: scenes keep the values they were given
   - as: joiner
     run: +scene/verses
+    sees: +scene has no /verses switch.
     not_sees: Verses played now
+    because: the scene package no longer knows the switch scene-verse added
