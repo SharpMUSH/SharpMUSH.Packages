@@ -1,0 +1,43 @@
+# +scene/pause leaves the player's focus on the scene, so a tap that only asked for a focus would keep writing
+# radio lines into it. A paused scene records nothing, radio included, until +scene/start resumes it.
+install: [radio, radio-help, radio-config, radio-scene]
+cleanup: ["@feed/undefine radio"]
+players:
+  admin: { roles: [radio-admin] }
+  logger: { roles: [approved] }
+  ann:
+unique: [scenename, paused, resumed]
+steps:
+  - as: admin
+    run: +radio/create Harbour
+  - as: logger
+    run: +radio/join Harbour
+  - as: ann
+    run: +radio/join Harbour
+  - as: logger
+    run: +scene/create ${scenename}
+  - eval: scenefocus(${logger})
+    capture: scene
+  - as: logger
+    run: +radio/log Harbour
+
+  - as: logger
+    run: +scene/pause
+    sees: paused
+  - eval: scenefocus(${logger})
+    is: ${scene}
+    because: pausing keeps the player's focus on the scene
+  - eval: words(sceneposes(${scene}))
+    capture: before
+  - as: ann
+    run: +radio Harbour=${paused}
+  - eval: words(sceneposes(${scene}))
+    is: ${before}
+    because: a paused scene records nothing
+
+  - as: logger
+    run: +scene/start ${scene}
+  - as: ann
+    run: +radio Harbour=${resumed}
+  - eval: scenepose(${scene},last(sceneposes(${scene})),content)
+    sees: ${resumed}

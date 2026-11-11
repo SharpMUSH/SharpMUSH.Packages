@@ -1,0 +1,38 @@
+# The radio's settings are +config's: +config radio lists them, a change is what +radio reads, and a colour is
+# checked the way +radio/color checks one.
+install: [radio, radio-help, radio-config]
+cleanup: ["@feed/undefine radio"]
+players:
+  staff:
+  admin: { roles: [radio-admin] }
+unique: [first, second]
+steps:
+  - god: "@permission/allow ${staff}=config.admin"
+  - as: staff
+    run: +config radio
+    sees: [recall-max, title-length]
+    not_sees: no such system
+  - as: staff
+    run: +config radio/color=sparkly
+    sees: "'sparkly' is not a colour."
+  - as: staff
+    run: +config radio/title-length=5
+  - as: staff
+    run: +config radio/recall=1
+
+  - as: admin
+    run: +radio/create Relay
+  - as: admin
+    run: +radio/join Relay
+  - as: admin
+    run: +radio/title Relay=Lieutenant
+    sees: A title is up to 5 characters.
+  - as: admin
+    run: +radio Relay=${first}
+  - as: admin
+    run: +radio Relay=${second}
+  - as: admin
+    run: +radio/recall Relay
+    sees: ${second}
+    not_sees: ${first}
+    because: recall is 1 line when no number is given

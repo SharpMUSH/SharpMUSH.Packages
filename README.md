@@ -168,7 +168,8 @@ directory fails unless it raises that package's `version` (in `package.yaml`
 and `index.yaml`) above the last one. Once it merges, the release job tags
 `<package-dir>/v<version>` at the last commit that touched the directory.
 Every manifest is validated against SharpMUSH `main` and, once SharpMUSH has
-a release, against its latest one. To check a branch by hand:
+a release, against its latest one; the behaviour tests in [`tests/`](tests/)
+run on both, when that SharpMUSH has their runner. To check a branch by hand:
 
 ```
 git fetch --tags origin
@@ -242,6 +243,9 @@ mode: warnings fail).
    ref with a label and type, and use block scalars for all code.
 5. Raise the package's version in the same pull request; once it merges, CI
    tags the release `<package>/v<version>`.
+6. Add a behaviour test under `tests/<package>/`: a YAML file of commands
+   played by test characters and the output each must show. CI runs it on a
+   test game. See [`tests/README.md`](tests/README.md).
 
 Package ids are first-come within this repo, must not collide with an
 existing id even with punctuation stripped (`roll-tables` blocks `rolltables`),

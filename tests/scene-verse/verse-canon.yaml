@@ -1,0 +1,60 @@
+# scene-verse names the verse and canon scene details and lists the verses played now; uninstalling it takes the
+# details away and leaves scenes the values they were given.
+install: [scene-verse]
+players:
+  owner: { room: scene, roles: [approved] }
+  joiner: { room: scene, roles: [approved] }
+unique: [verse, scenename]
+steps:
+  - god: "@teleport ${object:scene/logger}=#2"
+  - eval: scenedetail()
+    is: verse canon
+  - eval: scenedetail(verse)
+    is: Verse
+  - eval: scenedetail(verse,tone)
+    is: ""
+  - eval: u(${object:scene/logger}/FUN`DETAIL`PAINT,verse,Marvel)
+    render: html
+    is: Marvel
+  - eval: scenedetail(canon,many)
+    is: "1"
+  - eval: scenedetail(canon,value, Marvel | X-Men |)
+    is: Marvel|X-Men
+
+  - as: owner
+    run: +scene/create ${scenename}
+  - eval: scenefocus(${owner})
+    capture: scene
+  - eval: scene(${scene},verse)
+    is: ""
+    because: a listed detail reads empty until it is set
+  - as: owner
+    run: +scene/set verse=${verse}
+  - as: owner
+    run: +scene/set canon=Marvel|X-Men
+    sees: Canon is now Marvel · X-Men.
+
+  - as: joiner
+    run: +scene/list verse=${verse}
+    sees: ["${verse}", 1 scene]
+    because: the verse follows the title
+  - as: joiner
+    run: +scene ${scene}
+    sees: [Verse, "${verse}", Marvel · X-Men]
+  - as: joiner
+    run: +scene/verses
+    sees: [Verses played now, "${verse}", +scene/list verse=<verse>]
+  - as: joiner
+    run: +help scene verse
+    sees: +scene/verses
+
+  - uninstall: scene-verse
+  - eval: scenedetail()
+    is: ""
+    because: uninstalling scene-verse takes its details away
+  - eval: scene(${scene},verse)
+    is: ${verse}
+    because: scenes keep the values they were given
+  - as: joiner
+    run: +scene/verses
+    not_sees: Verses played now

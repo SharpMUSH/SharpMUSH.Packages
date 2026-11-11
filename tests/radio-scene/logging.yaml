@@ -1,0 +1,94 @@
+# With radio-scene, what a logging listener hears goes into their scene once, tagged as radio, and its help joins
+# the radio's and the scene package's own.
+install: [radio, radio-help, radio-config]
+cleanup: ["@feed/undefine radio"]
+players:
+  early:
+  admin:
+  logger:
+  ann:
+unique: [scenename, said, unlogged]
+steps:
+  - as: early
+    run: +radio/log
+    sees: +radio has no /log switch
+  - as: early
+    run: +help radio
+    sees: "Subtopics: admins · moderators"
+
+  - install: radio-scene
+  # Its topics join the radio's and the scene package's own help, as subtopics of each.
+  - as: early
+    run: +help radio
+    sees: "Subtopics: admins · log · moderators"
+  - as: early
+    run: +help radio log
+    sees: +radio/stoplog <frequency>
+  - as: early
+    run: +help scene
+    sees: "privacy · radio ·"
+  - as: early
+    run: +help scene radio
+    sees: +help radio log
+
+  - god: "@role/assign ${admin}=radio-admin"
+  - god: "@role/assign ${logger}=approved"
+  - as: admin
+    run: +radio/create Ship
+  - as: logger
+    run: +radio/join Ship
+  - as: ann
+    run: +radio/join Ship
+  - as: logger
+    run: +radio/log Ship
+    sees: Join a scene first
+
+  - as: logger
+    run: +scene/create ${scenename}
+  - eval: scenefocus(${logger})
+    capture: scene
+  - as: logger
+    run: +radio/log Ship
+    sees: goes into your scene until +radio/stoplog
+  - as: logger
+    run: +radio/log
+    sees: "Logged into your scene: Ship."
+
+  - as: ann
+    run: +radio Ship=${said}
+  - eval: trim(squish(iter(sceneposes(${scene}),if(strmatch(scenepose(${scene},##,content),*${said}*),scenepose(${scene},##,content)),%b,|),|),|)
+    is: '<Ship> ${ann.name} says, "${said}"'
+    because: the line is logged once
+  - eval: scenepose(${scene},last(sceneposes(${scene})),type)
+    is: radio
+  - eval: scenepose(${scene},last(sceneposes(${scene})),frequency)
+    is: Ship
+  - eval: scenetype(radio,presentation)
+    is: message
+    because: radio-scene adds the radio type to the Scene Logger
+  - as: logger
+    run: +scene/types
+    sees: Radio
+  - as: logger
+    run: +scene/hide radio
+    sees: Radio lines are hidden while reading and playing.
+  - as: logger
+    run: +scene/recall 1
+    sees: 1 line of radio hidden.
+    not_sees: ${said}
+  - as: logger
+    run: +scene/show radio
+    sees: Radio lines show while reading and playing.
+  - as: logger
+    run: +scene/recall 1
+    is: '<RADIO · ${scene}> <Ship> ${ann.name} says, "${said}"'
+    because: a radio line is one line tagged with its scene, with no rule over it
+
+  - eval: words(sceneposes(${scene}))
+    capture: count
+  - as: logger
+    run: +radio/stoplog Ship
+  - as: ann
+    run: +radio Ship=${unlogged}
+  - eval: words(sceneposes(${scene}))
+    is: ${count}

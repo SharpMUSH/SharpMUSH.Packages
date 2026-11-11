@@ -1,0 +1,86 @@
+# The JRPG sheet: a new character sets attribute dice and shares out class levels, rolls two attributes, and has
+# experience awarded on a ledger; only its player and staff read it; +config and +help reach it through the
+# bridges; and the chargen bridge locks the sheet while the application is with staff.
+install: [chargen, sheet-fabula, sheet-fabula-help, sheet-fabula-config, sheet-fabula-chargen]
+players:
+  keeper: { room: hall, roles: [fabula-sheet-keeper] }
+  ann: { room: hall }
+  bo: { room: hall }
+steps:
+  - as: ann
+    run: +sheet/set dex=d10
+    sees: "Dexterity is d10 on ${ann.name}'s sheet. A new character's attributes are d8 d8 d8 d8, d10 d8 d8 d6, or d10 d10 d6 d6, in any order."
+  - as: ann
+    run: +sheet/set mig=d6
+    sees: Might is d6 on ${ann.name}'s sheet.
+  - as: ann
+    run: +sheet/set wlp=d4
+    sees: An attribute is d6, d8, d10 or d12.
+  - as: ann
+    run: +sheet/class rogue=3
+    sees: "Rogue is level 3 on ${ann.name}'s sheet: level 3 in all."
+  - as: ann
+    run: +sheet/class guardian=2
+    sees: "Guardian is level 2 on ${ann.name}'s sheet: level 5 in all."
+  - as: ann
+    run: +sheet/class arcanist=1
+    sees: That makes level 6, and a new character's classes share 5.
+
+  - as: ann
+    run: +check dex+ins
+    sees: "${ann.name} rolls Dexterity + Insight: d10["
+  - heard: bo
+    containing: ${ann.name} rolls Dexterity + Insight
+    count: 1
+    because: the room sees a roll
+  - as: ann
+    run: +check mig+mig=13
+    sees: ["${ann.name} rolls Might + Might: d6[", vs 13]
+  - as: ann
+    run: +sheet
+    sees: ["Level:    5", "Guardian      2", "Rogue         3"]
+  - as: ann
+    run: +sheet/ledger
+    sees: [Dexterity d10, Rogue +3, Guardian +2, "4 of 200 build entries."]
+
+  - as: keeper
+    run: +sheet/award ${ann.name}=xp 10 for the test
+    sees: ${ann.name} gains 10 experience (for the test) and has 10.
+  - as: bo
+    run: +sheet ${ann.name}
+    sees: Only ${ann.name} and staff can read their sheet.
+
+  - as: keeper
+    run: +config fabula
+    sees: "Settings: JRPG sheet"
+  - as: ann
+    run: +help sheet
+    sees: "+sheet shows your character's sheet: four attributes, Dexterity, Insight,"
+
+  # sheet-fabula-chargen: a reviewer reads the sheet of anyone with an application, and the sheet waits while the
+  # application is with staff.
+  - as: ann
+    run: +app/set concept=A courier with a past
+  - as: ann
+    run: +app/set archetype=rogue
+  - as: ann
+    run: +app/set background=Grew up on the docks.
+  - as: ann
+    run: +app/set personality=Wry, and wants to be left alone.
+  - as: ann
+    run: +app/set hooks=Owes a favour to the harbourmaster.
+  - god: "@permission/allow ${bo}=softcode.chargen.review"
+  - as: bo
+    run: +sheet ${ann.name}
+    sees: "Level:    5"
+  - as: ann
+    run: +app/submit
+    sees: Submitted.
+  - as: ann
+    run: +sheet/set dex=d8
+    sees: Your application is with staff. +app/withdraw takes it back to change your sheet.
+  - as: ann
+    run: +app/withdraw
+  - as: ann
+    run: +sheet/set dex=d8
+    sees: "Dexterity is d8"

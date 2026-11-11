@@ -1,0 +1,128 @@
+# The d20 sheet: a new character gives out the starting scores and trains skills, rolls checks, keeps coin, gear
+# and hit points; only its player and staff read it; staff give XP; +config and +help reach it through the
+# bridges; and the chargen bridge locks the sheet while the application is with staff.
+install: [chargen, sheet-d20, sheet-d20-help, sheet-d20-config, sheet-d20-chargen]
+players:
+  keeper: { room: hall, roles: [d20-sheet-keeper] }
+  ann: { room: hall }
+  bo: { room: hall }
+steps:
+  - as: ann
+    run: +sheet
+    sees: ["Next: +sheet/set <ability>=<score>. Left to give: 15, 14, 13, 12, 10, and"]
+  - as: ann
+    run: +sheet/set str=15
+    sees: "Strength is 15 on ${ann.name}'s sheet. Next: +sheet/set <ability>=<score>. Left to give: 14, 13, 12, 10, and 8."
+  - as: ann
+    run: +sheet/set dex=15
+    sees: "Dexterity takes one of the starting scores left: 14, 13, 12, 10, or 8."
+  - as: ann
+    run: +sheet/set dex=14
+  - as: ann
+    run: +sheet/set con=13
+  - as: ann
+    run: +sheet/set int=12
+  - as: ann
+    run: +sheet/set wis=10
+  - as: ann
+    run: +sheet/set cha=8
+    sees: "Next: +sheet/set <skill>=trained. 0 of 4 skills trained."
+  - as: ann
+    run: +sheet/set athletics=trained
+    sees: 1 of 4 skills trained
+  - as: ann
+    run: +sheet/set stealth=trained
+  - as: ann
+    run: +sheet/set lore=trained
+  - as: ann
+    run: +sheet/set insight=trained
+    sees: Your sheet is complete. +app/submit sends it to staff with your application.
+  - as: ann
+    run: +sheet/set medicine=trained
+    sees: A new character trains 4 skills. Set one untrained to train another.
+  - as: ann
+    run: +sheet/chargen
+    sees: [1. Abilities done, "2. Skills done: 4 of 4 skills trained: Athletics, Insight, Lore, and", Complete.]
+
+  # Athletics: Strength 15 adds +2 and training +2.
+  - as: ann
+    run: +check athletics=15
+    sees: ["${ann.name} checks Athletics: 1d20[", "] + 4 = ", vs DC 15]
+  - heard: bo
+    containing: ${ann.name} checks Athletics
+    count: 1
+    because: the room sees a check
+  - as: ann
+    run: +check/private stealth=hard
+    sees: ["You privately check Stealth: 1d20[", vs DC 20]
+  - heard: bo
+    containing: Stealth
+    count: 0
+    because: a private check is told only to the roller
+
+  - as: ann
+    run: +sheet/coin 10 found
+    sees: ${ann.name} has 10 coin.
+  - as: ann
+    run: +sheet/gear Rope=2
+    sees: ${ann.name}'s sheet lists 2 Rope.
+  - as: ann
+    run: +sheet/use Rope
+    sees: "${ann.name} uses one Rope: 1 left."
+  - as: ann
+    run: +sheet/damage 3
+    sees: "${ann.name} takes 3 damage: 6/9 hit points."
+  - as: ann
+    run: +sheet/heal all
+    sees: ${ann.name} has 9/9 hit points.
+  - as: ann
+    run: +sheet/advance athletics
+    sees: Advances come after approval.
+
+  - as: bo
+    run: +sheet ${ann.name}
+    sees: Only ${ann.name} and staff can read their sheet.
+  - as: keeper
+    run: +sheet ${ann.name}
+    sees: ["Coin: 10", "1 Rope", "Athletics      str      trained      +4"]
+  - as: keeper
+    run: +sheet/xp ${ann.name}=+10 for the test
+    sees: ${ann.name} has 10 XP.
+  - as: ann
+    run: +sheet/ledger
+    sees: [Strength 15, Athletics trained]
+
+  - as: keeper
+    run: +config d20
+    sees: "Settings: D20 sheet"
+  - as: ann
+    run: +help sheet chargen
+    sees: Making a character takes two steps.
+
+  # sheet-d20-chargen: a reviewer reads the sheet of anyone with an application, and the sheet waits while the
+  # application is with staff.
+  - as: ann
+    run: +app/set concept=A courier with a past
+  - as: ann
+    run: +app/set archetype=rogue
+  - as: ann
+    run: +app/set background=Grew up on the docks.
+  - as: ann
+    run: +app/set personality=Wry, and wants to be left alone.
+  - as: ann
+    run: +app/set hooks=Owes a favour to the harbourmaster.
+  - god: "@permission/allow ${bo}=softcode.chargen.review"
+  - as: bo
+    run: +sheet ${ann.name}
+    sees: "Training bonus: +2"
+  - as: ann
+    run: +app/submit
+    sees: Submitted.
+  - as: ann
+    run: +sheet/set str=
+    sees: Your application is with staff. +app/withdraw takes it back to change your sheet.
+  - as: ann
+    run: +app/withdraw
+  - as: ann
+    run: +sheet/set str=
+    sees: Strength is unassigned on ${ann.name}'s sheet.

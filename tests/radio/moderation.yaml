@@ -1,0 +1,66 @@
+# Moderators restrict; locks and member lists decide who may tune in.
+install: [radio, radio-help, radio-config]
+cleanup: ["@feed/undefine radio"]
+players:
+  admin: { roles: [radio-admin] }
+  mod:
+  ann:
+  cy:
+unique: [spoke]
+steps:
+  - as: admin
+    run: +radio/create Ops
+  - as: mod
+    run: +radio/restrict Ops=${ann.name}
+    sees: Only a moderator of Ops can do that.
+  - as: admin
+    run: +radio/modadd Ops=${mod.name}
+    sees: ${mod.name} is one of the moderators of Ops now.
+
+  - as: ann
+    run: +radio/join Ops
+  - as: mod
+    run: +radio/restrict Ops=${ann.name}/1h
+    sees: ${ann.name} may not speak on Ops until
+  - as: ann
+    run: +radio Ops=hello
+    sees: You may not speak on Ops.
+  - as: mod
+    run: +radio/unrestrict Ops=${ann.name}
+    sees: ${ann.name} may speak on Ops again.
+  - as: ann
+    run: +radio Ops=${spoke}
+  - heard: ann
+    containing: ${spoke}
+    lines: ['<Ops> ${ann.name} says, "${spoke}"']
+
+  # A talk lock that lets nobody else in leaves the frequency to its lists.
+  - as: mod
+    run: "+radio/lock Ops/talk=#0"
+    sees: Only an admin of Ops can do that.
+  - as: admin
+    run: "+radio/lock Ops/talk=#0"
+    sees: "The talk lock of Ops is #0 now."
+  - as: cy
+    run: +radio/join Ops
+    sees: You may not tune in to Ops.
+  - as: mod
+    run: +radio/memadd Ops=${cy.name}
+    sees: ${cy.name} is one of the members of Ops now.
+  - as: cy
+    run: +radio/join Ops
+    sees: You tune in to Ops.
+
+  - as: admin
+    run: +radio/options Ops/keep=1
+    sees: "Ops: keep is 1."
+  - as: cy
+    run: +radio Ops=one
+  - as: cy
+    run: +radio Ops=two
+  - god: think [feedinfo(radio/1,messages)]
+    is: "1"
+
+  - as: cy
+    run: +help radio moderators
+    sees: +radio/restrict

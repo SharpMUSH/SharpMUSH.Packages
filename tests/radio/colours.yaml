@@ -1,0 +1,51 @@
+# A frequency's colour is a theme colour, which tone() paints in each listener's own theme, or ansi() codes; the
+# default is the info theme colour. A word that is neither is refused, not stored.
+install: [radio, radio-help, radio-config]
+cleanup: ["@feed/undefine radio"]
+players:
+  admin: { roles: [radio-admin] }
+  ann:
+steps:
+  - eval: u(${object:radio/radio}/FUN`PAINT,success,Police)
+    render: html
+    sees: [tone-success, Police]
+  - eval: u(${object:radio/radio}/FUN`PAINT,hg,Police)
+    render: html
+    sees: Police
+    not_sees: tone-
+  - eval: u(${object:radio/radio}/FUN`PAINT,,Police)
+    render: html
+    is: Police
+  - god: think [get(${object:radio/radio}/DATA`CONFIG`COLOR)]
+    is: info
+
+  - as: admin
+    run: +radio/create Tower
+    sees: Created Tower.
+  - as: ann
+    run: +radio/join Tower
+  - as: ann
+    run: +radio/color Tower=success
+    sees: You see Tower like this now.
+  - as: ann
+    run: +radio/color Tower=hg
+    sees: You see Tower like this now.
+  - as: ann
+    run: +radio/color Tower=
+    sees: You see Tower like this now.
+
+  - as: ann
+    run: +radio/color Tower=sparkly
+    sees: "'sparkly' is not a colour."
+  - as: ann
+    run: +radio/color Tower=hz
+    sees: "'hz' is not a colour."
+  - as: ann
+    run: +radio/color Tower=+red
+    sees: You see Tower like this now.
+  - as: ann
+    run: "+radio/color Tower=#ff8800"
+    sees: You see Tower like this now.
+  - as: ann
+    run: +radio/color Tower=warning
+    sees: You see Tower like this now.

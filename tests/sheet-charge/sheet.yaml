@@ -1,0 +1,96 @@
+# The Charge sheet: a new character gives out action dots, rolls with risk and effect, and keeps momentum,
+# stress and a condition; only its player and staff read it; +config and +help reach it through the bridges;
+# and the chargen bridge locks the sheet while the application is with staff.
+install: [chargen, sheet-charge, sheet-charge-help, sheet-charge-config, sheet-charge-chargen]
+players:
+  keeper: { room: hall, roles: [charge-sheet-keeper] }
+  ann: { room: hall }
+  bo: { room: hall }
+steps:
+  - as: ann
+    run: +sheet/set muscle=2
+    sees: Muscle has 2 dots on ${ann.name}'s sheet. 2 of 7 dots given.
+  - as: ann
+    run: +sheet/set move=3
+    sees: An action has a whole number of dots from 0 to 2.
+  - as: ann
+    run: +sheet/set move=2
+  - as: ann
+    run: +sheet/set sneak=2
+  - as: ann
+    run: +sheet/set study=1
+    sees: Study has 1 dot on ${ann.name}'s sheet. 7 of 7 dots given.
+  - as: ann
+    run: +sheet/detail concept=Courier
+    sees: "${ann.name}'s concept: Courier"
+  - as: ann
+    run: +sheet/momentum +1
+    sees: ${ann.name} has 3 momentum.
+  - as: ann
+    run: +sheet/stress +2
+    sees: ${ann.name} has 2 of 4 stress.
+  - as: ann
+    run: +sheet/condition Winded
+    sees: "${ann.name}'s condition: Winded"
+  - as: ann
+    run: +sheet/condition
+    sees: ${ann.name} has no condition now.
+
+  # Muscle 2 rolls two dice and keeps the highest.
+  - as: ann
+    run: +check muscle=high standard
+    sees: "${ann.name} rolls Muscle (high risk, standard effect): 2d6kh1["
+  - heard: bo
+    containing: ${ann.name} rolls Muscle
+    count: 1
+    because: the room sees a roll
+  - as: ann
+    run: +check/push sneak
+    sees: "${ann.name} rolls Sneak (moderate risk, standard effect): 3d6kh1["
+  - as: ann
+    run: +sheet
+    sees: ["Concept:    Courier", "Stress:   [##..] 2/4"]
+  - as: ann
+    run: +sheet/ledger
+    sees: [Muscle, Study]
+  - as: ann
+    run: +sheet/milestones
+    sees: No milestones yet.
+  - as: bo
+    run: +sheet ${ann.name}
+    sees: Only ${ann.name} and staff can read their sheet.
+
+  - as: keeper
+    run: +config charge
+    sees: "Settings: Charge sheet"
+  - as: ann
+    run: +help sheet
+    sees: "+sheet shows your character's sheet: details, momentum, stress, condition,"
+
+  # sheet-charge-chargen: a reviewer reads the sheet of anyone with an application, and the sheet waits while the
+  # application is with staff.
+  - as: ann
+    run: +app/set concept=A courier with a past
+  - as: ann
+    run: +app/set archetype=rogue
+  - as: ann
+    run: +app/set background=Grew up on the docks.
+  - as: ann
+    run: +app/set personality=Wry, and wants to be left alone.
+  - as: ann
+    run: +app/set hooks=Owes a favour to the harbourmaster.
+  - god: "@permission/allow ${bo}=softcode.chargen.review"
+  - as: bo
+    run: +sheet ${ann.name}
+    sees: "Concept:    Courier"
+  - as: ann
+    run: +app/submit
+    sees: Submitted.
+  - as: ann
+    run: +sheet/set muscle=1
+    sees: Your application is with staff. +app/withdraw takes it back to change your sheet.
+  - as: ann
+    run: +app/withdraw
+  - as: ann
+    run: +sheet/set muscle=1
+    sees: "Muscle has 1 dot"
