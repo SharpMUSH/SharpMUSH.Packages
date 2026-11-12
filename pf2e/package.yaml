@@ -7664,8 +7664,7 @@ objects:
           json_map(%!/FUN`ENC`LEDGER`KEEP,u({{commands}}/FUN`LEDGER`OF,u(FUN`ENC`C,%0,who)),\,),
           [json(object,kind,"level",level,u(FUN`ENC`LEVEL,%0),n,1)][iter(u(FUN`ENC`C,%0,abil),\,[json(object,kind,"grant",pack,"familiar-abilities",id,json(string,%i0),choices,firstof(json_query(u(FUN`ENC`C,%0,abch),extract,$.%i0),json(object)),n,add(600000,inum(0)))],%b,)])]
         flags: [funsyntax]
-      # %0 a combatant's index: a grant for each condition it has, with the ones they imply. Reads enc_conds and
-      # enc_fxc.
+      # A grant for each condition in enc_conds and enc_fxc (set by FUN`ENC`LEDGER), with the ones they imply.
       FUN`ENC`LEDGER`CONDS:
         value: |-
           [
