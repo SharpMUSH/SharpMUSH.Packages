@@ -7023,8 +7023,8 @@ objects:
             gear, [u(%!/FUN`SHOW`ITEM,equipment,json_query(%1,extract,$.id),)] x[json_query(%1,extract,$.qty)][if(strlen(json_query(%1,extract,$.where)),%b%([json_query(%1,extract,$.where)]%))],
             money, Money [u(%!/FUN`SHOW`SIGNED,json_query(%1,extract,$.cp))] cp[if(strlen(json_query(%1,extract,$.reason)),: [json_query(%1,extract,$.reason)])],
             xp, XP [u(%!/FUN`SHOW`SIGNED,json_query(%1,extract,$.xp))][if(strlen(json_query(%1,extract,$.reason)),: [json_query(%1,extract,$.reason)])],
-            rune, u(%!/FUN`SHOW`ENTRY`RUNE,%0,%1): [if(cand(strlen(u({{core}}/FUN`ITEM`MYST,json_query(%1,extract,$.id))),not(permission(%#,softcode.pf2e.staff))),a rune,[u(%!/FUN`SHOW`RUNE,json_query(%1,extract,$.rune),json_query(%1,extract,$.value))] rune)],
-            myst, u(%!/FUN`SHOW`ENTRY`MYST,%0,%1)[switch(json_query(%1,extract,$.state),u,[u({{core}}/FUN`ITEM`UNUSUAL,%q<show_mi>)]%, not identified,k,Identified [json_query(%q<show_mi>,extract,$.name)],if(permission(%#,softcode.pf2e.staff),Misidentified [json_query(%q<show_mi>,extract,$.name)] as [json_query(u({{core}}/FUN`ITEM`GET,equipment,json_query(%1,extract,$.state)),extract,$.name)],Identified [json_query(u({{core}}/FUN`ITEM`GET,equipment,json_query(%1,extract,$.state)),extract,$.name)]))],
+            rune, [u(%!/FUN`SHOW`ITEM,equipment,json_query(%1,extract,$.id),)]: [if(cand(strlen(u({{core}}/FUN`ITEM`MYST,json_query(%1,extract,$.id))),not(permission(%#,softcode.pf2e.staff))),a rune,[u(%!/FUN`SHOW`RUNE,json_query(%1,extract,$.rune),json_query(%1,extract,$.value))] rune)],
+            myst, [setq(show_mi,u({{core}}/FUN`ITEM`GET,equipment,json_query(%1,extract,$.id)))][switch(json_query(%1,extract,$.state),u,[u({{core}}/FUN`ITEM`UNUSUAL,%q<show_mi>)]%, not identified,k,Identified [json_query(%q<show_mi>,extract,$.name)],if(permission(%#,softcode.pf2e.staff),Misidentified [json_query(%q<show_mi>,extract,$.name)] as [json_query(u({{core}}/FUN`ITEM`GET,equipment,json_query(%1,extract,$.state)),extract,$.name)],Identified [json_query(u({{core}}/FUN`ITEM`GET,equipment,json_query(%1,extract,$.state)),extract,$.name)]))],
             learned, Learned [u(%!/FUN`SHOW`ITEM,spells,json_query(%1,extract,$.id),)],
             lock, Sheet finished,
             json_query(%1,extract,$.kind))]|[name(json_query(%1,extract,$.by))]
@@ -7033,16 +7033,6 @@ objects:
       FUN`SHOW`ENTRY`GRANT:
         value: |-
           Grant [u(%!/FUN`SHOW`ITEM,json_query(%1,extract,$.pack),json_query(%1,extract,$.id),json_query(%1,extract,$.badge))][switch(json_query(%1,extract,$.pack),actions,%b%(action%),feats,%b%(feat%),spells,%b%(spell%),equipment,%b%(item%),)][if(t(json_query(%1,extract,$.level)),%b%(level [json_query(%1,extract,$.level)]%))]
-        flags: [funsyntax]
-      # %1 a rune entry: the gear and the rune, hidden from players while the gear is not identified.
-      FUN`SHOW`ENTRY`RUNE:
-        value: |-
-          [u(%!/FUN`SHOW`ITEM,equipment,json_query(%1,extract,$.id),)]
-        flags: [funsyntax]
-      # %1 a myst entry: whether the gear was identified, and as what.
-      FUN`SHOW`ENTRY`MYST:
-        value: |-
-          [setq(show_mi,u({{core}}/FUN`ITEM`GET,equipment,json_query(%1,extract,$.id)))]
         flags: [funsyntax]
 
   # The table: encounters, exploration, skill challenges and Recall Knowledge. WIZARD to keep each
