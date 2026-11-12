@@ -1,7 +1,7 @@
 format: "1.20"
 package: duties-fate
 title: "Duties: Fate sheet rolls"
-version: 1.0.2
+version: 1.0.3
 authors: [SharpMUSH]
 description: "Lets Duties roll on the Fate sheet: a roll provider called fate, so a duty's checks roll four Fate dice plus a skill or approach against an opposition on the ladder, with teamwork, paid invokes and fate points as rewards. Pick it with +config duties/system=fate."
 license: MIT
@@ -75,10 +75,12 @@ objects:
         value: |-
           setq(provider_spent,if(%q<provider_invokes>,u({{sheet-fate/sheet}}/API`AWARD,%0,-%q<provider_invokes>)))[setq(provider_rolled,uargs({{sheet-fate/sheet}}/API`CHECK,roller,%0,trait,%1,modifier,add(%q<provider_teamwork>,mul(2,%q<provider_invokes>)),target,%q<provider_opposition>))][if(strmatch(%q<provider_rolled>,#-*),%q<provider_rolled>,u(%!/FUN`CHECK`RESULT,%q<provider_rolled>))]
         flags: [funsyntax]
+      DATA`TEMPLATE`CHECK`RESULT: |-
+        {"tier":"","text":"","roll":null,"margin":null,"system":{"shifts":null,"opposition":null,"ladder":"","teamwork":null,"invokes":null}}
       # %0 the sheet's check JSON.
       FUN`CHECK`RESULT:
         value: |-
-          setq(provider_shifts,json_query(%0,extract,$.shifts))[json(object,tier,json(string,json_query(%0,extract,$.tier)),text,json(string,[json_query(%0,extract,$.label)]: [json_query(%0,extract,$.text)] against [u(%!/FUN`LADDER`SHOW,%q<provider_opposition>)][u(%!/FUN`CHECK`EXTRAS)]),roll,json_query(%0,extract,$.roll),margin,%q<provider_shifts>,system,json(object,shifts,%q<provider_shifts>,opposition,%q<provider_opposition>,ladder,json(string,u({{sheet-fate/sheet}}/API`LADDER,json_query(%0,extract,$.total))),teamwork,%q<provider_teamwork>,invokes,%q<provider_invokes>))]
+          setq(provider_shifts,json_query(%0,extract,$.shifts))[json_fill(v(DATA`TEMPLATE`CHECK`RESULT),/tier,json_query(%0,extract,$.tier),/text,[json_query(%0,extract,$.label)]: [json_query(%0,extract,$.text)] against [u(%!/FUN`LADDER`SHOW,%q<provider_opposition>)][u(%!/FUN`CHECK`EXTRAS)],/roll,json_query(%0,extract,$.roll),/margin,%q<provider_shifts>,/system/shifts,%q<provider_shifts>,/system/opposition,%q<provider_opposition>,/system/ladder,u({{sheet-fate/sheet}}/API`LADDER,json_query(%0,extract,$.total)),/system/teamwork,%q<provider_teamwork>,/system/invokes,%q<provider_invokes>)]
         flags: [funsyntax]
       FUN`CHECK`EXTRAS:
         value: |-

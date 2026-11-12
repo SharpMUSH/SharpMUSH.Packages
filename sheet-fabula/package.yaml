@@ -1,7 +1,7 @@
 format: "1.20"
 package: sheet-fabula
 title: "JRPG sheet"
-version: 1.2.3
+version: 1.2.4
 authors: [SharpMUSH]
 description: "A JRPG character sheet compatible with Fabula Ultima: four attributes as die sizes, classes and their skill levels, HP, MP, IP, Fabula Points, status effects and bonds. +check rolls two attribute dice against a Difficulty Level, with rerolls and bond invokes paid in Fabula Points. Requires the Fabula Ultima Core Rulebook; see NOTICE.md."
 license: MIT
@@ -1076,12 +1076,14 @@ objects:
         value: |-
           think u(%!/FUN`CHECK`READ,%q<cmd_left_side>); @assert cand(gte(words(%q<check_words>),1),lte(words(%q<check_words>),2))=@include %!/INC`CHECK`USAGE; @assert strlen(%q<check_pair>)=@pemit %#=notice(SHEET,'[first(%q<check_bad>)]' is not an attribute. Give [itemize(lcstr(v(DATA`ATTRS)),,or)].,warn); think setq(check_dl,u(%!/API`TARGET,%q<cmd_right_side>)); @assert cor(not(%q<cmd_has_equals>),strlen(%q<check_dl>))=@pemit %#=notice(SHEET,'%q<cmd_right_side>' is not a difficulty. Give trivial%, easy%, standard or normal%, hard%, extreme or very hard%, or a number from 1 to 40.,warn)
         flags: [cmdsyntax]
+      DATA`TEMPLATE`INC`CHECK`KEEP: |-
+        {"check":null,"push":null,"at":null,"private":false,"support":""}
       # %<json> a check, %<push> what a bond invoke added, %<at> when it was first rolled: keeps it as FABULA`LAST, with
       # check_private and check_support (whose group check it supports), for +check/invoke, +check/bond and
       # +check/group.
       INC`CHECK`KEEP:
         value: |-
-          @include/args %!/INC`DO`SET=who,%q<viewer_objid>,leaf,LAST,value,json(object,check,%<json>,push,%<push>,at,%<at>,private,json(boolean,%q<check_private>),support,json(string,%q<check_support>))
+          @include/args %!/INC`DO`SET=who,%q<viewer_objid>,leaf,LAST,value,json_fill(v(DATA`TEMPLATE`INC`CHECK`KEEP),/check,%<json>,/push,%<push>,/at,%<at>,/private,%q<check_private>,/support,%q<check_support>)
         flags: [cmdsyntax]
       # %<verb> (roll, invoke) and %<line>: to the room, or to the roller alone after /private. check_poss is "your"
       # in private, else the roller's possessive.
@@ -1217,10 +1219,12 @@ objects:
         value: |-
           first(iter(u(%!/FUN`LEDGER`KEYS,%0),if(cand(not(comp(u(%!/FUN`LEDGER`GET,%0,%i0,phase),chargen)),not(comp(u(%!/FUN`LEDGER`GET,%0,%i0,kind),%1)),not(comp(u(%!/FUN`LEDGER`GET,%0,%i0,key),%2))),%i0)))
         flags: [funsyntax]
+      DATA`TEMPLATE`LEDGER`JSON: |-
+        {"kind":"","key":"","n":null,"phase":"","source":"","by":"","at":null,"class":"","name":""}
       # %0 kind, %1 key, %2 n, %3 phase, %4 source, %5 by, %6 class, %7 name: one entry.
       FUN`LEDGER`JSON:
         value: |-
-          json(object,kind,json(string,%0),key,json(string,%1),n,%2,phase,json(string,%3),source,json(string,%4),by,json(string,%5),at,secs(),class,json(string,%6),name,json(string,%7))
+          json_fill(v(DATA`TEMPLATE`LEDGER`JSON),/kind,%0,/key,%1,/n,%2,/phase,%3,/source,%4,/by,%5,/at,secs(),/class,%6,/name,%7)
         flags: [funsyntax]
       # %0 a character, %1 an entry's number (nothing for a new one), %2 its JSON, %3 LEDGER (the default),
       # EXPERIENCE or MONEY: writes it and returns the number. All three share the numbers in FABULA`LEDGER`NEXT.
@@ -2340,6 +2344,8 @@ objects:
         value: |-
           setq(rolled,roll(1d%0,,record))[json_query(%q<rolled>,extract,$.total)] [json_query(%q<rolled>,extract,$.id)]
         flags: [funsyntax]
+      DATA`TEMPLATE`CHECK`JSON: |-
+        {"tier":"","total":null,"hr":null,"dice":[null,null],"sizes":[null,null],"pair":"","modifier":null,"target":"","crit":false,"fumble":false,"label":"","text":"","roll":""}
       # Builds a check's JSON from check_pair, check_sizes, check_dice, check_mod, check_dl, check_roll and
       # check_extra (a bond's strength added).
       FUN`CHECK`JSON:
@@ -2348,7 +2354,7 @@ objects:
           json_d2,last(%q<check_dice>),
           json_total,add(%q<json_d1>,%q<json_d2>,%q<check_mod>,firstof(%q<check_extra>,0)),
           json_crit,cand(eq(%q<json_d1>,%q<json_d2>),gte(%q<json_d1>,6)),
-          json_fumble,cand(eq(%q<json_d1>,1),eq(%q<json_d2>,1)))[json(object,tier,json(string,u(%!/API`TIER,%q<json_total>,%q<json_d1>,%q<json_d2>,%q<check_dl>)),total,%q<json_total>,hr,max(%q<json_d1>,%q<json_d2>),dice,json(array,%q<json_d1>,%q<json_d2>),sizes,json(array,first(%q<check_sizes>),last(%q<check_sizes>)),pair,json(string,lcstr(%q<check_pair>)),modifier,%q<check_mod>,target,json(string,%q<check_dl>),crit,json(boolean,%q<json_crit>),fumble,json(boolean,%q<json_fumble>),label,json(string,u(%!/API`LABEL,%q<check_pair>)),text,json(string,d[first(%q<check_sizes>)]%[%q<json_d1>%] + d[last(%q<check_sizes>)]%[%q<json_d2>%][if(%q<check_mod>,%b[if(gt(%q<check_mod>,0),+,-)] [abs(%q<check_mod>)])] = [sub(%q<json_total>,firstof(%q<check_extra>,0))]),roll,json(string,%q<check_roll>))]
+          json_fumble,cand(eq(%q<json_d1>,1),eq(%q<json_d2>,1)))[json_fill(v(DATA`TEMPLATE`CHECK`JSON),/tier,u(%!/API`TIER,%q<json_total>,%q<json_d1>,%q<json_d2>,%q<check_dl>),/total,%q<json_total>,/hr,max(%q<json_d1>,%q<json_d2>),/dice/0,%q<json_d1>,/dice/1,%q<json_d2>,/sizes/0,first(%q<check_sizes>),/sizes/1,last(%q<check_sizes>),/pair,lcstr(%q<check_pair>),/modifier,%q<check_mod>,/target,%q<check_dl>,/crit,%q<json_crit>,/fumble,%q<json_fumble>,/label,u(%!/API`LABEL,%q<check_pair>),/text,d[first(%q<check_sizes>)]%[%q<json_d1>%] + d[last(%q<check_sizes>)]%[%q<json_d2>%][if(%q<check_mod>,%b[if(gt(%q<check_mod>,0),+,-)] [abs(%q<check_mod>)])] = [sub(%q<json_total>,firstof(%q<check_extra>,0))],/roll,%q<check_roll>)]
         flags: [funsyntax]
 
       # ---- the sheet API ------------------------------------------------------------
@@ -2358,10 +2364,12 @@ objects:
         value: |-
           The JRPG sheet's functions for other packages. See the package README.
         flags: [VISUAL]
+      DATA`TEMPLATE`API`TRAITS: |-
+        {"key":"","label":"","group":"check","always":true}
       # JSON list of the checks: [{"key","label","group","always"}], one for each pair of attributes, group check.
       API`TRAITS:
         value: |-
-          json_array(iter(v(DATA`PAIRS),json(object,key,json(string,lcstr(%i0)),label,json(string,u(%!/API`LABEL,%i0)),group,json(string,check),always,json(boolean,1)),%b,|),|)
+          json_array(iter(v(DATA`PAIRS),json_fill(v(DATA`TEMPLATE`API`TRAITS),/key,lcstr(%i0),/label,u(%!/API`LABEL,%i0)),%b,|),|)
         flags: [VISUAL]
       API`ALWAYS:
         value: |-

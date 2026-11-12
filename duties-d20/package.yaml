@@ -1,7 +1,7 @@
 format: "1.20"
 package: duties-d20
 title: "Duties: d20 sheet rolls"
-version: 1.0.3
+version: 1.0.4
 authors: [SharpMUSH]
 description: "Lets Duties roll on the d20 sheet: a roll provider called d20, so a duty's checks roll 1d20 plus a character's ability or skill against a DC. Pick it with +config duties/system=d20."
 license: MIT
@@ -84,10 +84,12 @@ objects:
         value: |-
           @assert hastype(%<roller>,player); think setqm(grant_kind,json_query(%<reward>,extract,$.kind),grant_amount,firstof(json_query(%<reward>,extract,$.amount),1),grant_item,trim(json_query(%<reward>,extract,$.item))); @assert cand(isint(%q<grant_amount>),gt(%q<grant_amount>,0)); @switch %q<grant_kind>=coin,{@pemit %<roller>=notice(DUTIES,You gain %q<grant_amount> coin. You have [u({{sheet-d20/sheet}}/API`COIN,%<roller>,%q<grant_amount>)].,ok)},item,{@assert strlen(%q<grant_item>); @pemit %<roller>=notice(DUTIES,You gain %q<grant_amount> %q<grant_item>. You have [u({{sheet-d20/sheet}}/API`GEAR,%<roller>,%q<grant_item>,%q<grant_amount>)].,ok)}
         flags: [cmdsyntax]
+      DATA`TEMPLATE`CHECK`RESULT: |-
+        {"tier":"","text":"","roll":null,"margin":null,"system":{"dc":null,"total":null,"natural":null,"helpers":null}}
       # %0 the sheet's check JSON, %1 how many helped.
       FUN`CHECK`RESULT:
         value: |-
-          json(object,tier,json(string,json_query(%0,extract,$.tier)),text,json(string,[json_query(%0,extract,$.label)]: [json_query(%0,extract,$.text)] vs DC [json_query(%0,extract,$.target)][if(%1,%b%(advantage from help%))]),roll,json_query(%0,extract,$.roll),margin,json_query(%0,extract,$.margin),system,json(object,dc,json_query(%0,extract,$.target),total,json_query(%0,extract,$.total),natural,json_query(%0,extract,$.natural),helpers,%1))
+          json_fill(v(DATA`TEMPLATE`CHECK`RESULT),/tier,json_query(%0,extract,$.tier),/text,[json_query(%0,extract,$.label)]: [json_query(%0,extract,$.text)] vs DC [json_query(%0,extract,$.target)][if(%1,%b%(advantage from help%))],/roll,json_query(%0,extract,$.roll),/margin,json_query(%0,extract,$.margin),/system/dc,json_query(%0,extract,$.target),/system/total,json_query(%0,extract,$.total),/system/natural,json_query(%0,extract,$.natural),/system/helpers,%1)
         flags: [funsyntax]
       # %0 %<mods>, a JSON object: how many helpers it names.
       FUN`MODS`HELPERS:

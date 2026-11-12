@@ -4,7 +4,7 @@ packages:
   - path: roll-tables/
     name: Roll Tables
     package: roll-tables
-    version: 1.1.0
+    version: 1.1.1
     description: Random tables as softcode data, rolled in the room with +table/roll and publishable to the wiki
   - path: roll-tables-help/
     package: roll-tables-help
@@ -18,7 +18,7 @@ packages:
   - path: sheet-d20/
     name: D20 Sheet
     package: sheet-d20
-    version: 2.2.4
+    version: 2.2.5
     description: d20 character sheet built from a ledger (abilities, skills, training, level, hit points, coin, gear), guided character creation, +check against a DC or a foe, and encounters with their own sheet copies, foes from a bestiary, initiative and conditions
   - path: sheet-d20-help/
     package: sheet-d20-help
@@ -35,7 +35,7 @@ packages:
   - path: sheet-fate/
     name: Fate Sheet
     package: sheet-fate
-    version: 1.6.3
+    version: 1.6.4
     description: Fate character sheet (skills or approaches, aspects, stunts, stress, consequences, fate points) with +check on four Fate dice, a grant ledger, guided +chargen, encounters with their own sheet copies, NPC opposition from +npc and the commands to run a conflict, and audited milestones and breakthroughs that players spend with +sheet/advance; Fate SRD text under CC BY 3.0
   - path: sheet-fate-help/
     package: sheet-fate-help
@@ -107,7 +107,7 @@ packages:
   - path: duties/
     name: Duties
     package: duties
-    version: 1.3.3
+    version: 1.3.4
     description: +duty — short adventures a party plays from challenge to challenge, written by players, approved by duty reviewers and put on a seasonal roster; rolls come from a sheet system bridge
   - path: duties-help/
     name: Duties help
@@ -131,20 +131,20 @@ packages:
     description: +duty/start/scene and +duty/scene — a party plays its duty in a scene, and setting out, each step, roll and outcome go into it as narration (requires duties and scene)
   - path: duties-d20/
     package: duties-d20
-    version: 1.0.3
+    version: 1.0.4
     description: Duties roll provider "d20" on the D20 sheet
   - path: duties-pf2e/
     package: duties-pf2e
-    version: 1.0.2
+    version: 1.0.3
     description: Duties roll provider "pf2e" on the Pathfinder 2e sheet
   - path: duties-fate/
     package: duties-fate
-    version: 1.0.2
+    version: 1.0.3
     description: Duties roll provider "fate" on the Fate sheet
   - path: sheet-pbta/
     name: PbtA Sheet
     package: sheet-pbta
-    version: 2.3.4
+    version: 2.3.5
     description: Powered by the Apocalypse character sheet built from a ledger (playbooks, stats, moves, guided character creation, advances, forward, ongoing, hold, harm, XP), +check on 2d6 and encounters on sheet copies with foes and GM moves; Dungeon World moves under CC BY 3.0
   - path: sheet-pbta-help/
     package: sheet-pbta-help
@@ -160,7 +160,7 @@ packages:
     description: Joins the PbtA sheet to +app character applications
   - path: duties-pbta/
     package: duties-pbta
-    version: 1.0.4
+    version: 1.0.5
     description: Duties roll provider "pbta" on the PbtA sheet
   - path: pbta-wiki/
     name: PbtA rules
@@ -190,7 +190,7 @@ packages:
   - path: pf2e/
     name: Pathfinder 2e rules
     package: pf2e
-    version: 0.10.19
+    version: 0.10.20
     description: Pathfinder Second Edition rules read the way Foundry VTT's pf2e system reads them, with ledger character sheets, a character builder, spellcasting, a deity table the game fills, alchemy, encounters with a bestiary, hazards, effects and GM tools, exploration, skill challenges, downtime, loot and shops with unidentified items, audited awards and levels (ORC License)
   - path: pf2e-portal/
     package: pf2e-portal
@@ -213,7 +213,7 @@ packages:
   - path: sheet-fitd/
     name: FitD Sheet
     package: sheet-fitd
-    version: 2.2.4
+    version: 2.2.5
     description: Forged in the Dark character sheet (ledger-built actions, XP advances, stress, trauma, harm, coin, audited log, encounters with threats and positions, clocks) with +check on a d6 pool; Blades in the Dark SRD under CC BY 3.0
   - path: sheet-fitd-help/
     package: sheet-fitd-help
@@ -230,7 +230,7 @@ packages:
   - path: sheet-brp/
     name: BRP Sheet
     package: sheet-brp
-    version: 2.3.3
+    version: 2.3.4
     description: Percentile character sheet on Basic Roleplaying (ledger-built characteristics and skills, point-buy chargen, experience checks, hit points, power points, coin, audited log, encounters with creatures, hit locations and strike ranks) with +check on 1d100; ORC Licensed Material
   - path: sheet-brp-help/
     package: sheet-brp-help
@@ -247,7 +247,7 @@ packages:
   - path: sheet-ironsworn/
     name: Ironsworn Sheet
     package: sheet-ironsworn
-    version: 2.2.4
+    version: 2.2.5
     description: Ironsworn character sheet (stats and assets built from a ledger, meters, experience spent on assets with an audited log, companion health, iron vows, encounters with their own copies, foes on progress tracks) with +check action rolls and +vow; Ironsworn SRD under CC BY 4.0
   - path: sheet-ironsworn-help/
     package: sheet-ironsworn-help
@@ -263,20 +263,20 @@ packages:
     description: Joins the Ironsworn sheet to +app character applications
   - path: duties-fitd/
     package: duties-fitd
-    version: 1.0.3
+    version: 1.0.4
     description: Duties roll provider "fitd" on the FitD sheet
   - path: duties-brp/
     package: duties-brp
-    version: 1.0.4
+    version: 1.0.5
     description: Duties roll provider "brp" on the BRP sheet
   - path: duties-ironsworn/
     package: duties-ironsworn
-    version: 1.1.2
+    version: 1.1.3
     description: Duties roll provider "ironsworn" on the Ironsworn sheet
   - path: sheet-fabula/
     name: JRPG Sheet
     package: sheet-fabula
-    version: 1.2.3
+    version: 1.2.4
     description: JRPG character sheet compatible with Fabula Ultima (four attribute dice, the Core Rulebook's and the Atlases' classes, HP/MP/IP, Fabula Points, status effects, bonds) with +check against a Difficulty Level, and conflicts in turns against a bestiary of foes on a battle screen with pictures; requires the Fabula Ultima Core Rulebook
   - path: sheet-fabula-help/
     package: sheet-fabula-help
@@ -292,7 +292,7 @@ packages:
     description: Joins the JRPG sheet to +app character applications
   - path: duties-fabula/
     package: duties-fabula
-    version: 1.0.2
+    version: 1.0.3
     description: Duties roll provider "fabula" on the JRPG sheet
   - path: fabula-wiki/
     name: JRPG rules
@@ -302,7 +302,7 @@ packages:
   - path: sheet-salvage-union/
     name: Salvage Union Sheet
     package: sheet-salvage-union
-    version: 1.3.3
+    version: 1.3.4
     description: Salvage Union pilots, mechs and the Union Crawler (class ability trees, chassis, systems, modules, scrap, heat) with d20 +check on the Core Mechanic table; Salvage Union Open Game Licence 1.0b, unofficial
   - path: sheet-salvage-union-help/
     package: sheet-salvage-union-help
@@ -318,7 +318,7 @@ packages:
     description: Joins the Salvage Union sheet to +app character applications
   - path: duties-salvage-union/
     package: duties-salvage-union
-    version: 1.0.4
+    version: 1.0.5
     description: Duties roll provider "salvage" on the Salvage Union sheet
   - path: salvage-union-wiki/
     name: Salvage Union rules
@@ -328,7 +328,7 @@ packages:
   - path: sheet-charge/
     name: Charge Sheet
     package: sheet-charge
-    version: 1.2.4
+    version: 1.2.5
     description: Charge character sheet (details, action dots, momentum, stress clock, milestones and talents) with +check action rolls, assists, determination and fortune rolls, encounters with threats and consequences, and clocks; Charge SRD under CC BY 4.0
   - path: sheet-charge-help/
     package: sheet-charge-help
@@ -349,12 +349,12 @@ packages:
     description: Charge rules as wiki pages (action rolls, momentum, consequences, stress, clocks, progression; CC BY 4.0)
   - path: duties-charge/
     package: duties-charge
-    version: 1.0.2
+    version: 1.0.3
     description: Duties roll provider "charge" on the Charge sheet
   - path: radio/
     name: Radio
     package: radio
-    version: 1.8.1
+    version: 1.8.2
     description: +radio — frequencies to tune in to, speak on and recall, with moderators, admins and locks; the worked example of a system built on @feed
   - path: radio-help/
     name: Radio help

@@ -1,7 +1,7 @@
 format: "1.20"
 package: sheet-d20
 title: "D20 sheet"
-version: 2.2.4
+version: 2.2.5
 authors: [SharpMUSH]
 description: "A d20 character sheet built from a ledger: six ability scores, a skill list the game edits, training, level, hit points, coin and gear, with separate audited ledgers for XP, coin and gear. Guided character creation, XP advances, +check rolls 1d20 plus a trait against a DC, and encounters that keep their own copy of each sheet, with foes from a bestiary the game edits, initiative, turns and conditions."
 license: MIT
@@ -1083,12 +1083,14 @@ objects:
         value: |-
           @if not(hasattr(%<who>,D20))={&D20 %<who>=This character's d20 sheet. +sheet shows it.; @set %<who>/D20=wizard; @set %<who>/D20=no_command}
         flags: [cmdsyntax]
+      DATA`TEMPLATE`INC`DO`ENTRY: |-
+        {"n":null,"kind":"","key":"","value":"","phase":"","by":"","at":null}
       # A ledger entry: %<who>, %<kind>, %<key>, %<value>, %<phase> (chargen, play or staff). A chargen entry
       # rewrites the chargen entry in force of the same kind and key; every other entry is numbered after the
       # last. entry_n is its number. Each has the wizard attribute flag, and an entry without it is never read.
       INC`DO`ENTRY:
         value: |-
-          @include/args %!/INC`DO`ROOT=who,%<who>; think setq(entry_n,if(strmatch(%<phase>,chargen),u(%!/FUN`LEDGER`CHARGENOF,%<who>,%<kind>,%<key>))); think setq(entry_n,firstof(%q<entry_n>,inc(lmax(0 [iter(lattr(%<who>/D20`LEDGER`*),last(%i0,`))])))); &D20`LEDGER`%q<entry_n> %<who>=[json(object,n,%q<entry_n>,kind,json(string,%<kind>),key,json(string,%<key>),value,json(string,%<value>),phase,json(string,%<phase>),by,json(string,objid(%#)),at,secs())]; @set %<who>/D20`LEDGER`%q<entry_n>=wizard; &D20`MERGED %<who>
+          @include/args %!/INC`DO`ROOT=who,%<who>; think setq(entry_n,if(strmatch(%<phase>,chargen),u(%!/FUN`LEDGER`CHARGENOF,%<who>,%<kind>,%<key>))); think setq(entry_n,firstof(%q<entry_n>,inc(lmax(0 [iter(lattr(%<who>/D20`LEDGER`*),last(%i0,`))])))); &D20`LEDGER`%q<entry_n> %<who>=[json_fill(v(DATA`TEMPLATE`INC`DO`ENTRY),/n,%q<entry_n>,/kind,%<kind>,/key,%<key>,/value,%<value>,/phase,%<phase>,/by,objid(%#),/at,secs())]; @set %<who>/D20`LEDGER`%q<entry_n>=wizard; &D20`MERGED %<who>
         flags: [cmdsyntax]
       # A revoke entry taking back entry %<n> on %<who>.
       INC`DO`REVOKE:
@@ -1189,6 +1191,8 @@ objects:
           if(match(%0,%1),ldelete(%0,match(%0,%1)),%0)
         flags: [funsyntax]
 
+      DATA`TEMPLATE`VIEW`LIVE: |-
+        {"level":null,"scores":"","training":"","hp":null,"damage":null,"coin":null,"gear":"","encounter":""}
       # ---- views --------------------------------------------------------------------
       # A view is what a roll or a screen reads: a JSON object with level, scores (STR=15 DEX=14 ...), training
       # (the trained skills, ATHLETICS=1 ...), hp (the most), damage, coin, gear (n~KEY~Label items between |) and
@@ -1196,7 +1200,7 @@ objects:
       # sheet; an encounter's copy is one.
       FUN`VIEW`LIVE:
         value: |-
-          setq(view_rows,u(%!/FUN`LEDGER`MERGED,%0))[setq(view_level,u(%!/FUN`BUILD`LEVEL,%q<view_rows>))][json(object,level,%q<view_level>,scores,json(string,iter(u(%!/FUN`TRAIT`OFKIND,ability),%i0=[u(%!/FUN`BUILD`SCORE,%q<view_rows>,%i0)])),training,json(string,squish(iter(u(%!/FUN`TRAIT`OFKIND,skill),if(u(%!/FUN`BUILD`TRAIN,%q<view_rows>,%i0),%i0=[u(%!/FUN`BUILD`TRAIN,%q<view_rows>,%i0)])))),hp,u(%!/FUN`HP`MAX,%q<view_rows>,%q<view_level>),damage,default(%0/D20`DAMAGE,0),coin,default(%0/D20`COIN,0),gear,json(string,u(%!/FUN`GEAR`LIVE,%0)),encounter,json(string,))]
+          setq(view_rows,u(%!/FUN`LEDGER`MERGED,%0))[setq(view_level,u(%!/FUN`BUILD`LEVEL,%q<view_rows>))][json_fill(v(DATA`TEMPLATE`VIEW`LIVE),/level,%q<view_level>,/scores,iter(u(%!/FUN`TRAIT`OFKIND,ability),%i0=[u(%!/FUN`BUILD`SCORE,%q<view_rows>,%i0)]),/training,squish(iter(u(%!/FUN`TRAIT`OFKIND,skill),if(u(%!/FUN`BUILD`TRAIN,%q<view_rows>,%i0),%i0=[u(%!/FUN`BUILD`TRAIN,%q<view_rows>,%i0)]))),/hp,u(%!/FUN`HP`MAX,%q<view_rows>,%q<view_level>),/damage,default(%0/D20`DAMAGE,0),/coin,default(%0/D20`COIN,0),/gear,u(%!/FUN`GEAR`LIVE,%0))]
         flags: [funsyntax]
       # %0 rows, %1 the level: the most hit points, HP-LEVEL plus the hit point ability's modifier for each level,
       # at least 1 a level.
@@ -1406,10 +1410,12 @@ objects:
         value: |-
           setq(fk_key,ucstr(edit(trim(%0),%b,-)))[cond(cand(regmatch(%q<fk_key>,^%[A-Z0-9-%]+$),hasattr({{store}},FOE`%q<fk_key>)),%q<fk_key>,first(iter(lattr({{store}}/FOE`*),if(not(comp(lcstr(get({{store}}/%i0)),lcstr(trim(%0)))),last(%i0,`)))))]
         flags: [funsyntax]
+      DATA`TEMPLATE`FOE`MAKE: |-
+        {"key":"","label":"","ac":null,"hp":null,"hpmax":null,"init":null,"attack":null,"damage":"","level":null,"notes":""}
       # %0 an encounter, %1 a bestiary key: a new foe copied from it. Returns its number.
       FUN`FOE`MAKE:
         value: |-
-          setq(fm_k,inc(lmax(0 [u(%!/FUN`FOE`NUMS,%0)])))[setq(fm_hp,default({{store}}/FOE`%1`HP,1))][attrib_set({{encounters}}/ENC`%0`FOE`%q<fm_k>,json(object,key,json(string,%1),label,json(string,[get({{store}}/FOE`%1)] %q<fm_k>),ac,default({{store}}/FOE`%1`AC,10),hp,%q<fm_hp>,hpmax,%q<fm_hp>,init,default({{store}}/FOE`%1`INIT,0),attack,default({{store}}/FOE`%1`ATTACK,0),damage,json(string,default({{store}}/FOE`%1`DAMAGE,1d4)),level,default({{store}}/FOE`%1`LEVEL,0),notes,json(string,get({{store}}/FOE`%1`NOTES))))]%q<fm_k>
+          setq(fm_k,inc(lmax(0 [u(%!/FUN`FOE`NUMS,%0)])))[setq(fm_hp,default({{store}}/FOE`%1`HP,1))][attrib_set({{encounters}}/ENC`%0`FOE`%q<fm_k>,json_fill(v(DATA`TEMPLATE`FOE`MAKE),/key,%1,/label,[get({{store}}/FOE`%1)] %q<fm_k>,/ac,default({{store}}/FOE`%1`AC,10),/hp,%q<fm_hp>,/hpmax,%q<fm_hp>,/init,default({{store}}/FOE`%1`INIT,0),/attack,default({{store}}/FOE`%1`ATTACK,0),/damage,default({{store}}/FOE`%1`DAMAGE,1d4),/level,default({{store}}/FOE`%1`LEVEL,0),/notes,get({{store}}/FOE`%1`NOTES)))]%q<fm_k>
         flags: [funsyntax]
       # %0 an encounter, %1 a foe, %2 the target's AC or nothing: rolls the attack and, on a hit or with no AC,
       # the damage. Both rolls are kept (roll() record). Returns {"hit","damage","text","roll"}.
@@ -1663,11 +1669,13 @@ objects:
         value: |-
           The d20 sheet's functions for other packages. See the package README.
         flags: [VISUAL]
+      DATA`TEMPLATE`API`TRAITS: |-
+        {"key":"","label":"","group":"","always":false}
       # JSON list of every trait: [{"key","label","group","always"}], group ability or skill. Keys are lower
       # case. always is true for a trait every character can roll: the abilities.
       API`TRAITS:
         value: |-
-          json_array(iter(u(%!/FUN`TRAIT`ALL),json(object,key,json(string,lcstr(%i0)),label,json(string,u(%!/FUN`TRAIT`LABEL,%i0)),group,json(string,u(%!/FUN`TRAIT`KIND,%i0)),always,json(boolean,strmatch(u(%!/FUN`TRAIT`KIND,%i0),ability))),%b,|),|)
+          json_array(iter(u(%!/FUN`TRAIT`ALL),json_fill(v(DATA`TEMPLATE`API`TRAITS),/key,lcstr(%i0),/label,u(%!/FUN`TRAIT`LABEL,%i0),/group,u(%!/FUN`TRAIT`KIND,%i0),/always,strmatch(u(%!/FUN`TRAIT`KIND,%i0),ability)),%b,|),|)
         flags: [VISUAL]
       # The trait keys every character can roll, lower case: the abilities.
       API`ALWAYS:
@@ -1745,11 +1753,13 @@ objects:
         value: |-
           sort(iter(lattr(%0/D20`%1LEDGER`*),if(hasflag(%0/%i0,wizard),last(%i0,`))),n)
         flags: [funsyntax]
+      DATA`TEMPLATE`BOOK`ADD: |-
+        {"n":null,"delta":null,"total":null,"item":"","label":"","reason":"","by":"","at":null}
       # %0 a character, %1 a book, %2 the change, %3 why, %4 the item, %5 its label: a new entry, then the cached
       # total. Nothing for no change.
       FUN`BOOK`ADD:
         value: |-
-          if(%2,[setqm(book_cache,u(%!/FUN`BOOK`CACHE,%1,%4),book_n,inc(lmax(0 [iter(lattr(%0/D20`%1LEDGER`*),last(%i0,`))])))][setq(book_had,get(%0/%q<book_cache>))][setqm(book_total,add(firstof(before(%q<book_had>,|),0),%2),book_label,firstof(%5,after(%q<book_had>,|)))][u(%!/FUN`API`ROOT,%0)][attrib_set(%0/D20`%1LEDGER`%q<book_n>,json(object,n,%q<book_n>,delta,%2,total,%q<book_total>,item,json(string,%4),label,json(string,%q<book_label>),reason,json(string,left(%3,200)),by,json(string,objid(%#)),at,secs()))][set(%0/D20`%1LEDGER`%q<book_n>,wizard)][u(%!/FUN`BOOK`SET,%0,%q<book_cache>,%q<book_total>,if(u(%!/FUN`BOOK`LABELLED,%1),%q<book_label>))][u(%!/FUN`BOOK`TRIM,%0,%1)])
+          if(%2,[setqm(book_cache,u(%!/FUN`BOOK`CACHE,%1,%4),book_n,inc(lmax(0 [iter(lattr(%0/D20`%1LEDGER`*),last(%i0,`))])))][setq(book_had,get(%0/%q<book_cache>))][setqm(book_total,add(firstof(before(%q<book_had>,|),0),%2),book_label,firstof(%5,after(%q<book_had>,|)))][u(%!/FUN`API`ROOT,%0)][attrib_set(%0/D20`%1LEDGER`%q<book_n>,json_fill(v(DATA`TEMPLATE`BOOK`ADD),/n,%q<book_n>,/delta,%2,/total,%q<book_total>,/item,%4,/label,%q<book_label>,/reason,left(%3,200),/by,objid(%#),/at,secs()))][set(%0/D20`%1LEDGER`%q<book_n>,wizard)][u(%!/FUN`BOOK`SET,%0,%q<book_cache>,%q<book_total>,if(u(%!/FUN`BOOK`LABELLED,%1),%q<book_label>))][u(%!/FUN`BOOK`TRIM,%0,%1)])
         flags: [funsyntax]
       # %0 a character, %1 a cache attribute, %2 the total, %3 a label: writes the cache; 0 removes it.
       FUN`BOOK`SET:
@@ -1835,6 +1845,8 @@ objects:
         value: |-
           u(%!/FUN`CHECK`ROLLED,ucstr(%1),firstof(%4,1d20),add(u(%!/FUN`V`RATING,%0,ucstr(%1)),firstof(%2,0)),%3)
         flags: [funsyntax]
+      DATA`TEMPLATE`CHECK`ROLLED: |-
+        {"tier":"","total":null,"natural":null,"target":"","margin":"","label":"","text":"","roll":null,"formula":""}
       # %0 the key, %1 the die, %2 what is added, %3 the DC or nothing.
       FUN`CHECK`ROLLED:
         value: |-
@@ -1842,7 +1854,7 @@ objects:
           rolled,roll(%q<rolled_formula>,,record),
           rolled_natural,json_query(%q<rolled>,extract,$.dice%[0%].total),
           rolled_total,json_query(%q<rolled>,extract,$.total),
-          rolled_tier,u(%!/API`TIER,%q<rolled_total>,%q<rolled_natural>,%3))[json(object,tier,json(string,%q<rolled_tier>),total,%q<rolled_total>,natural,%q<rolled_natural>,target,json(string,%3),margin,json(string,if(strlen(%3),sub(%q<rolled_total>,%3))),label,json(string,u(%!/FUN`TRAIT`LABEL,%0)),text,json(string,json_query(%q<rolled>,extract,$.text)),roll,json_query(%q<rolled>,extract,$.id),formula,json(string,%q<rolled_formula>))]
+          rolled_tier,u(%!/API`TIER,%q<rolled_total>,%q<rolled_natural>,%3))[json_fill(v(DATA`TEMPLATE`CHECK`ROLLED),/tier,%q<rolled_tier>,/total,%q<rolled_total>,/natural,%q<rolled_natural>,/target,%3,/margin,if(strlen(%3),sub(%q<rolled_total>,%3)),/label,u(%!/FUN`TRAIT`LABEL,%0),/text,json_query(%q<rolled>,extract,$.text),/roll,json_query(%q<rolled>,extract,$.id),/formula,%q<rolled_formula>)]
         flags: [funsyntax]
 
       # ---- lifecycle ----------------------------------------------------------------

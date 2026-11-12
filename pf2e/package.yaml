@@ -1,7 +1,7 @@
 format: "1.20"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.10.19"
+version: "0.10.20"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, downtime (+downtime: Earn Income, Crafting, Learn a Spell, Retraining), loot, stashes and shops with unidentified magic items (+loot, +identify), and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -114,7 +114,7 @@ objects:
       # ledger read again costs a few hundred function calls. The key is the ledger with the package's
       # version, the books and CACHE`STAMP, which the updater and the deity table change. CACHE lists
       # the keys oldest first; past DATA`CACHE`KEEP the oldest goes.
-      DATA`CACHE`VERSION: "0.10.19"
+      DATA`CACHE`VERSION: "0.10.20"
       DATA`CACHE`KEEP: 200
       DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_itemalts check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_shieldrules check_bulkrules check_bulk check_bulk_enc check_bulk_max check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
       # The ItemAlteration properties the core applies, by the kind of item they reach.
@@ -1179,6 +1179,8 @@ objects:
           @@(check_level)[
           if(cand(strlen(u(FUN`ABP`MODE)),t(setr(abp_n,u(FUN`ABP`DEFENSE,%q<check_level>)))),potency~%q<abp_n>~defense-potency~0)]
         flags: [funsyntax]
+      DATA`TEMPLATE`ABP`RUNES: |-
+        {"system":{"runes":{"potency":0,"striking":0,"resilient":0,"property":null}}}
       # A weapon's or armor's runes under ABP: no fundamental runes, and property runes only with
       # abp-fundamental, as many as the attack or defense potency of the character's level.
       FUN`ABP`RUNES:
@@ -1186,7 +1188,7 @@ objects:
           @@(%0 an item, %1 the mode; check_level)[
           setq(abp_slots,u(FUN`ABP`SLOTS,%0,%1))][
           setq(abp_property,firstof(json_query(%0,extract,$.system.runes.property),json(array)))][
-          json_mod(%0,patch,json(object,system,json(object,runes,json(object,potency,0,striking,0,resilient,0,property,\[[iter(lnum(min(%q<abp_slots>,json_query(%q<abp_property>,size))),json(string,json_query(%q<abp_property>,extract,$\[%i0\])),%b,\,)]\]))))]
+          json_mod(%0,patch,json_fill(get({{core}}/DATA`TEMPLATE`ABP`RUNES),/system/runes/property,\[[iter(lnum(min(%q<abp_slots>,json_query(%q<abp_property>,size))),json(string,json_query(%q<abp_property>,extract,$\[%i0\])),%b,\,)]\]))]
         flags: [funsyntax]
       # How many property runes a weapon or armor holds under ABP: none with abp, and with abp-fundamental its
       # attack or defense potency at the character's level, one more for orichalcum.
@@ -1528,6 +1530,8 @@ objects:
           @@(%0 the effect's roll option slug, %1 its badge)self:effect:%0[if(strlen(%1),%bself:effect:%0:%1)]
         flags: [funsyntax]
       FUN`ACTOR: The actor, built from the sheet.
+      DATA`TEMPLATE`ACTOR`DATA: |-
+        {"abilities":null,"skills":null,"details":{"class":{"trait":""},"ancestry":{"trait":""},"level":{"value":null}}}
       # What @actor reads in a formula, shaped like Foundry's character: level, abilities.<a>.mod,
       # skills.<s>.rank and system.skills.<s>.rank (every statistic and proficiency), conditions.<slug>.value and .badge.value.
       FUN`ACTOR`DATA:
@@ -1539,7 +1543,7 @@ objects:
             level,%1,
             abilities,setr(actor_abilities,fold(me/FUN`ACTOR`ABILITY,str dex con int wis cha,json(object))),
             skills,%q<actor_ranks>,
-            system,json(object,abilities,%q<actor_abilities>,skills,%q<actor_ranks>,details,json(object,class,json(object,trait,json(string,u(FUN`ACTOR`SLUG,%q<check_class>))),ancestry,json(object,trait,json(string,u(FUN`ACTOR`SLUG,%q<check_ancestry>))),level,json(object,value,%1))),
+            system,json_fill(get({{core}}/DATA`TEMPLATE`ACTOR`DATA),/abilities,%q<actor_abilities>,/skills,%q<actor_ranks>,/details/class/trait,u(FUN`ACTOR`SLUG,%q<check_class>),/details/ancestry/trait,u(FUN`ACTOR`SLUG,%q<check_ancestry>),/details/level/value,%1),
             conditions,fold(me/FUN`ACTOR`CONDITION,%2,json(object)))]
         flags: [funsyntax]
       # The actor's system.attributes.shield, as Foundry's roll data has it: the shield held, or a spell's.
@@ -1781,6 +1785,8 @@ objects:
           setq(check_upgrades,%q<check_upgrades> [u(FUN`CHECK`SPELLRANKS)])][
           setq(check_form,u(FUN`CHECK`FORM))]
         flags: [funsyntax]
+      DATA`TEMPLATE`CHECK`PREPARE`ACTOR: |-
+        {"system":{"attributes":{"shield":null}}}
       # %1 1 to leave out the synthetics: sets the statistics, the actor data with its shield, and the synthetic
       # modifiers.
       FUN`CHECK`PREPARE`ACTOR:
@@ -1788,7 +1794,7 @@ objects:
           setq(check_stats,setunion([v(DATA`STATISTICS)] [v(DATA`PROFICIENCIES)] [iter(graball(%q<check_entries>,rank~*),elements(%i0,2,~))] [iter(%q<check_upgrades>,first(%i0,~))],))[
           setq(check_actor,u(FUN`ACTOR`DATA,%q<check_entries>,%q<check_level>,%q<check_conditions>,%q<check_stats>))][
           setq(check_shield,u(FUN`CHECK`SHIELD))][
-          setq(check_actor,json_mod(%q<check_actor>,patch,json(object,system,json(object,attributes,json(object,shield,u(FUN`ACTOR`SHIELD))))))][
+          setq(check_actor,json_mod(%q<check_actor>,patch,json_fill(get({{core}}/DATA`TEMPLATE`CHECK`PREPARE`ACTOR),/system/attributes/shield,u(FUN`ACTOR`SHIELD))))][
           if(%1,setqm(check_synthetics,json(array),check_index,,check_flats,),
             [setq(check_synthetics,u(FUN`SYNTHETICS`MODIFIERS,%q<check_actor>,%q<check_static>,%q<check_dynamic>))][
             setq(check_index,u(FUN`SYNTHETICS`INDEX,%q<check_synthetics>))][
@@ -2412,6 +2418,8 @@ objects:
           @@(%0 the base, %1 the increase, %2 the maximum)[
           if(gt(add(%0,%1),%2),max(%0,%2),add(%0,%1))]
         flags: [funsyntax]
+      DATA`TEMPLATE`CHECK`SHIELDATTR: |-
+        {"id":"","name":"","ac":null,"hardness":null,"max":null,"value":null,"bt":null,"raised":false,"fx":null}
       # Foundry's actor shield (system.attributes.shield), %0 a shield item or nothing: the held shield, then the
       # ActiveEffectLike rules on system.attributes.shield of the grants in check_shieldrules, in priority order,
       # as a spell's shield. JSON: id, name, ac, hardness, max, value, bt, raised, fx (the effect's grant id when
@@ -2419,7 +2427,7 @@ objects:
       FUN`CHECK`SHIELDATTR:
         value: |-
           @@(%0 a shield item or nothing)[
-          setq(sha,if(strlen(%0),json(object,id,json(string,ucstr(json_query(%0,extract,$._id))),name,json(string,json_query(%0,extract,$.name)),ac,firstof(json_query(%0,extract,$.system.acBonus),0),hardness,firstof(json_query(%0,extract,$.system.hardness),0),max,setr(sha_max,firstof(json_query(%0,extract,$.system.hp.max),0)),value,%q<sha_max>,bt,div(%q<sha_max>,2),raised,false,fx,null)))][
+          setq(sha,if(strlen(%0),json_fill(get({{core}}/DATA`TEMPLATE`CHECK`SHIELDATTR),/id,ucstr(json_query(%0,extract,$._id)),/name,json_query(%0,extract,$.name),/ac,firstof(json_query(%0,extract,$.system.acBonus),0),/hardness,firstof(json_query(%0,extract,$.system.hardness),0),/max,setr(sha_max,firstof(json_query(%0,extract,$.system.hp.max),0)),/value,%q<sha_max>,/bt,div(%q<sha_max>,2))))][
           setq(sha_rules,sort(iter(%q<check_shieldrules>,[setq(sha_g,%i0)][json_map(me/FUN`CHECK`SHIELDATTR`RULE,firstof(json_query(u(FUN`ITEM`GET,first(%i0,~),elements(%i0,2,~)),extract,$.system.rules),json(array)),%b,%i0)]),n))][
           null(iter(%q<sha_rules>,u(FUN`CHECK`SHIELDATTR`APPLY,%i0)))]%q<sha>
         flags: [funsyntax]
@@ -2444,11 +2452,13 @@ objects:
           setq(shr_v,u(FUN`FORMULA`VALUE,json_query(%q<shr_rule>,get,value),%q<shr_data>,0))][
           setq(sha,json_mod(firstof(%q<sha>,json(object,id,null,name,"",ac,0,hardness,0,max,0,value,0,bt,0,raised,false,fx,null)),set,$.%q<shr_field>,if(strmatch(%q<shr_field>,raised),if(t(%q<shr_v>),true,false),floor(u(FUN`DAMAGE`MODE,%q<shr_mode>,firstof(json_query(%q<sha>,extract,$.%q<shr_field>),0),%q<shr_v>)))))]
         flags: [funsyntax]
+      DATA`TEMPLATE`CHECK`SHIELDATTR`OBJECT: |-
+        {"id":"","name":"","ac":null,"hardness":null,"max":null,"value":null,"bt":null,"raised":null,"fx":""}
       # Sets %q<sha> to the shield the rule's value describes.
       FUN`CHECK`SHIELDATTR`OBJECT:
         value: |-
           [setq(shr_o,json_query(%q<shr_rule>,get,value))][
-          setq(sha,json(object,id,json(string,ucstr(elements(%q<shr_g>,2,~))),name,json(string,edit(edit(json_query(%q<rr_item>,extract,$.name),Spell Effect:%b,),Effect:%b,)),ac,firstof(json_query(%q<shr_o>,extract,$.ac),0),hardness,firstof(json_query(%q<shr_o>,extract,$.hardness),0),max,firstof(json_query(%q<shr_o>,extract,$.hp.max),0),value,firstof(json_query(%q<shr_o>,extract,$.hp.value),0),bt,firstof(json_query(%q<shr_o>,extract,$.brokenThreshold),0),raised,if(strmatch(json_query(%q<shr_o>,extract,$.raised),true),true,false),fx,json(string,elements(%q<shr_g>,2,~))))]
+          setq(sha,json_fill(get({{core}}/DATA`TEMPLATE`CHECK`SHIELDATTR`OBJECT),/id,ucstr(elements(%q<shr_g>,2,~)),/name,edit(edit(json_query(%q<rr_item>,extract,$.name),Spell Effect:%b,),Effect:%b,),/ac,firstof(json_query(%q<shr_o>,extract,$.ac),0),/hardness,firstof(json_query(%q<shr_o>,extract,$.hardness),0),/max,firstof(json_query(%q<shr_o>,extract,$.hp.max),0),/value,firstof(json_query(%q<shr_o>,extract,$.hp.value),0),/bt,firstof(json_query(%q<shr_o>,extract,$.brokenThreshold),0),/raised,if(strmatch(json_query(%q<shr_o>,extract,$.raised),true),true,false),/fx,elements(%q<shr_g>,2,~)))]
         flags: [funsyntax]
       # %0 priority~grant~rule index: reads the rule, its roll data and its path and mode into the shr_ registers.
       FUN`CHECK`SHIELDATTR`READ:
@@ -2671,10 +2681,12 @@ objects:
           setq(spd_all,u(FUN`CHECK`RULES`EACH,BaseSpeed,FUN`CHECK`SPEEDS`ONE,))][
           iter(setunion(iter(%q<spd_all>,first(%i0,~)),),%i0~[lmax(iter(graball(%q<spd_all>,%i0~*),rest(%i0,~)))])]
         flags: [funsyntax]
+      DATA`TEMPLATE`CHECK`SPEEDS`ONE: |-
+        {"speeds":{"land":{"value":null}}}
       FUN`CHECK`SPEEDS`ONE:
         value: |-
           @@(%0 a rule, %1 its roll data)[
-          [before(firstof(u(FUN`FORMULA`INJECT,json_query(%0,extract,$.selector),%1),land)-speed,-speed)]~[trunc(u(FUN`FORMULA`VALUE,json_query(%0,get,value),json_mod(%1,set,$.actor.system.movement,json(object,speeds,json(object,land,json(object,value,firstof(json_query(u(FUN`CHECK`ITEM,%q<check_ancestry>),extract,$.system.speed),25))))),0))]]
+          [before(firstof(u(FUN`FORMULA`INJECT,json_query(%0,extract,$.selector),%1),land)-speed,-speed)]~[trunc(u(FUN`FORMULA`VALUE,json_query(%0,get,value),json_mod(%1,set,$.actor.system.movement,json_fill(get({{core}}/DATA`TEMPLATE`CHECK`SPEEDS`ONE),/speeds/land/value,firstof(json_query(u(FUN`CHECK`ITEM,%q<check_ancestry>),extract,$.system.speed),25))),0))]]
         flags: [funsyntax]
       # Sense: the ancestry's vision and each Sense rule, as sense~acuity~range.
       FUN`CHECK`SENSES:
@@ -3111,19 +3123,23 @@ objects:
           setq(made_obj,firstof(json_query(%q<check_daily>,extract,$.made),json(object)))][
           trim(squish(iter(json_map(me/FUN`JSON`KEYS,%q<made_obj>,%b),if(gt(setr(made_n,json_query(%q<made_obj>,extract,$\["%i0"\])),0),%i0~%q<made_n>))))]
         flags: [funsyntax]
+      DATA`TEMPLATE`STRIKE`USE: |-
+        {"use":"","left":null,"useid":""}
       # A Strike with a consumable weapon, such as a bomb, marked with where it comes from (gear, made, or res:<a
       # resource's slug>) and how many are left; any other Strike as it is.
       FUN`STRIKE`USE:
         value: |-
           @@(%0 a Strike, %1 the source, %2 how many, %3 the item's id)[
-          if(member(json_query(%0,extract,$.traits),consumable),json_mod(%0,patch,json(object,use,json(string,%1),left,firstof(%2,0),useid,json(string,%3))),%0)]
+          if(member(json_query(%0,extract,$.traits),consumable),json_mod(%0,patch,json_fill(get({{core}}/DATA`TEMPLATE`STRIKE`USE),/use,%1,/left,firstof(%2,0),/useid,%3)),%0)]
         flags: [funsyntax]
+      DATA`TEMPLATE`STRIKE`LEVELED: |-
+        {"item":{"level":null},"parent":{"level":null}}
       # A Strike from an item whose level a resource sets, such as a versatile vial: its own FlatModifier on its
       # attack becomes its potency and its DamageAlteration of the dice number its dice, worked out at that level.
       FUN`STRIKE`LEVELED:
         value: |-
           @@(%0 a Strike, %1 the item's id, %2 the level)[
-          setqm(lev_rules,firstof(json_query(u(FUN`ITEM`GET,equipment,%1),extract,$.system.rules),json(array)),lev_data,json(object,item,json(object,level,%2),parent,json(object,level,%2)))][
+          setqm(lev_rules,firstof(json_query(u(FUN`ITEM`GET,equipment,%1),extract,$.system.rules),json(array)),lev_data,json_fill(get({{core}}/DATA`TEMPLATE`STRIKE`LEVELED),/item/level,%2,/parent/level,%2))][
           setq(lev_attack,first(json_map(me/FUN`CHECK`RULEKEY,%q<lev_rules>,%b,FlatModifier)))][
           setq(lev_dice,first(json_map(me/FUN`CHECK`RULEKEY,%q<lev_rules>,%b,DamageAlteration)))][
           json_mod(%0,patch,json(object,
@@ -3375,11 +3391,13 @@ objects:
           @@(%0 a formula and a type)[
           if(strlen(%0),[setq(dp_f,first(%0))]base~[if(strmatch(%q<dp_f>,*d*),before(%q<dp_f>,d),0)]~[if(strmatch(%q<dp_f>,*d*),after(%q<dp_f>,d),0)]~[if(strmatch(%q<dp_f>,*d*),0,%q<dp_f>)]~[last(%0)]~persistent~n~~)]
         flags: [funsyntax]
+      DATA`TEMPLATE`DAMAGE`WEAPON: |-
+        {"system":{"damage":{"dice":null,"die":"","damageType":""},"runes":{"potency":null,"striking":null}}}
       # The weapon for @weapon in a rule's formula: its item, with the Strike's dice, die, type and runes.
       FUN`DAMAGE`WEAPON:
         value: |-
           @@(%0 a Strike)[
-          json_mod(firstof(u(FUN`ITEM`GET,equipment,json_query(%0,extract,$.id)),json(object)),patch,json(object,system,json(object,damage,json(object,dice,add(firstof(json_query(%0,extract,$.dice),0),firstof(json_query(%0,extract,$.striking),0)),die,json(string,json_query(%0,extract,$.die)),damageType,json(string,json_query(%0,extract,$.type))),runes,json(object,potency,firstof(json_query(%0,extract,$.potency),0),striking,firstof(json_query(%0,extract,$.striking),0)))))]
+          json_mod(firstof(u(FUN`ITEM`GET,equipment,json_query(%0,extract,$.id)),json(object)),patch,json_fill(get({{core}}/DATA`TEMPLATE`DAMAGE`WEAPON),/system/damage/dice,add(firstof(json_query(%0,extract,$.dice),0),firstof(json_query(%0,extract,$.striking),0)),/system/damage/die,json_query(%0,extract,$.die),/system/damage/damageType,json_query(%0,extract,$.type),/system/runes/potency,firstof(json_query(%0,extract,$.potency),0),/system/runes/striking,firstof(json_query(%0,extract,$.striking),0)))]
         flags: [funsyntax]
       # The traits' damage modifiers: kickback, backstabber against an off-guard target, tearing,
       # venomous and splash, as type~value~slug~force~damage type~category entries.
@@ -3913,13 +3931,15 @@ objects:
           @@(%0 the days needed)[
           That takes [u(%!/FUN`DOWNTIME`DAYS,%0)] of downtime%, and [name(%q<sheet_target>)] has %q<dt_days>. Staff award downtime: +pf2e/award <players>=7 days <reason>.]
         flags: [funsyntax]
+      DATA`TEMPLATE`INC`DOWNTIME`CRAFT: |-
+        {"id":"","name":"","count":null,"left":null,"per":null,"by":"","at":null}
       # Craft: the item's level, proficiency, feats and rarity allow it; the check comes after 2 days of setting up,
       # 1 with the formula, and needs half the Price in materials. A success spends them and starts a project whose
       # remaining materials each day of work lessens by the Income Earned for the crafter's level (one higher on a
       # critical success) and Crafting rank. A failure salvages everything; a critical failure ruins a tenth.
       INC`DOWNTIME`CRAFT:
         value: |-
-          @assert not(strlen(%q<dt_project>))=@pemit %#=notice(PF2E,[name(%q<sheet_target>)] is crafting [u(%!/FUN`DOWNTIME`ITEMS,json_query(%q<dt_project>,extract,$.count),json_query(%q<dt_project>,extract,$.name))] already: +downtime/work%, +downtime/finish or +downtime/drop.,warn); @include %!/INC`DOWNTIME`CRAFT`FIND; @include %!/INC`DOWNTIME`CRAFT`CHECK; @include %!/INC`DOWNTIME`CRAFT`COST; @include %!/INC`DOWNTIME`CRAFT`ROLL; think setqm(purse_kind,days,purse_amount,-%q<dt_setup>,purse_reason,Craft %q<dt_what>: setting up); @include %!/INC`PURSE`PUT; think setqm(purse_kind,money,purse_amount,-%q<dt_spend>,purse_reason,Craft %q<dt_what>: [if(gte(%q<roll_degree>,2),materials,ruined materials)]); @include/nobreak %!/INC`DOWNTIME`PAY; @break lt(%q<roll_degree>,2)={@pemit/list %q<dt_tell>=notice(PF2E,[u(%!/FUN`SHOW`CHECK)]%r[name(%q<sheet_target>)] fails to craft %q<dt_what>[if(%q<roll_degree>,%, and salvages the materials,%, and ruins [u(%!/FUN`SHOW`MONEY,%q<dt_spend>)] of materials)]. [u(%!/FUN`DOWNTIME`LEFT)])}; @break not(%q<dt_left>)={@include %!/INC`DOWNTIME`GIVE; @pemit/list %q<dt_tell>=notice(PF2E,[u(%!/FUN`SHOW`CHECK)]%r[name(%q<sheet_target>)] crafts %q<dt_what> for [u(%!/FUN`SHOW`MONEY,%q<dt_spend>)]. [u(%!/FUN`DOWNTIME`LEFT)])}; &PF2E`CRAFT %q<sheet_target>=[json(object,id,json(string,%q<dt_id>),name,json(string,%q<dt_name>),count,%q<dt_count>,left,%q<dt_left>,per,%q<dt_per>,by,json(string,objid(%#)),at,secs())]; @set %q<sheet_target>/PF2E`CRAFT=wizard; @pemit/list %q<dt_tell>=notice(PF2E,[u(%!/FUN`SHOW`CHECK)]%r[name(%q<sheet_target>)] starts crafting %q<dt_what>%, spending [u(%!/FUN`SHOW`MONEY,%q<dt_spend>)] of materials. The rest is [u(%!/FUN`SHOW`MONEY,%q<dt_left>)]: +downtime/finish pays it now%, and each day of +downtime/work takes [u(%!/FUN`SHOW`MONEY,%q<dt_per>)] off it. [u(%!/FUN`DOWNTIME`LEFT)])
+          @assert not(strlen(%q<dt_project>))=@pemit %#=notice(PF2E,[name(%q<sheet_target>)] is crafting [u(%!/FUN`DOWNTIME`ITEMS,json_query(%q<dt_project>,extract,$.count),json_query(%q<dt_project>,extract,$.name))] already: +downtime/work%, +downtime/finish or +downtime/drop.,warn); @include %!/INC`DOWNTIME`CRAFT`FIND; @include %!/INC`DOWNTIME`CRAFT`CHECK; @include %!/INC`DOWNTIME`CRAFT`COST; @include %!/INC`DOWNTIME`CRAFT`ROLL; think setqm(purse_kind,days,purse_amount,-%q<dt_setup>,purse_reason,Craft %q<dt_what>: setting up); @include %!/INC`PURSE`PUT; think setqm(purse_kind,money,purse_amount,-%q<dt_spend>,purse_reason,Craft %q<dt_what>: [if(gte(%q<roll_degree>,2),materials,ruined materials)]); @include/nobreak %!/INC`DOWNTIME`PAY; @break lt(%q<roll_degree>,2)={@pemit/list %q<dt_tell>=notice(PF2E,[u(%!/FUN`SHOW`CHECK)]%r[name(%q<sheet_target>)] fails to craft %q<dt_what>[if(%q<roll_degree>,%, and salvages the materials,%, and ruins [u(%!/FUN`SHOW`MONEY,%q<dt_spend>)] of materials)]. [u(%!/FUN`DOWNTIME`LEFT)])}; @break not(%q<dt_left>)={@include %!/INC`DOWNTIME`GIVE; @pemit/list %q<dt_tell>=notice(PF2E,[u(%!/FUN`SHOW`CHECK)]%r[name(%q<sheet_target>)] crafts %q<dt_what> for [u(%!/FUN`SHOW`MONEY,%q<dt_spend>)]. [u(%!/FUN`DOWNTIME`LEFT)])}; &PF2E`CRAFT %q<sheet_target>=[json_fill(get({{commands}}/DATA`TEMPLATE`INC`DOWNTIME`CRAFT),/id,%q<dt_id>,/name,%q<dt_name>,/count,%q<dt_count>,/left,%q<dt_left>,/per,%q<dt_per>,/by,objid(%#),/at,secs())]; @set %q<sheet_target>/PF2E`CRAFT=wizard; @pemit/list %q<dt_tell>=notice(PF2E,[u(%!/FUN`SHOW`CHECK)]%r[name(%q<sheet_target>)] starts crafting %q<dt_what>%, spending [u(%!/FUN`SHOW`MONEY,%q<dt_spend>)] of materials. The rest is [u(%!/FUN`SHOW`MONEY,%q<dt_left>)]: +downtime/finish pays it now%, and each day of +downtime/work takes [u(%!/FUN`SHOW`MONEY,%q<dt_per>)] off it. [u(%!/FUN`DOWNTIME`LEFT)])
         flags: [cmdsyntax]
       # +downtime/craft: finds the item named in %q<cmd_rest> and reads its name, level, rarity, traits and batch size
       # into the dt_ registers.
@@ -3945,10 +3965,12 @@ objects:
         value: |-
           think setqm(cmd_dc,add(extract(get({{core}}/DATA`DC`LEVEL),add(2,max(-1,min(25,%q<dt_level>))),1),firstof(after(grab(get({{core}}/DATA`DC`RARITY),%q<dt_rarity>~*),~),0)),roll_stat,crafting,cmd_with,,roll_extra,action:craft); think u(%!/FUN`CHECK`PREPARE); think u({{core}}/FUN`ROLL`CHECK,%q<roll_total>,%q<roll_domains>,%q<roll_options> %q<roll_extra>,%q<cmd_dc>); think setqm(dt_what,u(%!/FUN`DOWNTIME`ITEMS,%q<dt_count>,%q<dt_name>),dt_per,switch(%q<roll_degree>,3,u(%!/FUN`DOWNTIME`INCOME,inc(%q<check_level>),%q<dt_rank>),2,u(%!/FUN`DOWNTIME`INCOME,%q<check_level>,%q<dt_rank>),0)); think setqm(dt_spend,switch(%q<roll_degree>,3,%q<dt_mat>,2,%q<dt_mat>,0,ceil(fdiv(%q<dt_mat>,10)),0),dt_left,if(gte(%q<roll_degree>,2),sub(%q<dt_price>,%q<dt_mat>),0))
         flags: [cmdsyntax]
+      DATA`TEMPLATE`INC`DOWNTIME`GIVE: |-
+        {"kind":"gear","id":"","qty":null,"where":"","step":"gear"}
       # The project's items, dt_id and dt_count, join the sheet's gear; the project ends.
       INC`DOWNTIME`GIVE:
         value: |-
-          @include %!/INC`BUILD`BEGIN; think setq(build_held,u({{core}}/FUN`SHEET`VALUE,%q<check_entries>,gear,%q<dt_id>)); think setq(entry_json,json(object,kind,"gear",id,json(string,%q<dt_id>),qty,add(firstof(first(%q<build_held>,|),0),%q<dt_count>),where,json(string,firstof(rest(%q<build_held>,|),u(%!/FUN`BUILD`GEAR`WHERE,%q<dt_id>))),step,"gear")); @include %!/INC`BUILD`PUT; &PF2E`CRAFT %q<sheet_target>=
+          @include %!/INC`BUILD`BEGIN; think setq(build_held,u({{core}}/FUN`SHEET`VALUE,%q<check_entries>,gear,%q<dt_id>)); think setq(entry_json,json_fill(get({{commands}}/DATA`TEMPLATE`INC`DOWNTIME`GIVE),/id,%q<dt_id>,/qty,add(firstof(first(%q<build_held>,|),0),%q<dt_count>),/where,firstof(rest(%q<build_held>,|),u(%!/FUN`BUILD`GEAR`WHERE,%q<dt_id>)))); @include %!/INC`BUILD`PUT; &PF2E`CRAFT %q<sheet_target>=
         flags: [cmdsyntax]
       INC`DOWNTIME`NEED:
         value: |-
@@ -4027,13 +4049,17 @@ objects:
         value: |-
           @include %!/INC`BUILD`BEGIN; think setq(rt_broken,u(%!/FUN`RETRAIN`BROKEN,%q<rt_sim>)); @assert not(strlen(%q<rt_broken>))=@pemit %#=notice(PF2E,After this%, [itemize(%q<rt_broken>,|)]. Retrain the feat first.,warn)
         flags: [cmdsyntax]
+      DATA`TEMPLATE`INC`RETRAIN`FEAT: |-
+        {"kind":"grant","pack":"feats","id":"","step":"","level":null,"n":null}
       INC`RETRAIN`FEAT:
         value: |-
-          think setq(rt_n,first(u(%!/FUN`BUILD`STEP,feat-[lcstr(trim(before(%q<cmd_rest>,=)))]))); @assert strlen(%q<rt_n>)=@pemit %#=notice(PF2E,There is no feat in [trim(before(%q<cmd_rest>,=))] to retrain. The feat slots are [itemize(u(%!/FUN`BUILD`SLOTS))].,warn); think setq(rt_old,u(%!/FUN`SHOW`ITEM,feats,json_query(get(%q<sheet_target>/PF2E`LEDGER`%q<rt_n>),extract,$.id),)); think setq(rt_newid,u({{core}}/FUN`ITEM`FIND,feats,trim(after(%q<cmd_rest>,=)))); @assert strlen(%q<rt_newid>)=@pemit %#=notice(PF2E,There is no feat called [trim(after(%q<cmd_rest>,=))] from a book the game uses.,warn); @include %!/INC`BUILD`BEGIN; think setq(rt_sim,[iter(u(%!/FUN`BUILD`STEP,feat-[lcstr(trim(before(%q<cmd_rest>,=)))]),json(object,kind,"revoke",entry,%i0,n,add(%q<build_next>,#@)),%b,\,)]\,[json(object,kind,"grant",pack,"feats",id,json(string,%q<rt_newid>),step,json(string,feat-[lcstr(trim(before(%q<cmd_rest>,=)))]),level,last(trim(before(%q<cmd_rest>,=)),-),n,add(%q<build_next>,100))]); @include %!/INC`RETRAIN`CHECK; @include %!/INC`BUILD`FEAT; think setq(rt_what,%q<rt_old> becomes [u(%!/FUN`SHOW`ITEM,feats,%q<build_id>,)])
+          think setq(rt_n,first(u(%!/FUN`BUILD`STEP,feat-[lcstr(trim(before(%q<cmd_rest>,=)))]))); @assert strlen(%q<rt_n>)=@pemit %#=notice(PF2E,There is no feat in [trim(before(%q<cmd_rest>,=))] to retrain. The feat slots are [itemize(u(%!/FUN`BUILD`SLOTS))].,warn); think setq(rt_old,u(%!/FUN`SHOW`ITEM,feats,json_query(get(%q<sheet_target>/PF2E`LEDGER`%q<rt_n>),extract,$.id),)); think setq(rt_newid,u({{core}}/FUN`ITEM`FIND,feats,trim(after(%q<cmd_rest>,=)))); @assert strlen(%q<rt_newid>)=@pemit %#=notice(PF2E,There is no feat called [trim(after(%q<cmd_rest>,=))] from a book the game uses.,warn); @include %!/INC`BUILD`BEGIN; think setq(rt_sim,[iter(u(%!/FUN`BUILD`STEP,feat-[lcstr(trim(before(%q<cmd_rest>,=)))]),json(object,kind,"revoke",entry,%i0,n,add(%q<build_next>,#@)),%b,\,)]\,[json_fill(get({{commands}}/DATA`TEMPLATE`INC`RETRAIN`FEAT),/id,%q<rt_newid>,/step,feat-[lcstr(trim(before(%q<cmd_rest>,=)))],/level,last(trim(before(%q<cmd_rest>,=)),-),/n,add(%q<build_next>,100))]); @include %!/INC`RETRAIN`CHECK; @include %!/INC`BUILD`FEAT; think setq(rt_what,%q<rt_old> becomes [u(%!/FUN`SHOW`ITEM,feats,%q<build_id>,)])
         flags: [cmdsyntax]
+      DATA`TEMPLATE`INC`RETRAIN`INCREASE: |-
+        {"kind":"rank","stat":"","rank":null,"step":"","n":null}
       INC`RETRAIN`INCREASE:
         value: |-
-          @include %!/INC`RETRAIN`INCREASE`FIND; @include %!/INC`BUILD`BEGIN; think setq(rt_sim,[json(object,kind,"revoke",entry,%q<rt_n>,n,%q<build_next>)]\,[json(object,kind,"rank",stat,json(string,%q<rt_new>),rank,inc(u({{core}}/FUN`CHECK`RANK,%q<rt_new>)),step,json(string,increase-%q<rt_at>),n,inc(%q<build_next>))]); @include %!/INC`RETRAIN`CHECK; think setq(cmd_rest,%q<rt_at>=%q<rt_new>); @include %!/INC`BUILD`INCREASE; think setq(rt_what,the level %q<rt_at> skill increase moves from [u(%!/FUN`SHOW`STAT,%q<rt_stat>)] to [u(%!/FUN`SHOW`STAT,%q<rt_new>)])
+          @include %!/INC`RETRAIN`INCREASE`FIND; @include %!/INC`BUILD`BEGIN; think setq(rt_sim,[json(object,kind,"revoke",entry,%q<rt_n>,n,%q<build_next>)]\,[json_fill(get({{commands}}/DATA`TEMPLATE`INC`RETRAIN`INCREASE),/stat,%q<rt_new>,/rank,inc(u({{core}}/FUN`CHECK`RANK,%q<rt_new>)),/step,increase-%q<rt_at>,/n,inc(%q<build_next>))]); @include %!/INC`RETRAIN`CHECK; think setq(cmd_rest,%q<rt_at>=%q<rt_new>); @include %!/INC`BUILD`INCREASE; think setq(rt_what,the level %q<rt_at> skill increase moves from [u(%!/FUN`SHOW`STAT,%q<rt_stat>)] to [u(%!/FUN`SHOW`STAT,%q<rt_new>)])
         flags: [cmdsyntax]
       # +downtime/retrain increase: finds the skill increase at the level before = (%q<rt_n>, %q<rt_stat>,
       # %q<rt_rank>) and the skill after it (%q<rt_new>), and stops unless the increase may move.
@@ -4162,6 +4188,14 @@ objects:
         value: |-
           json_query(%1,extract,$.value)
         flags: [funsyntax]
+      DATA`TEMPLATE`FAM`ACTOR: |-
+        {"str":{"mod":0},"dex":{"mod":0},"con":{"mod":0},"int":{"mod":0},"wis":{"mod":0},"cha":{"mod":0}}
+      DATA`TEMPLATE`FAM`ACTOR`2: |-
+        {"ac":{"value":null},"hp":{"max":null,"value":null,"temp":0},"speed":{"value":null,"otherSpeeds":null},"resistances":null}
+      DATA`TEMPLATE`FAM`ACTOR`3: |-
+        {"type":"","acuity":"","range":null}
+      DATA`TEMPLATE`FAM`ACTOR`4: |-
+        {"fortitude":{"value":null},"reflex":{"value":null},"will":{"value":null}}
       # A familiar's statistics as a creature from the master's sheet (Player Core): its level, the master's AC and
       # saves, Perception, Acrobatics and Stealth of level plus the spellcasting attribute modifier, other skills of
       # level, 5 Hit Points a level, Speed 25 feet, Tiny, minion. Needs the master's check_ registers.
@@ -4172,11 +4206,11 @@ objects:
             name,json(string,u(%!/FUN`FAM`NAME,%0)),
             type,"npc",
             system,json(object,
-              abilities,json(object,str,json(object,mod,0),dex,json(object,mod,0),con,json(object,mod,0),int,json(object,mod,0),wis,json(object,mod,0),cha,json(object,mod,0)),
-              attributes,json(object,ac,json(object,value,%q<fa_ac>),hp,json(object,max,%q<fb_hp>,value,%q<fb_hp>,temp,0),speed,json(object,value,%q<fb_land>,otherSpeeds,\[[iter(%q<fb_speeds>,json(object,type,json(string,first(%i0,~)),value,rest(%i0,~)),%b,\,)]\]),resistances,\[[iter(%q<fb_res>,json(object,type,json(string,first(%i0,~)),value,rest(%i0,~)),%b,\,)]\]),
+              abilities,get({{commands}}/DATA`TEMPLATE`FAM`ACTOR),
+              attributes,json_fill(get({{commands}}/DATA`TEMPLATE`FAM`ACTOR`2),/ac/value,%q<fa_ac>,/hp/max,%q<fb_hp>,/hp/value,%q<fb_hp>,/speed/value,%q<fb_land>,/speed/otherSpeeds,\[[iter(%q<fb_speeds>,json(object,type,json(string,first(%i0,~)),value,rest(%i0,~)),%b,\,)]\],/resistances,\[[iter(%q<fb_res>,json(object,type,json(string,first(%i0,~)),value,rest(%i0,~)),%b,\,)]\]),
               details,json(object,level,json(object,value,%q<fa_level>)),
-              perception,json(object,mod,add(%q<fa_level>,%q<fa_mod>),senses,\[[iter(%q<fb_senses>,json(object,type,json(string,first(%i0,~)),acuity,json(string,firstof(elements(%i0,2,~),precise)),range,firstof(elements(%i0,3,~),null)),%b,\,)]\]),
-              saves,json(object,fortitude,json(object,value,first(%q<fa_saves>)),reflex,json(object,value,extract(%q<fa_saves>,2,1)),will,json(object,value,last(%q<fa_saves>))),
+              perception,json(object,mod,add(%q<fa_level>,%q<fa_mod>),senses,\[[iter(%q<fb_senses>,json_fill(get({{commands}}/DATA`TEMPLATE`FAM`ACTOR`3),/type,first(%i0,~),/acuity,firstof(elements(%i0,2,~),precise),/range,firstof(elements(%i0,3,~),null)),%b,\,)]\]),
+              saves,json_fill(get({{commands}}/DATA`TEMPLATE`FAM`ACTOR`4),/fortitude/value,first(%q<fa_saves>),/reflex/value,extract(%q<fa_saves>,2,1),/will/value,last(%q<fa_saves>)),
               skills,%q<fa_skills>,
               traits,json(object,rarity,"common",size,json(object,value,"tiny"),value,\[[iter(setunion(%q<fb_traits>,),json(string,%i0),%b,\,)]\])))]
         flags: [funsyntax]
@@ -4233,11 +4267,15 @@ objects:
             Resistance,if(strlen(setr(fbr_type,u(%!/FUN`FAM`SELECTION,json_query(%1,extract,$.type)))),setq(fb_res,trim(%q<fb_res> %q<fbr_type>~%q<fbr_val>))),
             )]
         flags: [funsyntax]
+      DATA`TEMPLATE`FAM`SELECTION: |-
+        {"item":{"flags":{"system":{"rulesSelections":null}}}}
       FUN`FAM`SELECTION:
         value: |-
           @@(%0 a rule's text, fb_ch: {item|flags.system.rulesSelections.<flag>} replaced by the choice)[
-          u({{core}}/FUN`FORMULA`INJECT,%0,json(object,item,json(object,flags,json(object,system,json(object,rulesSelections,%q<fb_ch>)))))]
+          u({{core}}/FUN`FORMULA`INJECT,%0,json_fill(get({{commands}}/DATA`TEMPLATE`FAM`SELECTION),/item/flags/system/rulesSelections,%q<fb_ch>))]
         flags: [funsyntax]
+      DATA`TEMPLATE`FAM`COMBATANT: |-
+        {"name":"","kind":"npc","pack":"minion","id":"","actor":null,"master":"","abil":"","abch":null,"side":"pc","adj":0,"hazard":0,"simple":1,"hp":null,"max":null,"temp":0,"init":null,"conds":{},"dur":{},"pers":{},"map":0,"down":0}
       # The familiar as an encounter combatant, or #-1~why.
       FUN`FAM`COMBATANT:
         value: |-
@@ -4247,7 +4285,7 @@ objects:
           if(not(u(%!/FUN`FAM`HAS)),#-1~[name(%0)] has no familiar.,
             [setqm(fc_actor,u(%!/FUN`FAM`ACTOR,%0),fc_abil,u(%!/FUN`FAM`LATEST,%0,abilities))][
             setq(fc_hp,json_query(%q<fc_actor>,extract,$.system.attributes.hp.max))][
-            json(object,name,json(string,u(%!/FUN`FAM`NAME,%0)),kind,"npc",pack,"minion",id,json(string,F[after(num(%0),#)]),actor,%q<fc_actor>,master,json(string,objid(%0)),abil,json(string,json_query(%q<fc_abil>,extract,$.ids)),abch,firstof(json_query(%q<fc_abil>,extract,$.ch),json(object)),side,"pc",adj,0,hazard,0,simple,1,hp,%q<fc_hp>,max,%q<fc_hp>,temp,0,init,null,conds,json(object),dur,json(object),pers,json(object),map,0,down,0)])]
+            json_fill(get({{commands}}/DATA`TEMPLATE`FAM`COMBATANT),/name,u(%!/FUN`FAM`NAME,%0),/id,F[after(num(%0),#)],/actor,%q<fc_actor>,/master,objid(%0),/abil,json_query(%q<fc_abil>,extract,$.ids),/abch,firstof(json_query(%q<fc_abil>,extract,$.ch),json(object)),/hp,%q<fc_hp>,/max,%q<fc_hp>)])]
         flags: [funsyntax]
       FUN`FAM`CHOICEVAL2:
         value: |-
@@ -4369,6 +4407,8 @@ objects:
           if(cand(strmatch(%q<cs_path>,savage),lte(%q<csz_i>,3)),setq(csz_i,inc(%q<csz_i>)))][
           extract(%q<csz_l>,%q<csz_i>,1)]
         flags: [funsyntax]
+      DATA`TEMPLATE`COMP`STRIKE: |-
+        {"_id":"","name":"","type":"melee","system":{"slug":"","bonus":{"value":null},"damageRolls":{"base":{"damage":"","damageType":""}},"traits":{"value":null},"range":null}}
       # A Strike as a Foundry melee item: Str to hit, or Dex for finesse; one damage die, two when mature, three when
       # specialized, plus Str and 2 (nimble) or 3 (savage), doubled when specialized; magical once nimble or savage.
       FUN`COMP`STRIKE:
@@ -4378,8 +4418,12 @@ objects:
           setq(cst_bonus,add(if(member(%q<cst_tr>,finesse),max(%q<ca_str>,%q<ca_dex>),%q<ca_str>),u(%!/FUN`COMP`PROF,unarmed)))][
           setq(cst_flat,add(%q<ca_str>,mul(switch(%q<cs_path>,nimble,2,savage,3,0),if(words(%q<cs_specs>),2,1))))][
           setq(cst_dmg,[if(words(%q<cs_specs>),3,if(%q<cs_mature>,2,1))][json_query(%0,extract,$.die)][if(gt(%q<cst_flat>,0),+%q<cst_flat>,if(lt(%q<cst_flat>,0),%q<cst_flat>))])][
-          json(object,_id,json(string,companion-%1),name,json(string,capstr(json_query(%0,extract,$.name))),type,"melee",system,json(object,slug,json(string,json_query(%0,extract,$.name)),bonus,json(object,value,%q<cst_bonus>),damageRolls,json(object,base,json(object,damage,json(string,%q<cst_dmg>),damageType,json(string,json_query(%0,extract,$.type)))),traits,json(object,value,\[[iter(squish(%q<cst_tr> unarmed [if(strlen(%q<cs_path>),magical)]),json(string,%i0),%b,\,)]\]),range,null))]
+          json_fill(get({{commands}}/DATA`TEMPLATE`COMP`STRIKE),/_id,companion-%1,/name,capstr(json_query(%0,extract,$.name)),/system/slug,json_query(%0,extract,$.name),/system/bonus/value,%q<cst_bonus>,/system/damageRolls/base/damage,%q<cst_dmg>,/system/damageRolls/base/damageType,json_query(%0,extract,$.type),/system/traits/value,\[[iter(squish(%q<cst_tr> unarmed [if(strlen(%q<cs_path>),magical)]),json(string,%i0),%b,\,)]\])]
         flags: [funsyntax]
+      DATA`TEMPLATE`COMP`ACTOR: |-
+        {"str":{"mod":null},"dex":{"mod":null},"con":{"mod":null},"int":{"mod":null},"wis":{"mod":null},"cha":{"mod":null}}
+      DATA`TEMPLATE`COMP`ACTOR`2: |-
+        {"rarity":"","size":{"value":""},"value":null}
       # The companion as a Foundry npc from its type and advancement (Player Core): its level the master's, AC 10 +
       # Dex + unarmored defense, the type's Hit Points + (6 + Con) a level, saves and skills from its ranks, a racer's
       # +10-foot status bonus on its land Speed (its first other Speed without one), its Strikes as items.
@@ -4391,13 +4435,13 @@ objects:
             type,"npc",
             items,\[[iter(lnum(json_query(%q<ca_strikes>,size)),u(%!/FUN`COMP`STRIKE,json_query(%q<ca_strikes>,extract,$\[%i0\]),%i0),%b,\,)]\],
             system,json(object,
-              abilities,json(object,str,json(object,mod,%q<ca_str>),dex,json(object,mod,%q<ca_dex>),con,json(object,mod,%q<ca_con>),int,json(object,mod,%q<ca_int>),wis,json(object,mod,%q<ca_wis>),cha,json(object,mod,%q<ca_cha>)),
-              attributes,json(object,ac,json(object,value,add(10,%q<ca_dex>,u(%!/FUN`COMP`PROF,defense))),hp,json(object,max,%q<ca_hp>,value,%q<ca_hp>,temp,0),speed,json(object,value,%q<ca_land>,otherSpeeds,\[[iter(%q<ca_others>,json(object,type,json(string,first(%i0,~)),value,rest(%i0,~)),%b,\,)]\]),resistances,\[\]),
+              abilities,json_fill(get({{commands}}/DATA`TEMPLATE`COMP`ACTOR),/str/mod,%q<ca_str>,/dex/mod,%q<ca_dex>,/con/mod,%q<ca_con>,/int/mod,%q<ca_int>,/wis/mod,%q<ca_wis>,/cha/mod,%q<ca_cha>),
+              attributes,json_fill(get({{commands}}/DATA`TEMPLATE`FAM`ACTOR`2),/ac/value,add(10,%q<ca_dex>,u(%!/FUN`COMP`PROF,defense)),/hp/max,%q<ca_hp>,/hp/value,%q<ca_hp>,/speed/value,%q<ca_land>,/speed/otherSpeeds,\[[iter(%q<ca_others>,json(object,type,json(string,first(%i0,~)),value,rest(%i0,~)),%b,\,)]\],/resistances,\[\]),
               details,json(object,level,json(object,value,%q<ca_level>)),
-              perception,json(object,mod,add(%q<ca_wis>,u(%!/FUN`COMP`PROF,perception)),senses,\[[iter(json_query(%q<cs_data>,extract,$.senses),json(object,type,json(string,first(%i0,~)),acuity,json(string,firstof(elements(%i0,2,~),precise)),range,firstof(elements(%i0,3,~),null)),%b,\,)]\]),
-              saves,json(object,fortitude,json(object,value,add(%q<ca_con>,u(%!/FUN`COMP`PROF,fortitude))),reflex,json(object,value,add(%q<ca_dex>,u(%!/FUN`COMP`PROF,reflex))),will,json(object,value,add(%q<ca_wis>,u(%!/FUN`COMP`PROF,will)))),
+              perception,json(object,mod,add(%q<ca_wis>,u(%!/FUN`COMP`PROF,perception)),senses,\[[iter(json_query(%q<cs_data>,extract,$.senses),json_fill(get({{commands}}/DATA`TEMPLATE`FAM`ACTOR`3),/type,first(%i0,~),/acuity,firstof(elements(%i0,2,~),precise),/range,firstof(elements(%i0,3,~),null)),%b,\,)]\]),
+              saves,json_fill(get({{commands}}/DATA`TEMPLATE`FAM`ACTOR`4),/fortitude/value,add(%q<ca_con>,u(%!/FUN`COMP`PROF,fortitude)),/reflex/value,add(%q<ca_dex>,u(%!/FUN`COMP`PROF,reflex)),/will/value,add(%q<ca_wis>,u(%!/FUN`COMP`PROF,will))),
               skills,%q<ca_skills>,
-              traits,json(object,rarity,json(string,json_query(%q<cs_data>,extract,$.rarity)),size,json(object,value,json(string,u(%!/FUN`COMP`SIZE))),value,\["animal"\,"minion"\])))]
+              traits,json_fill(get({{commands}}/DATA`TEMPLATE`COMP`ACTOR`2),/rarity,json_query(%q<cs_data>,extract,$.rarity),/size/value,u(%!/FUN`COMP`SIZE),/value,\["animal"\,"minion"\])))]
         flags: [funsyntax]
       # Sets the companion's level, attributes, Hit Points, speeds, skills and Strikes in the ca_ registers.
       FUN`COMP`ACTOR`STATS:
@@ -4452,6 +4496,8 @@ objects:
         value: |-
           switch(%0,tiny,Tiny,sm,Small,med,Medium,lg,Large,huge,Huge,grg,Gargantuan,%0)
         flags: [funsyntax]
+      DATA`TEMPLATE`COMP`COMBATANT: |-
+        {"name":"","kind":"npc","pack":"minion","id":"","actor":null,"master":"","abil":"","abch":{},"side":"pc","adj":0,"hazard":0,"simple":1,"hp":null,"max":null,"temp":0,"init":null,"conds":{},"dur":{},"pers":{},"map":0,"down":0}
       # The companion as an encounter combatant, or #-1~why.
       FUN`COMP`COMBATANT:
         value: |-
@@ -4463,7 +4509,7 @@ objects:
             not(u(%!/FUN`COMP`HAS)),#-1~[name(%0)] has no animal companion.,
             not(strlen(%q<cs_type>)),#-1~[name(%0)]'s animal companion has no type yet: +companion/type chooses it.,
             [setq(cc_actor,u(%!/FUN`COMP`ACTOR,%0))][
-            json(object,name,json(string,%q<cs_name>),kind,"npc",pack,"minion",id,json(string,C[after(num(%0),#)]),actor,%q<cc_actor>,master,json(string,objid(%0)),abil,"",abch,json(object),side,"pc",adj,0,hazard,0,simple,1,hp,%q<ca_hp>,max,%q<ca_hp>,temp,0,init,null,conds,json(object),dur,json(object),pers,json(object),map,0,down,0)])]
+            json_fill(get({{commands}}/DATA`TEMPLATE`COMP`COMBATANT),/name,%q<cs_name>,/id,C[after(num(%0),#)],/actor,%q<cc_actor>,/master,objid(%0),/hp,%q<ca_hp>,/max,%q<ca_hp>)])]
         flags: [funsyntax]
       CMD`RITUAL:
         value: |-
@@ -5044,9 +5090,11 @@ objects:
         value: |-
           @include %!/INC`TARGET`EDIT; think setqm(entry_stat,u(%!/FUN`COMMAND`STAT,before(%q<cmd_rest>,=)),entry_rank,u(%!/FUN`COMMAND`RANK,after(%q<cmd_rest>,=))); @assert eq(words(%q<entry_stat>),1)=@pemit %#=notice(PF2E,u(%!/FUN`SHOW`STAT`MISS,trim(before(%q<cmd_rest>,=)),%q<entry_stat>),warn); @assert strlen(%q<entry_rank>)=@pemit %#=notice(PF2E,A rank is untrained%, trained%, expert%, master or legendary%, or 0 to 4.,warn); think setqm(entry_json,json(object,kind,"rank",stat,json(string,%q<entry_stat>),rank,%q<entry_rank>),entry_text,[capstr(%q<entry_stat>)] [u(%!/FUN`SHOW`RANK,%q<entry_rank>)]); @include %!/INC`ENTRY`WRITE
         flags: [cmdsyntax]
+      DATA`TEMPLATE`INC`PF2E`GRANT: |-
+        {"kind":"grant","pack":"","id":"","badge":null}
       INC`PF2E`GRANT:
         value: |-
-          @include %!/INC`TARGET`EDIT; think setqm(entry_pack,lcstr(trim(before(%q<cmd_rest>,/))),entry_name,trim(before(after(%q<cmd_rest>,/),=)),entry_badge,trim(after(%q<cmd_rest>,=))); @assert strlen(u({{core}}/DATA`PACK`%q<entry_pack>))=@pemit %#=notice(PF2E,Name a pack and an item%, such as conditions/frightened. The packs are [itemize(lcstr(iter(lattr({{core}}/DATA`PACK`*),last(%i0,`))))].,warn); @assert lt(words(u({{core}}/FUN`SHEET`GRANTS,u({{core}}/FUN`SHEET`ENTRIES,%q<sheet_ledger>),20)),get({{core}}/DATA`SHEET`GRANTS`MAX))=@pemit %#=notice(PF2E,A sheet holds at most [get({{core}}/DATA`SHEET`GRANTS`MAX)] items. Revoke one first.,warn); think setq(entry_id,u({{core}}/FUN`ITEM`FIND,%q<entry_pack>,%q<entry_name>)); @assert strlen(%q<entry_id>)=@pemit %#=notice(PF2E,There is no %q<entry_name> in %q<entry_pack> from a book the game uses.,warn); @assert cor(not(strlen(%q<entry_badge>)),cand(isint(%q<entry_badge>),gt(%q<entry_badge>,0)))=@pemit %#=notice(PF2E,A value after = is a whole number above 0%, such as conditions/frightened=2.,warn); think setqm(entry_json,json(object,kind,"grant",pack,json(string,%q<entry_pack>),id,json(string,%q<entry_id>),badge,firstof(%q<entry_badge>,null)),entry_text,[u(%!/FUN`SHOW`ITEM,%q<entry_pack>,%q<entry_id>,%q<entry_badge>)]); @include %!/INC`ENTRY`WRITE
+          @include %!/INC`TARGET`EDIT; think setqm(entry_pack,lcstr(trim(before(%q<cmd_rest>,/))),entry_name,trim(before(after(%q<cmd_rest>,/),=)),entry_badge,trim(after(%q<cmd_rest>,=))); @assert strlen(u({{core}}/DATA`PACK`%q<entry_pack>))=@pemit %#=notice(PF2E,Name a pack and an item%, such as conditions/frightened. The packs are [itemize(lcstr(iter(lattr({{core}}/DATA`PACK`*),last(%i0,`))))].,warn); @assert lt(words(u({{core}}/FUN`SHEET`GRANTS,u({{core}}/FUN`SHEET`ENTRIES,%q<sheet_ledger>),20)),get({{core}}/DATA`SHEET`GRANTS`MAX))=@pemit %#=notice(PF2E,A sheet holds at most [get({{core}}/DATA`SHEET`GRANTS`MAX)] items. Revoke one first.,warn); think setq(entry_id,u({{core}}/FUN`ITEM`FIND,%q<entry_pack>,%q<entry_name>)); @assert strlen(%q<entry_id>)=@pemit %#=notice(PF2E,There is no %q<entry_name> in %q<entry_pack> from a book the game uses.,warn); @assert cor(not(strlen(%q<entry_badge>)),cand(isint(%q<entry_badge>),gt(%q<entry_badge>,0)))=@pemit %#=notice(PF2E,A value after = is a whole number above 0%, such as conditions/frightened=2.,warn); think setqm(entry_json,json_fill(get({{commands}}/DATA`TEMPLATE`INC`PF2E`GRANT),/pack,%q<entry_pack>,/id,%q<entry_id>,/badge,firstof(%q<entry_badge>,null)),entry_text,[u(%!/FUN`SHOW`ITEM,%q<entry_pack>,%q<entry_id>,%q<entry_badge>)]); @include %!/INC`ENTRY`WRITE
         flags: [cmdsyntax]
       INC`PF2E`REVOKE:
         value: |-
@@ -5079,13 +5127,15 @@ objects:
         value: |-
           @break not(strmatch(json_query(%q<entry_json>,type),object))=@pemit %#=notice(PF2E,The entry could not be written: %q<entry_json>,error); think setq(entry_n,inc(lmax(0 [iter(lattr(%q<sheet_target>/PF2E`LEDGER`*),last(%i0,`))]))); &PF2E`LEDGER`%q<entry_n> %q<sheet_target>=[json_mod(%q<entry_json>,patch,json(object,n,%q<entry_n>,by,json(string,objid(%#))))]; @set %q<sheet_target>/PF2E`LEDGER`%q<entry_n>=wizard; @pemit %#=notice(PF2E,[if(strmatch(num(%q<sheet_target>),num(%#)),,[name(%q<sheet_target>)]:%b)]%q<entry_text> %(entry %q<entry_n>%).,ok)
         flags: [cmdsyntax]
+      DATA`TEMPLATE`INC`CHECK`ROLL: |-
+        {"stat":"","dc":"","ok":null}
       # A check: the statistic's modifiers stacked, a d20 rolled and kept, and against a DC its degree.
       # "with <slug>" anywhere after the statistic picks a roll substitution, such as with assurance.
       # PF2E`LASTCHECK on the character keeps what was typed, for +hero/reroll. The table includes this too,
       # so it names this object rather than %!.
       INC`CHECK`ROLL:
         value: |-
-          think setqm(roll_raw_stat,%q<cmd_stat>,roll_raw_dc,%q<cmd_dc>); think setqm(with_at,match(%q<cmd_stat>,with),with_dc,match(%q<cmd_dc>,with)); think setqm(cmd_with,trim(if(%q<with_at>,extract(%q<cmd_stat>,inc(%q<with_at>),99),if(%q<with_dc>,extract(%q<cmd_dc>,inc(%q<with_dc>),99)))),cmd_stat,if(%q<with_at>,extract(%q<cmd_stat>,1,dec(%q<with_at>)),%q<cmd_stat>),cmd_dc,if(%q<with_dc>,extract(%q<cmd_dc>,1,dec(%q<with_dc>)),%q<cmd_dc>)); think setq(roll_stat,u({{commands}}/FUN`COMMAND`STAT,%q<cmd_stat>)); @assert eq(words(%q<roll_stat>),1)=@pemit %#=notice(PF2E,u({{commands}}/FUN`SHOW`STAT`MISS,%q<cmd_stat>,%q<roll_stat>),warn); @assert cor(not(strlen(%q<cmd_dc>)),isint(%q<cmd_dc>))=@pemit %#=notice(PF2E,A DC is a whole number%, such as +check athletics=20.,warn); think u({{commands}}/FUN`CHECK`PREPARE); @assert cor(not(strlen(%q<cmd_with>)),strlen(%q<roll_sub>),strmatch(%q<roll_tags>,Fortune|Misfortune))=@pemit %#=notice(PF2E,u({{commands}}/FUN`SHOW`SUB`MISS),warn); think u({{core}}/FUN`ROLL`CHECK,%q<roll_total>,%q<roll_domains>,%q<roll_options> %q<roll_extra>,%q<cmd_dc>); &PF2E`LASTCHECK %q<sheet_target>=[json(object,stat,json(string,%q<roll_raw_stat>),dc,json(string,%q<roll_raw_dc>),ok,if(u({{commands}}/FUN`HERO`CAN),true,false))]; @set %q<sheet_target>/PF2E`LASTCHECK=wizard; @remit %l=notice(PF2E,u({{commands}}/FUN`SHOW`CHECK)); @include {{commands}}/INC`CHECK`GMNOTES
+          think setqm(roll_raw_stat,%q<cmd_stat>,roll_raw_dc,%q<cmd_dc>); think setqm(with_at,match(%q<cmd_stat>,with),with_dc,match(%q<cmd_dc>,with)); think setqm(cmd_with,trim(if(%q<with_at>,extract(%q<cmd_stat>,inc(%q<with_at>),99),if(%q<with_dc>,extract(%q<cmd_dc>,inc(%q<with_dc>),99)))),cmd_stat,if(%q<with_at>,extract(%q<cmd_stat>,1,dec(%q<with_at>)),%q<cmd_stat>),cmd_dc,if(%q<with_dc>,extract(%q<cmd_dc>,1,dec(%q<with_dc>)),%q<cmd_dc>)); think setq(roll_stat,u({{commands}}/FUN`COMMAND`STAT,%q<cmd_stat>)); @assert eq(words(%q<roll_stat>),1)=@pemit %#=notice(PF2E,u({{commands}}/FUN`SHOW`STAT`MISS,%q<cmd_stat>,%q<roll_stat>),warn); @assert cor(not(strlen(%q<cmd_dc>)),isint(%q<cmd_dc>))=@pemit %#=notice(PF2E,A DC is a whole number%, such as +check athletics=20.,warn); think u({{commands}}/FUN`CHECK`PREPARE); @assert cor(not(strlen(%q<cmd_with>)),strlen(%q<roll_sub>),strmatch(%q<roll_tags>,Fortune|Misfortune))=@pemit %#=notice(PF2E,u({{commands}}/FUN`SHOW`SUB`MISS),warn); think u({{core}}/FUN`ROLL`CHECK,%q<roll_total>,%q<roll_domains>,%q<roll_options> %q<roll_extra>,%q<cmd_dc>); &PF2E`LASTCHECK %q<sheet_target>=[json_fill(get({{commands}}/DATA`TEMPLATE`INC`CHECK`ROLL),/stat,%q<roll_raw_stat>,/dc,%q<roll_raw_dc>,/ok,if(u({{commands}}/FUN`HERO`CAN),true,false))]; @set %q<sheet_target>/PF2E`LASTCHECK=wizard; @remit %l=notice(PF2E,u({{commands}}/FUN`SHOW`CHECK)); @include {{commands}}/INC`CHECK`GMNOTES
         flags: [cmdsyntax]
       # Notes only the GM sees go to the GM of the room's encounter, else to staff who rolled.
       INC`CHECK`GMNOTES:
@@ -5108,9 +5158,11 @@ objects:
         value: |-
           $(?is)^\+toggle(?\: +(.*))?$:think setq(cmd_args,trim(%1)); think u(%!/FUN`COMMAND`TARGET); think setqm(cmd_name,trim(before(%q<cmd_rest>,=)),cmd_to,lcstr(trim(after(%q<cmd_rest>,=)))); @include %!/INC`TARGET`VIEW; think u({{core}}/FUN`CHECK`PREPARE,%q<sheet_ledger>); @assert strlen(%q<cmd_name>)={@pemit %#=u(%!/FUN`SHOW`TOGGLES)}; @include %!/INC`TOGGLE`SET
         flags: [regexp, cmdsyntax]
+      DATA`TEMPLATE`INC`TOGGLE`SET: |-
+        {"kind":"toggle","domain":"","option":"","value":null,"selection":null}
       INC`TOGGLE`SET:
         value: |-
-          think setq(tg_at,u(%!/FUN`TOGGLE`FIND,%q<cmd_name>)); @assert eq(words(%q<tg_at>),1)=@pemit %#=notice(PF2E,u(%!/FUN`TOGGLE`MISS,%q<cmd_name>,%q<tg_at>),warn); think u(%!/FUN`TOGGLE`ASK,%q<tg_at>,%q<cmd_to>); @assert cor(match(on off,%q<cmd_to>),not(strlen(%q<cmd_to>)),strlen(%q<tg_sel>))=@pemit %#=notice(PF2E,%q<tg_label> has no choice called %q<cmd_to>. The choices are [itemize(iter(%q<tg_subs>,u(%!/FUN`TOGGLE`SUBLABEL,%q<tg_at>,%i0),%b,|),|,or)].,warn); @assert cor(%q<tg_value>,not(elements(%q<tg>,11,~)))=@pemit %#=notice(PF2E,%q<tg_label> is always on. +toggle %q<tg_label>=<choice> picks one of [itemize(iter(%q<tg_subs>,u(%!/FUN`TOGGLE`SUBLABEL,%q<tg_at>,%i0),%b,|),|,or)].,warn); @assert elements(%q<tg>,9,~)=@pemit %#=notice(PF2E,%q<tg_label> cannot be changed now.,warn); think setq(entry_json,json(object,kind,"toggle",domain,json(string,first(%q<tg>,~)),option,json(string,elements(%q<tg>,2,~)),value,if(%q<tg_value>,true,false),selection,if(strlen(%q<tg_sel>),json(string,%q<tg_sel>),null))); @include %!/INC`BUILD`PUT; @pemit %#=notice(PF2E,[if(strmatch(num(%q<sheet_target>),num(%#)),,[name(%q<sheet_target>)]:%b)]%q<tg_label>: [if(%q<tg_value>,on,off)][if(strlen(%q<tg_sel>),%, [u(%!/FUN`TOGGLE`SUBLABEL,%q<tg_at>,%q<tg_sel>)])].,ok)
+          think setq(tg_at,u(%!/FUN`TOGGLE`FIND,%q<cmd_name>)); @assert eq(words(%q<tg_at>),1)=@pemit %#=notice(PF2E,u(%!/FUN`TOGGLE`MISS,%q<cmd_name>,%q<tg_at>),warn); think u(%!/FUN`TOGGLE`ASK,%q<tg_at>,%q<cmd_to>); @assert cor(match(on off,%q<cmd_to>),not(strlen(%q<cmd_to>)),strlen(%q<tg_sel>))=@pemit %#=notice(PF2E,%q<tg_label> has no choice called %q<cmd_to>. The choices are [itemize(iter(%q<tg_subs>,u(%!/FUN`TOGGLE`SUBLABEL,%q<tg_at>,%i0),%b,|),|,or)].,warn); @assert cor(%q<tg_value>,not(elements(%q<tg>,11,~)))=@pemit %#=notice(PF2E,%q<tg_label> is always on. +toggle %q<tg_label>=<choice> picks one of [itemize(iter(%q<tg_subs>,u(%!/FUN`TOGGLE`SUBLABEL,%q<tg_at>,%i0),%b,|),|,or)].,warn); @assert elements(%q<tg>,9,~)=@pemit %#=notice(PF2E,%q<tg_label> cannot be changed now.,warn); think setq(entry_json,json_fill(get({{commands}}/DATA`TEMPLATE`INC`TOGGLE`SET),/domain,first(%q<tg>,~),/option,elements(%q<tg>,2,~),/value,if(%q<tg_value>,true,false),/selection,if(strlen(%q<tg_sel>),json(string,%q<tg_sel>),null))); @include %!/INC`BUILD`PUT; @pemit %#=notice(PF2E,[if(strmatch(num(%q<sheet_target>),num(%#)),,[name(%q<sheet_target>)]:%b)]%q<tg_label>: [if(%q<tg_value>,on,off)][if(strlen(%q<tg_sel>),%, [u(%!/FUN`TOGGLE`SUBLABEL,%q<tg_at>,%q<tg_sel>)])].,ok)
         flags: [cmdsyntax]
       FUN`TOGGLE`ASK:
         value: |-
@@ -5275,10 +5327,12 @@ objects:
           setq(actor_sys,json_mod(%q<actor_sys>,patch,json(object,%q<af_key>,json_query(%0,extract,$.value))))][
           setq(actor_src_%q<af_key>,%q<af_n>~[json_query(%q<check_ledger>,extract,$\[%q<af_index>\].step)])]
         flags: [funsyntax]
+      DATA`TEMPLATE`BUILD`ACTORCHILDREN: |-
+        {"actor":{"flags":{"system":null}}}
       FUN`BUILD`ACTORCHILDREN:
         value: |-
           @@(after FUN`BUILD`ACTORFLAGS: what GrantItems reading the actor's flags bring and is not granted yet, each pack~ID~parent~step~level~depth~choices)[
-          setq(actor_data,json(object,actor,json(object,flags,json(object,system,%q<actor_sys>))))][
+          setq(actor_data,json_fill(get({{commands}}/DATA`TEMPLATE`BUILD`ACTORCHILDREN),/actor/flags/system,%q<actor_sys>))][
           squish(iter(graball(%q<check_entries>,grant~*),
             [setqm(ac_pack,before(elements(%i0,2,~),|),ac_id,after(elements(%i0,2,~),|),ac_level,elements(%i0,6,~))][
             if(words(setr(ac_grants,json_query(get(u({{core}}/DATA`PACK`%q<ac_pack>)/ITEM`%q<ac_id>`PREP),extract,$.grants))),
@@ -5295,6 +5349,8 @@ objects:
             if(cand(strlen(%q<ac_found>),not(words(graball(%q<check_entries>,grant~[edit(%q<ac_found>,~,|)]~*))),u({{core}}/FUN`PREDICATE`TEST,firstof(json_query(%0,get,predicate),json(array)),%q<check_options>)),
               %q<ac_found>~[first(%q<ac_src>,~)]~[rest(%q<ac_src>,~)]~%q<ac_level>~1~{})])]
         flags: [funsyntax]
+      DATA`TEMPLATE`BUILD`TREE: |-
+        {"kind":"grant","pack":"","id":"","badge":null,"step":"","parent":null,"level":null,"choices":null}
       # The grants a queue of items brings, breadth first: each item, numbered from build_next, then
       # what it grants in turn, each item once. Sets tree_count and tree_json_<k>, each a grant entry.
       FUN`BUILD`TREE:
@@ -5310,7 +5366,7 @@ objects:
               setq(tree_count,inc(%q<tree_count>))][
               setq(tree_n,add(%q<build_next>,dec(%q<tree_count>)))][
               setq(tree_choices,firstof(edit(elements(%q<tree_item>,7,~),\\u0020,%b),json(object)))][
-              setq(tree_json_%q<tree_count>,json(object,kind,"grant",pack,json(string,elements(%q<tree_item>,1,~)),id,json(string,elements(%q<tree_item>,2,~)),badge,null,step,json(string,elements(%q<tree_item>,4,~)),parent,firstof(elements(%q<tree_item>,3,~),null),level,firstof(elements(%q<tree_item>,5,~),null),choices,%q<tree_choices>))][
+              setq(tree_json_%q<tree_count>,json_fill(get({{commands}}/DATA`TEMPLATE`BUILD`TREE),/pack,elements(%q<tree_item>,1,~),/id,elements(%q<tree_item>,2,~),/step,elements(%q<tree_item>,4,~),/parent,firstof(elements(%q<tree_item>,3,~),null),/level,firstof(elements(%q<tree_item>,5,~),null),/choices,%q<tree_choices>))][
               setq(tree_queue,squish(%q<tree_queue> [u(%!/FUN`BUILD`CHILDREN,elements(%q<tree_item>,1,~),elements(%q<tree_item>,2,~),%q<tree_choices>,%q<tree_n>,elements(%q<tree_item>,4,~),elements(%q<tree_item>,5,~),elements(%q<tree_item>,6,~),)]))])])))]
         flags: [funsyntax]
       INC`BUILD`SHOW:
@@ -5354,10 +5410,12 @@ objects:
         value: |-
           @break cor(not(strmatch(%q<build_step>,class)),neq(json_query(%q<build_item>,extract,$.system.keyAbility.value.length),1)); think setq(entry_json,json(object,kind,"boost",ability,json(string,json_query(%q<build_item>,extract,$.system.keyAbility.value\[0\])),step,"boost-class",parent,%q<build_picked>)); @include %!/INC`BUILD`PUT
         flags: [cmdsyntax]
+      DATA`TEMPLATE`INC`BUILD`BOOST: |-
+        {"kind":"","ability":"","step":"","parent":null}
       # +build/boost <set>=<attributes>: ancestry, background, class, or a level (1, 5, 10, 15, 20).
       INC`BUILD`BOOST:
         value: |-
-          @include %!/INC`BUILD`BOOST`PLAN; @include %!/INC`BUILD`BEGIN; @include/nobreak %!/INC`BUILD`CLEAR; @dolist/inplace %q<build_plan>={think setq(entry_json,json(object,kind,json(string,before(##,~)),ability,json(string,elements(##,2,~)),step,json(string,%q<build_step>),parent,firstof(elements(##,3,~),null))); @include %!/INC`BUILD`PUT}; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)][switch(%q<build_set>,class,Key attribute,ancestry,Ancestry boosts,background,Background boosts,Level %q<build_set> boost[if(gt(words(%q<build_plan>),1),s)])]: [itemize(iter(%q<build_plan>,[if(strmatch(first(%i0,~),flaw),flaw%b)][capstr(elements(%i0,2,~))],%b,|),|)].,ok); @wait 0={think u(%!/FUN`BUILD`LOAD); @pemit %#=u(%!/FUN`BUILD`NEXT)}
+          @include %!/INC`BUILD`BOOST`PLAN; @include %!/INC`BUILD`BEGIN; @include/nobreak %!/INC`BUILD`CLEAR; @dolist/inplace %q<build_plan>={think setq(entry_json,json_fill(get({{commands}}/DATA`TEMPLATE`INC`BUILD`BOOST),/kind,before(##,~),/ability,elements(##,2,~),/step,%q<build_step>,/parent,firstof(elements(##,3,~),null))); @include %!/INC`BUILD`PUT}; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)][switch(%q<build_set>,class,Key attribute,ancestry,Ancestry boosts,background,Background boosts,Level %q<build_set> boost[if(gt(words(%q<build_plan>),1),s)])]: [itemize(iter(%q<build_plan>,[if(strmatch(first(%i0,~),flaw),flaw%b)][capstr(elements(%i0,2,~))],%b,|),|)].,ok); @wait 0={think u(%!/FUN`BUILD`LOAD); @pemit %#=u(%!/FUN`BUILD`NEXT)}
         flags: [cmdsyntax]
       # +build/boost: reads <set>=<attributes> into %q<build_set> and %q<build_typed>, and sets %q<build_plan>,
       # stopping when the set or an attribute is unknown or the plan does not fit.
@@ -5376,10 +5434,12 @@ objects:
         value: |-
           think setqm(build_step,skills,build_picked,u(%!/FUN`BUILD`SKILLS`PICKED),build_need,u(%!/FUN`BUILD`SKILLS`NEED)); @assert strlen(trim(%q<cmd_rest>))=@pemit %#=notice(PF2E,[if(words(%q<build_picked>),Chosen: [itemize(iter(%q<build_picked>,u(%!/FUN`SHOW`STAT,%i0),%b,|),|)].%b)][if(gt(%q<build_need>,words(%q<build_picked>)),[sub(%q<build_need>,words(%q<build_picked>))] more to choose: +build/skills <skill> ... +build/list skills shows them.,Nothing more to choose. +build/undo skills chooses again.)]); think setq(build_typed,setdiff(u(%!/FUN`BUILD`SKILL`LIST,%q<cmd_rest>),%q<build_picked>)); @assert not(member(iter(%q<build_typed>,left(%i0,1)),?))=@pemit %#=notice(PF2E,u(%!/FUN`BUILD`SKILL`MISS,%q<build_typed>),warn); think setq(build_known,u(%!/FUN`BUILD`TRAINED`ELSEWHERE)); @assert not(words(setinter(%q<build_typed>,%q<build_known>)))=@pemit %#=notice(PF2E,Already trained another way: [itemize(iter(setinter(%q<build_typed>,%q<build_known>),u(%!/FUN`SHOW`STAT,%i0),%b,|),|)]. Choose others.,warn); @assert words(%q<build_typed>)=@pemit %#=notice(PF2E,Chosen already.,warn); @assert lte(add(words(%q<build_picked>),words(%q<build_typed>)),%q<build_need>)=@pemit %#=notice(PF2E,[if(gt(%q<build_need>,words(%q<build_picked>)),Only [sub(%q<build_need>,words(%q<build_picked>))] more to choose%, not [words(%q<build_typed>)].,All %q<build_need> are chosen.)] +build/undo skills chooses again.,warn)
         flags: [cmdsyntax]
+      DATA`TEMPLATE`INC`BUILD`INCREASE: |-
+        {"kind":"rank","stat":"","rank":null,"step":""}
       # +build/increase <level>=<skill>: a skill increase, one rank up.
       INC`BUILD`INCREASE:
         value: |-
-          think setqm(build_at,trim(before(%q<cmd_rest>,=)),build_stat,u(%!/FUN`BUILD`SKILL`LIST,after(%q<cmd_rest>,=)),build_step,increase-[trim(before(%q<cmd_rest>,=))]); @assert member(u(%!/FUN`BUILD`LEVELS,skillIncreaseLevels),%q<build_at>)=@pemit %#=notice(PF2E,Your class gives skill increases at levels [itemize(u(%!/FUN`BUILD`LEVELS,skillIncreaseLevels))]: +build/increase 3=athletics.,warn); @assert lte(%q<build_at>,%q<check_level>)=@pemit %#=notice(PF2E,You are level %q<check_level>%, below %q<build_at>.,warn); @assert cand(eq(words(%q<build_stat>),1),not(member(iter(%q<build_stat>,left(%i0,1)),?)))=@pemit %#=notice(PF2E,Name one skill: +build/increase %q<build_at>=athletics.,warn); @include %!/INC`BUILD`GUARD; @include %!/INC`BUILD`BEGIN; @include/nobreak %!/INC`BUILD`CLEAR; think u(%!/FUN`BUILD`LOAD); think setq(build_rank,inc(u({{core}}/FUN`CHECK`RANK,%q<build_stat>))); @assert lte(%q<build_rank>,switch(1,gte(%q<build_at>,15),4,gte(%q<build_at>,7),3,2))=@pemit %#=notice(PF2E,[u(%!/FUN`SHOW`STAT,%q<build_stat>)] cannot go past [u(%!/FUN`SHOW`RANK,dec(%q<build_rank>))] at level %q<build_at>.,warn); think setq(entry_json,json(object,kind,"rank",stat,json(string,%q<build_stat>),rank,%q<build_rank>,step,json(string,%q<build_step>))); @include %!/INC`BUILD`PUT; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)][u(%!/FUN`SHOW`STAT,%q<build_stat>)] is [u(%!/FUN`SHOW`RANK,%q<build_rank>)] from level %q<build_at>.,ok); @wait 0={think u(%!/FUN`BUILD`LOAD); @pemit %#=u(%!/FUN`BUILD`NEXT)}
+          think setqm(build_at,trim(before(%q<cmd_rest>,=)),build_stat,u(%!/FUN`BUILD`SKILL`LIST,after(%q<cmd_rest>,=)),build_step,increase-[trim(before(%q<cmd_rest>,=))]); @assert member(u(%!/FUN`BUILD`LEVELS,skillIncreaseLevels),%q<build_at>)=@pemit %#=notice(PF2E,Your class gives skill increases at levels [itemize(u(%!/FUN`BUILD`LEVELS,skillIncreaseLevels))]: +build/increase 3=athletics.,warn); @assert lte(%q<build_at>,%q<check_level>)=@pemit %#=notice(PF2E,You are level %q<check_level>%, below %q<build_at>.,warn); @assert cand(eq(words(%q<build_stat>),1),not(member(iter(%q<build_stat>,left(%i0,1)),?)))=@pemit %#=notice(PF2E,Name one skill: +build/increase %q<build_at>=athletics.,warn); @include %!/INC`BUILD`GUARD; @include %!/INC`BUILD`BEGIN; @include/nobreak %!/INC`BUILD`CLEAR; think u(%!/FUN`BUILD`LOAD); think setq(build_rank,inc(u({{core}}/FUN`CHECK`RANK,%q<build_stat>))); @assert lte(%q<build_rank>,switch(1,gte(%q<build_at>,15),4,gte(%q<build_at>,7),3,2))=@pemit %#=notice(PF2E,[u(%!/FUN`SHOW`STAT,%q<build_stat>)] cannot go past [u(%!/FUN`SHOW`RANK,dec(%q<build_rank>))] at level %q<build_at>.,warn); think setq(entry_json,json_fill(get({{commands}}/DATA`TEMPLATE`INC`BUILD`INCREASE),/stat,%q<build_stat>,/rank,%q<build_rank>,/step,%q<build_step>)); @include %!/INC`BUILD`PUT; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)][u(%!/FUN`SHOW`STAT,%q<build_stat>)] is [u(%!/FUN`SHOW`RANK,%q<build_rank>)] from level %q<build_at>.,ok); @wait 0={think u(%!/FUN`BUILD`LOAD); @pemit %#=u(%!/FUN`BUILD`NEXT)}
         flags: [cmdsyntax]
       # +build/language <language> ...: the languages chosen beyond the ancestry's own.
       INC`BUILD`LANGUAGE:
@@ -5408,11 +5468,13 @@ objects:
         value: |-
           think setqm(build_choices,u(%!/FUN`BUILD`CHOICES`OPEN,0),build_at,trim(before(%q<cmd_rest>,=)),build_typed,trim(after(%q<cmd_rest>,=))); think if(not(isint(%q<build_at>)),setq(build_at,firstof(match(iter(%q<build_choices>,edit(elements(%i0,4,~),%b,_),|,%b),*[edit(%q<build_at>,%b,_)]*),%q<build_at>))); @assert cand(strlen(%q<build_typed>),isint(%q<build_at>),gte(%q<build_at>,1),lte(%q<build_at>,words(%q<build_choices>,|)))=@pemit %#=notice(PF2E,[if(words(%q<build_choices>,|),Choose by number or name: [itemize(iter(%q<build_choices>,+build/choose #@=<option> for [elements(%i0,4,~)],|,|),|)].,Nothing asks for a choice.)],warn); think setq(build_choice,extract(%q<build_choices>,%q<build_at>,1,|)); think setqm(build_owner,first(%q<build_choice>,~),build_flag,elements(%q<build_choice>,2,~),build_step,choice-[first(%q<build_choice>,~)]-[elements(%q<build_choice>,2,~)]); @include %!/INC`BUILD`GUARD; think setq(build_value,u(%!/FUN`BUILD`CHOICE`MATCH,%q<build_choice>,%q<build_typed>)); @assert strlen(%q<build_value>)=@pemit %#=notice(PF2E,%q<build_typed> is not one of the options. +build/list choice %q<build_at> shows them.,warn)
         flags: [cmdsyntax]
+      DATA`TEMPLATE`INC`BUILD`CHOOSE`RECORD: |-
+        {"kind":"choice","entry":null,"flag":"","value":"","step":"","parent":null}
       # +build/choose: records the choice in the build ledger and rebuilds the grants that hang from the entry it
       # belongs to.
       INC`BUILD`CHOOSE`RECORD:
         value: |-
-          @include %!/INC`BUILD`BEGIN; @include/nobreak %!/INC`BUILD`CLEAR; think setq(entry_json,json(object,kind,"choice",entry,%q<build_owner>,flag,json(string,%q<build_flag>),value,json(string,%q<build_value>),step,json(string,%q<build_step>),parent,%q<build_owner>)); @include %!/INC`BUILD`PUT; think setq(build_choice_n,%q<build_last>); think u(%!/FUN`BUILD`LOAD); think setq(build_owner_grant,u(%!/FUN`BUILD`GRANT`BY`N,%q<build_owner>)); @include %!/INC`BUILD`BEGIN; think u(%!/FUN`BUILD`TREE,u(%!/FUN`BUILD`CHILDREN,elements(%q<build_owner_grant>,2,~),elements(%q<build_owner_grant>,3,~),u({{core}}/FUN`CHECK`CHOICES,elements(%q<build_owner_grant>,5,~)),%q<build_choice_n>,%q<build_step>,u(%!/FUN`BUILD`ENTRY`LEVEL,%q<build_owner>),1,%q<build_flag>)); @include %!/INC`BUILD`TREE`WRITE; @include/nobreak %!/INC`BUILD`ACTORTREE
+          @include %!/INC`BUILD`BEGIN; @include/nobreak %!/INC`BUILD`CLEAR; think setq(entry_json,json_fill(get({{commands}}/DATA`TEMPLATE`INC`BUILD`CHOOSE`RECORD),/entry,%q<build_owner>,/flag,%q<build_flag>,/value,%q<build_value>,/step,%q<build_step>,/parent,%q<build_owner>)); @include %!/INC`BUILD`PUT; think setq(build_choice_n,%q<build_last>); think u(%!/FUN`BUILD`LOAD); think setq(build_owner_grant,u(%!/FUN`BUILD`GRANT`BY`N,%q<build_owner>)); @include %!/INC`BUILD`BEGIN; think u(%!/FUN`BUILD`TREE,u(%!/FUN`BUILD`CHILDREN,elements(%q<build_owner_grant>,2,~),elements(%q<build_owner_grant>,3,~),u({{core}}/FUN`CHECK`CHOICES,elements(%q<build_owner_grant>,5,~)),%q<build_choice_n>,%q<build_step>,u(%!/FUN`BUILD`ENTRY`LEVEL,%q<build_owner>),1,%q<build_flag>)); @include %!/INC`BUILD`TREE`WRITE; @include/nobreak %!/INC`BUILD`ACTORTREE
         flags: [cmdsyntax]
       # +build/spell <spell>[ at <rank>], +build/unspell <spell>[ at <rank>]: the spells the character knows, keeps in
       # a spellbook or has their familiar keep, and their focus spells. A spontaneous caster learns a spell at a rank.
@@ -5476,10 +5538,12 @@ objects:
         value: |-
           think u({{core}}/FUN`CAST`PREPARE); think u(%!/FUN`SPELL`ARGS,%q<cmd_rest>); think setq(build_id,u({{core}}/FUN`ITEM`FIND,spells,%q<arg_spell>)); think setq(build_n,first(iter(%q<check_grants>,if(cand(strmatch(elements(%i0,2,~),spells),strmatch(elements(%i0,3,~),%q<build_id>),cor(not(strlen(%q<arg_rank>)),strmatch(elements(%i0,4,~),%q<arg_rank>))),first(%i0,~))))); @assert strlen(%q<build_n>)=@pemit %#=notice(PF2E,There is no %q<cmd_rest> on the sheet.,warn); @assert cor(%q<build_staff>,not(%q<build_locked>))=@pemit %#=notice(PF2E,The sheet is finished%, so staff remove spells.,warn); @include %!/INC`BUILD`BEGIN; think setq(entry_json,json(object,kind,"revoke",entry,%q<build_n>)); @include %!/INC`BUILD`PUT; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)]Removed [u(%!/FUN`SHOW`SPELLNAME,%q<build_id>)].,ok)
         flags: [cmdsyntax]
+      DATA`TEMPLATE`INC`BUILD`SIGNATURE: |-
+        {"kind":"signature","id":"","rank":null,"step":""}
       # +build/signature <spell>: a signature spell for the rank it is known at, one a rank, from 3rd level for a sorcerer, bard or oracle.
       INC`BUILD`SIGNATURE:
         value: |-
-          think u({{core}}/FUN`CAST`PREPARE); @assert member(%q<check_options>,feature:signature-spells)=@pemit %#=notice(PF2E,Signature spells come with the Signature Spells class feature.,warn); think u(%!/FUN`SPELL`ARGS,%q<cmd_rest>); think setq(build_id,u({{core}}/FUN`ITEM`FIND,spells,%q<arg_spell>)); think setq(build_rank,firstof(%q<arg_rank>,first(sort(iter(graball(%q<cast_known>,%q<build_id>~*),firstof(elements(%i0,2,~),json_query(get(u({{core}}/DATA`PACK`SPELLS)/ITEM`%q<build_id>`PREP),extract,$.level))),n)))); @assert cand(strlen(%q<build_id>),isint(%q<build_rank>),not(member(json_query(get(u({{core}}/DATA`PACK`SPELLS)/ITEM`%q<build_id>`PREP),extract,$.opts),item:trait:cantrip)))=@pemit %#=notice(PF2E,%q<arg_spell> is not a spell in your repertoire.,warn); think setq(build_step,signature-%q<build_rank>); @include %!/INC`BUILD`GUARD; @include %!/INC`BUILD`BEGIN; @include/nobreak %!/INC`BUILD`CLEAR; think setq(entry_json,json(object,kind,"signature",id,json(string,%q<build_id>),rank,%q<build_rank>,step,json(string,%q<build_step>))); @include %!/INC`BUILD`PUT; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)]Signature spell for rank %q<build_rank>: [u(%!/FUN`SHOW`SPELLNAME,%q<build_id>)].,ok)
+          think u({{core}}/FUN`CAST`PREPARE); @assert member(%q<check_options>,feature:signature-spells)=@pemit %#=notice(PF2E,Signature spells come with the Signature Spells class feature.,warn); think u(%!/FUN`SPELL`ARGS,%q<cmd_rest>); think setq(build_id,u({{core}}/FUN`ITEM`FIND,spells,%q<arg_spell>)); think setq(build_rank,firstof(%q<arg_rank>,first(sort(iter(graball(%q<cast_known>,%q<build_id>~*),firstof(elements(%i0,2,~),json_query(get(u({{core}}/DATA`PACK`SPELLS)/ITEM`%q<build_id>`PREP),extract,$.level))),n)))); @assert cand(strlen(%q<build_id>),isint(%q<build_rank>),not(member(json_query(get(u({{core}}/DATA`PACK`SPELLS)/ITEM`%q<build_id>`PREP),extract,$.opts),item:trait:cantrip)))=@pemit %#=notice(PF2E,%q<arg_spell> is not a spell in your repertoire.,warn); think setq(build_step,signature-%q<build_rank>); @include %!/INC`BUILD`GUARD; @include %!/INC`BUILD`BEGIN; @include/nobreak %!/INC`BUILD`CLEAR; think setq(entry_json,json_fill(get({{commands}}/DATA`TEMPLATE`INC`BUILD`SIGNATURE),/id,%q<build_id>,/rank,%q<build_rank>,/step,%q<build_step>)); @include %!/INC`BUILD`PUT; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)]Signature spell for rank %q<build_rank>: [u(%!/FUN`SHOW`SPELLNAME,%q<build_id>)].,ok)
         flags: [cmdsyntax]
       # +build/innate <spell>[=<uses a day>]: a spell the character casts innately, from an ancestry feat or the like:
       # a cantrip at will, another spell once a day unless the count says otherwise (0 at will). Charisma and at least
@@ -5563,7 +5627,7 @@ objects:
       # +build/buy: adds the gear to the build ledger and takes the cost from the purse.
       INC`BUILD`BUY`RECORD:
         value: |-
-          @include %!/INC`BUILD`BEGIN; think setq(build_held,first(u({{core}}/FUN`SHEET`VALUE,%q<check_entries>,gear,%q<build_id>),|)); think setq(entry_json,json(object,kind,"gear",id,json(string,%q<build_id>),qty,add(firstof(%q<build_held>,0),%q<build_count>),where,json(string,setr(build_where,firstof(rest(u({{core}}/FUN`SHEET`VALUE,%q<check_entries>,gear,%q<build_id>),|),u(%!/FUN`BUILD`GEAR`WHERE,%q<build_id>)))),step,"gear")); @include %!/INC`BUILD`PUT; @dolist/inplace [if(strlen(u({{core}}/FUN`ITEM`MYST,%q<build_id>)),x)]={think setq(entry_json,json(object,kind,"myst",id,json(string,%q<build_id>),state,"k",step,"gear")); @include %!/INC`BUILD`PUT}; think setqm(purse_kind,money,purse_amount,-%q<build_cost>,purse_reason,Bought [if(gt(%q<build_count>,1),%q<build_count>%b)][json_query(%q<build_item>,extract,$.name)]); @include %!/INC`PURSE`PUT
+          @include %!/INC`BUILD`BEGIN; think setq(build_held,first(u({{core}}/FUN`SHEET`VALUE,%q<check_entries>,gear,%q<build_id>),|)); think setq(entry_json,json_fill(get({{commands}}/DATA`TEMPLATE`INC`DOWNTIME`GIVE),/id,%q<build_id>,/qty,add(firstof(%q<build_held>,0),%q<build_count>),/where,setr(build_where,firstof(rest(u({{core}}/FUN`SHEET`VALUE,%q<check_entries>,gear,%q<build_id>),|),u(%!/FUN`BUILD`GEAR`WHERE,%q<build_id>))))); @include %!/INC`BUILD`PUT; @dolist/inplace [if(strlen(u({{core}}/FUN`ITEM`MYST,%q<build_id>)),x)]={think setq(entry_json,json(object,kind,"myst",id,json(string,%q<build_id>),state,"k",step,"gear")); @include %!/INC`BUILD`PUT}; think setqm(purse_kind,money,purse_amount,-%q<build_cost>,purse_reason,Bought [if(gt(%q<build_count>,1),%q<build_count>%b)][json_query(%q<build_item>,extract,$.name)]); @include %!/INC`PURSE`PUT
         flags: [cmdsyntax]
       # +build/level: a new level for 1000 XP, which it spends. The new level's steps then show on +build.
       INC`BUILD`LEVEL:
@@ -5588,10 +5652,12 @@ objects:
         value: |-
           @assert cor(strmatch(%q<build_kind>,shield),not(strlen(u({{core}}/FUN`ABP`MODE))))=@pemit %#=notice(PF2E,Automatic Bonus Progression gives potency%, striking and resilient by level%, so weapons and armor take no fundamental runes.,warn); think setq(build_slug,last(grab(v(DATA`RUNES),[first(%q<build_rune>,~)]~[last(%q<build_rune>,~)]~%q<build_kind>~*),~)); @assert strlen(%q<build_slug>)=@pemit %#=notice(PF2E,u(%!/FUN`BUILD`RUNE`ASK,%q<build_kind>),warn); think setqm(build_old,firstof(json_query(u({{core}}/FUN`ITEM`RUNED,%q<build_id>),extract,$.system.runes.[first(%q<build_rune>,~)]),0),build_rune_item,u({{core}}/FUN`ITEM`GET,equipment,u({{core}}/FUN`ITEM`FIND,equipment,%q<build_slug>))); @assert gt(last(%q<build_rune>,~),%q<build_old>)=@pemit %#=notice(PF2E,[u(%!/FUN`SHOW`ITEM,equipment,%q<build_id>,)] already has [u(%!/FUN`SHOW`RUNE,first(%q<build_rune>,~),%q<build_old>)].,warn); @assert lte(json_query(%q<build_rune_item>,extract,$.system.level.value),%q<check_level>)=@pemit %#=notice(PF2E,[json_query(%q<build_rune_item>,extract,$.name)] is level [json_query(%q<build_rune_item>,extract,$.system.level.value)]%, above yours.,warn); think setq(build_cost,max(0,sub(u(%!/FUN`BUILD`PRICE,%q<build_rune_item>),if(%q<build_old>,u(%!/FUN`BUILD`PRICE,u({{core}}/FUN`ITEM`GET,equipment,u({{core}}/FUN`ITEM`FIND,equipment,last(grab(v(DATA`RUNES),[first(%q<build_rune>,~)]~%q<build_old>~%q<build_kind>~*),~)))),0)))); @assert lte(%q<build_cost>,u(%!/FUN`PURSE`TOTAL,%q<sheet_target>,money))=@pemit %#=notice(PF2E,It costs [u(%!/FUN`SHOW`MONEY,%q<build_cost>)]%, and the sheet has [u(%!/FUN`SHOW`MONEY,u(%!/FUN`PURSE`TOTAL,%q<sheet_target>,money))].,warn)
         flags: [cmdsyntax]
+      DATA`TEMPLATE`INC`BUILD`UPGRADE`RECORD: |-
+        {"kind":"rune","id":"","rune":"","value":null,"step":"gear"}
       # +build/rune: records the rune in the build ledger and takes the cost from the purse.
       INC`BUILD`UPGRADE`RECORD:
         value: |-
-          @include %!/INC`BUILD`BEGIN; think setq(entry_json,json(object,kind,"rune",id,json(string,%q<build_id>),rune,json(string,first(%q<build_rune>,~)),value,last(%q<build_rune>,~),step,"gear")); @include %!/INC`BUILD`PUT; think setqm(purse_kind,money,purse_amount,mul(-1,%q<build_cost>),purse_reason,[u(%!/FUN`SHOW`RUNE,first(%q<build_rune>,~),last(%q<build_rune>,~))] rune on [u(%!/FUN`SHOW`ITEM,equipment,%q<build_id>,)]); @include %!/INC`PURSE`PUT
+          @include %!/INC`BUILD`BEGIN; think setq(entry_json,json_fill(get({{commands}}/DATA`TEMPLATE`INC`BUILD`UPGRADE`RECORD),/id,%q<build_id>,/rune,first(%q<build_rune>,~),/value,last(%q<build_rune>,~))); @include %!/INC`BUILD`PUT; think setqm(purse_kind,money,purse_amount,mul(-1,%q<build_cost>),purse_reason,[u(%!/FUN`SHOW`RUNE,first(%q<build_rune>,~),last(%q<build_rune>,~))] rune on [u(%!/FUN`SHOW`ITEM,equipment,%q<build_id>,)]); @include %!/INC`PURSE`PUT
         flags: [cmdsyntax]
       # Each fundamental rune: rune~value~what it goes on~the equipment slug of the rune.
       DATA`RUNES: potency~1~weapon~weapon-potency-1 potency~2~weapon~weapon-potency-2 potency~3~weapon~weapon-potency-3 striking~1~weapon~striking striking~2~weapon~striking-greater striking~3~weapon~striking-major potency~1~armor~armor-potency-1 potency~2~armor~armor-potency-2 potency~3~armor~armor-potency-3 resilient~1~armor~resilient resilient~2~armor~resilient-greater resilient~3~armor~resilient-major reinforcing~1~shield~reinforcing-rune-minor reinforcing~2~shield~reinforcing-rune-lesser reinforcing~3~shield~reinforcing-rune-moderate reinforcing~4~shield~reinforcing-rune-greater reinforcing~5~shield~reinforcing-rune-major reinforcing~6~shield~reinforcing-rune-supreme
@@ -5629,18 +5695,20 @@ objects:
         value: |-
           @assert not(member(%q<build_have>,%q<build_prop>))=@pemit %#=notice(PF2E,%q<build_item_name> has %q<build_rname> already.,warn); think setq(build_old,first(iter(%q<build_have>,if(strmatch(u({{core}}/FUN`RUNE`FAMILY,u({{core}}/FUN`RUNE`GET,%i0,%q<build_k>)),u({{core}}/FUN`RUNE`FAMILY,%q<build_rinfo>)),%i0)))); think setqm(build_oldinfo,if(strlen(%q<build_old>),u({{core}}/FUN`RUNE`GET,%q<build_old>,%q<build_k>)),build_new,squish([iter(%q<build_have>,if(strmatch(%i0,%q<build_old>),,%i0))] %q<build_prop>),build_slots,if(strlen(setr(build_abp,u({{core}}/FUN`ABP`MODE))),u({{core}}/FUN`ABP`SLOTS,%q<build_runed>,%q<build_abp>),firstof(json_query(%q<build_runed>,extract,$.system.runes.potency),0))); @assert lt(firstof(json_query(%q<build_oldinfo>,extract,$.price),0),json_query(%q<build_rinfo>,extract,$.price))=@pemit %#=notice(PF2E,%q<build_item_name> has [json_query(%q<build_oldinfo>,extract,$.name)]%, worth more than %q<build_rname>. +build/upgrade %q<build_item_name>=remove [json_query(%q<build_oldinfo>,extract,$.name)] takes it off.,warn); @assert cor(%q<build_staff>,strmatch(json_query(%q<build_rinfo>,extract,$.rarity),common))=@pemit %#=notice(PF2E,%q<build_rname> is [json_query(%q<build_rinfo>,extract,$.rarity)]: staff etch it.,warn); @assert lte(json_query(%q<build_rinfo>,extract,$.level),%q<check_level>)=@pemit %#=notice(PF2E,%q<build_rname> is level [json_query(%q<build_rinfo>,extract,$.level)]%, above yours.,warn); @assert lte(words(%q<build_new>),%q<build_slots>)=@pemit %#=notice(PF2E,%q<build_item_name> has [if(%q<build_slots>,%q<build_slots> property rune slot[if(neq(%q<build_slots>,1),s)]%, all used,no property rune slots)]: [switch(%q<build_abp>,abp,Automatic Bonus Progression leaves property runes off weapons and armor,abp-fundamental,it gets one for each point of potency the character's level brings,it gets one for each point of potency)].,warn); think setq(build_cost,mul(100,sub(json_query(%q<build_rinfo>,extract,$.price),firstof(json_query(%q<build_oldinfo>,extract,$.price),0)))); @assert lte(%q<build_cost>,u(%!/FUN`PURSE`TOTAL,%q<sheet_target>,money))=@pemit %#=notice(PF2E,It costs [u(%!/FUN`SHOW`MONEY,%q<build_cost>)]%, and the sheet has [u(%!/FUN`SHOW`MONEY,u(%!/FUN`PURSE`TOTAL,%q<sheet_target>,money))].,warn)
         flags: [cmdsyntax]
+      DATA`TEMPLATE`INC`BUILD`PROPERTY`RECORD: |-
+        {"kind":"rune","id":"","rune":"property","value":"","step":"gear"}
       # +build/rune property: records the runes in the build ledger and takes the cost from the purse.
       INC`BUILD`PROPERTY`RECORD:
         value: |-
-          @include %!/INC`BUILD`BEGIN; think setq(entry_json,json(object,kind,"rune",id,json(string,%q<build_id>),rune,"property",value,json(string,edit(%q<build_new>,%b,.)),step,"gear")); @include %!/INC`BUILD`PUT; think setqm(purse_kind,money,purse_amount,mul(-1,%q<build_cost>),purse_reason,%q<build_rname> rune on %q<build_item_name>); @include %!/INC`PURSE`PUT
+          @include %!/INC`BUILD`BEGIN; think setq(entry_json,json_fill(get({{commands}}/DATA`TEMPLATE`INC`BUILD`PROPERTY`RECORD),/id,%q<build_id>,/value,edit(%q<build_new>,%b,.))); @include %!/INC`BUILD`PUT; think setqm(purse_kind,money,purse_amount,mul(-1,%q<build_cost>),purse_reason,%q<build_rname> rune on %q<build_item_name>); @include %!/INC`PURSE`PUT
         flags: [cmdsyntax]
       INC`BUILD`UNETCH:
         value: |-
-          @assert member(%q<build_have>,%q<build_prop>)=@pemit %#=notice(PF2E,%q<build_item_name> has no %q<build_rname> rune.,warn); think setq(build_new,squish(iter(%q<build_have>,if(strmatch(%i0,%q<build_prop>),,%i0)))); @include %!/INC`BUILD`BEGIN; think setq(entry_json,json(object,kind,"rune",id,json(string,%q<build_id>),rune,"property",value,json(string,edit(%q<build_new>,%b,.)),step,"gear")); @include %!/INC`BUILD`PUT; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)]%q<build_item_name> no longer has %q<build_rname>. Nothing is paid back for it.,ok)
+          @assert member(%q<build_have>,%q<build_prop>)=@pemit %#=notice(PF2E,%q<build_item_name> has no %q<build_rname> rune.,warn); think setq(build_new,squish(iter(%q<build_have>,if(strmatch(%i0,%q<build_prop>),,%i0)))); @include %!/INC`BUILD`BEGIN; think setq(entry_json,json_fill(get({{commands}}/DATA`TEMPLATE`INC`BUILD`PROPERTY`RECORD),/id,%q<build_id>,/value,edit(%q<build_new>,%b,.))); @include %!/INC`BUILD`PUT; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)]%q<build_item_name> no longer has %q<build_rname>. Nothing is paid back for it.,ok)
         flags: [cmdsyntax]
       INC`BUILD`SELL:
         value: |-
-          think setqm(build_id,u(%!/FUN`BUILD`GEAR`FIND,before(%q<cmd_rest>,=)),build_count,firstof(trim(after(%q<cmd_rest>,=)),1)); @assert strlen(%q<build_id>)=@pemit %#=notice(PF2E,There is no [trim(before(%q<cmd_rest>,=))] in the sheet's gear.,warn); think setq(build_state,u({{core}}/FUN`SHEET`VALUE,%q<check_entries>,gear,%q<build_id>)); @assert cand(isint(%q<build_count>),gt(%q<build_count>,0),lte(%q<build_count>,first(%q<build_state>,|)))=@pemit %#=notice(PF2E,The sheet has [first(%q<build_state>,|)].,warn); think setq(build_cost,div(mul(%q<build_count>,u(%!/FUN`BUILD`PRICE,u({{core}}/FUN`ITEM`GET,equipment,%q<build_id>))),if(%q<build_locked>,2,1))); @include %!/INC`BUILD`BEGIN; think setq(entry_json,json(object,kind,"gear",id,json(string,%q<build_id>),qty,sub(first(%q<build_state>,|),%q<build_count>),where,json(string,rest(%q<build_state>,|)),step,"gear")); @include %!/INC`BUILD`PUT; think setqm(gear_id,%q<build_id>,gear_left,sub(first(%q<build_state>,|),%q<build_count>)); @include/nobreak %!/INC`GEAR`BARE; think setqm(purse_kind,money,purse_amount,%q<build_cost>,purse_reason,[if(%q<build_locked>,Sold,Returned)] [if(gt(%q<build_count>,1),%q<build_count>%b)][u(%!/FUN`SHOW`ITEM,equipment,%q<build_id>,)]); @include %!/INC`PURSE`PUT; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)][if(%q<build_locked>,Sold,Returned)] [if(gt(%q<build_count>,1),%q<build_count>%b)][u(%!/FUN`SHOW`ITEM,equipment,%q<build_id>,)] for [u(%!/FUN`SHOW`MONEY,%q<build_cost>)].,ok)
+          think setqm(build_id,u(%!/FUN`BUILD`GEAR`FIND,before(%q<cmd_rest>,=)),build_count,firstof(trim(after(%q<cmd_rest>,=)),1)); @assert strlen(%q<build_id>)=@pemit %#=notice(PF2E,There is no [trim(before(%q<cmd_rest>,=))] in the sheet's gear.,warn); think setq(build_state,u({{core}}/FUN`SHEET`VALUE,%q<check_entries>,gear,%q<build_id>)); @assert cand(isint(%q<build_count>),gt(%q<build_count>,0),lte(%q<build_count>,first(%q<build_state>,|)))=@pemit %#=notice(PF2E,The sheet has [first(%q<build_state>,|)].,warn); think setq(build_cost,div(mul(%q<build_count>,u(%!/FUN`BUILD`PRICE,u({{core}}/FUN`ITEM`GET,equipment,%q<build_id>))),if(%q<build_locked>,2,1))); @include %!/INC`BUILD`BEGIN; think setq(entry_json,json_fill(get({{commands}}/DATA`TEMPLATE`INC`DOWNTIME`GIVE),/id,%q<build_id>,/qty,sub(first(%q<build_state>,|),%q<build_count>),/where,rest(%q<build_state>,|))); @include %!/INC`BUILD`PUT; think setqm(gear_id,%q<build_id>,gear_left,sub(first(%q<build_state>,|),%q<build_count>)); @include/nobreak %!/INC`GEAR`BARE; think setqm(purse_kind,money,purse_amount,%q<build_cost>,purse_reason,[if(%q<build_locked>,Sold,Returned)] [if(gt(%q<build_count>,1),%q<build_count>%b)][u(%!/FUN`SHOW`ITEM,equipment,%q<build_id>,)]); @include %!/INC`PURSE`PUT; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)][if(%q<build_locked>,Sold,Returned)] [if(gt(%q<build_count>,1),%q<build_count>%b)][u(%!/FUN`SHOW`ITEM,equipment,%q<build_id>,)] for [u(%!/FUN`SHOW`MONEY,%q<build_cost>)].,ok)
         flags: [cmdsyntax]
       # When the last of an item of gear goes, its runes go with it, so one bought or found later starts bare.
       INC`GEAR`BARE:
@@ -5659,7 +5727,7 @@ objects:
       # +build/equip <item>=worn|held|carried: armor is worn, a weapon or shield held.
       INC`BUILD`EQUIP:
         value: |-
-          think setqm(build_id,u(%!/FUN`BUILD`GEAR`FIND,before(%q<cmd_rest>,=)),build_where,lcstr(trim(after(%q<cmd_rest>,=)))); @assert strlen(%q<build_id>)=@pemit %#=notice(PF2E,There is no [trim(before(%q<cmd_rest>,=))] in the sheet's gear.,warn); @assert match(worn held carried,%q<build_where>)=@pemit %#=notice(PF2E,Gear is worn%, held or carried: +build/equip leather armor=worn.,warn); @include %!/INC`BUILD`BEGIN; think setq(entry_json,json(object,kind,"gear",id,json(string,%q<build_id>),qty,first(u({{core}}/FUN`SHEET`VALUE,%q<check_entries>,gear,%q<build_id>),|),where,json(string,%q<build_where>),step,"gear")); @include %!/INC`BUILD`PUT; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)][u(%!/FUN`SHOW`ITEM,equipment,%q<build_id>,)]: %q<build_where>.,ok)
+          think setqm(build_id,u(%!/FUN`BUILD`GEAR`FIND,before(%q<cmd_rest>,=)),build_where,lcstr(trim(after(%q<cmd_rest>,=)))); @assert strlen(%q<build_id>)=@pemit %#=notice(PF2E,There is no [trim(before(%q<cmd_rest>,=))] in the sheet's gear.,warn); @assert match(worn held carried,%q<build_where>)=@pemit %#=notice(PF2E,Gear is worn%, held or carried: +build/equip leather armor=worn.,warn); @include %!/INC`BUILD`BEGIN; think setq(entry_json,json_fill(get({{commands}}/DATA`TEMPLATE`INC`DOWNTIME`GIVE),/id,%q<build_id>,/qty,first(u({{core}}/FUN`SHEET`VALUE,%q<check_entries>,gear,%q<build_id>),|),/where,%q<build_where>)); @include %!/INC`BUILD`PUT; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)][u(%!/FUN`SHOW`ITEM,equipment,%q<build_id>,)]: %q<build_where>.,ok)
         flags: [cmdsyntax]
       FUN`BUILD: The builder's reading of the sheet.
       FUN`BUILD`LOAD:
@@ -5739,7 +5807,7 @@ objects:
           if(lt(%6,3),
             [setq(child_item,u({{core}}/FUN`ITEM`GET,%0,%1))][
             setq(child_prep,get(u({{core}}/DATA`PACK`%0)/ITEM`%1`PREP))][
-            setq(child_data,json(object,item,json(object,flags,json(object,system,json(object,rulesSelections,firstof(%2,json(object)))))))][
+            setq(child_data,json_fill(get({{commands}}/DATA`TEMPLATE`FAM`SELECTION),/item/flags/system/rulesSelections,firstof(%2,json(object))))][
             setq(tree_opts,%q<tree_opts> [json_query(%q<child_prep>,extract,$.kind)]:[json_query(%q<child_prep>,extract,$.slug)])][
             setq(child_options,%q<check_options> %q<tree_opts> [u({{core}}/FUN`CHECK`CHOICE`OPTIONS,json_query(%q<child_prep>,extract,$.choiceopts),firstof(%2,json(object)))])][
             setq(child_base,%3~%4~[firstof(%5,)]~[inc(%6)])][
@@ -6631,20 +6699,24 @@ objects:
           @@(%0 the text: a page that only says it)[
           json_fill(get(%!/DATA`WEB`DOCUMENT),/title,Pathfinder sheet,/pages/0/title,Pathfinder sheet,/pages/0/sections,json_array(u(%!/WEB`SECTION,,1,1,json(object,kind,"markdown",value,json(string,%0))),%r))]
         flags: [funsyntax]
+      DATA`TEMPLATE`WEB`PAGE: |-
+        {"key":"","title":"","order":null,"sections":null}
       WEB`PAGE:
         value: |-
           @@(%0 a key, %1 its title, %2 its order, %3 its sections, %r-separated)[
-          json(object,key,json(string,%0),title,json(string,%1),order,%2,sections,json_array(%3,%r))]
+          json_fill(get({{commands}}/DATA`TEMPLATE`WEB`PAGE),/key,%0,/title,%1,/order,%2,/sections,json_array(%3,%r))]
         flags: [funsyntax]
       WEB`STATS:
         value: |-
           @@(%0 the rows' data key: a row of stat tiles)[
           json(object,kind,"stats",rows_field,json(string,%0))]
         flags: [funsyntax]
+      DATA`TEMPLATE`WEB`CHIPS: |-
+        {"kind":"chips","src_field":"","label":"","empty":""}
       WEB`CHIPS:
         value: |-
           @@(%0 the data key of a list, %1 a label, %2 what shows when it is empty: chips)[
-          json(object,kind,"chips",src_field,json(string,%0),label,json(string,%1),empty,json(string,%2))]
+          json_fill(get({{commands}}/DATA`TEMPLATE`WEB`CHIPS),/src_field,%0,/label,%1,/empty,%2)]
         flags: [funsyntax]
       WEB`SECTION:
         value: |-
@@ -6656,10 +6728,12 @@ objects:
           @@(%0 data keys separated by |, or by spaces when there is no |: a keyvalue element)[
           json(object,kind,"keyvalue",fields,json_array(iter(%0,json(string,%i0),if(strmatch(%0,*|*),|,%b),%r),%r))]
         flags: [funsyntax]
+      DATA`TEMPLATE`WEB`TABLE: |-
+        {"key":"","label":"","type":null,"color_key":""}
       WEB`TABLE:
         value: |-
           @@(%0 the rows' data key, %1 label~key for each column, or label~key~color key for a chip: a table element)[
-          json(object,kind,"table",rows_field,json(string,%0),columns,json_array(iter(%1,json(object,key,json(string,elements(%i0,2,~)),label,json(string,first(%i0,~)),type,if(strlen(elements(%i0,3,~)),"chip","text"),color_key,json(string,elements(%i0,3,~))),%b,%r),%r),empty,"None.")]
+          json(object,kind,"table",rows_field,json(string,%0),columns,json_array(iter(%1,json_fill(get({{commands}}/DATA`TEMPLATE`WEB`TABLE),/key,elements(%i0,2,~),/label,first(%i0,~),/type,if(strlen(elements(%i0,3,~)),"chip","text"),/color_key,elements(%i0,3,~)),%b,%r),%r),empty,"None.")]
         flags: [funsyntax]
       WEB`DATA:
         value: |-
@@ -6718,10 +6792,12 @@ objects:
         value: |-
           json_mod(%0,patch,%1)
         flags: [funsyntax]
+      DATA`TEMPLATE`WEB`VALUE: |-
+        {"value":"","visible":false}
       WEB`VALUE:
         value: |-
           @@(%0 a key, %1 its text: one member, shown when there is text)[
-          json(object,%0,json(object,value,json(string,%1),visible,json(boolean,if(strlen(%1),true,false))))]
+          json(object,%0,json_fill(get({{commands}}/DATA`TEMPLATE`WEB`VALUE),/value,%1,/visible,if(strlen(%1),true,false)))]
         flags: [funsyntax]
       WEB`ROWS:
         value: |-
@@ -6733,27 +6809,33 @@ objects:
           @@(%0 a row's cells separated by |, %1 their keys: a row object)[
           fold(%!/WEB`MERGE,iter(%1,json(object,%i0,json(string,elements(%0,inum(0),|))),%b,%r),json(object),%r)]
         flags: [funsyntax]
+      DATA`TEMPLATE`WEB`TILE: |-
+        {"label":"","value":"","caption":"","color":""}
       WEB`TILE:
         value: |-
           @@(%0 a label, %1 a value, %2 a caption, %3 a colour: a stat tile)[
-          json(object,label,json(string,%0),value,json(string,%1),caption,json(string,%2),color,json(string,%3))]
+          json_fill(get({{commands}}/DATA`TEMPLATE`WEB`TILE),/label,%0,/value,%1,/caption,%2,/color,%3)]
         flags: [funsyntax]
       WEB`RANKCOLOR:
         value: |-
           @@(%0 a proficiency rank's name: its colour)[
           switch(%0,Trained,info,Expert,success,Master,warning,Legendary,secondary,default)]
         flags: [funsyntax]
+      DATA`TEMPLATE`WEB`LIST: |-
+        {"text":"","color":""}
       WEB`LIST:
         value: |-
           @@(%0 a list separated by |, %1 a colour or nothing: chips)[
-          if(strlen(%0),json_array(iter(%0,if(strlen(%1),json(object,text,json(string,%i0),color,json(string,%1)),json(string,%i0)),|,%r),%r),json(array))]
+          if(strlen(%0),json_array(iter(%0,if(strlen(%1),json_fill(get({{commands}}/DATA`TEMPLATE`WEB`LIST),/text,%i0,/color,%1),json(string,%i0)),|,%r),%r),json(array))]
         flags: [funsyntax]
+      DATA`TEMPLATE`WEB`DEFENCES: |-
+        {"label":"Hit points","value":"","current":null,"max":null,"color":"","caption":""}
       WEB`DEFENCES:
         value: |-
           @@(check_daily the day: hit points as a bar, AC, Hero Points as pips, class DC and Speed as tiles)[
           setqm(web_hpmax,u({{core}}/FUN`CHECK`HP),web_hp,firstof(json_query(%q<check_daily>,extract,$.hp),u({{core}}/FUN`CHECK`HP)),web_hero,u(%!/FUN`HERO`N,%q<check_daily>))][
           json_array(
-            [json(object,label,"Hit points",value,json(string,%q<web_hp> / %q<web_hpmax>),current,%q<web_hp>,max,%q<web_hpmax>,color,json(string,case(1,lte(mul(%q<web_hp>,4),%q<web_hpmax>),error,lte(mul(%q<web_hp>,2),%q<web_hpmax>),warning,success)),caption,json(string,if(json_query(%q<check_daily>,extract,$.wounded),Wounded [json_query(%q<check_daily>,extract,$.wounded)])))]%r[
+            [json_fill(get({{commands}}/DATA`TEMPLATE`WEB`DEFENCES),/value,%q<web_hp> / %q<web_hpmax>,/current,%q<web_hp>,/max,%q<web_hpmax>,/color,case(1,lte(mul(%q<web_hp>,4),%q<web_hpmax>),error,lte(mul(%q<web_hp>,2),%q<web_hpmax>),warning,success),/caption,if(json_query(%q<check_daily>,extract,$.wounded),Wounded [json_query(%q<check_daily>,extract,$.wounded)]))]%r[
             u(%!/WEB`TILE,AC,add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`AC))),if(strlen(%q<check_armor>),json_query(%q<check_armor>,extract,$.name),Unarmored),info)]%r[
             json(object,label,"Hero Points",value,json(string,%q<web_hero>),current,%q<web_hero>,max,3,pips,true,color,"warning")]%r[
             u(%!/WEB`TILE,Class DC,add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`CLASSDC))),,primary)]%r[
@@ -7217,23 +7299,29 @@ objects:
         value: |-
           think u(%!/FUN`HERO`SPEND); @include %!/INC`ENC`STORE; @include %!/INC`ENC`CHECK
         flags: [cmdsyntax]
+      DATA`TEMPLATE`INC`HERO`REROLL`SAVE: |-
+        {"after":"","ok":""}
       # A save: the character goes back to how they were before it, and rolls it again; the others' saves stand.
       INC`HERO`REROLL`SAVE:
         value: |-
-          think setq(hero_base,get(me/%q<enc_attr>`U`[json_query(%q<hero_rr>,extract,$.un)])); @assert strlen(%q<hero_base>)=@pemit %#=notice(PF2E,That save is too far back to reroll.,warn); think setq(enc,json_mod(%q<enc>,replace,$.c\[%q<hero_at>\],json_query(%q<hero_base>,extract,$.c\[%q<hero_at>\]))); think u(%!/FUN`HERO`SPEND); think setqm(save_stat,json_query(%q<hero_rr>,extract,$.save.stat),save_dc,json_query(%q<hero_rr>,extract,$.save.dc),save_parts,json_query(%q<hero_rr>,extract,$.save.parts),save_ok,); think setq(save_line,u(%!/FUN`ACT`SAVE,%q<hero_at>)); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,[u(%!/FUN`ENC`C,%q<hero_at>,name)] spends a Hero Point and rerolls the [u({{commands}}/FUN`SHOW`STAT,%q<save_stat>)] save:%r%q<save_line>); &%q<enc_attr>`RR me=[json_mod(%q<hero_rr>,patch,json(object,after,json(string,digest(sha1,%q<enc>)),ok,json(string,setdiff(json_query(%q<hero_rr>,extract,$.ok),%q<hero_at>))))]
+          think setq(hero_base,get(me/%q<enc_attr>`U`[json_query(%q<hero_rr>,extract,$.un)])); @assert strlen(%q<hero_base>)=@pemit %#=notice(PF2E,That save is too far back to reroll.,warn); think setq(enc,json_mod(%q<enc>,replace,$.c\[%q<hero_at>\],json_query(%q<hero_base>,extract,$.c\[%q<hero_at>\]))); think u(%!/FUN`HERO`SPEND); think setqm(save_stat,json_query(%q<hero_rr>,extract,$.save.stat),save_dc,json_query(%q<hero_rr>,extract,$.save.dc),save_parts,json_query(%q<hero_rr>,extract,$.save.parts),save_ok,); think setq(save_line,u(%!/FUN`ACT`SAVE,%q<hero_at>)); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,[u(%!/FUN`ENC`C,%q<hero_at>,name)] spends a Hero Point and rerolls the [u({{commands}}/FUN`SHOW`STAT,%q<save_stat>)] save:%r%q<save_line>); &%q<enc_attr>`RR me=[json_mod(%q<hero_rr>,patch,json_fill(v(DATA`TEMPLATE`INC`HERO`REROLL`SAVE),/after,digest(sha1,%q<enc>),/ok,setdiff(json_query(%q<hero_rr>,extract,$.ok),%q<hero_at>)))]
         flags: [cmdsyntax]
+      DATA`TEMPLATE`INC`HERO`MARK: |-
+        {"after":"","sw":"","args":"","un":null,"at":"","ok":"","save":null}
       # After a Strike, check or save in an encounter: who rolled (rr_at), whose roll a Hero Point may reroll (rr_ok),
       # the encounter's state then, so a reroll is refused once anything changes it, and its undo entry.
       INC`HERO`MARK:
         value: |-
-          &%q<enc_attr>`RR me=[json(object,after,json(string,digest(sha1,%q<enc>)),sw,json(string,%q<rr_sw>),args,json(string,%q<cmd_args>),un,firstof(%q<enc_un>,0),at,json(string,%q<rr_at>),ok,json(string,%q<rr_ok>),save,firstof(%q<rr_save>,null))]
+          &%q<enc_attr>`RR me=[json_fill(v(DATA`TEMPLATE`INC`HERO`MARK),/after,digest(sha1,%q<enc>),/sw,%q<rr_sw>,/args,%q<cmd_args>,/un,firstof(%q<enc_un>,0),/at,%q<rr_at>,/ok,%q<rr_ok>,/save,firstof(%q<rr_save>,null))]
         flags: [cmdsyntax]
+      DATA`TEMPLATE`INC`HERO`RECOVER: |-
+        {"conds":{"dying":null},"down":0,"daily":{"hero":0}}
       # Heroic Recovery: all the character's Hero Points, at least 1, and they are no longer dying, stable at 0 Hit Points,
       # wounded no higher. Spent when dying rises; the encounter raises it on its own, so it is spent right after,
       # even after the rise that killed them.
       INC`HERO`RECOVER:
         value: |-
-          think setq(hero_who,if(strlen(%q<cmd_args>),pmatch(%q<cmd_args>),%#)); @assert hastype(%q<hero_who>,player)=@pemit %#=notice(PF2E,There is no player called %q<cmd_args>.,warn); think u(%!/FUN`HERO`LOAD,%q<hero_who>); @assert cor(strmatch(objid(%q<hero_who>),objid(%#)),%q<enc_gm>)=@pemit %#=notice(PF2E,You spend only your own Hero Points.,warn); @assert strlen(%q<hero_at>)=@pemit %#=notice(PF2E,Heroic Recovery saves a dying character in an encounter%, and [u(%!/FUN`HERO`WHO,%q<hero_who>,are,is)] in none.,warn); @assert gt(firstof(json_query(u(%!/FUN`ENC`C,%q<hero_at>,conds),extract,$.dying),0),0)=@pemit %#=notice(PF2E,[u(%!/FUN`HERO`WHO,%q<hero_who>,are,is)] not dying.,warn); @assert gt(%q<hero_n>,0)=@pemit %#=notice(PF2E,[u(%!/FUN`HERO`WHO,%q<hero_who>,have,has)] no Hero Points.,warn); think setq(hero_name,u(%!/FUN`ENC`C,%q<hero_at>,name)); think u(%!/FUN`ENC`PATCH,%q<hero_at>,json(object,conds,json(object,dying,null),down,0,daily,json(object,hero,0))); @include %!/INC`ENC`STORE; @remit loc(%q<hero_who>)=notice(PF2E,%q<hero_name> spends [u(%!/FUN`HERO`TEXT,%q<hero_n>)] to avoid death: no longer dying%, stable at 0 Hit Points[if(json_query(u(%!/FUN`ENC`C,%q<hero_at>,conds),extract,$.wounded),%, wounded [json_query(u(%!/FUN`ENC`C,%q<hero_at>,conds),extract,$.wounded)])].,ok)
+          think setq(hero_who,if(strlen(%q<cmd_args>),pmatch(%q<cmd_args>),%#)); @assert hastype(%q<hero_who>,player)=@pemit %#=notice(PF2E,There is no player called %q<cmd_args>.,warn); think u(%!/FUN`HERO`LOAD,%q<hero_who>); @assert cor(strmatch(objid(%q<hero_who>),objid(%#)),%q<enc_gm>)=@pemit %#=notice(PF2E,You spend only your own Hero Points.,warn); @assert strlen(%q<hero_at>)=@pemit %#=notice(PF2E,Heroic Recovery saves a dying character in an encounter%, and [u(%!/FUN`HERO`WHO,%q<hero_who>,are,is)] in none.,warn); @assert gt(firstof(json_query(u(%!/FUN`ENC`C,%q<hero_at>,conds),extract,$.dying),0),0)=@pemit %#=notice(PF2E,[u(%!/FUN`HERO`WHO,%q<hero_who>,are,is)] not dying.,warn); @assert gt(%q<hero_n>,0)=@pemit %#=notice(PF2E,[u(%!/FUN`HERO`WHO,%q<hero_who>,have,has)] no Hero Points.,warn); think setq(hero_name,u(%!/FUN`ENC`C,%q<hero_at>,name)); think u(%!/FUN`ENC`PATCH,%q<hero_at>,v(DATA`TEMPLATE`INC`HERO`RECOVER)); @include %!/INC`ENC`STORE; @remit loc(%q<hero_who>)=notice(PF2E,%q<hero_name> spends [u(%!/FUN`HERO`TEXT,%q<hero_n>)] to avoid death: no longer dying%, stable at 0 Hit Points[if(json_query(u(%!/FUN`ENC`C,%q<hero_at>,conds),extract,$.wounded),%, wounded [json_query(u(%!/FUN`ENC`C,%q<hero_at>,conds),extract,$.wounded)])].,ok)
         flags: [cmdsyntax]
 
       # --- Encounters ---------------------------------------------------------------------------
@@ -7349,9 +7437,11 @@ objects:
         value: |-
           think setqm(best_text,trim(before(%q<cmd_args>,=)),best_levels,trim(after(%q<cmd_args>,=))); think setqm(best_low,if(strlen(%q<best_levels>),if(isint(%q<best_levels>),%q<best_levels>,before(%q<best_levels>,-)),-99),best_high,if(strlen(%q<best_levels>),if(isint(%q<best_levels>),%q<best_levels>,after(%q<best_levels>,-)),99)); @assert cor(strlen(%q<best_text>),strlen(%q<best_levels>))=@pemit %#=notice(PF2E,+enc/bestiary <name%, trait or hazard>=<level or levels>%, such as +enc/bestiary goblin%, +enc/bestiary undead=2-4%, +enc/bestiary hazard=3 or +enc/bestiary =5.,warn); @assert cand(isint(%q<best_low>),isint(%q<best_high>))=@pemit %#=notice(PF2E,Give one level or a range%, such as =3 or =2-4.,warn); @pemit %#=u(%!/FUN`SHOW`BESTIARY)
         flags: [cmdsyntax]
+      DATA`TEMPLATE`INC`ENC`START: |-
+        {"gm":"","round":0,"turn":-1,"next":1,"c":[]}
       INC`ENC`START:
         value: |-
-          @assert not(strlen(%q<enc>))=@pemit %#=notice(PF2E,There is already an encounter here%, run by [name(json_query(%q<enc>,extract,$.gm))]. +enc shows it.,warn); think setq(enc,json(object,gm,json(string,objid(%#)),round,0,turn,-1,next,1,c,json(array))); @wipe me/%q<enc_attr>`*; &%q<enc_attr> me=%q<enc>; @remit %l=notice(PF2E,%N begins an encounter. +enc/join to take part%; %N adds creatures with +enc/add.,ok)
+          @assert not(strlen(%q<enc>))=@pemit %#=notice(PF2E,There is already an encounter here%, run by [name(json_query(%q<enc>,extract,$.gm))]. +enc shows it.,warn); think setq(enc,json_fill(v(DATA`TEMPLATE`INC`ENC`START),/gm,objid(%#))); @wipe me/%q<enc_attr>`*; &%q<enc_attr> me=%q<enc>; @remit %l=notice(PF2E,%N begins an encounter. +enc/join to take part%; %N adds creatures with +enc/add.,ok)
         flags: [cmdsyntax]
       # +enc/add <creature>[=<count>] from the creature packs, or +enc/add <player>.
       INC`ENC`ADD:
@@ -7414,13 +7504,15 @@ objects:
               [setq(enc,json_mod(%q<enc>,set,$.turn,dec(%0)))][setq(enc_say,u(FUN`TURN`NEXT,1))],
               setq(enc,json_mod(%q<enc>,set,$.turn,-1))))]
         flags: [funsyntax]
+      DATA`TEMPLATE`ENC`NPC: |-
+        {"name":"","kind":"npc","pack":"","id":"","side":"foe","adj":null,"hazard":null,"simple":null,"hp":null,"max":null,"temp":0,"init":null,"conds":{},"dur":{},"pers":{},"map":0,"down":0}
       FUN`ENC`NPC:
         value: |-
           @@(%0 a pack, %1 a creature's or hazard's id, %2 2 for elite, -2 for weak, else nothing)[
           setq(npc_item,u({{core}}/FUN`ITEM`GET,%0,%1))][
           setq(npc_hazard,strmatch(json_query(%q<npc_item>,extract,$.type),hazard))][
           setq(npc_hp,if(cand(%q<npc_hazard>,not(strmatch(json_query(%q<npc_item>,extract,$.system.attributes.hasHealth),true))),0,max(1,add(firstof(json_query(%q<npc_item>,extract,$.system.attributes.hp.max),1),u(FUN`ENC`ADJUST`HP,firstof(json_query(%q<npc_item>,extract,$.system.details.level.value),0),%2)))))][
-          u(FUN`ENC`ADDC,json(object,name,json(string,u(FUN`ENC`NAMED,[switch(%2,2,Elite%b,-2,Weak%b)][json_query(%q<npc_item>,extract,$.name)])),kind,"npc",pack,json(string,%0),id,json(string,ucstr(%1)),side,"foe",adj,firstof(%2,0),hazard,%q<npc_hazard>,simple,if(%q<npc_hazard>,not(strmatch(json_query(%q<npc_item>,extract,$.system.details.isComplex),true)),0),hp,%q<npc_hp>,max,%q<npc_hp>,temp,0,init,null,conds,json(object),dur,json(object),pers,json(object),map,0,down,0))]
+          u(FUN`ENC`ADDC,json_fill(v(DATA`TEMPLATE`ENC`NPC),/name,u(FUN`ENC`NAMED,[switch(%2,2,Elite%b,-2,Weak%b)][json_query(%q<npc_item>,extract,$.name)]),/pack,%0,/id,ucstr(%1),/adj,firstof(%2,0),/hazard,%q<npc_hazard>,/simple,if(%q<npc_hazard>,not(strmatch(json_query(%q<npc_item>,extract,$.system.details.isComplex),true)),0),/hp,%q<npc_hp>,/max,%q<npc_hp>))]
         flags: [funsyntax]
       # GM Core's elite and weak adjustments: +2 or -2 to AC, attacks, damage, checks and DCs, Hit Points
       # by level, and a level higher or lower for XP.
@@ -7441,6 +7533,8 @@ objects:
             -2, sub(%q<level_base>,if(eq(%q<level_base>,1),2,1)),
             %q<level_base>)]
         flags: [funsyntax]
+      DATA`TEMPLATE`ENC`JOIN: |-
+        {"name":"","kind":"pc","who":"","snap":null,"side":"pc","hp":null,"max":null,"temp":0,"sp":null,"spmax":null,"res":null,"resmax":null,"init":null,"daily":null,"fx":{},"conds":null,"dur":{},"pers":{},"map":0,"down":0,"act":""}
       # A character joins as their ledger now: its last entry, their maximum hit points, and the
       # exploration activity they were doing.
       FUN`ENC`JOIN:
@@ -7454,7 +7548,7 @@ objects:
           setq(join_now,min(%q<join_hp>,u({{commands}}/FUN`DAILY`HP,%q<join_day>,%q<join_hp>)))][
           setq(join_wounded,json_query(%q<join_day>,extract,$.wounded))][
           setqm(join_sp,u({{commands}}/FUN`STAMINA`SP,%q<join_day>),join_rp,u({{commands}}/FUN`STAMINA`RP,%q<join_day>))][
-          u(FUN`ENC`ADDC,json(object,name,json(string,name(%0)),kind,"pc",who,json(string,objid(%0)),snap,%q<join_snap>,side,"pc",hp,%q<join_now>,max,%q<join_hp>,temp,0,sp,%q<join_sp>,spmax,%q<stamina_max>,res,%q<join_rp>,resmax,%q<resolve_max>,init,null,daily,%q<join_day>,fx,json(object),conds,if(%q<join_wounded>,json(object,wounded,%q<join_wounded>),json(object)),dur,json(object),pers,json(object),map,0,down,0,act,json(string,firstof(get(%0/PF2E`EXPLORE),none))))]
+          u(FUN`ENC`ADDC,json_fill(v(DATA`TEMPLATE`ENC`JOIN),/name,name(%0),/who,objid(%0),/snap,%q<join_snap>,/hp,%q<join_now>,/max,%q<join_hp>,/sp,%q<join_sp>,/spmax,%q<stamina_max>,/res,%q<join_rp>,/resmax,%q<resolve_max>,/daily,%q<join_day>,/conds,if(%q<join_wounded>,json(object,wounded,%q<join_wounded>),json(object)),/act,firstof(get(%0/PF2E`EXPLORE),none)))]
         flags: [funsyntax]
       FUN`ENC`LEDGER`N:
         value: |-
@@ -7465,6 +7559,12 @@ objects:
           @@(%1 an entry: it as JSON when it was made by the snapshot, enc_snap)[
           if(lte(json_query(%1,extract,$.n),%q<enc_snap>),%1)]
         flags: [funsyntax]
+      DATA`TEMPLATE`ENC`LEDGER: |-
+        {"kind":"gear","id":"","qty":null,"where":"","n":null}
+      DATA`TEMPLATE`ENC`LEDGER`2: |-
+        {"kind":"grant","pack":"","id":"","choices":null,"badge":null,"n":null}
+      DATA`TEMPLATE`ENC`LEDGER`3: |-
+        {"kind":"toggle","domain":"","option":"","value":null,"selection":null,"n":null}
       # The ledger a combatant's checks are made from: a character's up to when they joined, a
       # creature's just its level; each with the combatant's conditions, effects, toggles and shield's
       # state (self:shield:raised, self:shield:broken, self:shield:destroyed) on top.
@@ -7479,9 +7579,9 @@ objects:
               json_map(%!/FUN`ENC`LEDGER`KEEP,u({{commands}}/FUN`LEDGER`OF,u(FUN`ENC`C,%0,who)),\,),
               [json(object,kind,"level",level,u(FUN`ENC`LEVEL,%0),n,1)][iter(u(FUN`ENC`C,%0,abil),\,[json(object,kind,"grant",pack,"familiar-abilities",id,json(string,%i0),choices,firstof(json_query(u(FUN`ENC`C,%0,abch),extract,$.%i0),json(object)),n,add(600000,inum(0)))],%b,)])]\,[
             iter(setunion(setr(enc_keys,setunion(json_map(%!/FUN`JSON`KEY,%q<enc_conds>,%b),iter(%q<enc_fxc>,first(%i0,~)))) [iter(%q<enc_keys>,u(FUN`ENC`IMPLIED,%i0))],),if(strlen(setr(enc_cid,u({{core}}/FUN`ITEM`FIND,conditions,%i0))),json(object,kind,"grant",pack,"conditions",id,json(string,%q<enc_cid>),badge,if(setr(enc_badge,firstof(json_query(%q<enc_conds>,extract,$.%i0),after(grab(%q<enc_fxc>,%i0~*),~))),%q<enc_badge>,null),n,add(100000,inum(0)))),%b,\,)]\,[
-            iter(json_map(%!/FUN`JSON`KEY,setr(enc_used,firstof(u(FUN`ENC`C,%0,used),json(object))),%b),json(object,kind,"gear",id,json(string,%i0),qty,first(json_query(%q<enc_used>,extract,$.%i0),|),where,json(string,rest(json_query(%q<enc_used>,extract,$.%i0),|)),n,add(200000,inum(0))),%b,\,)]\,[
-            iter(u(FUN`FX`LIVE,setr(enc_fx,firstof(u(FUN`ENC`C,%0,fx),json(object)))),json(object,kind,"grant",pack,json(string,edit(json_query(%q<enc_fx>,extract,$\["%i0"\].pack),",)),id,json(string,%i0),choices,json_mod(firstof(json_query(%q<enc_fx>,extract,$\["%i0"\].ch),json(object)),patch,json(object,effectLevel,json_query(%q<enc_fx>,extract,$\["%i0"\].lvl))),badge,firstof(json_query(%q<enc_fx>,extract,$\["%i0"\].badge),null),n,add(300000,inum(0))),%b,\,)]\,[
-            iter(json_map(%!/FUN`JSON`KEY,setr(enc_tg,firstof(u(FUN`ENC`C,%0,tg),json(object))),%b),json(object,kind,"toggle",domain,json(string,before(%i0,|)),option,json(string,after(%i0,|)),value,if(first(json_query(%q<enc_tg>,extract,$\["%i0"\]),|),true,false),selection,if(strlen(setr(enc_tgsel,rest(json_query(%q<enc_tg>,extract,$\["%i0"\]),|))),json(string,%q<enc_tgsel>),null),n,add(400000,inum(0))),%b,\,)]\,[
+            iter(json_map(%!/FUN`JSON`KEY,setr(enc_used,firstof(u(FUN`ENC`C,%0,used),json(object))),%b),json_fill(v(DATA`TEMPLATE`ENC`LEDGER),/id,%i0,/qty,first(json_query(%q<enc_used>,extract,$.%i0),|),/where,rest(json_query(%q<enc_used>,extract,$.%i0),|),/n,add(200000,inum(0))),%b,\,)]\,[
+            iter(u(FUN`FX`LIVE,setr(enc_fx,firstof(u(FUN`ENC`C,%0,fx),json(object)))),json_fill(v(DATA`TEMPLATE`ENC`LEDGER`2),/pack,edit(json_query(%q<enc_fx>,extract,$\["%i0"\].pack),",),/id,%i0,/choices,json_mod(firstof(json_query(%q<enc_fx>,extract,$\["%i0"\].ch),json(object)),patch,json(object,effectLevel,json_query(%q<enc_fx>,extract,$\["%i0"\].lvl))),/badge,firstof(json_query(%q<enc_fx>,extract,$\["%i0"\].badge),null),/n,add(300000,inum(0))),%b,\,)]\,[
+            iter(json_map(%!/FUN`JSON`KEY,setr(enc_tg,firstof(u(FUN`ENC`C,%0,tg),json(object))),%b),json_fill(v(DATA`TEMPLATE`ENC`LEDGER`3),/domain,before(%i0,|),/option,after(%i0,|),/value,if(first(json_query(%q<enc_tg>,extract,$\["%i0"\]),|),true,false),/selection,if(strlen(setr(enc_tgsel,rest(json_query(%q<enc_tg>,extract,$\["%i0"\]),|))),json(string,%q<enc_tgsel>),null),/n,add(400000,inum(0))),%b,\,)]\,[
             iter(squish([if(strmatch(u(FUN`ENC`C,%0,kind),npc),self:type:[if(t(u(FUN`ENC`C,%0,hazard)),hazard,npc)])] [if(t(u(FUN`ENC`C,%0,raised)),self:shield:raised self:effect:raise-a-shield)] [if(strlen(setr(enc_shst,u(FUN`ENC`C,%0,shst))),self:shield:%q<enc_shst>)]),json(object,kind,"option",option,json(string,%i0),n,add(500000,inum(0))),%b,\,)],\,),\,)]\]]
         flags: [funsyntax]
       # The conditions a combatant's effects grant (GrantItem of a condition whose predicate holds for the effect's
@@ -8216,11 +8316,13 @@ objects:
         value: |-
           think setqm(rr_sw,check,rr_at,if(strmatch(u(%!/FUN`ENC`C,%q<act_at>,kind),pc),%q<act_at>),rr_save,); think setq(rr_ok,if(cand(strlen(%q<rr_at>),u({{commands}}/FUN`HERO`CAN)),%q<act_at>)); @include %!/INC`HERO`MARK
         flags: [cmdsyntax]
+      DATA`TEMPLATE`INC`ENC`SAVE: |-
+        {"stat":"","dc":null,"parts":""}
       # +enc/save <who>=<save> vs <DC>[ <damage>]: a save for several combatants; with damage, a basic save from one
       # damage roll: none on a critical success, half on a success, double on a critical failure.
       INC`ENC`SAVE:
         value: |-
-          @include %!/INC`ENC`NEED; @include %!/INC`ENC`SAVE`READ; @include %!/INC`ENC`SAVE`DAMAGE; think setq(save_lines,iter(%q<save_at>,u(%!/FUN`ACT`SAVE,%i0),%b,%r)); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,[if(strlen(%q<save_formula>),Basic%b)][u({{commands}}/FUN`SHOW`STAT,%q<save_stat>)] save against DC %q<save_dc>[if(strlen(%q<save_formula>),%, %q<save_text>[if(gt(words(%q<save_parts>,|),1),%b= %q<save_raw>)])]:%r%q<save_lines>); think setqm(rr_sw,save,rr_at,squish(iter(%q<save_at>,if(strmatch(u(%!/FUN`ENC`C,%i0,kind),pc),%i0))),rr_ok,squish(%q<save_ok>),rr_save,json(object,stat,json(string,%q<save_stat>),dc,%q<save_dc>,parts,json(string,%q<save_parts>))); @include %!/INC`HERO`MARK
+          @include %!/INC`ENC`NEED; @include %!/INC`ENC`SAVE`READ; @include %!/INC`ENC`SAVE`DAMAGE; think setq(save_lines,iter(%q<save_at>,u(%!/FUN`ACT`SAVE,%i0),%b,%r)); @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,[if(strlen(%q<save_formula>),Basic%b)][u({{commands}}/FUN`SHOW`STAT,%q<save_stat>)] save against DC %q<save_dc>[if(strlen(%q<save_formula>),%, %q<save_text>[if(gt(words(%q<save_parts>,|),1),%b= %q<save_raw>)])]:%r%q<save_lines>); think setqm(rr_sw,save,rr_at,squish(iter(%q<save_at>,if(strmatch(u(%!/FUN`ENC`C,%i0,kind),pc),%i0))),rr_ok,squish(%q<save_ok>),rr_save,json_fill(v(DATA`TEMPLATE`INC`ENC`SAVE),/stat,%q<save_stat>,/dc,%q<save_dc>,/parts,%q<save_parts>)); @include %!/INC`HERO`MARK
         flags: [cmdsyntax]
       # +enc/save: reads <who>=<save> vs <DC> [<damage>] from %q<cmd_args> into %q<save_at>, %q<save_stat>,
       # %q<save_dc> and %q<save_formula>, and stops unless the player may call the save.
@@ -8832,13 +8934,15 @@ objects:
           if(gt(%q<fxa_temp>,u(FUN`ENC`C,%0,temp)),u(FUN`ENC`SET,%0,temp,%q<fxa_temp>))][
           [u(FUN`ENC`C,%0,name)] gains [u(FUN`FX`NAME,%1,%2)][u(FUN`FX`BADGE`SHOW,%1,%2,%q<fxa_badge>)][if(strlen(%q<fxa_on>),%bon [itemize(%q<fxa_on>,|)])][if(%q<fxa_temp>,%band %q<fxa_temp> temporary Hit Points)][if(gt(%q<fxa_rounds>,0),%bfor %q<fxa_rounds> round[if(neq(%q<fxa_rounds>,1),s)])][if(strlen(%q<fx_sus>),%bwhile it is sustained)].[if(strlen(%q<fxa_note>),%b[trim(%q<fxa_note>)])]]
         flags: [funsyntax]
+      DATA`TEMPLATE`FX`ADD`READ: |-
+        {"_origin":{"options":"","outcome":null}}
       # %0 index, %1 pack, %2 id, %3 level, %4 choices: reads the effect into the fxa_ registers (item, choices,
       # origin, slug, rounds, badge).
       FUN`FX`ADD`READ:
         value: |-
           setq(fxa_item,u({{core}}/FUN`ITEM`GET,%1,%2))[
           setqm(fxa_ch,firstof(%4,json(object)),fxa_on,,fxa_note,)][
-          if(strlen(%q<fx_origin>),setq(fxa_ch,json_mod(%q<fxa_ch>,patch,json(object,_origin,json(object,options,json(string,%q<fx_origin>),outcome,if(isint(%q<fx_outcome>),%q<fx_outcome>,null))))))][
+          if(strlen(%q<fx_origin>),setq(fxa_ch,json_mod(%q<fxa_ch>,patch,json_fill(v(DATA`TEMPLATE`FX`ADD`READ),/_origin/options,%q<fx_origin>,/_origin/outcome,if(isint(%q<fx_outcome>),%q<fx_outcome>,null)))))][
           if(strmatch(%q<fxa_item>,*"ownedItems":true*),u(FUN`FX`OWNED,%0))][
           setq(fxa_prep,get(u({{core}}/DATA`PACK`%1)/ITEM`%2`PREP))][
           setq(fxa_slug,json_query(%q<fxa_prep>,extract,$.slug))][
@@ -9372,6 +9476,8 @@ objects:
             strmatch(json_query(firstof(u(FUN`ENC`C,%0,fx),json(object)),extract,$.I9LFZUICWMIGOGVI.ch.cover.level),standard),greater,
             standard)]
         flags: [funsyntax]
+      DATA`TEMPLATE`ACTION`APPLY: |-
+        {"by":{"grabbed":""}}
       FUN`ACTION`APPLY:
         value: |-
           @@(%0 who.kind.args)[
@@ -9381,7 +9487,7 @@ objects:
           switch(%q<ap_kind>,
             cond, u(FUN`ACTION`COND,%q<ap_at>,elements(%0,3,.),firstof(elements(%0,4,.),0),elements(%0,5,.)),
             dmg, u(FUN`ACTION`APPLY`DAMAGE,%0),
-            by, u(FUN`ENC`PATCH,%q<ap_at>,json(object,by,json(object,grabbed,json(string,%q<actn_k>)))),
+            by, u(FUN`ENC`PATCH,%q<ap_at>,json_fill(v(DATA`TEMPLATE`ACTION`APPLY),/by/grabbed,%q<actn_k>)),
             release, if(strmatch(u(FUN`ENC`C,%q<ap_at>,by.grabbed),%q<actn_k>),[u(FUN`ACTION`FREE,%q<ap_at>)][setq(actn_fx,%q<actn_fx> %q<ap_name> is free.)]),
             free, [u(FUN`ACTION`FREE,%q<ap_at>)][setq(actn_fx,%q<actn_fx> %q<ap_name> is free.)],
             uncond, if(strlen(json_query(u(FUN`ENC`C,%q<ap_at>,conds),extract,$\["[elements(%0,3,.)]"\])),[u(FUN`ENC`PATCH,%q<ap_at>,json(object,conds,json(object,elements(%0,3,.),null),dur,json(object,elements(%0,3,.),null)))][setq(actn_fx,%q<actn_fx> %q<ap_name> is no longer [elements(%0,3,.)].)]),
@@ -9408,12 +9514,14 @@ objects:
         value: |-
           [u(FUN`ACTION`TW`ROLL,elements(%0,3,.))][if(gt(%q<tw_n>,0),[u(FUN`ACT`HEAL,%q<ap_at>,%q<tw_n>)][setq(actn_fx,%q<actn_fx> %q<tw_text>: %q<heal_text>.)],if(lt(%q<tw_n>,0),[u(FUN`ACT`HARM,%q<ap_at>,abs(%q<tw_n>),0)][setq(actn_fx,%q<actn_fx> Damage %q<tw_text>. %q<harm_text>.)]))]
         flags: [funsyntax]
+      DATA`TEMPLATE`ACTION`COND: |-
+        {"conds":{"grabbed":null},"dur":{"grabbed":null}}
       FUN`ACTION`COND:
         value: |-
           @@(%0 a combatant's index, %1 a condition, %2 its value or 0, %3 e1, e2, s1, r<rounds> or nothing)[
           setq(cond_was,json_query(u(FUN`ENC`C,%0,conds),extract,$\["%1"\]))][
           setq(cond_v,if(%2,max(%2,firstof(%q<cond_was>,0)),0))][
-          if(strmatch(%1,restrained),u(FUN`ENC`PATCH,%0,json(object,conds,json(object,grabbed,null),dur,json(object,grabbed,null))))][
+          if(strmatch(%1,restrained),u(FUN`ENC`PATCH,%0,v(DATA`TEMPLATE`ACTION`COND)))][
           u(FUN`ENC`PATCH,%0,json(object,conds,json(object,%1,%q<cond_v>),dur,json(object,%1,switch(%3,e1,json(string,%q<actn_k>~1~end),e2,json(string,%q<actn_k>~2~end),s1,json(string,%q<actn_k>~1),r*,json(string,%q<actn_k>~[after(%3,r)]),null))))][
           setq(actn_fx,%q<actn_fx> [u(FUN`ENC`C,%0,name)] is %1[if(%2,%b%q<cond_v>)][switch(%3,e1,%buntil the end of [u(FUN`ENC`C,%q<act_at>,name)]'s turn,e2,%buntil the end of [u(FUN`ENC`C,%q<act_at>,name)]'s next turn,s1,%buntil [u(FUN`ENC`C,%q<act_at>,name)]'s next turn starts,r1,%bfor 1 round,r*,%bfor [after(%3,r)] rounds)].)]
         flags: [funsyntax]
@@ -9429,10 +9537,12 @@ objects:
             setq(actn_fx,%q<actn_fx> [edit(u(FUN`FX`ADD,%0,first(%q<ae_found>,~),rest(%q<ae_found>,~),,%q<cast_fxch>,%q<actn_k>),%q<ae_name>,%q<ae_name>[if(strlen(%q<cast_fxname>),%b%([firstof(%q<ae_show>,lcstr(%q<cast_fxname>))]%))])])][
             setqm(fx_origin,,fx_outcome,)])]
         flags: [funsyntax]
+      DATA`TEMPLATE`ACTION`FREE: |-
+        {"conds":{"grabbed":null,"restrained":null},"dur":{"grabbed":null,"restrained":null},"by":null}
       FUN`ACTION`FREE:
         value: |-
           @@(%0 a combatant's index: no longer grabbed or restrained)[
-          u(FUN`ENC`PATCH,%0,json(object,conds,json(object,grabbed,null,restrained,null),dur,json(object,grabbed,null,restrained,null),by,null))]
+          u(FUN`ENC`PATCH,%0,v(DATA`TEMPLATE`ACTION`FREE))]
         flags: [funsyntax]
       # Actions spent on the acting combatant's turn: three (a minion two, on its master's turn), one more when
       # quickened, less slowed and stunned.
@@ -9493,9 +9603,11 @@ objects:
         value: |-
           @include %!/INC`ENC`NEEDGM; think setq(keep_at,if(strlen(%q<cmd_args>),u(%!/FUN`ENC`TARGETS,%q<cmd_args>),iter(u(%!/FUN`ENC`INDEXES),if(strmatch(u(%!/FUN`ENC`C,%i0,kind),pc),%i0)))); @assert not(strlen(%q<targets_missing>))=@pemit %#=notice(PF2E,No one in the encounter is called %q<targets_missing>.,warn); think setq(keep_at,squish(iter(%q<keep_at>,if(strmatch(u(%!/FUN`ENC`C,%i0,kind),pc),%i0)))); @assert words(%q<keep_at>)=@pemit %#=notice(PF2E,There are no characters to keep.,warn); @dolist/inplace %q<keep_at>=@include %!/INC`ENC`KEEP`ONE=##; @include %!/INC`ENC`STORE; @remit %l=notice(PF2E,%N keeps the encounter for [itemize(iter(%q<keep_at>,u(%!/FUN`ENC`C,%i0,name),%b,|),|)]: Hit Points[if(u({{core}}/FUN`STAMINA),%, Stamina and Resolve Points)]%, spells and consumables used are on their sheets now.,ok)
         flags: [cmdsyntax]
+      DATA`TEMPLATE`INC`ENC`KEEP`ONE: |-
+        {"kind":"gear","id":"##","qty":null,"where":""}
       INC`ENC`KEEP`ONE:
         value: |-
-          think setqm(keep_i,%0,sheet_target,u(%!/FUN`ENC`C,%0,who)); think setq(daily,json_mod(firstof(u(%!/FUN`ENC`C,%0,daily),json(object)),patch,json(object,hp,if(lt(u(%!/FUN`ENC`C,%0,hp),u(%!/FUN`ENC`C,%0,max)),max(0,u(%!/FUN`ENC`C,%0,hp)),null),sp,if(lt(u(%!/FUN`ENC`C,%0,sp),u(%!/FUN`ENC`C,%0,spmax)),u(%!/FUN`ENC`C,%0,sp),null),resolve,if(lt(u(%!/FUN`ENC`C,%0,res),u(%!/FUN`ENC`C,%0,resmax)),u(%!/FUN`ENC`C,%0,res),null),wounded,firstof(json_query(u(%!/FUN`ENC`C,%0,conds),extract,$.wounded),null)))); @include {{commands}}/INC`DAILY`WRITE; think setq(keep_used,firstof(u(%!/FUN`ENC`C,%0,used),json(object))); @dolist/inplace [json_map(%!/FUN`JSON`KEY,%q<keep_used>,%b)]={think setqm(entry_json,json(object,kind,"gear",id,json(string,##),qty,first(json_query(%q<keep_used>,extract,$\["##"\]),|),where,json(string,rest(json_query(%q<keep_used>,extract,$\["##"\]),|))),entry_text,[u({{commands}}/FUN`SHOW`ITEM,equipment,##,)] x[first(json_query(%q<keep_used>,extract,$\["##"\]),|)]); @include {{commands}}/INC`ENTRY`WRITE}; think u(%!/FUN`ENC`SET,%q<keep_i>,used,json(object)); think u(%!/FUN`ENC`SET,%q<keep_i>,snap,lmax(0 [json_map(%!/FUN`ENC`LEDGER`N,u({{commands}}/FUN`LEDGER`OF,%q<sheet_target>),%b)]))
+          think setqm(keep_i,%0,sheet_target,u(%!/FUN`ENC`C,%0,who)); think setq(daily,json_mod(firstof(u(%!/FUN`ENC`C,%0,daily),json(object)),patch,json(object,hp,if(lt(u(%!/FUN`ENC`C,%0,hp),u(%!/FUN`ENC`C,%0,max)),max(0,u(%!/FUN`ENC`C,%0,hp)),null),sp,if(lt(u(%!/FUN`ENC`C,%0,sp),u(%!/FUN`ENC`C,%0,spmax)),u(%!/FUN`ENC`C,%0,sp),null),resolve,if(lt(u(%!/FUN`ENC`C,%0,res),u(%!/FUN`ENC`C,%0,resmax)),u(%!/FUN`ENC`C,%0,res),null),wounded,firstof(json_query(u(%!/FUN`ENC`C,%0,conds),extract,$.wounded),null)))); @include {{commands}}/INC`DAILY`WRITE; think setq(keep_used,firstof(u(%!/FUN`ENC`C,%0,used),json(object))); @dolist/inplace [json_map(%!/FUN`JSON`KEY,%q<keep_used>,%b)]={think setqm(entry_json,json_fill(v(DATA`TEMPLATE`INC`ENC`KEEP`ONE),/qty,first(json_query(%q<keep_used>,extract,$\["##"\]),|),/where,rest(json_query(%q<keep_used>,extract,$\["##"\]),|)),entry_text,[u({{commands}}/FUN`SHOW`ITEM,equipment,##,)] x[first(json_query(%q<keep_used>,extract,$\["##"\]),|)]); @include {{commands}}/INC`ENTRY`WRITE}; think u(%!/FUN`ENC`SET,%q<keep_i>,used,json(object)); think u(%!/FUN`ENC`SET,%q<keep_i>,snap,lmax(0 [json_map(%!/FUN`ENC`LEDGER`N,u({{commands}}/FUN`LEDGER`OF,%q<sheet_target>),%b)]))
         flags: [cmdsyntax]
       # --- Strike attack effects and afflictions --------------------------------------------------
       FUN`AFF: A creature Strike's attack effects; afflictions and their stages.
@@ -9548,6 +9660,8 @@ objects:
           @@(%0 a number, %1 its unit)[
           mul(%0,firstof(after(grab(v(DATA`AFF`ROUNDS),lcstr(%1)~*),~),1))]
         flags: [funsyntax]
+      DATA`TEMPLATE`AFF`STAGE: |-
+        {"dmg":"","conds":"","dur":null}
       FUN`AFF`STAGE:
         value: |-
           @@(%0 a stage's text: its JSON)[
@@ -9555,7 +9669,7 @@ objects:
           null(if(regmatchi(%0,v(DATA`AFF`RX`DMG),0 as_dice as_type),,regmatchi(%0,v(DATA`AFF`RX`DMG2),0 as_dice as_type)))][
           setq(as_dur,if(regmatchi(%0,v(DATA`AFF`RX`DUR),0 as_n as_u),u(FUN`AFF`ROUNDS,%q<as_n>,%q<as_u>),1))][
           setq(as_conds,squish(iter(rest(edit(%0,@UUID,|),|),if(regmatchi(%i0,v(DATA`AFF`RX`COND),0 as_c as_v),[lcstr(%q<as_c>)]~[firstof(%q<as_v>,0)]),|,%b)))][
-          json(object,dmg,json(string,trim(%q<as_dice> [lcstr(%q<as_type>)])),conds,json(string,%q<as_conds>),dur,%q<as_dur>)]
+          json_fill(v(DATA`TEMPLATE`AFF`STAGE),/dmg,trim(%q<as_dice> [lcstr(%q<as_type>)]),/conds,%q<as_conds>,/dur,%q<as_dur>)]
         flags: [funsyntax]
       FUN`AFF`SUMMARY:
         value: |-
@@ -9583,6 +9697,10 @@ objects:
           setqm(ae_stages,json_query(json_query(%q<ae_def>,get,stages),size),ae_step,switch(%q<roll_degree>,1,1,0,2,0))][
           %q<ae_tname>'s [u({{commands}}/FUN`SHOW`STAT,json_query(%q<ae_def>,extract,$.save))] against %1: [json_query(%q<roll_record>,extract,$.text)][u(FUN`ACT`TAGS)] vs DC [json_query(%q<ae_def>,extract,$.dc)]: [tone(strong,u(FUN`ACT`DEGREE,%q<roll_degree>))].[u(FUN`AFF`EXPOSE`STAGE,%0,%1,%2,%3,%4)]]
         flags: [funsyntax]
+      DATA`TEMPLATE`AFF`EXPOSE`STAGE: |-
+        {"name":"","kind":"","traits":"","def":null,"stage":0,"pend":null,"next":null,"left":null,"conds":""}
+      DATA`TEMPLATE`AFF`EXPOSE`STAGE`2: |-
+        {"name":"","kind":"","traits":"","def":null,"stage":0,"next":1,"left":null,"conds":""}
       # %0 the target's index, %1 the affliction's name, %2 its slug, %4 its traits: moves the affliction on by
       # %q<ae_step> stages, starting it with its onset when the target does not have it, as the end of the line.
       FUN`AFF`EXPOSE`STAGE:
@@ -9590,8 +9708,8 @@ objects:
           [switch(1,
           not(%q<ae_step>),if(strlen(%q<ae_have>),,%b%q<ae_tname> is not afflicted.),
           strlen(%q<ae_have>),u(FUN`AFF`ENTER,%0,%2,min(%q<ae_stages>,add(json_query(%q<ae_have>,extract,$.stage),%q<ae_step>))),
-          isint(json_query(%q<ae_def>,extract,$.onset)),[u(FUN`ENC`PATCH,%0,json(object,aff,json(object,%2,json(object,name,json(string,%1),kind,json(string,%q<ae_kind>),traits,json(string,%4),def,%q<ae_def>,stage,0,pend,%q<ae_step>,next,json_query(%q<ae_def>,extract,$.onset),left,firstof(json_query(%q<ae_def>,extract,$.max),null),conds,""))))]%b%q<ae_tname> is afflicted: onset in [json_query(%q<ae_def>,extract,$.onset)] round[if(neq(json_query(%q<ae_def>,extract,$.onset),1),s)].,
-          [u(FUN`ENC`PATCH,%0,json(object,aff,json(object,%2,json(object,name,json(string,%1),kind,json(string,%q<ae_kind>),traits,json(string,%4),def,%q<ae_def>,stage,0,next,1,left,firstof(json_query(%q<ae_def>,extract,$.max),null),conds,""))))][u(FUN`AFF`ENTER,%0,%2,min(%q<ae_stages>,%q<ae_step>))])]
+          isint(json_query(%q<ae_def>,extract,$.onset)),[u(FUN`ENC`PATCH,%0,json(object,aff,json(object,%2,json_fill(v(DATA`TEMPLATE`AFF`EXPOSE`STAGE),/name,%1,/kind,%q<ae_kind>,/traits,%4,/def,%q<ae_def>,/pend,%q<ae_step>,/next,json_query(%q<ae_def>,extract,$.onset),/left,firstof(json_query(%q<ae_def>,extract,$.max),null)))))]%b%q<ae_tname> is afflicted: onset in [json_query(%q<ae_def>,extract,$.onset)] round[if(neq(json_query(%q<ae_def>,extract,$.onset),1),s)].,
+          [u(FUN`ENC`PATCH,%0,json(object,aff,json(object,%2,json_fill(v(DATA`TEMPLATE`AFF`EXPOSE`STAGE`2),/name,%1,/kind,%q<ae_kind>,/traits,%4,/def,%q<ae_def>,/left,firstof(json_query(%q<ae_def>,extract,$.max),null)))))][u(FUN`AFF`ENTER,%0,%2,min(%q<ae_stages>,%q<ae_step>))])]
         flags: [funsyntax]
       # A stage reached: the last stage's conditions off, this one's on, its damage taken; its duration until the next save.
       FUN`AFF`ENTER:
@@ -9867,9 +9985,11 @@ objects:
         value: |-
           @assert strlen(%q<vp>)=@pemit %#=notice(PF2E,There is no skill challenge here. +challenge/start <name>=<goal> begins one.,warn); @pemit %#=u(%!/FUN`SHOW`CHALLENGE)
         flags: [cmdsyntax]
+      DATA`TEMPLATE`INC`CHALLENGE`START: |-
+        {"gm":"","name":"","goal":null,"vp":0,"round":1,"rolled":"","options":{},"dc":null}
       INC`CHALLENGE`START:
         value: |-
-          @assert not(strlen(%q<vp>))=@pemit %#=notice(PF2E,There is already a challenge here. +challenge shows it.,warn); think setqm(vp_name,trim(before(%q<cmd_args>,=)),vp_goal,trim(after(%q<cmd_args>,=))); @assert cand(strlen(%q<vp_name>),isint(%q<vp_goal>),gt(%q<vp_goal>,0))=@pemit %#=notice(PF2E,+challenge/start <name>=<victory points to win>%, such as +challenge/start Chase the thief=5.,warn); &%q<vp_attr> %!=[json(object,gm,json(string,objid(%#)),name,json(string,%q<vp_name>),goal,%q<vp_goal>,vp,0,round,1,rolled,"",options,json(object),dc,null)]; @remit %l=notice(PF2E,%N starts a skill challenge: [tone(strong,%q<vp_name>)]%, %q<vp_goal> victory points to win. %N adds the skills that help with +challenge/option.,ok)
+          @assert not(strlen(%q<vp>))=@pemit %#=notice(PF2E,There is already a challenge here. +challenge shows it.,warn); think setqm(vp_name,trim(before(%q<cmd_args>,=)),vp_goal,trim(after(%q<cmd_args>,=))); @assert cand(strlen(%q<vp_name>),isint(%q<vp_goal>),gt(%q<vp_goal>,0))=@pemit %#=notice(PF2E,+challenge/start <name>=<victory points to win>%, such as +challenge/start Chase the thief=5.,warn); &%q<vp_attr> %!=[json_fill(v(DATA`TEMPLATE`INC`CHALLENGE`START),/gm,objid(%#),/name,%q<vp_name>,/goal,%q<vp_goal>)]; @remit %l=notice(PF2E,%N starts a skill challenge: [tone(strong,%q<vp_name>)]%, %q<vp_goal> victory points to win. %N adds the skills that help with +challenge/option.,ok)
         flags: [cmdsyntax]
       INC`CHALLENGE`GM:
         value: |-
@@ -9988,9 +10108,11 @@ objects:
         value: |-
           @break not(%q<id_magic>)=@pemit %#=notice(PF2E,After 10 minutes of tests%, you cannot yet tell what %q<id_name> is. You may try again.,warn); think setq(daily,json_mod(%q<daily>,patch,json(object,ident,json(string,squish(json_query(%q<daily>,extract,$.ident) [ucstr(%q<id_id>)]))))); @include {{commands}}/INC`DAILY`WRITE; @pemit %#=notice(PF2E,After 10 minutes with [u({{commands}}/FUN`SHOW`STAT,%q<id_stat>)]%, you cannot tell what %q<id_name> is. Try again after your daily preparations.,warn)
         flags: [cmdsyntax]
+      DATA`TEMPLATE`INC`IDENTIFY`WRONG: |-
+        {"kind":"myst","id":"","state":"","step":"gear"}
       INC`IDENTIFY`WRONG:
         value: |-
-          think setq(id_wrong,u(%!/FUN`IDENTIFY`OTHER,%q<id_item>,first(%q<id_worth>,~),%q<id_magic>)); @break not(strlen(%q<id_wrong>))={@include %!/INC`IDENTIFY`FAIL}; think setq(entry_json,json(object,kind,"myst",id,json(string,ucstr(%q<id_id>)),state,json(string,%q<id_wrong>),step,"gear")); @include {{commands}}/INC`BUILD`PUT; @pemit %#=notice(PF2E,u(%!/FUN`IDENTIFY`SAY,json_query(u({{core}}/FUN`ITEM`GET,equipment,%q<id_wrong>),extract,$.name)),ok)
+          think setq(id_wrong,u(%!/FUN`IDENTIFY`OTHER,%q<id_item>,first(%q<id_worth>,~),%q<id_magic>)); @break not(strlen(%q<id_wrong>))={@include %!/INC`IDENTIFY`FAIL}; think setq(entry_json,json_fill(v(DATA`TEMPLATE`INC`IDENTIFY`WRONG),/id,ucstr(%q<id_id>),/state,%q<id_wrong>)); @include {{commands}}/INC`BUILD`PUT; @pemit %#=notice(PF2E,u(%!/FUN`IDENTIFY`SAY,json_query(u({{core}}/FUN`ITEM`GET,equipment,%q<id_wrong>),extract,$.name)),ok)
         flags: [cmdsyntax]
       # The GM of the room's encounter hears every identification; a misidentification is flagged.
       INC`IDENTIFY`GM:
@@ -10047,11 +10169,15 @@ objects:
         value: |-
           think setqm(loot_pick,u(%!/FUN`LOOT`FIND,before(%q<cmd_args>,=)),loot_count,firstof(trim(after(%q<cmd_args>,=)),1),loot_shop,v(%q<loot_p>`SHOP)); @assert strlen(%q<loot_pick>)=@pemit %#=notice(PF2E,There is no [trim(before(%q<cmd_args>,=))] here. +loot lists what there is.,warn); think setqm(loot_id,first(%q<loot_pick>,~),loot_have,elements(%q<loot_pick>,2,~),loot_myst,elements(%q<loot_pick>,3,~),loot_code,elements(%q<loot_pick>,4,~),loot_shown,u(%!/FUN`LOOT`SHOWN,%q<loot_pick>)); @assert cand(isint(%q<loot_count>),gt(%q<loot_count>,0),lte(%q<loot_count>,%q<loot_have>))=@pemit %#=notice(PF2E,There [if(eq(%q<loot_have>,1),is 1,are %q<loot_have>)] here.,warn); think setq(loot_held,firstof(first(u({{core}}/FUN`SHEET`VALUE,%q<check_entries>,gear,%q<loot_id>),|),0)); @assert cor(not(%q<loot_held>),strmatch(u(%!/FUN`LOOT`CODE,u({{core}}/FUN`SHEET`RUNES,%q<check_entries>,%q<loot_id>)),%q<loot_code>))=@pemit %#=notice(PF2E,You carry [u({{core}}/FUN`ITEM`SHOWN,%q<loot_id>)] with other runes: the items of one kind share their runes. Drop or sell yours first.,warn); think setq(loot_cost,if(strlen(%q<loot_shop>),ceil(fdiv(mul(%q<loot_count>,rest(u(%!/FUN`LOOT`WORTH,%q<loot_id>,%q<loot_code>),~),first(%q<loot_shop>)),100)),0)); @assert lte(%q<loot_cost>,u({{commands}}/FUN`PURSE`TOTAL,%#,money))=@pemit %#=notice(PF2E,That costs [u({{commands}}/FUN`SHOW`MONEY,%q<loot_cost>)]%, and you have [u({{commands}}/FUN`SHOW`MONEY,u({{commands}}/FUN`PURSE`TOTAL,%#,money))].,warn)
         flags: [cmdsyntax]
+      DATA`TEMPLATE`INC`LOOT`TAKE`RECORD: |-
+        {"kind":"gear","id":"","qty":null,"where":"","step":"gear"}
+      DATA`TEMPLATE`INC`LOOT`TAKE`RECORD`2: |-
+        {"kind":"rune","id":"","rune":"","value":null,"step":"gear"}
       # +loot/take: adds the item and its runes to the player's build ledger, takes it out of the loot, and pays the
       # shop.
       INC`LOOT`TAKE`RECORD:
         value: |-
-          think setq(entry_json,json(object,kind,"gear",id,json(string,%q<loot_id>),qty,add(%q<loot_held>,%q<loot_count>),where,json(string,firstof(rest(u({{core}}/FUN`SHEET`VALUE,%q<check_entries>,gear,%q<loot_id>),|),u({{commands}}/FUN`BUILD`GEAR`WHERE,%q<loot_id>))),step,"gear")); @include {{commands}}/INC`BUILD`PUT; @dolist/inplace [if(not(%q<loot_held>),u(%!/FUN`LOOT`RUNES,%q<loot_code>))]={think setq(entry_json,json(object,kind,"rune",id,json(string,%q<loot_id>),rune,json(string,before(##,~)),value,if(strmatch(##,property~*),json(string,after(##,~)),after(##,~)),step,"gear")); @include {{commands}}/INC`BUILD`PUT}; think setq(loot_state,u(%!/FUN`LOOT`STATE,%q<loot_id>,%q<loot_held>,%q<loot_myst>)); @dolist/inplace [if(strlen(%q<loot_state>),x)]={think setq(entry_json,json(object,kind,"myst",id,json(string,ucstr(%q<loot_id>)),state,"%q<loot_state>",step,"gear")); @include {{commands}}/INC`BUILD`PUT}; &%q<loot_p>`ITEMS %!=[u(%!/FUN`LOOT`MOVE,v(%q<loot_p>`ITEMS),%q<loot_id>,%q<loot_myst>,%q<loot_code>,-%q<loot_count>)]; @dolist/inplace [if(%q<loot_cost>,x)]={think setqm(sheet_target,%#,purse_kind,money,purse_amount,-%q<loot_cost>,purse_reason,Bought [u(%!/FUN`LOOT`COUNTED,%q<loot_count>,%q<loot_shown>)] at [u(%!/FUN`LOOT`TITLE)]); @include {{commands}}/INC`PURSE`PUT}
+          think setq(entry_json,json_fill(v(DATA`TEMPLATE`INC`LOOT`TAKE`RECORD),/id,%q<loot_id>,/qty,add(%q<loot_held>,%q<loot_count>),/where,firstof(rest(u({{core}}/FUN`SHEET`VALUE,%q<check_entries>,gear,%q<loot_id>),|),u({{commands}}/FUN`BUILD`GEAR`WHERE,%q<loot_id>)))); @include {{commands}}/INC`BUILD`PUT; @dolist/inplace [if(not(%q<loot_held>),u(%!/FUN`LOOT`RUNES,%q<loot_code>))]={think setq(entry_json,json_fill(v(DATA`TEMPLATE`INC`LOOT`TAKE`RECORD`2),/id,%q<loot_id>,/rune,before(##,~),/value,if(strmatch(##,property~*),json(string,after(##,~)),after(##,~)))); @include {{commands}}/INC`BUILD`PUT}; think setq(loot_state,u(%!/FUN`LOOT`STATE,%q<loot_id>,%q<loot_held>,%q<loot_myst>)); @dolist/inplace [if(strlen(%q<loot_state>),x)]={think setq(entry_json,json(object,kind,"myst",id,json(string,ucstr(%q<loot_id>)),state,"%q<loot_state>",step,"gear")); @include {{commands}}/INC`BUILD`PUT}; &%q<loot_p>`ITEMS %!=[u(%!/FUN`LOOT`MOVE,v(%q<loot_p>`ITEMS),%q<loot_id>,%q<loot_myst>,%q<loot_code>,-%q<loot_count>)]; @dolist/inplace [if(%q<loot_cost>,x)]={think setqm(sheet_target,%#,purse_kind,money,purse_amount,-%q<loot_cost>,purse_reason,Bought [u(%!/FUN`LOOT`COUNTED,%q<loot_count>,%q<loot_shown>)] at [u(%!/FUN`LOOT`TITLE)]); @include {{commands}}/INC`PURSE`PUT}
         flags: [cmdsyntax]
       INC`LOOT`TAKECOIN:
         value: |-
@@ -10070,7 +10196,7 @@ objects:
       # +loot/drop: takes the item out of the player's build ledger, puts it in the loot, and pays the seller.
       INC`LOOT`DROP`RECORD:
         value: |-
-          think setq(entry_json,json(object,kind,"gear",id,json(string,%q<loot_id>),qty,sub(first(%q<loot_state>,|),%q<loot_count>),where,json(string,rest(%q<loot_state>,|)),step,"gear")); @include {{commands}}/INC`BUILD`PUT; think setqm(gear_id,%q<loot_id>,gear_left,sub(first(%q<loot_state>,|),%q<loot_count>)); @include/nobreak {{commands}}/INC`GEAR`BARE; &%q<loot_p>`ITEMS %!=[u(%!/FUN`LOOT`MOVE,v(%q<loot_p>`ITEMS),%q<loot_id>,if(strlen(%q<loot_shop>),,%q<loot_myst>),%q<loot_code>,%q<loot_count>)]; @dolist/inplace [if(%q<loot_pay>,x)]={think setqm(sheet_target,%#,purse_kind,money,purse_amount,%q<loot_pay>,purse_reason,Sold [u(%!/FUN`LOOT`COUNTED,%q<loot_count>,%q<loot_shown>)] at [u(%!/FUN`LOOT`TITLE)]); @include {{commands}}/INC`PURSE`PUT}
+          think setq(entry_json,json_fill(v(DATA`TEMPLATE`INC`LOOT`TAKE`RECORD),/id,%q<loot_id>,/qty,sub(first(%q<loot_state>,|),%q<loot_count>),/where,rest(%q<loot_state>,|))); @include {{commands}}/INC`BUILD`PUT; think setqm(gear_id,%q<loot_id>,gear_left,sub(first(%q<loot_state>,|),%q<loot_count>)); @include/nobreak {{commands}}/INC`GEAR`BARE; &%q<loot_p>`ITEMS %!=[u(%!/FUN`LOOT`MOVE,v(%q<loot_p>`ITEMS),%q<loot_id>,if(strlen(%q<loot_shop>),,%q<loot_myst>),%q<loot_code>,%q<loot_count>)]; @dolist/inplace [if(%q<loot_pay>,x)]={think setqm(sheet_target,%#,purse_kind,money,purse_amount,%q<loot_pay>,purse_reason,Sold [u(%!/FUN`LOOT`COUNTED,%q<loot_count>,%q<loot_shown>)] at [u(%!/FUN`LOOT`TITLE)]); @include {{commands}}/INC`PURSE`PUT}
         flags: [cmdsyntax]
       INC`LOOT`DROPCOIN:
         value: |-

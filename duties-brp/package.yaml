@@ -1,7 +1,7 @@
 format: "1.20"
 package: duties-brp
 title: "Duties: percentile (BRP) rolls"
-version: 1.0.4
+version: 1.0.5
 authors: [SharpMUSH]
 description: "Lets Duties roll on the percentile (BRP) sheet: a roll provider called brp, so a duty's checks roll 1d100 under a skill or characteristic roll, doubled or halved for difficulty, with help making a roll one step easier, and skill gains or healing as rewards. Pick it with +config duties/system=brp."
 license: MIT
@@ -75,11 +75,13 @@ objects:
           provider_eased,if(%q<provider_helped>,u(%!/FUN`LEVEL`EASIER,%q<provider_level>),%q<provider_level>),
           provider_rolled,if(strlen(%q<provider_level>),uargs({{sheet-brp/sheet}}/API`CHECK,roller,%<roller>,trait,%<trait>,modifier,0,target,%q<provider_eased>)))[cond(not(strlen(%q<provider_level>)),#-1 NO SUCH DIFFICULTY,strmatch(%q<provider_rolled>,#-*),%q<provider_rolled>,u(%!/FUN`CHECK`RESULT,%q<provider_rolled>))]
         flags: [funsyntax]
+      DATA`TEMPLATE`CHECK`RESULT: |-
+        {"tier":"","text":"","roll":"","margin":"","system":{"level":"","chance":null,"rating":null,"total":"","difficulty":"","augmented":null}}
       # %0 the sheet's check JSON.
       FUN`CHECK`RESULT:
         value: |-
           setqm(result_total,json_query(%0,extract,$.total),
-          result_chance,json_query(%0,extract,$.chance))[json(object,tier,json(string,json_query(%0,extract,$.tier)),text,json(string,[json_query(%0,extract,$.label)] %(%q<provider_eased>%, %q<result_chance>%%%): [if(strlen(%q<result_total>),[json_query(%0,extract,$.text)]:%b)][u(%!/FUN`LEVEL`WORDS,json_query(%0,extract,$.level))][if(cand(%q<provider_helped>,comp(%q<provider_eased>,%q<provider_level>)),%b%(one step easier for the help%))]),roll,json(string,json_query(%0,extract,$.roll)),margin,json(string,if(strlen(%q<result_total>),sub(%q<result_chance>,%q<result_total>))),system,json(object,level,json(string,json_query(%0,extract,$.level)),chance,%q<result_chance>,rating,json_query(%0,extract,$.rating),total,json(string,%q<result_total>),difficulty,json(string,%q<provider_eased>),augmented,%q<provider_helped>))]
+          result_chance,json_query(%0,extract,$.chance))[json_fill(v(DATA`TEMPLATE`CHECK`RESULT),/tier,json_query(%0,extract,$.tier),/text,[json_query(%0,extract,$.label)] %(%q<provider_eased>%, %q<result_chance>%%%): [if(strlen(%q<result_total>),[json_query(%0,extract,$.text)]:%b)][u(%!/FUN`LEVEL`WORDS,json_query(%0,extract,$.level))][if(cand(%q<provider_helped>,comp(%q<provider_eased>,%q<provider_level>)),%b%(one step easier for the help%))],/roll,json_query(%0,extract,$.roll),/margin,if(strlen(%q<result_total>),sub(%q<result_chance>,%q<result_total>)),/system/level,json_query(%0,extract,$.level),/system/chance,%q<result_chance>,/system/rating,json_query(%0,extract,$.rating),/system/total,%q<result_total>,/system/difficulty,%q<provider_eased>,/system/augmented,%q<provider_helped>)]
         flags: [funsyntax]
       # The rewards this provider hands out, for the duty editor.
       FN`DUTIES`REWARDS:
