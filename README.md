@@ -66,7 +66,7 @@ The table is generated from [`index.yaml`](index.yaml); edit that file, then run
 | [`fate-system-toolkit-help/`](fate-system-toolkit-help/) | 1.1.2 | Puts the Fate System Toolkit topics into +help |
 | [`fate-system-toolkit-config/`](fate-system-toolkit-config/) | 1.1.2 | Puts the Fate System Toolkit settings, conditions, storms and augs into +config |
 | [`fate-system-toolkit-wiki/`](fate-system-toolkit-wiki/) | 1.1.2 | Unofficial Fate System Toolkit rules reference as wiki pages; Fate System Toolkit SRD text under CC BY 3.0 |
-| [`duties/`](duties/) | 1.3.4 | +duty — short adventures a party plays from challenge to challenge, written by players, approved by duty reviewers and put on a seasonal roster; rolls come from a sheet system bridge |
+| [`duties/`](duties/) | 1.3.5 | +duty — short adventures a party plays from challenge to challenge, written by players, approved by duty reviewers and put on a seasonal roster; rolls come from a sheet system bridge |
 | [`duties-help/`](duties-help/) | 1.0.2 | Registers the duties topics with +help (requires duties and plus-help) |
 | [`duties-config/`](duties-config/) | 1.0.2 | Registers the duties settings and active roster with +config (requires duties and plus-config) |
 | [`duties-app/`](duties-app/) | 1.1.1 | Application package — registers duties as a portal page at /apps/duties, with a map editor for a duty's steps, the review of submitted duties and the active roster (requires duties) |
@@ -84,7 +84,7 @@ The table is generated from [`index.yaml`](index.yaml); edit that file, then run
 | [`fitd-wiki/`](fitd-wiki/) | 1.1.2 | Wiki pages for the FitD sheet (how to play, making a character, actions and attributes, stress, harm and advancement, encounters, threats, clocks); based on the Blades in the Dark SRD under CC BY 3.0 |
 | [`brp-wiki/`](brp-wiki/) | 1.1.2 | Wiki pages for the BRP sheet (how to play, making a character, characteristics and skills, hit points, coin and experience, encounters, creatures); ORC Licensed Material |
 | [`ironsworn-wiki/`](ironsworn-wiki/) | 1.1.2 | Wiki pages for the Ironsworn sheet (how to play, making a character, assets and experience, meters and momentum, vows, encounters, foes); based on the Ironsworn SRD under CC BY 4.0 |
-| [`pf2e/`](pf2e/) | 0.10.20 | Pathfinder Second Edition rules read the way Foundry VTT's pf2e system reads them, with ledger character sheets, a character builder, spellcasting, a deity table the game fills, alchemy, encounters with a bestiary, hazards, effects and GM tools, exploration, skill challenges, downtime, loot and shops with unidentified items, audited awards and levels (ORC License) |
+| [`pf2e/`](pf2e/) | 0.10.21 | Pathfinder Second Edition rules read the way Foundry VTT's pf2e system reads them, with ledger character sheets, a character builder, spellcasting, a deity table the game fills, alchemy, encounters with a bestiary, hazards, effects and GM tools, exploration, skill challenges, downtime, loot and shops with unidentified items, audited awards and levels (ORC License) |
 | [`pf2e-portal/`](pf2e-portal/) | 1.0.1 | Joins the Pathfinder 2e rules to the HTTP handler, for the pf2e-app sheet page |
 | [`pf2e-app/`](pf2e-app/) | 1.0.1 | The Pathfinder 2e sheet as a portal page at /apps/pf2e |
 | [`pf2e-help/`](pf2e-help/) | 1.0.2 | Puts the Pathfinder 2e topics into +help |
