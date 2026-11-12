@@ -1,7 +1,7 @@
 format: "1.20"
 package: duties-fabula
 title: "Duties: JRPG rolls"
-version: 1.0.2
+version: 1.0.3
 authors: [SharpMUSH]
 description: "Lets Duties roll on the JRPG sheet: a roll provider called fabula, so a duty's checks roll two attribute dice against a Difficulty Level, with help and bonds adding to the total, Fabula Points paying for rerolls, and experience, zenit or Fabula Points as rewards. Pick it with +config duties/system=fabula."
 license: MIT
@@ -83,12 +83,14 @@ objects:
         value: |-
           setq(provider_rolled,uargs({{sheet-fabula/sheet}}/API`CHECK,roller,%0,trait,%1,modifier,%q<provider_bonus>,target,%q<provider_dl>))[cond(strmatch(%q<provider_rolled>,#-*),%q<provider_rolled>,cand(%2,strmatch(json_query(%q<provider_rolled>,extract,$.tier),fail)),[setq(provider_used,inc(%q<provider_used>))][null(u({{sheet-fabula/sheet}}/API`ADJUST,%0,FP,-1))][u(%!/FUN`CHECK`TRY,%0,%1,dec(%2))],u(%!/FUN`CHECK`RESULT,%0,%q<provider_rolled>))]
         flags: [funsyntax]
+      DATA`TEMPLATE`CHECK`RESULT: |-
+        {"tier":"","text":"","roll":"","margin":null,"system":{"total":null,"hr":null,"dice":null,"sizes":null,"dl":null,"helpers":null,"bond":null,"invokes":null}}
       # %0 the roller, %1 the sheet's check JSON.
       FUN`CHECK`RESULT:
         value: |-
           setqm(result_tier,json_query(%1,extract,$.tier),
           result_total,json_query(%1,extract,$.total),
-          result_fp,if(strmatch(%q<result_tier>,crit-fail),u({{sheet-fabula/sheet}}/API`ADJUST,%0,FP,1)))[json(object,tier,json(string,%q<result_tier>),text,json(string,[json_query(%1,extract,$.label)]: [json_query(%1,extract,$.text)] vs %q<provider_dl>: [u(%!/FUN`TIER`WORDS,%q<result_tier>)][u(%!/FUN`CHECK`EXTRAS)]),roll,json(string,json_query(%1,extract,$.roll)),margin,sub(%q<result_total>,%q<provider_dl>),system,json(object,total,%q<result_total>,hr,json_query(%1,extract,$.hr),dice,json_query(%1,extract,$.dice),sizes,json_query(%1,extract,$.sizes),dl,%q<provider_dl>,helpers,words(%q<provider_helpers>),bond,%q<provider_bond>,invokes,%q<provider_used>))]
+          result_fp,if(strmatch(%q<result_tier>,crit-fail),u({{sheet-fabula/sheet}}/API`ADJUST,%0,FP,1)))[json_fill(v(DATA`TEMPLATE`CHECK`RESULT),/tier,%q<result_tier>,/text,[json_query(%1,extract,$.label)]: [json_query(%1,extract,$.text)] vs %q<provider_dl>: [u(%!/FUN`TIER`WORDS,%q<result_tier>)][u(%!/FUN`CHECK`EXTRAS)],/roll,json_query(%1,extract,$.roll),/margin,sub(%q<result_total>,%q<provider_dl>),/system/total,%q<result_total>,/system/hr,json_query(%1,extract,$.hr),/system/dice,json_query(%1,extract,$.dice),/system/sizes,json_query(%1,extract,$.sizes),/system/dl,%q<provider_dl>,/system/helpers,words(%q<provider_helpers>),/system/bond,%q<provider_bond>,/system/invokes,%q<provider_used>)]
         flags: [funsyntax]
       FUN`CHECK`EXTRAS:
         value: |-

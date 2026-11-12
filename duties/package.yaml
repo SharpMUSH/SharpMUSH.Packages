@@ -1,7 +1,7 @@
 format: "1.20"
 package: duties
 title: "Duties"
-version: 1.3.3
+version: 1.3.4
 authors: [SharpMUSH]
 description: "Duties: short adventures a party plays through with +duty, from challenge to challenge. Everyone rolls at each challenge, the outcome picks the way on, and the steps nobody in the party has seen are favoured. Players write duties and submit them, a duty reviewer approves them, and staff choose which approved duties are on the active roster and when. The rolls come from a sheet system's bridge, such as duties-d20 or duties-fate."
 license: MIT
@@ -448,9 +448,13 @@ objects:
       INC`RUN`ENTER: |-
         think setq(node,%q<next>)[setq(kind,get({{store}}/%q<root>`N`%q<next>))]; &RUN`%q<run>`NODE {{store}}=%q<node>; &RUN`%q<run>`FRESH {{store}}=squish(iter(%q<mem>,if(hasattr({{store}},SEEN`[u(%!/FUN`KEY,%i0)]`%q<id>`%q<node>),,%i0))); &RUN`%q<run>`ROUND {{store}}=1; @wipe {{store}}/RUN`%q<run>`ROLL; @wipe {{store}}/RUN`%q<run>`LAST; @wipe {{store}}/RUN`%q<run>`OK; @wipe {{store}}/RUN`%q<run>`BAD; @dolist/inline %q<mem>={&SEEN`[u(%!/FUN`KEY,%i0)]`%q<id>`%q<node> {{store}}=secs()}; @dolist/inline %q<mem>={@pemit %i0=u(%!/FUN`SCREEN`RUN,%q<run>,%i0)}; @include/args %!/INC`RUN`EVENT=event,LINE,text,[u(%!/FUN`LINE`STEP,%q<root>,%q<node>)]; @break strmatch(%q<kind>,challenge); think setqm(gnode,%q<node>,
         gwho,%q<mem>); @include/nobreak %!/INC`RUN`GRANT; @assert strmatch(%q<kind>,end); @assert strmatch(get({{store}}/%q<root>`N`%q<node>`RESULT),success)={@include/args %!/INC`RUN`FINISH=why,The duty is over. It ends in failure.[u(%!/FUN`TALLY,%q<run>)]}; @dolist/inline %q<mem>={&DONE`[u(%!/FUN`KEY,%i0)]`%q<id> {{store}}=secs()}; @include/args %!/INC`RUN`FINISH=why,The duty is over. It ends in success.[u(%!/FUN`TALLY,%q<run>)]
+      DATA`TEMPLATE`INC`RUN`ROLL: |-
+        {"duty":"","run":null,"node":"","option":"","round":null}
+      DATA`TEMPLATE`INC`RUN`ROLL`2: |-
+        {"helpers":[],"invokes":0}
       # %<roller> rolls %<opt> at the current challenge.
       INC`RUN`ROLL: |-
-        think setq(rk,u(%!/FUN`KEY,%<roller>))[setq(ctx,json(object,duty,json(string,%q<id>),run,%q<run>,node,json(string,%q<node>),option,json(string,%<opt>),round,get({{store}}/RUN`%q<run>`ROUND)))][setq(rtrait,if(strmatch(%<opt>,improvise),u(%!/FUN`IMPROVTRAIT,%<roller>,%q<ctx>),get({{store}}/%q<root>`N`%q<node>`O`%<opt>`TRAIT)))][setq(rdiff,if(strmatch(%<opt>,improvise),u(%!/FUN`IMPROVDIFF,%q<root>,%q<node>),get({{store}}/%q<root>`N`%q<node>`O`%<opt>`DIFF)))][setq(rres,uargs(%q<prov>/FN`DUTIES`CHECK,roller,%<roller>,trait,%q<rtrait>,difficulty,%q<rdiff>,mods,json(object,helpers,json(array),invokes,0),context,%q<ctx>))][setq(rtier,u(%!/FUN`TIER,json_query(%q<rres>,extract,$.tier)))][setq(rgood,u(%!/FUN`GOOD,%q<rtier>))]; @include %!/INC`RUN`ROLL`RECORD; @pemit/list %q<mem>=notice(DUTY,name(%<roller>) tries [if(strmatch(%<opt>,improvise),Improvise,get({{store}}/%q<root>`N`%q<node>`O`%<opt>))] with [u(%!/FUN`TRAITLABEL,%q<rtrait>)] at %q<rdiff>: [json_query(%q<rres>,extract,$.text)] [badge(u(%!/FUN`TIERLABEL,%q<rtier>),if(%q<rgood>,ok,warn))],info); @include/args %!/INC`RUN`EVENT=event,LINE,text,[name(%<roller>)] tries [if(strmatch(%<opt>,improvise),Improvise,get({{store}}/%q<root>`N`%q<node>`O`%<opt>))] with [u(%!/FUN`TRAITLABEL,%q<rtrait>)] at %q<rdiff>: [json_query(%q<rres>,extract,$.text)] %([u(%!/FUN`TIERLABEL,%q<rtier>)]%)
+        think setq(rk,u(%!/FUN`KEY,%<roller>))[setq(ctx,json_fill(v(DATA`TEMPLATE`INC`RUN`ROLL),/duty,%q<id>,/run,%q<run>,/node,%q<node>,/option,%<opt>,/round,get({{store}}/RUN`%q<run>`ROUND)))][setq(rtrait,if(strmatch(%<opt>,improvise),u(%!/FUN`IMPROVTRAIT,%<roller>,%q<ctx>),get({{store}}/%q<root>`N`%q<node>`O`%<opt>`TRAIT)))][setq(rdiff,if(strmatch(%<opt>,improvise),u(%!/FUN`IMPROVDIFF,%q<root>,%q<node>),get({{store}}/%q<root>`N`%q<node>`O`%<opt>`DIFF)))][setq(rres,uargs(%q<prov>/FN`DUTIES`CHECK,roller,%<roller>,trait,%q<rtrait>,difficulty,%q<rdiff>,mods,v(DATA`TEMPLATE`INC`RUN`ROLL`2),context,%q<ctx>))][setq(rtier,u(%!/FUN`TIER,json_query(%q<rres>,extract,$.tier)))][setq(rgood,u(%!/FUN`GOOD,%q<rtier>))]; @include %!/INC`RUN`ROLL`RECORD; @pemit/list %q<mem>=notice(DUTY,name(%<roller>) tries [if(strmatch(%<opt>,improvise),Improvise,get({{store}}/%q<root>`N`%q<node>`O`%<opt>))] with [u(%!/FUN`TRAITLABEL,%q<rtrait>)] at %q<rdiff>: [json_query(%q<rres>,extract,$.text)] [badge(u(%!/FUN`TIERLABEL,%q<rtier>),if(%q<rgood>,ok,warn))],info); @include/args %!/INC`RUN`EVENT=event,LINE,text,[name(%<roller>)] tries [if(strmatch(%<opt>,improvise),Improvise,get({{store}}/%q<root>`N`%q<node>`O`%<opt>))] with [u(%!/FUN`TRAITLABEL,%q<rtrait>)] at %q<rdiff>: [json_query(%q<rres>,extract,$.text)] %([u(%!/FUN`TIERLABEL,%q<rtier>)]%)
       # Records %<roller>'s roll of option %<opt> and its tier in run %q<run>, and counts it as a success or failure
       # of the option.
       INC`RUN`ROLL`RECORD: |-
@@ -468,8 +472,12 @@ objects:
       # The rewards on step gnode for the characters in gwho.
       INC`RUN`GRANT: |-
         @dolist/inline/nobreak iter(%q<gwho>,iter(u(%!/FUN`REWARDS,%q<root>,%q<gnode>),%i1|%i0)) ={@include/args %!/INC`RUN`GRANTONE=member,before(%i0,|),row,after(%i0,|)}
+      DATA`TEMPLATE`INC`RUN`GRANTONE: |-
+        {"kind":"","repeat":""}
+      DATA`TEMPLATE`INC`RUN`GRANTONE`2: |-
+        {"duty":"","run":null,"node":""}
       INC`RUN`GRANTONE: |-
-        think setq(gpath,%q<root>`N`%q<gnode>`W`%<row>)[setq(ggot,GOT`[u(%!/FUN`KEY,%<member>)]`%q<id>`%q<gnode>`%<row>)][setq(gkind,get({{store}}/%q<gpath>))]; @break lt(u(%!/FUN`SUCCESS,%q<run>),firstof(get({{store}}/%q<gpath>`SUCCESS),0)); @break cand(strmatch(get({{store}}/%q<gpath>`REPEAT),once),hasattr({{store}},%q<ggot>)); &%q<ggot> {{store}}=secs(); @break strmatch(%q<gkind>,info)={@pemit %<member>=notice(DUTY,You learn: [json_query(get({{store}}/%q<gpath>`DETAILS),extract,$.text)],info)}; @trigger/args %q<prov>/ON`DUTIES`GRANT=roller,%<member>,reward,json_mod(get({{store}}/%q<gpath>`DETAILS),patch,json(object,kind,json(string,%q<gkind>),repeat,json(string,get({{store}}/%q<gpath>`REPEAT)))),context,json(object,duty,json(string,%q<id>),run,%q<run>,node,json(string,%q<gnode>))
+        think setq(gpath,%q<root>`N`%q<gnode>`W`%<row>)[setq(ggot,GOT`[u(%!/FUN`KEY,%<member>)]`%q<id>`%q<gnode>`%<row>)][setq(gkind,get({{store}}/%q<gpath>))]; @break lt(u(%!/FUN`SUCCESS,%q<run>),firstof(get({{store}}/%q<gpath>`SUCCESS),0)); @break cand(strmatch(get({{store}}/%q<gpath>`REPEAT),once),hasattr({{store}},%q<ggot>)); &%q<ggot> {{store}}=secs(); @break strmatch(%q<gkind>,info)={@pemit %<member>=notice(DUTY,You learn: [json_query(get({{store}}/%q<gpath>`DETAILS),extract,$.text)],info)}; @trigger/args %q<prov>/ON`DUTIES`GRANT=roller,%<member>,reward,json_mod(get({{store}}/%q<gpath>`DETAILS),patch,json_fill(v(DATA`TEMPLATE`INC`RUN`GRANTONE),/kind,%q<gkind>,/repeat,get({{store}}/%q<gpath>`REPEAT))),context,json_fill(v(DATA`TEMPLATE`INC`RUN`GRANTONE`2),/duty,%q<id>,/run,%q<run>,/node,%q<gnode>)
       # Takes gone out of the party: their roll this round no longer counts. The longest-standing member
       # leads when the leader goes; the duty ends when nobody is left.
       INC`RUN`DROP: |-
@@ -693,10 +701,12 @@ objects:
       FUN`PROBLEMS`FREEPORT: |-
         words(squish(iter(u(%!/FUN`EDGES,%0),if(cand(strmatch(get({{store}}/%0`E`%i0),%1),strmatch(get({{store}}/%0`E`%i0`PORT),%2),not(strlen([get({{store}}/%0`E`%i0`MIN)][get({{store}}/%0`E`%i0`MAX)][get({{store}}/%0`E`%i0`SHARE)][get({{store}}/%0`E`%i0`REQ)]))),%i0))))
 
+      DATA`TEMPLATE`SCREEN`ROSTER: |-
+        {"delim":"","nowrap":"","grow":""}
       # ---- Screens -----------------------------------------------------------------------------
       # %0 the viewer: the duties they can start, with their progress, and the parties gathering.
       FUN`SCREEN`ROSTER: |-
-        setq(sr_key,u(%!/FUN`KEY,%0))[setq(sr_ids,squish(iter(lattr({{store}}/DUTY`*),if(u(%!/FUN`ACTIVE,lcstr(last(%i0,`))),lcstr(last(%i0,`))))))][setq(sr_lobbies,squish(iter(lattr({{store}}/RUN`*),if(strmatch(get({{store}}/%i0`STATE),lobby),last(%i0,`)))))][box(if(words(%q<sr_ids>),ldatatable(json(object,delim,json(string,%r),nowrap,json(string,1%r3%r4%r5%r6),grow,json(string,%r1%r%r%r%r)),tone(strong,Duty)%r[tone(strong,Title)]%r[tone(strong,Party)]%r[tone(strong,Rewards)]%r[tone(strong,Challenges)]%r[tone(strong,Explored)],iter(%q<sr_ids>,u(%!/FUN`SCREEN`ROSTERROW,%i0,%q<sr_key>),,%*<|>),%*<|>),tone(muted,No duties are on the active roster now.))[if(words(%q<sr_lobbies>),%r[rule(Gathering)]%r[iter(%q<sr_lobbies>,Party %i0: [u(%!/FUN`TITLE,DUTY`[get({{store}}/RUN`%i0)]`R[get({{store}}/RUN`%i0`REV)])]%, led by [name(get({{store}}/RUN`%i0`LEADER))]%, [words(get({{store}}/RUN`%i0`MEMBERS))] in the party. +duty/join %i0,,%r)])][if(not(strlen(u(%!/FUN`PROVIDER))),%r[tone(muted,No sheet system is installed%, so duties cannot be played yet.)])]%r[rule()]%r[tone(muted,+duty <duty> to read one. +duty/start <duty> to gather a party.)],Duties)]
+        setq(sr_key,u(%!/FUN`KEY,%0))[setq(sr_ids,squish(iter(lattr({{store}}/DUTY`*),if(u(%!/FUN`ACTIVE,lcstr(last(%i0,`))),lcstr(last(%i0,`))))))][setq(sr_lobbies,squish(iter(lattr({{store}}/RUN`*),if(strmatch(get({{store}}/%i0`STATE),lobby),last(%i0,`)))))][box(if(words(%q<sr_ids>),ldatatable(json_fill(v(DATA`TEMPLATE`SCREEN`ROSTER),/delim,%r,/nowrap,1%r3%r4%r5%r6,/grow,%r1%r%r%r%r),tone(strong,Duty)%r[tone(strong,Title)]%r[tone(strong,Party)]%r[tone(strong,Rewards)]%r[tone(strong,Challenges)]%r[tone(strong,Explored)],iter(%q<sr_ids>,u(%!/FUN`SCREEN`ROSTERROW,%i0,%q<sr_key>),,%*<|>),%*<|>),tone(muted,No duties are on the active roster now.))[if(words(%q<sr_lobbies>),%r[rule(Gathering)]%r[iter(%q<sr_lobbies>,Party %i0: [u(%!/FUN`TITLE,DUTY`[get({{store}}/RUN`%i0)]`R[get({{store}}/RUN`%i0`REV)])]%, led by [name(get({{store}}/RUN`%i0`LEADER))]%, [words(get({{store}}/RUN`%i0`MEMBERS))] in the party. +duty/join %i0,,%r)])][if(not(strlen(u(%!/FUN`PROVIDER))),%r[tone(muted,No sheet system is installed%, so duties cannot be played yet.)])]%r[rule()]%r[tone(muted,+duty <duty> to read one. +duty/start <duty> to gather a party.)],Duties)]
       FUN`SCREEN`ROSTERROW: |-
         setq(rr_root,u(%!/FUN`LIVEROOT,%0))[unmark(%0%r[get({{store}}/%q<rr_root>)]%r[get({{store}}/%q<rr_root>`MIN)]-[get({{store}}/%q<rr_root>`MAX)]%r[u(%!/FUN`REWARDCOUNT,%1,%0,%q<rr_root>)]%r[u(%!/FUN`SEENCOUNT,%1,%0,%q<rr_root>)]%r[u(%!/FUN`EXPLORED,%1,%0,%q<rr_root>)]%%)]
       # %0 a duty, %1 the viewer: one duty, with what the viewer has made of it.
@@ -704,9 +714,9 @@ objects:
         setq(sd_key,u(%!/FUN`KEY,%1))[setq(sd_root,firstof(u(%!/FUN`LIVEROOT,%0),u(%!/FUN`ROOT,%0)))][box(lfields(,Duty%rStatus%rParty%rDone%rRewards received%rChallenges seen%rExplored,%0%r[u(%!/FUN`STATUSLABEL,%0)]%r[get({{store}}/%q<sd_root>`MIN)] to [get({{store}}/%q<sd_root>`MAX)] characters%r[if(strmatch(get({{store}}/%q<sd_root>`REPEAT),once),Once,As often as you like)]%r[u(%!/FUN`REWARDCOUNT,%q<sd_key>,%0,%q<sd_root>)]%r[u(%!/FUN`SEENCOUNT,%q<sd_key>,%0,%q<sd_root>)]%r[u(%!/FUN`EXPLORED,%q<sd_key>,%0,%q<sd_root>)]%% of its steps,%r)[if(strlen(get({{store}}/%q<sd_root>`DESC)),%r%r[get({{store}}/%q<sd_root>`DESC)])][if(cand(get({{store}}/DUTY`%0`NOTE),u(%!/FUN`CANEDIT,%1,%0)),%r%r[tone(warning,Reviewer's note: [get({{store}}/DUTY`%0`NOTE)])])]%r[rule()]%r[tone(muted,if(u(%!/FUN`ACTIVE,%0),+duty/start %0 gathers a party.,Not on the active roster now.)[if(u(%!/FUN`CANEDIT,%1,%0),%b+duty/steps %0 shows its steps.)])],get({{store}}/%q<sd_root>))]
       # %0 the duties, %1 a title: a table of them.
       FUN`SCREEN`LIST: |-
-        box(if(words(%0),ldatatable(json(object,delim,json(string,%r),nowrap,json(string,1%r3),grow,json(string,%r1%r)),tone(strong,Duty)%r[tone(strong,Title)]%r[tone(strong,Status)],iter(%0,unmark(%i0%r[get({{store}}/[u(%!/FUN`ROOT,%i0)])]%r[u(%!/FUN`STATUSLABEL,%i0)]),,%*<|>),%*<|>),tone(muted,None.)),%1)
+        box(if(words(%0),ldatatable(json_fill(v(DATA`TEMPLATE`SCREEN`ROSTER),/delim,%r,/nowrap,1%r3,/grow,%r1%r),tone(strong,Duty)%r[tone(strong,Title)]%r[tone(strong,Status)],iter(%0,unmark(%i0%r[get({{store}}/[u(%!/FUN`ROOT,%i0)])]%r[u(%!/FUN`STATUSLABEL,%i0)]),,%*<|>),%*<|>),tone(muted,None.)),%1)
       FUN`SCREEN`ROSTERADMIN: |-
-        setq(ra_ids,squish(iter(lattr({{store}}/DUTY`*),if(cand(get({{store}}/%i0`LIVE),not(get({{store}}/%i0`RETIRED))),lcstr(last(%i0,`))))))[box(if(words(%q<ra_ids>),ldatatable(json(object,delim,json(string,%r),nowrap,json(string,1%r3%r5),grow,json(string,%r1%r%r1%r)),tone(strong,Duty)%r[tone(strong,Title)]%r[tone(strong,Roster)]%r[tone(strong,Window)]%r[tone(strong,Now)],iter(%q<ra_ids>,unmark(%i0%r[get({{store}}/[u(%!/FUN`LIVEROOT,%i0)])]%r[if(get({{store}}/ROSTER`%i0),On,Off)]%r[u(%!/FUN`WINDOW,%i0)]%r[if(u(%!/FUN`ACTIVE,%i0),Active,-)]),,%*<|>),%*<|>),tone(muted,No duty has been approved yet.)),Approved duties)]
+        setq(ra_ids,squish(iter(lattr({{store}}/DUTY`*),if(cand(get({{store}}/%i0`LIVE),not(get({{store}}/%i0`RETIRED))),lcstr(last(%i0,`))))))[box(if(words(%q<ra_ids>),ldatatable(json_fill(v(DATA`TEMPLATE`SCREEN`ROSTER),/delim,%r,/nowrap,1%r3%r5,/grow,%r1%r%r1%r),tone(strong,Duty)%r[tone(strong,Title)]%r[tone(strong,Roster)]%r[tone(strong,Window)]%r[tone(strong,Now)],iter(%q<ra_ids>,unmark(%i0%r[get({{store}}/[u(%!/FUN`LIVEROOT,%i0)])]%r[if(get({{store}}/ROSTER`%i0),On,Off)]%r[u(%!/FUN`WINDOW,%i0)]%r[if(u(%!/FUN`ACTIVE,%i0),Active,-)]),,%*<|>),%*<|>),tone(muted,No duty has been approved yet.)),Approved duties)]
       # %0 a party, %1 the viewer: where the party is.
       FUN`SCREEN`RUN: |-
         u(%!/FUN`RUNREGS,%0)[box(switch(%q<state>,lobby,u(%!/FUN`SCREEN`LOBBY,%0),switch(%q<kind>,challenge,u(%!/FUN`SCREEN`CHALLENGE,%0,%1),u(%!/FUN`SCREEN`STEPTEXT,%1)[if(strmatch(%q<kind>,narration),%r[rule()]%r[tone(muted,if(strmatch(%q<leader>,%1),+duty/go to go on.,Waiting for [name(%q<leader>)] to go on.))])])),u(%!/FUN`TITLE,%q<root>)[if(cand(strlen(%q<node>),strlen(setr(srl,get({{store}}/%q<root>`N`%q<node>`LABEL)))),%b- %q<srl>)])]
@@ -715,8 +725,10 @@ objects:
       # %0 the viewer: the step's text, or its text for those who have seen it before.
       FUN`SCREEN`STEPTEXT: |-
         firstof(if(cand(not(member(get({{store}}/RUN`%q<run>`FRESH),%0)),strlen(get({{store}}/%q<root>`N`%q<node>`SEEN))),get({{store}}/%q<root>`N`%q<node>`SEEN),get({{store}}/%q<root>`N`%q<node>`TEXT)),tone(muted,No description.))
+      DATA`TEMPLATE`SCREEN`CHALLENGE: |-
+        {"duty":"","run":null,"node":"","option":"improvise","round":null}
       FUN`SCREEN`CHALLENGE: |-
-        setq(sc_run,%0)[setq(sc_wait,u(%!/FUN`WAITING,%0))][u(%!/FUN`SCREEN`STEPTEXT,%1)]%r%r[ldatatable(json(object,delim,json(string,%r),nowrap,json(string,1%r3%r4%r5),grow,json(string,%r1%r%r%r)),tone(strong,Option)%r[tone(strong,Roll)]%r[tone(strong,Trait)]%r[tone(strong,Difficulty)]%r[tone(strong,Needs)],iter(u(%!/FUN`OPEN,%0,%q<root>,%q<node>),u(%!/FUN`SCREEN`OPTIONROW,%i0),,%*<|>)%*<|>improvise%rImprovise%r[u(%!/FUN`TRAITLABEL,u(%!/FUN`IMPROVTRAIT,%1,json(object,duty,json(string,%q<id>),run,%0,node,json(string,%q<node>),option,json(string,improvise),round,get({{store}}/RUN`%0`ROUND))))]%r[u(%!/FUN`IMPROVDIFF,%q<root>,%q<node>)]%r1 roll,%*<|>)]%r[rule()]%r[tone(muted,Round [get({{store}}/RUN`%0`ROUND)]. [if(words(%q<sc_wait>),Waiting on [itemize(iter(%q<sc_wait>,name(%i0),,|),|)].,Everyone has rolled.)] [u(%!/FUN`EXITHINT,%q<root>,%q<node>)] +duty/try <option> to roll.)]
+        setq(sc_run,%0)[setq(sc_wait,u(%!/FUN`WAITING,%0))][u(%!/FUN`SCREEN`STEPTEXT,%1)]%r%r[ldatatable(json_fill(v(DATA`TEMPLATE`SCREEN`ROSTER),/delim,%r,/nowrap,1%r3%r4%r5,/grow,%r1%r%r%r),tone(strong,Option)%r[tone(strong,Roll)]%r[tone(strong,Trait)]%r[tone(strong,Difficulty)]%r[tone(strong,Needs)],iter(u(%!/FUN`OPEN,%0,%q<root>,%q<node>),u(%!/FUN`SCREEN`OPTIONROW,%i0),,%*<|>)%*<|>improvise%rImprovise%r[u(%!/FUN`TRAITLABEL,u(%!/FUN`IMPROVTRAIT,%1,json_fill(v(DATA`TEMPLATE`SCREEN`CHALLENGE),/duty,%q<id>,/run,%0,/node,%q<node>,/round,get({{store}}/RUN`%0`ROUND))))]%r[u(%!/FUN`IMPROVDIFF,%q<root>,%q<node>)]%r1 roll,%*<|>)]%r[rule()]%r[tone(muted,Round [get({{store}}/RUN`%0`ROUND)]. [if(words(%q<sc_wait>),Waiting on [itemize(iter(%q<sc_wait>,name(%i0),,|),|)].,Everyone has rolled.)] [u(%!/FUN`EXITHINT,%q<root>,%q<node>)] +duty/try <option> to roll.)]
       FUN`SCREEN`OPTIONROW: |-
         setq(so_p,%q<root>`N`%q<node>`O`%0)[unmark(%0%r[get({{store}}/%q<so_p>)][if(get({{store}}/%q<so_p>`TRAINED),%b%(trained%))]%r[u(%!/FUN`TRAITLABEL,get({{store}}/%q<so_p>`TRAIT))]%r[get({{store}}/%q<so_p>`DIFF)]%r[sub(get({{store}}/%q<so_p>`SUCC),firstof(get({{store}}/RUN`%q<sc_run>`OK`%0),0))] of [get({{store}}/%q<so_p>`SUCC)])]
       # %0 root, %1 step: how many ways lead on.
@@ -806,14 +818,18 @@ objects:
       # Field %0 of the posted JSON in %q<body>: a string unquoted, anything else as JSON, nothing when missing.
       WEB`BODY`GET: |-
         setq(web_got,json_query(%q<body>,get,%0))[switch(%q<web_got>,null,,"*,json_query(%q<web_got>,unescape),%q<web_got>)]
+      DATA`TEMPLATE`WEB`RESULT`ERROR: |-
+        {"ok":false,"errors":{"_global":""}}
       WEB`RESULT`ERROR: |-
-        json(object,ok,json(boolean,false),errors,json(object,_global,json(string,%0)))
+        json_fill(v(DATA`TEMPLATE`WEB`RESULT`ERROR),/errors/_global,%0)
       # The answer when an INC`DO` routine refused: its message, and the problems it found.
       WEB`RESULT`FAIL: |-
         u(%!/WEB`RESULT`ERROR,%q<do_msg>[if(strlen(%q<do_prob>),%b[edit(trim(%q<do_prob>,b,%r),%r,%b)])])
+      DATA`TEMPLATE`WEB`RESULT`PAGE: |-
+        {"ok":true,"message":"","schema":null,"data":{"fields":null}}
       # The answer after a change to duty id: message %0, the page drawn again and its data.
       WEB`RESULT`PAGE: |-
-        json(object,ok,json(boolean,true),message,json(string,%0),schema,u(%!/WEB`SCHEMA`DUTY,%q<web_viewer>,%q<id>),data,json(object,fields,u(%!/WEB`DATA`DUTY,%q<web_viewer>,%q<id>)))
+        json_fill(v(DATA`TEMPLATE`WEB`RESULT`PAGE),/message,%0,/schema,u(%!/WEB`SCHEMA`DUTY,%q<web_viewer>,%q<id>),/data/fields,u(%!/WEB`DATA`DUTY,%q<web_viewer>,%q<id>))
 
       # schemas: GET /http/duties/schema?at=<path>
       WEB`SCHEMA: |-
@@ -823,9 +839,11 @@ objects:
         json_fill(v(DATA`WEB`SAY),/title,%0,/pages/0/sections/0/elements/0/value,%1)
       DATA`WEB`SAY: |-
         {"kind":"view","schema_version":1,"title":"","pages":[{"key":"main","title":"Duties","order":1,"sections":[{"name":"","order":1,"elements":[{"kind":"markdown","value":""}]}]}],"actions":{}}
+      DATA`TEMPLATE`WEB`SCHEMA`HOME: |-
+        {"kind":"form","schema_version":1,"title":"Duties","pages":[{"key":"main","title":"Duties","order":1,"sections":null}],"actions":{"act":null}}
       # %0 the viewer: their duties, the ones waiting for review when they review duties, and a new one.
       WEB`SCHEMA`HOME: |-
-        json(object,kind,json(string,form),schema_version,json(number,1),title,json(string,Duties),pages,json(array,json(object,key,json(string,main),title,json(string,Duties),order,json(number,1),sections,u(%!/WEB`JSON`ARRAY,v(DATA`WEB`HOME`PLAY)%r[v(DATA`WEB`HOME`MINE)][if(u(%!/FUN`STAFF,%0),%r[v(DATA`WEB`HOME`REVIEW)]%r[v(DATA`WEB`HOME`ROSTER)])]%r[v(DATA`WEB`HOME`NEW)]))),actions,json(object,act,v(DATA`WEB`ACT)))
+        json_fill(v(DATA`TEMPLATE`WEB`SCHEMA`HOME),/pages/0/sections,u(%!/WEB`JSON`ARRAY,v(DATA`WEB`HOME`PLAY)%r[v(DATA`WEB`HOME`MINE)][if(u(%!/FUN`STAFF,%0),%r[v(DATA`WEB`HOME`REVIEW)]%r[v(DATA`WEB`HOME`ROSTER)])]%r[v(DATA`WEB`HOME`NEW)]),/actions/act,v(DATA`WEB`ACT))
       DATA`WEB`HOME`PLAY: |-
         {"name":"Duties you can start","order":0,"elements":[{"kind":"table","rows_field":"play","empty":"No duties are on the active roster now.","columns":[{"key":"title","label":"Duty"},{"key":"id","label":"Id"},{"key":"about","label":"About"},{"key":"party","label":"Party"},{"key":"rewards","label":"Rewards"},{"key":"challenges","label":"Challenges seen"},{"key":"explored","label":"Explored"}]},{"kind":"markdown","value":"Start one in the game with `+duty/start` and its id. With the Duties in scenes package, `+duty/start/scene` plays it in a scene of its own."}]}
       DATA`WEB`HOME`MINE: |-
@@ -843,31 +861,45 @@ objects:
       DATA`WEB`NOTE: |-
         {"transport":"http","method":"POST","route":"/http/duties/note","payload":"fields","on_error":{"bind_field_errors":true}}
 
+      DATA`TEMPLATE`WEB`SCHEMA`DUTY: |-
+        {"kind":"form","schema_version":1,"title":"","pages":[{"key":"main","title":"Duty","order":1,"sections":null}],"actions":{"act":null,"check":null,"note":null}}
+      DATA`TEMPLATE`WEB`SCHEMA`DUTY`2: |-
+        {"name":"Steps","order":3,"elements":[null]}
       # %0 the viewer, %1 a duty they may change: its editor. Sets web_state, web_edit (they may change it
       # now) and web_review (a reviewer, and it waits for review).
       WEB`SCHEMA`DUTY: |-
         setqm(web_state,get({{store}}/DUTY`%1`STATE),
         web_edit,cand(u(%!/FUN`CANEDIT,%0,%1),not(strmatch(get({{store}}/DUTY`%1`STATE),submitted))),
-        web_review,cand(u(%!/FUN`STAFF,%0),strmatch(get({{store}}/DUTY`%1`STATE),submitted)))[json(object,kind,json(string,form),schema_version,json(number,1),title,json(string,u(%!/FUN`TITLE,u(%!/FUN`ROOT,%1))),pages,json(array,json(object,key,json(string,main),title,json(string,Duty),order,json(number,1),sections,u(%!/WEB`JSON`ARRAY,v(DATA`WEB`DUTY`STATUS)%r[v(if(%q<web_edit>,DATA`WEB`DUTY`ABOUT,DATA`WEB`DUTY`ABOUTVIEW))]%r[json(object,name,json(string,Steps),order,json(number,3),elements,json(array,u(%!/WEB`GRAPH`FIELD,%q<web_edit>,%q<web_review>)))]%r[u(%!/WEB`SCHEMA`BUTTONS,%0,%1)][if(cand(u(%!/FUN`STAFF,%0),get({{store}}/DUTY`%1`LIVE)),%r[u(%!/WEB`SCHEMA`ROSTER,%1)])]))),actions,json(object,act,v(DATA`WEB`ACT),check,v(DATA`WEB`CHECK),note,v(DATA`WEB`NOTE)))]
+        web_review,cand(u(%!/FUN`STAFF,%0),strmatch(get({{store}}/DUTY`%1`STATE),submitted)))[json_fill(v(DATA`TEMPLATE`WEB`SCHEMA`DUTY),/title,u(%!/FUN`TITLE,u(%!/FUN`ROOT,%1)),/pages/0/sections,u(%!/WEB`JSON`ARRAY,v(DATA`WEB`DUTY`STATUS)%r[v(if(%q<web_edit>,DATA`WEB`DUTY`ABOUT,DATA`WEB`DUTY`ABOUTVIEW))]%r[json_fill(v(DATA`TEMPLATE`WEB`SCHEMA`DUTY`2),/elements/0,u(%!/WEB`GRAPH`FIELD,%q<web_edit>,%q<web_review>))]%r[u(%!/WEB`SCHEMA`BUTTONS,%0,%1)][if(cand(u(%!/FUN`STAFF,%0),get({{store}}/DUTY`%1`LIVE)),%r[u(%!/WEB`SCHEMA`ROSTER,%1)])]),/actions/act,v(DATA`WEB`ACT),/actions/check,v(DATA`WEB`CHECK),/actions/note,v(DATA`WEB`NOTE))]
       DATA`WEB`DUTY`STATUS: |-
         {"name":"","order":1,"elements":[{"kind":"keyvalue","fields":["Status","Reviewer's note"]}]}
       DATA`WEB`DUTY`ABOUT: |-
         {"name":"About it","order":2,"columns":2,"elements":[{"kind":"field","key":"duty","type":"hidden"},{"kind":"field","key":"title","label":"Title","type":"text","span":2,"validation":{"required":true,"max_length":80}},{"kind":"field","key":"description","label":"Description","type":"textarea","span":2,"help":"What players read before they start."},{"kind":"field","key":"min","label":"Smallest party","type":"number","validation":{"required":true,"min":1}},{"kind":"field","key":"max","label":"Largest party","type":"number","validation":{"required":true,"min":1}},{"kind":"field","key":"repeat","label":"Each character can do it","type":"select","default":"every","options":[{"value":"once","label":"Once"},{"value":"every","label":"Again and again"}]}]}
       DATA`WEB`DUTY`ABOUTVIEW: |-
         {"name":"About it","order":2,"elements":[{"kind":"field","key":"duty","type":"hidden"},{"kind":"keyvalue","fields":["Title","Description","Party","Each character can do it"]}]}
+      DATA`TEMPLATE`WEB`SCHEMA`BUTTONS: |-
+        {"name":"","order":4,"elements":null}
       # %0 the viewer, %1 the duty: the buttons for what they may do with it now.
       WEB`SCHEMA`BUTTONS: |-
-        json(object,name,json(string,),order,json(number,4),elements,u(%!/WEB`JSON`ARRAY,if(%q<web_edit>,u(%!/WEB`BUTTON,Save,save,primary)%r[u(%!/WEB`BUTTON,Submit for review,submit,success,Submit %1 for review? It cannot be changed while it waits.)][if(cand(get({{store}}/DUTY`%1`LIVE),get({{store}}/DUTY`%1`DRAFT)),%r[u(%!/WEB`BUTTON,Discard changes,discard,error,Drop the changes and keep the approved duty?)])])[if(cand(strmatch(%q<web_state>,submitted),strmatch(get({{store}}/DUTY`%1`AUTHOR),objid(%0))),u(%!/WEB`BUTTON,Withdraw,withdraw,secondary))][if(%q<web_review>,%r[v(DATA`WEB`RETURNNOTE)]%r[u(%!/WEB`BUTTON,Return with note,return,warning)]%r[u(%!/WEB`BUTTON,Approve,approve,success,Approve %1? It can then go on the active roster.)])]))
+        json_fill(v(DATA`TEMPLATE`WEB`SCHEMA`BUTTONS),/elements,u(%!/WEB`JSON`ARRAY,if(%q<web_edit>,u(%!/WEB`BUTTON,Save,save,primary)%r[u(%!/WEB`BUTTON,Submit for review,submit,success,Submit %1 for review? It cannot be changed while it waits.)][if(cand(get({{store}}/DUTY`%1`LIVE),get({{store}}/DUTY`%1`DRAFT)),%r[u(%!/WEB`BUTTON,Discard changes,discard,error,Drop the changes and keep the approved duty?)])])[if(cand(strmatch(%q<web_state>,submitted),strmatch(get({{store}}/DUTY`%1`AUTHOR),objid(%0))),u(%!/WEB`BUTTON,Withdraw,withdraw,secondary))][if(%q<web_review>,%r[v(DATA`WEB`RETURNNOTE)]%r[u(%!/WEB`BUTTON,Return with note,return,warning)]%r[u(%!/WEB`BUTTON,Approve,approve,success,Approve %1? It can then go on the active roster.)])]))
+      DATA`TEMPLATE`WEB`BUTTON: |-
+        {"kind":"button","label":"","action":"act","values":{"op":""},"color":"","variant":"","confirm":""}
       # A button: label %0, the op it posts %1, colour %2, a question asked first %3.
       WEB`BUTTON: |-
-        json(object,kind,json(string,button),label,json(string,%0),action,json(string,act),values,json(object,op,json(string,%1)),color,json(string,%2),variant,json(string,if(match(primary success,%2),filled,outlined)),confirm,json(string,%3))
+        json_fill(v(DATA`TEMPLATE`WEB`BUTTON),/label,%0,/values/op,%1,/color,%2,/variant,if(match(primary success,%2),filled,outlined),/confirm,%3)
       DATA`WEB`RETURNNOTE: |-
         {"kind":"field","key":"return_note","label":"What needs changing","type":"textarea","help":"Sent to the author with the duty."}
 
+      DATA`TEMPLATE`WEB`SCHEMA`ROSTER: |-
+        {"name":"On the roster","order":5,"elements":null}
+      DATA`TEMPLATE`WEB`SCHEMA`ROSTER`2: |-
+        {"name":"The days it is on","order":6,"columns":3,"elements":null}
+      DATA`TEMPLATE`WEB`SCHEMA`ROSTER`3: |-
+        {"name":"Parties on it","order":7,"elements":null}
       # %0 an approved duty: for a reviewer, three sections: its place on the roster, the days it is on, and
       # the parties on it.
       WEB`SCHEMA`ROSTER: |-
-        setq(web_runs,u(%!/FUN`RUNSOF,%0))[json(object,name,json(string,On the roster),order,json(number,5),elements,u(%!/WEB`JSON`ARRAY,v(DATA`WEB`ROSTER`STATE)%r[if(get({{store}}/DUTY`%0`RETIRED),u(%!/WEB`BUTTON,Restore,restore,success),if(get({{store}}/ROSTER`%0),u(%!/WEB`BUTTON,Take off the roster,rosteroff,warning),u(%!/WEB`BUTTON,Put on the roster,rosteron,success))%r[u(%!/WEB`BUTTON,Retire,retire,error,Retire %0? Players can no longer start it. Parties on it now finish it.)])]))][if(not(get({{store}}/DUTY`%0`RETIRED)),%r[json(object,name,json(string,The days it is on),order,json(number,6),columns,json(number,3),elements,u(%!/WEB`JSON`ARRAY,v(DATA`WEB`ROSTER`FROM)%r[v(DATA`WEB`ROSTER`TO)]%r[v(DATA`WEB`ROSTER`YEARLY)]%r[u(%!/WEB`BUTTON,Save the days,window,primary)]))])]%r[json(object,name,json(string,Parties on it),order,json(number,7),elements,u(%!/WEB`JSON`ARRAY,v(DATA`WEB`ROSTER`PARTIES)[if(words(%q<web_runs>),%r[json_fill(v(DATA`WEB`ROSTER`END),/options,u(%!/WEB`RUNOPTIONS,%q<web_runs>))]%r[u(%!/WEB`BUTTON,End the party,end,error,End this party? Nobody earns the duty's rewards.)])]))]
+        setq(web_runs,u(%!/FUN`RUNSOF,%0))[json_fill(v(DATA`TEMPLATE`WEB`SCHEMA`ROSTER),/elements,u(%!/WEB`JSON`ARRAY,v(DATA`WEB`ROSTER`STATE)%r[if(get({{store}}/DUTY`%0`RETIRED),u(%!/WEB`BUTTON,Restore,restore,success),if(get({{store}}/ROSTER`%0),u(%!/WEB`BUTTON,Take off the roster,rosteroff,warning),u(%!/WEB`BUTTON,Put on the roster,rosteron,success))%r[u(%!/WEB`BUTTON,Retire,retire,error,Retire %0? Players can no longer start it. Parties on it now finish it.)])]))][if(not(get({{store}}/DUTY`%0`RETIRED)),%r[json_fill(v(DATA`TEMPLATE`WEB`SCHEMA`ROSTER`2),/elements,u(%!/WEB`JSON`ARRAY,v(DATA`WEB`ROSTER`FROM)%r[v(DATA`WEB`ROSTER`TO)]%r[v(DATA`WEB`ROSTER`YEARLY)]%r[u(%!/WEB`BUTTON,Save the days,window,primary)]))])]%r[json_fill(v(DATA`TEMPLATE`WEB`SCHEMA`ROSTER`3),/elements,u(%!/WEB`JSON`ARRAY,v(DATA`WEB`ROSTER`PARTIES)[if(words(%q<web_runs>),%r[json_fill(v(DATA`WEB`ROSTER`END),/options,u(%!/WEB`RUNOPTIONS,%q<web_runs>))]%r[u(%!/WEB`BUTTON,End the party,end,error,End this party? Nobody earns the duty's rewards.)])]))]
       DATA`WEB`ROSTER`STATE: |-
         {"kind":"keyvalue","fields":["Roster","Days","Now"]}
       DATA`WEB`ROSTER`FROM: |-
@@ -880,13 +912,17 @@ objects:
         {"kind":"table","rows_field":"parties","empty":"No party is on it.","columns":[{"key":"party","label":"Party"},{"key":"leader","label":"Leader"},{"key":"members","label":"Members"},{"key":"step","label":"Where they are"}]}
       DATA`WEB`ROSTER`END: |-
         {"kind":"field","key":"end_run","label":"Party to end","type":"select","options":[]}
+      DATA`TEMPLATE`WEB`RUNOPTIONS: |-
+        {"value":"","label":""}
       # %0 parties: each as a choice for the party to end.
       WEB`RUNOPTIONS: |-
-        u(%!/WEB`JSON`ARRAY,iter(%0,json(object,value,json(string,%i0),label,json(string,Party %i0%, led by [name(get({{store}}/RUN`%i0`LEADER))])),%b,%r))
+        u(%!/WEB`JSON`ARRAY,iter(%0,json_fill(v(DATA`TEMPLATE`WEB`RUNOPTIONS),/value,%i0,/label,Party %i0%, led by [name(get({{store}}/RUN`%i0`LEADER))]),%b,%r))
 
+      DATA`TEMPLATE`WEB`GRAPH`FIELD: |-
+        {"note_action":"note"}
       # The steps: a graph field, read-only unless %0, with pinned notes when %1 (a reviewer reviewing).
       WEB`GRAPH`FIELD: |-
-        u(%!/WEB`JSON`PUT,json_fill(v(DATA`WEB`GRAPH),/graph/kinds,json(array,u(%!/WEB`KIND,CHALLENGE),u(%!/WEB`KIND,NARRATION),u(%!/WEB`KIND,END)),/graph/readonly,u(%!/WEB`JSON`BOOLEAN,not(%0))),graph,json(object,note_action,json(string,note)),%1)
+        u(%!/WEB`JSON`PUT,json_fill(v(DATA`WEB`GRAPH),/graph/kinds,json(array,u(%!/WEB`KIND,CHALLENGE),u(%!/WEB`KIND,NARRATION),u(%!/WEB`KIND,END)),/graph/readonly,u(%!/WEB`JSON`BOOLEAN,not(%0))),graph,v(DATA`TEMPLATE`WEB`GRAPH`FIELD),%1)
       DATA`WEB`GRAPH: |-
         {"kind":"field","key":"steps","label":"Steps","type":"graph","graph":{"kinds":[],"check":"check","issues_field":"issues","notes_field":"notes","changes_field":"changes","readonly":false}}
       # A kind of step: its template, with the reward kinds and, on a challenge, the sheet system's traits.
@@ -910,7 +946,7 @@ objects:
       WEB`TRAITS`OPTIONS: |-
         u(%!/WEB`JSON`ARRAY,if(strlen(setr(web_traits,u(%!/FUN`TRAITS))),json_map(%!/WEB`TRAITS`OPTION,%q<web_traits>,%r)))
       WEB`TRAITS`OPTION: |-
-        json(object,value,json(string,lcstr(json_query(%1,extract,$.key))),label,json(string,firstof(json_query(%1,extract,$.label),json_query(%1,extract,$.key))))
+        json_fill(v(DATA`TEMPLATE`WEB`RUNOPTIONS),/value,lcstr(json_query(%1,extract,$.key)),/label,firstof(json_query(%1,extract,$.label),json_query(%1,extract,$.key)))
       # The rewards field: a row per reward, its kind's own details beside it.
       WEB`REWARDS`FIELD: |-
         setq(web_rk,if(strlen(setr(web_rp,u(%!/FUN`PROVIDER))),u(%q<web_rp>/FN`DUTIES`REWARDS)))[json_fill(v(DATA`WEB`F`REWARDS),/item_fields/0/options,u(%!/WEB`JSON`ARRAY,v(DATA`WEB`F`INFOKIND)[if(strlen(%q<web_rk>),%r[json_map(%!/WEB`REWARDS`KIND,%q<web_rk>,%r)])]),/item_variants,u(%!/WEB`JSON`OBJECT,json(object,info,v(DATA`WEB`F`INFO))[if(strlen(%q<web_rk>),%r[json_map(%!/WEB`REWARDS`VARIANT,%q<web_rk>,%r)])]))]
@@ -921,11 +957,13 @@ objects:
       DATA`WEB`F`INFO: |-
         [{"kind":"field","key":"text","label":"What they learn","type":"textarea"}]
       WEB`REWARDS`KIND: |-
-        json(object,value,json(string,lcstr(json_query(%1,extract,$.kind))),label,json(string,firstof(json_query(%1,extract,$.label),json_query(%1,extract,$.kind))))
+        json_fill(v(DATA`TEMPLATE`WEB`RUNOPTIONS),/value,lcstr(json_query(%1,extract,$.kind)),/label,firstof(json_query(%1,extract,$.label),json_query(%1,extract,$.kind)))
       WEB`REWARDS`VARIANT: |-
         json(object,lcstr(json_query(%1,extract,$.kind)),u(%!/WEB`JSON`ARRAY,if(strlen(setr(web_rf,json_query(%1,extract,$.fields))),json_map(%!/WEB`REWARDS`DETAIL,%q<web_rf>,%r))))
+      DATA`TEMPLATE`WEB`REWARDS`DETAIL: |-
+        {"kind":"field","key":"","label":"","type":""}
       WEB`REWARDS`DETAIL: |-
-        json(object,kind,json(string,field),key,json(string,json_query(%1,extract,$.key)),label,json(string,firstof(json_query(%1,extract,$.label),json_query(%1,extract,$.key))),type,json(string,if(match(number integer,lcstr(json_query(%1,extract,$.type))),number,text)))
+        json_fill(v(DATA`TEMPLATE`WEB`REWARDS`DETAIL),/key,json_query(%1,extract,$.key),/label,firstof(json_query(%1,extract,$.label),json_query(%1,extract,$.key)),/type,if(match(number integer,lcstr(json_query(%1,extract,$.type))),number,text))
 
       # data: GET /http/duties/data?at=<path>, for the page WEB`SCHEMA drew.
       WEB`DATA: |-
@@ -935,13 +973,19 @@ objects:
       # %0 the viewer: the duties on the active roster, with their progress, as the roster screen has them.
       WEB`PLAYROWS: |-
         setq(web_pk,u(%!/FUN`KEY,%0))[u(%!/WEB`JSON`ARRAY,iter(squish(iter(lattr({{store}}/DUTY`*),if(u(%!/FUN`ACTIVE,lcstr(last(%i0,`))),lcstr(last(%i0,`))))),u(%!/WEB`PLAYROW,%i0,u(%!/FUN`LIVEROOT,%i0)),%b,%r))]
+      DATA`TEMPLATE`WEB`PLAYROW: |-
+        {"id":"","title":"","about":"","party":"","rewards":"","challenges":"","explored":""}
       WEB`PLAYROW: |-
-        json(object,id,json(string,%0),title,json(string,get({{store}}/%1)),about,json(string,get({{store}}/%1`DESC)),party,json(string,[get({{store}}/%1`MIN)]-[get({{store}}/%1`MAX)]),rewards,json(string,u(%!/FUN`REWARDCOUNT,%q<web_pk>,%0,%1)),challenges,json(string,u(%!/FUN`SEENCOUNT,%q<web_pk>,%0,%1)),explored,json(string,[u(%!/FUN`EXPLORED,%q<web_pk>,%0,%1)]%%))
+        json_fill(v(DATA`TEMPLATE`WEB`PLAYROW),/id,%0,/title,get({{store}}/%1),/about,get({{store}}/%1`DESC),/party,[get({{store}}/%1`MIN)]-[get({{store}}/%1`MAX)],/rewards,u(%!/FUN`REWARDCOUNT,%q<web_pk>,%0,%1),/challenges,u(%!/FUN`SEENCOUNT,%q<web_pk>,%0,%1),/explored,[u(%!/FUN`EXPLORED,%q<web_pk>,%0,%1)]%%)
+      DATA`TEMPLATE`WEB`ROSTERROWS: |-
+        {"id":"","title":"","roster":"","color":"","days":"","now":"","parties":""}
       # Every approved duty, with its place on the roster, for a reviewer.
       WEB`ROSTERROWS: |-
-        u(%!/WEB`JSON`ARRAY,iter(squish(iter(lattr({{store}}/DUTY`*),if(get({{store}}/%i0`LIVE),lcstr(last(%i0,`))))),json(object,id,json(string,%i0),title,json(string,get({{store}}/[u(%!/FUN`LIVEROOT,%i0)])),roster,json(string,cond(get({{store}}/DUTY`%i0`RETIRED),Retired,get({{store}}/ROSTER`%i0),On,Off)),color,json(string,cond(get({{store}}/DUTY`%i0`RETIRED),default,get({{store}}/ROSTER`%i0),success,warning)),days,json(string,u(%!/FUN`WINDOW,%i0)),now,json(string,if(u(%!/FUN`ACTIVE,%i0),Can be started,-)),parties,json(string,words(u(%!/FUN`RUNSOF,%i0)))),%b,%r))
+        u(%!/WEB`JSON`ARRAY,iter(squish(iter(lattr({{store}}/DUTY`*),if(get({{store}}/%i0`LIVE),lcstr(last(%i0,`))))),json_fill(v(DATA`TEMPLATE`WEB`ROSTERROWS),/id,%i0,/title,get({{store}}/[u(%!/FUN`LIVEROOT,%i0)]),/roster,cond(get({{store}}/DUTY`%i0`RETIRED),Retired,get({{store}}/ROSTER`%i0),On,Off),/color,cond(get({{store}}/DUTY`%i0`RETIRED),default,get({{store}}/ROSTER`%i0),success,warning),/days,u(%!/FUN`WINDOW,%i0),/now,if(u(%!/FUN`ACTIVE,%i0),Can be started,-),/parties,words(u(%!/FUN`RUNSOF,%i0))),%b,%r))
+      DATA`TEMPLATE`WEB`ROWS: |-
+        {"id":"","title":"","status":"","color":"","author":""}
       WEB`ROWS: |-
-        u(%!/WEB`JSON`ARRAY,iter(%0,json(object,id,json(string,%i0),title,json(string,u(%!/FUN`TITLE,u(%!/FUN`ROOT,%i0))),status,json(string,u(%!/FUN`STATUSLABEL,%i0)),color,json(string,switch(u(%!/FUN`STATUS,%i0),submitted,warning,returned,error,retired,default,approved,success,info)),author,json(string,name(get({{store}}/DUTY`%i0`AUTHOR)))),%b,%r))
+        u(%!/WEB`JSON`ARRAY,iter(%0,json_fill(v(DATA`TEMPLATE`WEB`ROWS),/id,%i0,/title,u(%!/FUN`TITLE,u(%!/FUN`ROOT,%i0)),/status,u(%!/FUN`STATUSLABEL,%i0),/color,switch(u(%!/FUN`STATUS,%i0),submitted,warning,returned,error,retired,default,approved,success,info),/author,name(get({{store}}/DUTY`%i0`AUTHOR))),%b,%r))
       # %0 the viewer, %1 a duty: everything its editor shows.
       WEB`DATA`DUTY: |-
         setqm(web_root,u(%!/FUN`ROOT,%1),
@@ -949,37 +993,57 @@ objects:
       # %0 an approved duty: what its roster section shows, a member a line.
       WEB`DATA`ROSTER: |-
         setq(web_runs,u(%!/FUN`RUNSOF,%0))[u(%!/WEB`JSON`MEMBER,Roster,json(string,cond(get({{store}}/DUTY`%0`RETIRED),Retired,get({{store}}/ROSTER`%0),On,Off)),1)]%r[u(%!/WEB`JSON`MEMBER,Days,json(string,u(%!/FUN`WINDOW,%0)),1)]%r[u(%!/WEB`JSON`MEMBER,Now,json(string,if(u(%!/FUN`ACTIVE,%0),Players can start it,Players cannot start it)),1)]%r[u(%!/WEB`JSON`MEMBER,window_from,json(string,get({{store}}/ROSTER`%0`FROM)),1)]%r[u(%!/WEB`JSON`MEMBER,window_to,json(string,get({{store}}/ROSTER`%0`TO)),1)]%r[u(%!/WEB`JSON`MEMBER,window_yearly,u(%!/WEB`JSON`BOOLEAN,get({{store}}/ROSTER`%0`YEARLY)),1)]%r[u(%!/WEB`JSON`MEMBER,parties,u(%!/WEB`JSON`ARRAY,iter(%q<web_runs>,u(%!/WEB`PARTYROW,%i0),%b,%r)),1)]%r[u(%!/WEB`JSON`MEMBER,end_run,json(string,first(%q<web_runs>)),1)]
+      DATA`TEMPLATE`WEB`PARTYROW: |-
+        {"party":"","leader":"","members":"","step":""}
       # %0 a party: its row in the parties table.
       WEB`PARTYROW: |-
         setqm(web_pr,DUTY`[get({{store}}/RUN`%0)]`R[get({{store}}/RUN`%0`REV)],
-        web_pn,get({{store}}/RUN`%0`NODE))[json(object,party,json(string,%0),leader,json(string,name(get({{store}}/RUN`%0`LEADER))),members,json(string,iter(get({{store}}/RUN`%0`MEMBERS),name(%i0),%b,%,%b)),step,json(string,if(strmatch(get({{store}}/RUN`%0`STATE),lobby),Gathering,firstof(get({{store}}/%q<web_pr>`N`%q<web_pn>`LABEL),%q<web_pn>))))]
+        web_pn,get({{store}}/RUN`%0`NODE))[json_fill(v(DATA`TEMPLATE`WEB`PARTYROW),/party,%0,/leader,name(get({{store}}/RUN`%0`LEADER)),/members,iter(get({{store}}/RUN`%0`MEMBERS),name(%i0),%b,%,%b),/step,if(strmatch(get({{store}}/RUN`%0`STATE),lobby),Gathering,firstof(get({{store}}/%q<web_pr>`N`%q<web_pn>`LABEL),%q<web_pn>)))]
 
+      DATA`TEMPLATE`WEB`STEPS: |-
+        {"start_x":0,"start_y":0}
       # %0 a revision's root: its steps and links as the graph field holds them.
       WEB`STEPS: |-
-        setq(web_ss,json(object,start,json(string,get({{store}}/%0`START)),nodes,u(%!/WEB`JSON`ARRAY,iter(u(%!/FUN`NODES,%0),u(%!/WEB`STEP,%0`N`%i0,%i0),%b,%r)),edges,u(%!/WEB`JSON`ARRAY,iter(u(%!/FUN`EDGES,%0),u(%!/WEB`EDGE,%0`E`%i0),%b,%r))))[if(hasattr({{store}},%0`START`X),json_mod(%q<web_ss>,patch,json(object,start_x,json(number,firstof(get({{store}}/%0`START`X),0)),start_y,json(number,firstof(get({{store}}/%0`START`Y),0)))),%q<web_ss>)]
+        setq(web_ss,json(object,start,json(string,get({{store}}/%0`START)),nodes,u(%!/WEB`JSON`ARRAY,iter(u(%!/FUN`NODES,%0),u(%!/WEB`STEP,%0`N`%i0,%i0),%b,%r)),edges,u(%!/WEB`JSON`ARRAY,iter(u(%!/FUN`EDGES,%0),u(%!/WEB`EDGE,%0`E`%i0),%b,%r))))[if(hasattr({{store}},%0`START`X),json_mod(%q<web_ss>,patch,json_fill(v(DATA`TEMPLATE`WEB`STEPS),/start_x,firstof(get({{store}}/%0`START`X),0),/start_y,firstof(get({{store}}/%0`START`Y),0))),%q<web_ss>)]
+      DATA`TEMPLATE`WEB`STEP: |-
+        {"key":"","kind":"","label":"","fields":null}
+      DATA`TEMPLATE`WEB`STEP`2: |-
+        {"x":0,"y":0}
       # %0 a step's attribute, %1 its key. A step with no place on the map yet has no x and y, and the
       # editor lays it out.
       WEB`STEP: |-
-        setq(web_st,json(object,key,json(string,%1),kind,json(string,get({{store}}/%0)),label,json(string,get({{store}}/%0`LABEL)),fields,u(%!/WEB`STEP`FIELDS,%0)))[if(hasattr({{store}},%0`X),json_mod(%q<web_st>,patch,json(object,x,json(number,firstof(get({{store}}/%0`X),0)),y,json(number,firstof(get({{store}}/%0`Y),0)))),%q<web_st>)]
+        setq(web_st,json_fill(v(DATA`TEMPLATE`WEB`STEP),/key,%1,/kind,get({{store}}/%0),/label,get({{store}}/%0`LABEL),/fields,u(%!/WEB`STEP`FIELDS,%0)))[if(hasattr({{store}},%0`X),json_mod(%q<web_st>,patch,json_fill(v(DATA`TEMPLATE`WEB`STEP`2),/x,firstof(get({{store}}/%0`X),0),/y,firstof(get({{store}}/%0`Y),0))),%q<web_st>)]
+      DATA`TEMPLATE`WEB`STEP`FIELDS: |-
+        {"text":"","seen":"","combine":"","result":"","critsuccess":"","success":"","partial":"","fail":"","critfail":"","options":null,"rewards":null}
       WEB`STEP`FIELDS: |-
-        json(object,text,json(string,get({{store}}/%0`TEXT)),seen,json(string,get({{store}}/%0`SEEN)),combine,json(string,firstof(get({{store}}/%0`COMBINE),majority)),result,json(string,firstof(get({{store}}/%0`RESULT),success)),critsuccess,json(string,get({{store}}/%0`T`CRITSUCCESS)),success,json(string,get({{store}}/%0`T`SUCCESS)),partial,json(string,get({{store}}/%0`T`PARTIAL)),fail,json(string,get({{store}}/%0`T`FAIL)),critfail,json(string,get({{store}}/%0`T`CRITFAIL)),options,u(%!/WEB`JSON`ARRAY,iter(lattr({{store}}/%0`O`*),u(%!/WEB`OPTION,%i0,lcstr(last(%i0,`))),%b,%r)),rewards,u(%!/WEB`JSON`ARRAY,iter(sort(iter(lattr({{store}}/%0`W`*),last(%i0,`)),n),u(%!/WEB`REWARD,%0`W`%i0),%b,%r)))
+        json_fill(v(DATA`TEMPLATE`WEB`STEP`FIELDS),/text,get({{store}}/%0`TEXT),/seen,get({{store}}/%0`SEEN),/combine,firstof(get({{store}}/%0`COMBINE),majority),/result,firstof(get({{store}}/%0`RESULT),success),/critsuccess,get({{store}}/%0`T`CRITSUCCESS),/success,get({{store}}/%0`T`SUCCESS),/partial,get({{store}}/%0`T`PARTIAL),/fail,get({{store}}/%0`T`FAIL),/critfail,get({{store}}/%0`T`CRITFAIL),/options,u(%!/WEB`JSON`ARRAY,iter(lattr({{store}}/%0`O`*),u(%!/WEB`OPTION,%i0,lcstr(last(%i0,`))),%b,%r)),/rewards,u(%!/WEB`JSON`ARRAY,iter(sort(iter(lattr({{store}}/%0`W`*),last(%i0,`)),n),u(%!/WEB`REWARD,%0`W`%i0),%b,%r)))
+      DATA`TEMPLATE`WEB`OPTION: |-
+        {"id":"","label":"","trait":"","difficulty":"","successes":0,"failures":0,"trained":null,"note":""}
       # %0 an option's attribute, %1 its name.
       WEB`OPTION: |-
-        json(object,id,json(string,%1),label,json(string,get({{store}}/%0)),trait,json(string,get({{store}}/%0`TRAIT)),difficulty,json(string,get({{store}}/%0`DIFF)),successes,json(number,firstof(get({{store}}/%0`SUCC),1)),failures,json(number,firstof(get({{store}}/%0`FAIL),1)),trained,u(%!/WEB`JSON`BOOLEAN,get({{store}}/%0`TRAINED)),note,json(string,get({{store}}/%0`NOTE)))
+        json_fill(v(DATA`TEMPLATE`WEB`OPTION),/id,%1,/label,get({{store}}/%0),/trait,get({{store}}/%0`TRAIT),/difficulty,get({{store}}/%0`DIFF),/successes,firstof(get({{store}}/%0`SUCC),1),/failures,firstof(get({{store}}/%0`FAIL),1),/trained,u(%!/WEB`JSON`BOOLEAN,get({{store}}/%0`TRAINED)),/note,get({{store}}/%0`NOTE))
+      DATA`TEMPLATE`WEB`REWARD: |-
+        {"id":0,"kind":"","repeat":"","success":0}
       # %0 a reward's attribute: its details, with its number, its kind and how often it is given.
       WEB`REWARD: |-
-        json_mod(if(cand(isjson(setr(web_rd,get({{store}}/%0`DETAILS))),strmatch(json_query(%q<web_rd>,type),object)),%q<web_rd>,json(object)),patch,json(object,id,json(number,last(%0,`)),kind,json(string,get({{store}}/%0)),repeat,json(string,firstof(get({{store}}/%0`REPEAT),once)),success,json(number,firstof(get({{store}}/%0`SUCCESS),0))))
+        json_mod(if(cand(isjson(setr(web_rd,get({{store}}/%0`DETAILS))),strmatch(json_query(%q<web_rd>,type),object)),%q<web_rd>,json(object)),patch,json_fill(v(DATA`TEMPLATE`WEB`REWARD),/id,last(%0,`),/kind,get({{store}}/%0),/repeat,firstof(get({{store}}/%0`REPEAT),once),/success,firstof(get({{store}}/%0`SUCCESS),0)))
+      DATA`TEMPLATE`WEB`EDGE: |-
+        {"from":"","port":"","to":""}
       # %0 a link's attribute: where it leads, with the settings it has.
       WEB`EDGE: |-
-        u(%!/WEB`JSON`PUT,u(%!/WEB`JSON`PUT,u(%!/WEB`JSON`PUT,u(%!/WEB`JSON`PUT,u(%!/WEB`JSON`PUT,json(object,from,json(string,get({{store}}/%0)),port,json(string,get({{store}}/%0`PORT)),to,json(string,get({{store}}/%0`TO))),weight,json(number,firstof(get({{store}}/%0`WEIGHT),1)),strlen(get({{store}}/%0`WEIGHT))),min,json(number,firstof(get({{store}}/%0`MIN),0)),strlen(get({{store}}/%0`MIN))),max,json(number,firstof(get({{store}}/%0`MAX),0)),strlen(get({{store}}/%0`MAX))),share,json(number,firstof(get({{store}}/%0`SHARE),0)),strlen(get({{store}}/%0`SHARE))),requires,json(string,get({{store}}/%0`REQ)),strlen(get({{store}}/%0`REQ)))
+        u(%!/WEB`JSON`PUT,u(%!/WEB`JSON`PUT,u(%!/WEB`JSON`PUT,u(%!/WEB`JSON`PUT,u(%!/WEB`JSON`PUT,json_fill(v(DATA`TEMPLATE`WEB`EDGE),/from,get({{store}}/%0),/port,get({{store}}/%0`PORT),/to,get({{store}}/%0`TO)),weight,json(number,firstof(get({{store}}/%0`WEIGHT),1)),strlen(get({{store}}/%0`WEIGHT))),min,json(number,firstof(get({{store}}/%0`MIN),0)),strlen(get({{store}}/%0`MIN))),max,json(number,firstof(get({{store}}/%0`MAX),0)),strlen(get({{store}}/%0`MAX))),share,json(number,firstof(get({{store}}/%0`SHARE),0)),strlen(get({{store}}/%0`SHARE))),requires,json(string,get({{store}}/%0`REQ)),strlen(get({{store}}/%0`REQ)))
+      DATA`TEMPLATE`WEB`NOTES: |-
+        {"node":"","author":"Reviewer","text":""}
       # %0 a root: its reviewers' notes, one per step.
       WEB`NOTES: |-
-        u(%!/WEB`JSON`ARRAY,iter(lattr({{store}}/%0`REMARK`*),json(object,node,json(string,lcstr(last(%i0,`))),author,json(string,Reviewer),text,json(string,get({{store}}/%i0))),%b,%r))
+        u(%!/WEB`JSON`ARRAY,iter(lattr({{store}}/%0`REMARK`*),json_fill(v(DATA`TEMPLATE`WEB`NOTES),/node,lcstr(last(%i0,`)),/text,get({{store}}/%i0)),%b,%r))
       # %0 a duty: the steps its changes add to or change in the approved duty.
       WEB`CHANGES: |-
         if(cand(get({{store}}/DUTY`%0`LIVE),get({{store}}/DUTY`%0`DRAFT)),u(%!/WEB`CHANGES`LIST,u(%!/FUN`LIVEROOT,%0),u(%!/FUN`ROOT,%0)),json_array())
+      DATA`TEMPLATE`WEB`CHANGES`LIST: |-
+        {"node":"","change":""}
       WEB`CHANGES`LIST: |-
-        u(%!/WEB`JSON`ARRAY,iter(squish(iter(u(%!/FUN`NODES,%1),if(strlen(u(%!/WEB`CHANGE,%0,%1,%i0)),%i0))),json(object,node,json(string,%i0),change,json(string,u(%!/WEB`CHANGE,%0,%1,%i0))),%b,%r))
+        u(%!/WEB`JSON`ARRAY,iter(squish(iter(u(%!/FUN`NODES,%1),if(strlen(u(%!/WEB`CHANGE,%0,%1,%i0)),%i0))),json_fill(v(DATA`TEMPLATE`WEB`CHANGES`LIST),/node,%i0,/change,u(%!/WEB`CHANGE,%0,%1,%i0)),%b,%r))
       # %0 the approved root, %1 the changed one, %2 a step: added, changed, or nothing.
       WEB`CHANGE: |-
         cond(not(hasattr({{store}},%0`N`%2)),added,comp(u(%!/WEB`SIGNATURE,%0,%2),u(%!/WEB`SIGNATURE,%1,%2)),changed)
@@ -993,9 +1057,11 @@ objects:
         pr_traits,u(%!/FUN`TRAITKEYS),
         pr_always,u(%!/FUN`ALWAYSKEYS),
         pr_kinds,u(%!/FUN`REWARDKINDS))[json(object,issues,u(%!/WEB`JSON`ARRAY,trim(squish(u(%!/WEB`ISSUES`LINES,,u(%!/FUN`PROBLEMS`DUTY,%0,%1))%r[iter(%q<pr_nodes>,u(%!/WEB`ISSUES`LINES,%i0,u(%!/FUN`PROBLEMS`NODE,%1,%i0)),,%r)],%r),b,%r)))]
+      DATA`TEMPLATE`WEB`ISSUES`LINES: |-
+        {"severity":"error","message":""}
       # %0 a step or nothing, %1 ~-separated problems: an issue for each.
       WEB`ISSUES`LINES: |-
-        iter(trim(squish(%1,~),b,~),if(strlen(trim(%i0)),u(%!/WEB`JSON`PUT,json(object,severity,json(string,error),message,json(string,trim(%i0))),node,json(string,%0),strlen(%0))),~,%r)
+        iter(trim(squish(%1,~),b,~),if(strlen(trim(%i0)),u(%!/WEB`JSON`PUT,json_fill(v(DATA`TEMPLATE`WEB`ISSUES`LINES),/message,trim(%i0)),node,json(string,%0),strlen(%0))),~,%r)
 
       # actions: POST /http/duties/act, /check and /note, run with @force so the writes are this object's.
       # %q<body> is the posted JSON: op (create, save, submit, withdraw, discard, approve, return, rosteron,
@@ -1008,9 +1074,11 @@ objects:
         web_viewer,%<viewer>); @assert cand(strlen(%q<web_viewer>),hastype(%q<web_viewer>,player))=think setq(web_response,u(%!/WEB`RESULT`ERROR,Sign in with a character first.)); @assert match(create save check submit withdraw discard approve return note rosteron rosteroff window retire restore end,%q<web_op>)=think setq(web_response,u(%!/WEB`RESULT`ERROR,There is no such action.)); think setqm(do_viewer,objid(%q<web_viewer>),
         do_id,u(%!/WEB`BODY`GET,duty),
         sw,); @include %!/WEB`ACT`%q<web_op>
+      DATA`TEMPLATE`WEB`ACT`CREATE: |-
+        {"ok":true,"message":"","redirect":""}
       WEB`ACT`CREATE: |-
         think setqm(do_id,u(%!/WEB`BODY`GET,new_id),
-        do_text,trim(u(%!/WEB`BODY`GET,new_title))); @assert strlen(%q<do_text>)=think setq(web_response,u(%!/WEB`RESULT`ERROR,Give it a title.)); @assert lte(strlen(%q<do_text>),80)=think setq(web_response,u(%!/WEB`RESULT`ERROR,Keep its title to 80 characters.)); @include/nobreak %!/INC`DO`CREATE; @assert %q<do_ok>=think setq(web_response,u(%!/WEB`RESULT`FAIL)); think setq(web_response,json(object,ok,json(boolean,true),message,json(string,Created %q<id>.),redirect,json(string,/apps/duties/%q<id>)))
+        do_text,trim(u(%!/WEB`BODY`GET,new_title))); @assert strlen(%q<do_text>)=think setq(web_response,u(%!/WEB`RESULT`ERROR,Give it a title.)); @assert lte(strlen(%q<do_text>),80)=think setq(web_response,u(%!/WEB`RESULT`ERROR,Keep its title to 80 characters.)); @include/nobreak %!/INC`DO`CREATE; @assert %q<do_ok>=think setq(web_response,u(%!/WEB`RESULT`FAIL)); think setq(web_response,json_fill(v(DATA`TEMPLATE`WEB`ACT`CREATE),/message,Created %q<id>.,/redirect,/apps/duties/%q<id>))
       WEB`ACT`SAVE: |-
         @include/nobreak %!/INC`WEB`SAVE; @assert %q<do_ok>=think setq(web_response,u(%!/WEB`RESULT`FAIL)); think setq(web_response,u(%!/WEB`RESULT`PAGE,Saved.))
       # Saves first when the duty can be changed, then draws the page again with what the checks find.

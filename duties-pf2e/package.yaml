@@ -1,7 +1,7 @@
 format: "1.20"
 package: duties-pf2e
 title: "Duties: Pathfinder 2e rolls"
-version: 1.0.2
+version: 1.0.3
 authors: [SharpMUSH]
 description: "Lets Duties roll on the Pathfinder 2e sheet: a roll provider called pf2e, so a duty's checks roll a skill, Perception or a save against a DC for the roller's level, with Pathfinder's four degrees of success. Pick it with +config duties/system=pf2e."
 license: MIT
@@ -41,10 +41,12 @@ objects:
     location: "{{pf2e/core}}"
     flags: [WIZARD, no_command]
     attributes:
+      DATA`TEMPLATE`FN`DUTIES`TRAITS: |-
+        {"key":"","label":"","group":"","always":true}
       # Every skill, Perception and the three saves. Anyone may roll any of them: untrained is a rank too.
       FN`DUTIES`TRAITS:
         value: |-
-          json_array(iter(get({{pf2e/core}}/DATA`STATISTICS),json(object,key,json(string,%i0),label,json(string,capstr(%i0)),group,json(string,switch(first(get({{pf2e/core}}/DATA`STATISTIC`[ucstr(%i0)])),skill,Skills,save,Saves,Perception)),always,true),%b,|),|)
+          json_array(iter(get({{pf2e/core}}/DATA`STATISTICS),json_fill(v(DATA`TEMPLATE`FN`DUTIES`TRAITS),/key,%i0,/label,capstr(%i0),/group,switch(first(get({{pf2e/core}}/DATA`STATISTIC`[ucstr(%i0)])),skill,Skills,save,Saves,Perception)),%b,|),|)
         flags: [funsyntax]
       # Pathfinder's four degrees of success; there is no partial success.
       FN`DUTIES`TIERS:
@@ -98,10 +100,12 @@ objects:
         value: |-
           ladd(0 [iter(if(%1,u({{pf2e/core}}/FUN`MODIFIER`STACK,u({{pf2e/core}}/FUN`CHECK`CHOSEN,%0) circumstance~1~aid~0),u({{pf2e/core}}/FUN`CHECK`CHOSEN,%0)),elements(%i0,2,~))])
         flags: [funsyntax]
+      DATA`TEMPLATE`CHECK`ROLL: |-
+        {"tier":"","text":"","roll":null,"margin":null,"system":{"dc":null,"total":null,"natural":null,"degree":null,"helpers":null}}
       # %0 the roller, %1 the statistic, %2 the DC adjustment, %3 how many helped.
       FUN`CHECK`ROLL:
         value: |-
-          null(u(%!/FUN`PREPARE,%0))[setqm(roll_total,u(%!/FUN`STAT`TOTAL,%1,gt(%3,0)),roll_dc,add(extract(get({{pf2e/core}}/DATA`DC`LEVEL),add(2,max(-1,min(25,%q<check_level>))),1),%2))][setq(roll_record,roll(1d20[if(gte(%q<roll_total>,0),+)]%q<roll_total>,,record))][setqm(roll_face,json_query(%q<roll_record>,extract,$.dice\[0\].results\[0\].result),roll_result,json_query(%q<roll_record>,extract,$.total))][setq(roll_degree,u({{pf2e/core}}/FUN`DEGREE`OF`CHECK,%q<roll_result>,%q<roll_dc>,%q<roll_face>))][json(object,tier,json(string,extract(crit-fail fail success crit-success,inc(%q<roll_degree>),1)),text,json(string,[capstr(%1)]: [json_query(%q<roll_record>,extract,$.text)] vs DC %q<roll_dc>[if(%3,%b%(+1 from Aid%))]),roll,json_query(%q<roll_record>,extract,$.id),margin,sub(%q<roll_result>,%q<roll_dc>),system,json(object,dc,%q<roll_dc>,total,%q<roll_result>,natural,%q<roll_face>,degree,%q<roll_degree>,helpers,%3))]
+          null(u(%!/FUN`PREPARE,%0))[setqm(roll_total,u(%!/FUN`STAT`TOTAL,%1,gt(%3,0)),roll_dc,add(extract(get({{pf2e/core}}/DATA`DC`LEVEL),add(2,max(-1,min(25,%q<check_level>))),1),%2))][setq(roll_record,roll(1d20[if(gte(%q<roll_total>,0),+)]%q<roll_total>,,record))][setqm(roll_face,json_query(%q<roll_record>,extract,$.dice\[0\].results\[0\].result),roll_result,json_query(%q<roll_record>,extract,$.total))][setq(roll_degree,u({{pf2e/core}}/FUN`DEGREE`OF`CHECK,%q<roll_result>,%q<roll_dc>,%q<roll_face>))][json_fill(v(DATA`TEMPLATE`CHECK`ROLL),/tier,extract(crit-fail fail success crit-success,inc(%q<roll_degree>),1),/text,[capstr(%1)]: [json_query(%q<roll_record>,extract,$.text)] vs DC %q<roll_dc>[if(%3,%b%(+1 from Aid%))],/roll,json_query(%q<roll_record>,extract,$.id),/margin,sub(%q<roll_result>,%q<roll_dc>),/system/dc,%q<roll_dc>,/system/total,%q<roll_result>,/system/natural,%q<roll_face>,/system/degree,%q<roll_degree>,/system/helpers,%3)]
         flags: [funsyntax]
       # %0 a difficulty word: what it adds to the level DC (pf2e's own adjustments), else nothing.
       FUN`DC`ADJUST:

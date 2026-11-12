@@ -1,7 +1,7 @@
 format: "1.20"
 package: sheet-salvage-union
 title: "Salvage Union sheet (unofficial)"
-version: 1.3.3
+version: 1.3.4
 authors: [SharpMUSH]
 description: "An unofficial Salvage Union pilot and mech sheet: a class, abilities bought down their trees with training points, HP, AP and pilot equipment; a mech built from a chassis, systems and modules, with SP, EP and heat; and the Union Crawler the pilots share. Encounters bring in the Core Book's NPCs, vehicles, drones, Bio-Titans and enemy mechs, with Group Initiative, NPC attacks and salvage. +check rolls the one d20 against the core mechanic table, spends the AP, EP and heat it costs, and lets a mech Push for a re-roll and a heat check. The Core Book's abilities, chassis, systems, modules, equipment and tables come from the Salvage Union (Unofficial) Foundry VTT system, under the Salvage Union Open Game Licence 1.0b."
 license: MIT
@@ -1063,12 +1063,14 @@ objects:
           ladd(0 [iter(lnum(1,6),default(%0/SALVAGE`MECH`SCRAP`T%i0,0))])
         flags: [funsyntax]
 
+      DATA`TEMPLATE`ROLL`D20: |-
+        {"label":"","kind":"","die":null,"roll":null,"secs":null}
       # ---- dice ---------------------------------------------------------------------
       # %0 the roller, %1 a label, %2 kind (mech or pilot): one d20, kept (roll() record) and remembered as the
       # roller's last check. Returns {"die","roll","tier"}.
       FUN`ROLL`D20:
         value: |-
-          setq(rolled,roll(1d20,,record))[setq(rolled_die,json_query(%q<rolled>,extract,$.total))][null(u(%!/FUN`DO`SET,%0,LAST,json(object,label,json(string,%1),kind,json(string,%2),die,%q<rolled_die>,roll,json_query(%q<rolled>,extract,$.id),secs,secs())))][json(object,die,%q<rolled_die>,roll,json_query(%q<rolled>,extract,$.id),tier,json(string,u(%!/API`TIER,%q<rolled_die>)))]
+          setq(rolled,roll(1d20,,record))[setq(rolled_die,json_query(%q<rolled>,extract,$.total))][null(u(%!/FUN`DO`SET,%0,LAST,json_fill(v(DATA`TEMPLATE`ROLL`D20),/label,%1,/kind,%2,/die,%q<rolled_die>,/roll,json_query(%q<rolled>,extract,$.id),/secs,secs())))][json(object,die,%q<rolled_die>,roll,json_query(%q<rolled>,extract,$.id),tier,json(string,u(%!/API`TIER,%q<rolled_die>)))]
         flags: [funsyntax]
       # %0 the roller, %1 their last check's JSON, %2 the re-roll (push, background, keepsake or motto): rolls it
       # again, marks the check, and returns {"die","roll","tier"}.
@@ -1336,12 +1338,14 @@ objects:
         value: |-
           last(iter(u(%!/FUN`LEDGER`LIVE,%0),if(cand(strmatch(u(%!/FUN`LEDGER`FIELD,%0,%i0,kind),grant),strmatch(u(%!/FUN`LEDGER`FIELD,%0,%i0,list),%1),strmatch(u(%!/FUN`LEDGER`FIELD,%0,%i0,key),%2)),%i0)))
         flags: [funsyntax]
+      DATA`TEMPLATE`LEDGER`WRITE: |-
+        {"n":null,"by":"","at":null,"phase":""}
       # %0 a character, %1 an entry as JSON without n, by, at and phase: writes it as the next entry (wizard
       # flagged; an entry without the flag counts for nothing) and returns its number. The phase is staff when a
       # sheet keeper makes it, chargen while the character is not approved, else play. FUN`LEDGER`ADD rebuilds the sheet after; FUN`LEDGER`WRITE leaves that to the caller.
       FUN`LEDGER`WRITE:
         value: |-
-          setq(ledger_n,inc(lmax(0 [u(%!/FUN`LEDGER`NS,%0)])))[null(u(%!/FUN`DO`SET,%0,LEDGER`%q<ledger_n>,json_mod(%1,patch,json(object,n,%q<ledger_n>,by,json(string,objid(%#)),at,secs(),phase,json(string,u(%!/FUN`LEDGER`PHASE,%0))))))][null(set(%0/SALVAGE`LEDGER`%q<ledger_n>,wizard))]%q<ledger_n>
+          setq(ledger_n,inc(lmax(0 [u(%!/FUN`LEDGER`NS,%0)])))[null(u(%!/FUN`DO`SET,%0,LEDGER`%q<ledger_n>,json_mod(%1,patch,json_fill(v(DATA`TEMPLATE`LEDGER`WRITE),/n,%q<ledger_n>,/by,objid(%#),/at,secs(),/phase,u(%!/FUN`LEDGER`PHASE,%0)))))][null(set(%0/SALVAGE`LEDGER`%q<ledger_n>,wizard))]%q<ledger_n>
         flags: [funsyntax]
       FUN`LEDGER`ADD:
         value: |-
@@ -1351,16 +1355,20 @@ objects:
         value: |-
           cond(u(%!/FUN`PERM`KEEPER,%#),staff,not(isapproved(%0)),chargen,1,play)
         flags: [funsyntax]
+      DATA`TEMPLATE`LEDGER`SET: |-
+        {"kind":"set","leaf":"","value":"","note":""}
       # %0 a character, %1 a leaf, %2 its value (nothing clears it), %3 a note. In chargen a second value for the
       # same leaf rewrites the chargen entry instead of adding one, so the ledger keeps the choices made.
       FUN`LEDGER`SET:
         value: |-
-          setq(set_old,if(strmatch(u(%!/FUN`LEDGER`PHASE,%0),chargen),last(iter(u(%!/FUN`LEDGER`LIVE,%0),if(cand(strmatch(u(%!/FUN`LEDGER`FIELD,%0,%i0,kind),set),strmatch(u(%!/FUN`LEDGER`FIELD,%0,%i0,leaf),%1),strmatch(u(%!/FUN`LEDGER`FIELD,%0,%i0,phase),chargen)),%i0)))))[if(strlen(%q<set_old>),[null(attrib_set(%0/SALVAGE`LEDGER`%q<set_old>,json_mod(get(%0/SALVAGE`LEDGER`%q<set_old>),patch,json(object,value,json(string,%2),at,secs()))))][null(u(%!/FUN`LEDGER`REBUILD,%0))]%q<set_old>,u(%!/FUN`LEDGER`ADD,%0,json(object,kind,"set",leaf,json(string,%1),value,json(string,%2),note,json(string,%3))))]
+          setq(set_old,if(strmatch(u(%!/FUN`LEDGER`PHASE,%0),chargen),last(iter(u(%!/FUN`LEDGER`LIVE,%0),if(cand(strmatch(u(%!/FUN`LEDGER`FIELD,%0,%i0,kind),set),strmatch(u(%!/FUN`LEDGER`FIELD,%0,%i0,leaf),%1),strmatch(u(%!/FUN`LEDGER`FIELD,%0,%i0,phase),chargen)),%i0)))))[if(strlen(%q<set_old>),[null(attrib_set(%0/SALVAGE`LEDGER`%q<set_old>,json_mod(get(%0/SALVAGE`LEDGER`%q<set_old>),patch,json(object,value,json(string,%2),at,secs()))))][null(u(%!/FUN`LEDGER`REBUILD,%0))]%q<set_old>,u(%!/FUN`LEDGER`ADD,%0,json_fill(v(DATA`TEMPLATE`LEDGER`SET),/leaf,%1,/value,%2,/note,%3)))]
         flags: [funsyntax]
+      DATA`TEMPLATE`LEDGER`GRANT: |-
+        {"kind":"grant","list":"","key":"","note":""}
       # %0 a character, %1 a list, %2 a key, %3 a note.
       FUN`LEDGER`GRANT:
         value: |-
-          u(%!/FUN`LEDGER`ADD,%0,json(object,kind,"grant",list,json(string,%1),key,json(string,%2),note,json(string,%3)))
+          u(%!/FUN`LEDGER`ADD,%0,json_fill(v(DATA`TEMPLATE`LEDGER`GRANT),/list,%1,/key,%2,/note,%3))
         flags: [funsyntax]
       # %0 a character, %1 the entry to take back, %2 a note. Nothing when there is no entry. In chargen a
       # chargen entry is wiped instead, as though it had not been chosen.
@@ -1428,7 +1436,7 @@ objects:
       # its number. It leaves the total to the caller.
       FUN`XP`WRITE:
         value: |-
-          setq(xp_n,inc(lmax(0 [u(%!/FUN`XP`NS,%0)])))[null(u(%!/FUN`DO`SET,%0,XP`%q<xp_n>,json_mod(%1,patch,json(object,n,%q<xp_n>,by,json(string,objid(%#)),at,secs(),phase,json(string,u(%!/FUN`LEDGER`PHASE,%0))))))][null(set(%0/SALVAGE`XP`%q<xp_n>,wizard))]%q<xp_n>
+          setq(xp_n,inc(lmax(0 [u(%!/FUN`XP`NS,%0)])))[null(u(%!/FUN`DO`SET,%0,XP`%q<xp_n>,json_mod(%1,patch,json_fill(v(DATA`TEMPLATE`LEDGER`WRITE),/n,%q<xp_n>,/by,objid(%#),/at,secs(),/phase,u(%!/FUN`LEDGER`PHASE,%0)))))][null(set(%0/SALVAGE`XP`%q<xp_n>,wizard))]%q<xp_n>
         flags: [funsyntax]
       # %0 a character, %1 Training Points to give (below 0 spends them), %2 a note, %3 the build entry it is for:
       # writes the entry, adds it to the total, and returns the entry's number.
@@ -1697,11 +1705,13 @@ objects:
         value: |-
           json_query(get({{store}}/CRAWLER`LEDGER`%0),extract,$.%1)
         flags: [funsyntax]
+      DATA`TEMPLATE`CRAWLER`ENTRY: |-
+        {"n":null,"by":"","at":null,"for":"","note":""}
       # %0 the entry's JSON (kind and its fields), %1 a note, %2 the pilot it was for: writes it, and returns its
       # number.
       FUN`CRAWLER`ENTRY:
         value: |-
-          setq(centry_n,inc(lmax(0 [u(%!/FUN`CRAWLER`NS)])))[null(attrib_set({{store}}/CRAWLER`LEDGER`%q<centry_n>,json_mod(%0,patch,json(object,n,%q<centry_n>,by,json(string,objid(%#)),at,secs(),for,json(string,if(strlen(%2),objid(%2))),note,json(string,%1)))))]%q<centry_n>
+          setq(centry_n,inc(lmax(0 [u(%!/FUN`CRAWLER`NS)])))[null(attrib_set({{store}}/CRAWLER`LEDGER`%q<centry_n>,json_mod(%0,patch,json_fill(v(DATA`TEMPLATE`CRAWLER`ENTRY),/n,%q<centry_n>,/by,objid(%#),/at,secs(),/for,if(strlen(%2),objid(%2)),/note,%1))))]%q<centry_n>
         flags: [funsyntax]
       # %0 a Tech Level, %1 scrap to add (below 0 takes it, never below none), %2 a note, %3 the pilot it is for:
       # changes the hold, writes the entry for what changed, and returns the hold's new amount.
@@ -1850,10 +1860,12 @@ objects:
         value: |-
           if(member(SYSTEM MODULE,%q<ck_kind>),EP,AP)
         flags: [funsyntax]
+      DATA`TEMPLATE`CHECK`ROLLED: |-
+        {"tier":"","die":null,"label":"","detail":"","kind":"","trait":"","roll":null,"heatcheck":false,"overload":"","heatdie":"","heat":""}
       # Spends, rolls, and returns the check's JSON; ck_ registers set.
       FUN`CHECK`ROLLED:
         value: |-
-          [null(if(%q<ck_pay>,u(%!/API`ADJUST,%q<ck_who>,%q<ck_meter>,-%q<ck_pay>)))][null(if(%q<ck_hot>,u(%!/API`ADJUST,%q<ck_who>,HEAT,%q<ck_hot>)))][setq(ck_rolled,u(%!/FUN`ROLL`D20,%q<ck_who>,%q<ck_label>,if(%q<ck_mech>,mech,pilot)))][setq(ck_heatcheck,cand(%q<ck_mech>,cor(cand(%q<ck_hot>,gte(u(%!/API`METER,%q<ck_who>,HEAT),u(%!/FUN`METER`MAX,%q<ck_who>,HEAT))),strmatch(|[get({{data}}/%q<ck_kind>`%q<ck_key>`TRAITS)]|,*|Heat Spike|*))))][setq(ck_overload,if(%q<ck_heatcheck>,u(%!/FUN`ROLL`HEAT,%q<ck_who>)))][json(object,tier,json(string,json_query(%q<ck_rolled>,extract,$.tier)),die,json_query(%q<ck_rolled>,extract,$.die),label,json(string,%q<ck_label>),detail,json(string,u(%!/FUN`CHECK`DETAIL)),kind,json(string,if(%q<ck_mech>,mech,pilot)),trait,json(string,if(member(DIE TEXT,%q<ck_kind>),die,lcstr(%q<ck_kind>-%q<ck_key>))),roll,json_query(%q<ck_rolled>,extract,$.roll),heatcheck,json(boolean,%q<ck_heatcheck>),overload,json(string,%q<ck_overload>),heatdie,json(string,%q<heat_die>),heat,json(string,%q<heat_now>))]
+          [null(if(%q<ck_pay>,u(%!/API`ADJUST,%q<ck_who>,%q<ck_meter>,-%q<ck_pay>)))][null(if(%q<ck_hot>,u(%!/API`ADJUST,%q<ck_who>,HEAT,%q<ck_hot>)))][setq(ck_rolled,u(%!/FUN`ROLL`D20,%q<ck_who>,%q<ck_label>,if(%q<ck_mech>,mech,pilot)))][setq(ck_heatcheck,cand(%q<ck_mech>,cor(cand(%q<ck_hot>,gte(u(%!/API`METER,%q<ck_who>,HEAT),u(%!/FUN`METER`MAX,%q<ck_who>,HEAT))),strmatch(|[get({{data}}/%q<ck_kind>`%q<ck_key>`TRAITS)]|,*|Heat Spike|*))))][setq(ck_overload,if(%q<ck_heatcheck>,u(%!/FUN`ROLL`HEAT,%q<ck_who>)))][json_fill(v(DATA`TEMPLATE`CHECK`ROLLED),/tier,json_query(%q<ck_rolled>,extract,$.tier),/die,json_query(%q<ck_rolled>,extract,$.die),/label,%q<ck_label>,/detail,u(%!/FUN`CHECK`DETAIL),/kind,if(%q<ck_mech>,mech,pilot),/trait,if(member(DIE TEXT,%q<ck_kind>),die,lcstr(%q<ck_kind>-%q<ck_key>)),/roll,json_query(%q<ck_rolled>,extract,$.roll),/heatcheck,%q<ck_heatcheck>,/overload,%q<ck_overload>,/heatdie,%q<heat_die>,/heat,%q<heat_now>)]
         flags: [funsyntax]
       # "Close, 3 SP; 1 heat, 3/10" or "2 AP, 3/5 left"; ck_ registers set.
       FUN`CHECK`DETAIL:

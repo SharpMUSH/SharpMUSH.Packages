@@ -1,7 +1,7 @@
 format: "1.16"
 package: radio
 title: "Radio"
-version: 1.8.1
+version: 1.8.2
 authors: [SharpMUSH]
 description: "Radio: +radio frequencies players tune in to, speak on and recall, with moderators, admins and their own locks. Built on @feed: the engine keeps each frequency's lines and listeners; this package keeps the names, lists and rules."
 license: MIT
@@ -367,9 +367,11 @@ objects:
       # +radio[/<page>]: the frequencies the player may tune in to, a page at a time.
       INC`LIST: |-
         think setq(listed_ids,squish(iter(u({{radio}}/FUN`IDS),if(u({{radio}}/FUN`CAN`JOIN,%i0,%#),%i0)))); @assert words(%q<listed_ids>)=@pemit %#=notice(RADIO,There are no frequencies you can tune in to.); @include/args {{radio}}/INC`PAGE=count,words(%q<listed_ids>),frame,4; @pemit %#=u({{radio}}/FUN`SCREEN`LIST)
+      DATA`TEMPLATE`SCREEN`LIST: |-
+        {"rule":"","delim":"","nowrap":"","grow":""}
       # One page of %q<listed_ids>: name, category, the reader's state and the description.
       FUN`SCREEN`LIST: |-
-        setq(page_ids,extract(%q<listed_ids>,inc(mul(dec(%q<page_number>),%q<page_size>)),%q<page_size>))[rule(Radio)]%r[datacolumns(json(object,rule,json(string,),delim,json(string,%r),nowrap,json(string,1%r3),grow,json(string,%r%r%r1)),[tone(strong,Frequency)]%r[iter(%q<page_ids>,u({{radio}}/FUN`NAME,%i0),,%r)],[tone(strong,Category)]%r[iter(%q<page_ids>,firstof(get({{radio}}/DATA`FREQUENCY`%i0`CATEGORY),-),,%r)],[tone(strong,You)]%r[iter(%q<page_ids>,u({{radio}}/FUN`STATE,%i0,%#),,%r)],[tone(strong,About)]%r[iter(%q<page_ids>,firstof(edit(get({{radio}}/DATA`FREQUENCY`%i0`DESC),%r,%b),-),,%r)])]%r[rule(+radio/join <frequency> tunes in[u({{radio}}/FUN`PAGE`FOOTER,+radio/[inc(%q<page_number>)] for the next)])]
+        setq(page_ids,extract(%q<listed_ids>,inc(mul(dec(%q<page_number>),%q<page_size>)),%q<page_size>))[rule(Radio)]%r[datacolumns(json_fill(get({{radio}}/DATA`TEMPLATE`SCREEN`LIST),/delim,%r,/nowrap,1%r3,/grow,%r%r%r1),[tone(strong,Frequency)]%r[iter(%q<page_ids>,u({{radio}}/FUN`NAME,%i0),,%r)],[tone(strong,Category)]%r[iter(%q<page_ids>,firstof(get({{radio}}/DATA`FREQUENCY`%i0`CATEGORY),-),,%r)],[tone(strong,You)]%r[iter(%q<page_ids>,u({{radio}}/FUN`STATE,%i0,%#),,%r)],[tone(strong,About)]%r[iter(%q<page_ids>,firstof(edit(get({{radio}}/DATA`FREQUENCY`%i0`DESC),%r,%b),-),,%r)])]%r[rule(+radio/join <frequency> tunes in[u({{radio}}/FUN`PAGE`FOOTER,+radio/[inc(%q<page_number>)] for the next)])]
       INC`SEND: |-
         @include {{radio}}/INC`NEED`JOINED; @include {{radio}}/INC`SEND`LINE
       # .<frequency> <message>: the frequency is the one of the player's whose name, without spaces, is or begins
