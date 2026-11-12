@@ -51,6 +51,17 @@ jobs:
           ref: ${{ matrix.sharpmush-ref }}
           path: sharpmush
 
+      # A release builds with the exact SDK it was tagged with. Its global.json rolls forward to
+      # the newest SDK on the runner, and v0.9.0 (tagged on 11.0.100-rc.2) does not compile on
+      # 11.0.100, which changed ZstandardDictionary.Train. main keeps its own roll-forward rule.
+      - name: Pin a release's SDK
+        if: matrix.sharpmush-ref != (vars.SHARPMUSH_REF || 'main')
+        working-directory: sharpmush
+        run: |
+          jq '.sdk.rollForward = "disable"' global.json > global.json.pinned
+          mv global.json.pinned global.json
+          cat global.json
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
