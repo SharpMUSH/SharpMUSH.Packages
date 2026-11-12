@@ -1,7 +1,7 @@
 format: "1.20"
 package: sheet-fate
 title: "Fate sheet"
-version: 1.6.3
+version: 1.6.4
 authors: [SharpMUSH]
 description: "A Fate character sheet: skills or the six approaches on the ladder, aspects, stunts, stress tracks, consequences and fate points. +sheet shows and fills it in, +chargen walks a player through it, and +check rolls four Fate dice plus a rating against an opposition for the room. The build is a ledger of grants; staff give milestones and breakthroughs that stay on a log, and players spend them with +sheet/advance. +encounter gives each encounter its own copy of fate points, stress and consequences, and runs a conflict: NPCs a GM builds with +npc, exchanges, harm, concessions, aspects on the scene and the GM's fate points. Fate Core and Fate Accelerated SRD material under CC BY 3.0."
 license: MIT
@@ -1976,11 +1976,13 @@ objects:
         value: |-
           The Fate sheet's functions for other packages. See the package README.
         flags: [VISUAL]
+      DATA`TEMPLATE`API`TRAITS: |-
+        {"key":"","label":"","group":"","always":true}
       # JSON list of the skills or approaches: [{"key","label","group","always"}], group skill or approach.
       # always is true for every one: an unrated skill rolls at Mediocre (+0).
       API`TRAITS:
         value: |-
-          json_array(iter(u(%!/FUN`TRAIT`ALL),json(object,key,json(string,lcstr(%i0)),label,json(string,u(%!/FUN`TRAIT`LABEL,%i0)),group,json(string,u(%!/FUN`TRAIT`NOUN)),always,json(boolean,1)),%b,|),|)
+          json_array(iter(u(%!/FUN`TRAIT`ALL),json_fill(v(DATA`TEMPLATE`API`TRAITS),/key,lcstr(%i0),/label,u(%!/FUN`TRAIT`LABEL,%i0),/group,u(%!/FUN`TRAIT`NOUN)),%b,|),|)
         flags: [VISUAL]
       # The keys every character can roll, lower case: all of them.
       API`ALWAYS:
@@ -2073,13 +2075,15 @@ objects:
         value: |-
           ladd(0 [iter(lattr(%!/RATE`*),u(%!/%i0,%0,%1))])
         flags: [funsyntax]
+      DATA`TEMPLATE`CHECK`ROLLED: |-
+        {"tier":"","total":null,"shifts":"","target":"","margin":"","label":"","text":"","roll":null,"formula":""}
       # %0 the key, %1 what is added, %2 the opposition or nothing.
       FUN`CHECK`ROLLED:
         value: |-
           setqm(rolled_formula,4dF[if(gte(%1,0),+%1,%1)],
           rolled,roll(%q<rolled_formula>,,record),
           rolled_total,json_query(%q<rolled>,extract,$.total),
-          rolled_shifts,if(strlen(%2),sub(%q<rolled_total>,%2)))[json(object,tier,json(string,u(%!/API`TIER,%q<rolled_shifts>)),total,%q<rolled_total>,shifts,json(string,%q<rolled_shifts>),target,json(string,%2),margin,json(string,%q<rolled_shifts>),label,json(string,u(%!/FUN`TRAIT`LABEL,%0)),text,json(string,json_query(%q<rolled>,extract,$.text)),roll,json_query(%q<rolled>,extract,$.id),formula,json(string,%q<rolled_formula>))]
+          rolled_shifts,if(strlen(%2),sub(%q<rolled_total>,%2)))[json_fill(v(DATA`TEMPLATE`CHECK`ROLLED),/tier,u(%!/API`TIER,%q<rolled_shifts>),/total,%q<rolled_total>,/shifts,%q<rolled_shifts>,/target,%2,/margin,%q<rolled_shifts>,/label,u(%!/FUN`TRAIT`LABEL,%0),/text,json_query(%q<rolled>,extract,$.text),/roll,json_query(%q<rolled>,extract,$.id),/formula,%q<rolled_formula>)]
         flags: [funsyntax]
 
       # ---- lifecycle ----------------------------------------------------------------

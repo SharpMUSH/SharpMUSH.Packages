@@ -1,7 +1,7 @@
 format: "1.20"
 package: duties-salvage-union
 title: "Duties: Salvage Union rolls"
-version: 1.0.4
+version: 1.0.5
 authors: [SharpMUSH]
 description: "Lets Duties roll on the Salvage Union sheet: a roll provider called salvage, so a duty's checks roll the d20 on the Core Mechanic table with one of the pilot's abilities or the mech's systems and modules, and Training Points or scrap for the Union Crawler as rewards. Pick it with +config duties/system=salvage."
 license: MIT
@@ -74,12 +74,14 @@ objects:
         value: |-
           setq(provider_rolled,if(isint(u({{sheet-salvage-union/sheet}}/API`TARGET,%<difficulty>)),uargs({{sheet-salvage-union/sheet}}/API`CHECK,roller,%<roller>,trait,%<trait>,spend,1,live,1),#-1 NO SUCH DIFFICULTY))[if(strmatch(%q<provider_rolled>,#-*),%q<provider_rolled>,u(%!/FUN`CHECK`RESULT,%q<provider_rolled>))]
         flags: [funsyntax]
+      DATA`TEMPLATE`CHECK`RESULT: |-
+        {"tier":"","text":"","roll":"","margin":null,"system":{"die":null,"kind":"","heatcheck":null,"overload":""}}
       # %0 the sheet's check JSON.
       FUN`CHECK`RESULT:
         value: |-
           setqm(result_tier,json_query(%0,extract,$.tier),
           result_die,json_query(%0,extract,$.die),
-          result_overload,json_query(%0,extract,$.overload))[json(object,tier,json(string,%q<result_tier>),text,json(string,[firstof(json_query(%0,extract,$.label),The die)]: %q<result_die>%, [u({{sheet-salvage-union/sheet}}/FUN`DISPLAY`TIER,%q<result_tier>)][if(strlen(%q<result_overload>),. The reactor overloads: %q<result_overload>)]),roll,json(string,json_query(%0,extract,$.roll)),margin,sub(%q<result_die>,11),system,json(object,die,%q<result_die>,kind,json(string,json_query(%0,extract,$.kind)),heatcheck,json_query(%0,extract,$.heatcheck),overload,json(string,%q<result_overload>)))]
+          result_overload,json_query(%0,extract,$.overload))[json_fill(v(DATA`TEMPLATE`CHECK`RESULT),/tier,%q<result_tier>,/text,[firstof(json_query(%0,extract,$.label),The die)]: %q<result_die>%, [u({{sheet-salvage-union/sheet}}/FUN`DISPLAY`TIER,%q<result_tier>)][if(strlen(%q<result_overload>),. The reactor overloads: %q<result_overload>)],/roll,json_query(%0,extract,$.roll),/margin,sub(%q<result_die>,11),/system/die,%q<result_die>,/system/kind,json_query(%0,extract,$.kind),/system/heatcheck,json_query(%0,extract,$.heatcheck),/system/overload,%q<result_overload>)]
         flags: [funsyntax]
       # The rewards a duty may give on this sheet, for Duties' editor.
       FN`DUTIES`REWARDS:

@@ -1,7 +1,7 @@
 format: "1.20"
 package: roll-tables
 title: Roll Tables
-version: 1.1.0
+version: 1.1.1
 authors: [SharpMUSH]
 description: "Roll tables: weather, encounters and names kept as softcode data, shown with +table, rolled in the room with +table/roll, and published to the wiki."
 license: MIT
@@ -331,11 +331,13 @@ objects:
       FN`SAY`END: |-
         %0[if(member(. ! ?,right(%0,1)),,.)]
 
+      DATA`TEMPLATE`FN`TABLE`GRID: |-
+        {"delim":"","nowrap":"1","min":"","grow":""}
       # ---- screens ---------------------------------------------------------------------------
       # %0 a key, %1 the row numbers to show: the table, keys on the left, results as stored.
       FN`TABLE`GRID: |-
         datacolumns(
-          json(object,delim,json(string,%r),nowrap,json(string,1),min,json(string,%r12),grow,json(string,%r1)),
+          json_fill(get({{table_functions}}/DATA`TEMPLATE`FN`TABLE`GRID),/delim,%r,/min,%r12,/grow,%r1),
           u(FN`TABLE`HEADING,%0)%r[iter(%1,u(FN`ROW`LABEL,%0,%i0),%b,%r)],
           Result%r[iter(%1,u(FN`ROW`SHOWN,get({{table_data}}/TABLE`%0`ROW`%i0)),%b,%r)])
       FN`TABLE`HEADING: |-
@@ -354,9 +356,11 @@ objects:
         box(
           if(words(%1),u(FN`SCREEN`LISTGRID,%0,u(FN`PAGE`SLICE,%1,%2)),There are no tables you can read.)%r[rule()]%r+table <name> shows a table. +table/roll <name> rolls on it.[u(FN`PAGE`FOOTER,words(%1),%2,list)],
           Roll Tables)
+      DATA`TEMPLATE`FN`SCREEN`LISTGRID: |-
+        {"delim":"","nowrap":"","grow":""}
       FN`SCREEN`LISTGRID: |-
         datacolumns(
-          json(object,delim,json(string,%r),nowrap,json(string,1%r3%r4),grow,json(string,%r1)),
+          json_fill(get({{table_functions}}/DATA`TEMPLATE`FN`SCREEN`LISTGRID),/delim,%r,/nowrap,1%r3%r4,/grow,%r1),
           Table%r[iter(%1,lcstr(%i0),%b,%r)],
           Title%r[iter(%1,u(FN`SCREEN`LISTTITLE,%i0,%0),%b,%r)],
           Die%r[iter(%1,get({{table_data}}/TABLE`%i0`DIE),%b,%r)],

@@ -1,7 +1,7 @@
 format: "1.20"
 package: sheet-ironsworn
 title: "Ironsworn sheet"
-version: 2.2.4
+version: 2.2.5
 authors: [SharpMUSH]
 description: "An Ironsworn character sheet: five stats and assets built from a ledger, health, spirit, supply and momentum, experience spent on new assets and their abilities, with its own audited ledger, companion health, iron vows with progress tracks, and encounters that play from copies of the sheets. +check makes an action roll, a six-sided die plus a stat against two ten-sided challenge dice, for the room; +vow swears, marks and fulfils vows. Based on the Ironsworn SRD under CC BY 4.0."
 license: MIT
@@ -991,12 +991,14 @@ objects:
         value: |-
           @include/args %!/INC`DO`ROOT=who,%<who>; @if strlen(%<value>)={&IRONSWORN`%<leaf> %<who>=%<value>},{&IRONSWORN`%<leaf> %<who>}
         flags: [cmdsyntax]
+      DATA`TEMPLATE`INC`DO`ENTRY: |-
+        {"n":null,"kind":"","key":"","value":"","phase":"","by":"","at":null}
       # A ledger entry: %<who>, %<kind>, %<key>, %<value>, %<phase> (chargen, play or staff). A chargen entry
       # rewrites the chargen entry in force of the same kind and key; every other entry is numbered after the
       # last. entry_n is its number. Each has the wizard attribute flag, and an entry without it is never read.
       INC`DO`ENTRY:
         value: |-
-          @include/args %!/INC`DO`ROOT=who,%<who>; think setq(entry_n,if(strmatch(%<phase>,chargen),u(%!/FUN`LEDGER`CHARGENOF,%<who>,%<kind>,%<key>))); think setq(entry_n,firstof(%q<entry_n>,inc(lmax(0 [iter(lattr(%<who>/IRONSWORN`LEDGER`*),last(%i0,`))])))); &IRONSWORN`LEDGER`%q<entry_n> %<who>=[json(object,n,%q<entry_n>,kind,json(string,%<kind>),key,json(string,%<key>),value,json(string,%<value>),phase,json(string,%<phase>),by,json(string,objid(%#)),at,secs())]; @set %<who>/IRONSWORN`LEDGER`%q<entry_n>=wizard; &IRONSWORN`MERGED %<who>
+          @include/args %!/INC`DO`ROOT=who,%<who>; think setq(entry_n,if(strmatch(%<phase>,chargen),u(%!/FUN`LEDGER`CHARGENOF,%<who>,%<kind>,%<key>))); think setq(entry_n,firstof(%q<entry_n>,inc(lmax(0 [iter(lattr(%<who>/IRONSWORN`LEDGER`*),last(%i0,`))])))); &IRONSWORN`LEDGER`%q<entry_n> %<who>=[json_fill(v(DATA`TEMPLATE`INC`DO`ENTRY),/n,%q<entry_n>,/kind,%<kind>,/key,%<key>,/value,%<value>,/phase,%<phase>,/by,objid(%#),/at,secs())]; @set %<who>/IRONSWORN`LEDGER`%q<entry_n>=wizard; &IRONSWORN`MERGED %<who>
         flags: [cmdsyntax]
       # %<who> joins encounter %<n> with a copy of their sheet: the stats and assets in force as STATS and ASSETS,
       # and their meters and companions' health. It goes last in their IRONSWORN`ENCOUNTERS.
@@ -1283,10 +1285,12 @@ objects:
         value: |-
           setq(fk_key,ucstr(edit(trim(%0),%b,-)))[cond(cand(regmatch(%q<fk_key>,^%[A-Z0-9-%]+$),hasattr({{store}},FOE`%q<fk_key>)),%q<fk_key>,first(iter(lattr({{store}}/FOE`*),if(not(comp(lcstr(get({{store}}/%i0)),lcstr(trim(%0)))),last(%i0,`)))))]
         flags: [funsyntax]
+      DATA`TEMPLATE`FOE`MAKE: |-
+        {"key":"","label":"","rank":"","ticks":0,"beaten":0,"nature":"","features":"","drives":"","tactics":""}
       # %0 an encounter, %1 a bestiary key: a new foe copied from it. Returns its number.
       FUN`FOE`MAKE:
         value: |-
-          setq(fm_k,inc(lmax(0 [u(%!/FUN`FOE`NUMS,%0)])))[attrib_set({{encounters}}/ENC`%0`FOE`%q<fm_k>,json(object,key,json(string,%1),label,json(string,[get({{store}}/FOE`%1)] %q<fm_k>),rank,json(string,lcstr(u(%!/FUN`FOE`STORE,%1,RANK,dangerous))),ticks,0,beaten,0,nature,json(string,get({{store}}/FOE`%1`NATURE)),features,json(string,get({{store}}/FOE`%1`FEATURES)),drives,json(string,get({{store}}/FOE`%1`DRIVES)),tactics,json(string,get({{store}}/FOE`%1`TACTICS))))]%q<fm_k>
+          setq(fm_k,inc(lmax(0 [u(%!/FUN`FOE`NUMS,%0)])))[attrib_set({{encounters}}/ENC`%0`FOE`%q<fm_k>,json_fill(v(DATA`TEMPLATE`FOE`MAKE),/key,%1,/label,[get({{store}}/FOE`%1)] %q<fm_k>,/rank,lcstr(u(%!/FUN`FOE`STORE,%1,RANK,dangerous)),/nature,get({{store}}/FOE`%1`NATURE),/features,get({{store}}/FOE`%1`FEATURES),/drives,get({{store}}/FOE`%1`DRIVES),/tactics,get({{store}}/FOE`%1`TACTICS)))]%q<fm_k>
         flags: [funsyntax]
       # %0 a kind, %1 a field, %2 its default.
       FUN`FOE`STORE:
@@ -1329,11 +1333,13 @@ objects:
         value: |-
           sort(iter(lattr(%0/IRONSWORN`%1LEDGER`*),if(hasflag(%0/%i0,wizard),last(%i0,`))),n)
         flags: [funsyntax]
+      DATA`TEMPLATE`BOOK`ADD: |-
+        {"n":null,"delta":null,"total":null,"item":"","label":"","reason":"","by":"","at":null}
       # %0 a character, %1 a book, %2 the change, %3 why, %4 the item, %5 its label: a new entry, then the cached
       # total. Nothing for no change.
       FUN`BOOK`ADD:
         value: |-
-          if(%2,[setqm(book_cache,u(%!/FUN`BOOK`CACHE,%1,%4),book_n,inc(lmax(0 [iter(lattr(%0/IRONSWORN`%1LEDGER`*),last(%i0,`))])))][setq(book_had,get(%0/%q<book_cache>))][setqm(book_total,add(firstof(before(%q<book_had>,|),0),%2),book_label,firstof(%5,after(%q<book_had>,|)))][u(%!/FUN`API`ROOT,%0)][attrib_set(%0/IRONSWORN`%1LEDGER`%q<book_n>,json(object,n,%q<book_n>,delta,%2,total,%q<book_total>,item,json(string,%4),label,json(string,%q<book_label>),reason,json(string,left(%3,200)),by,json(string,objid(%#)),at,secs()))][set(%0/IRONSWORN`%1LEDGER`%q<book_n>,wizard)][u(%!/FUN`BOOK`SET,%0,%q<book_cache>,%q<book_total>,if(u(%!/FUN`BOOK`LABELLED,%1),%q<book_label>))][u(%!/FUN`BOOK`TRIM,%0,%1)])
+          if(%2,[setqm(book_cache,u(%!/FUN`BOOK`CACHE,%1,%4),book_n,inc(lmax(0 [iter(lattr(%0/IRONSWORN`%1LEDGER`*),last(%i0,`))])))][setq(book_had,get(%0/%q<book_cache>))][setqm(book_total,add(firstof(before(%q<book_had>,|),0),%2),book_label,firstof(%5,after(%q<book_had>,|)))][u(%!/FUN`API`ROOT,%0)][attrib_set(%0/IRONSWORN`%1LEDGER`%q<book_n>,json_fill(v(DATA`TEMPLATE`BOOK`ADD),/n,%q<book_n>,/delta,%2,/total,%q<book_total>,/item,%4,/label,%q<book_label>,/reason,left(%3,200),/by,objid(%#),/at,secs()))][set(%0/IRONSWORN`%1LEDGER`%q<book_n>,wizard)][u(%!/FUN`BOOK`SET,%0,%q<book_cache>,%q<book_total>,if(u(%!/FUN`BOOK`LABELLED,%1),%q<book_label>))][u(%!/FUN`BOOK`TRIM,%0,%1)])
         flags: [funsyntax]
       # %0 a character, %1 a cache attribute, %2 the total, %3 a label: writes the cache; 0 removes it.
       FUN`BOOK`SET:
@@ -1457,15 +1463,19 @@ objects:
           rolled_c1,json_query(%q<rolled>,extract,$.dice%[0%].results%[0%].result),
           rolled_c2,json_query(%q<rolled>,extract,$.dice%[0%].results%[1%].result))[u(%!/FUN`ROLL`RESULT,%0,progress %0)]
         flags: [funsyntax]
+      DATA`TEMPLATE`ROLL`RESULT: |-
+        {"tier":"","action":null,"challenge":[null,null],"match":null,"text":"","roll":null,"formula":""}
       # %0 the score, %1 how the score reads; rolled, rolled_c1 and rolled_c2 set.
       FUN`ROLL`RESULT:
         value: |-
-          json(object,tier,json(string,u(%!/API`TIER,%0,%q<rolled_c1>,%q<rolled_c2>)),action,%0,challenge,json(array,%q<rolled_c1>,%q<rolled_c2>),match,eq(%q<rolled_c1>,%q<rolled_c2>),text,json(string,%1 vs %q<rolled_c1> and %q<rolled_c2>),roll,json_query(%q<rolled>,extract,$.id),formula,json(string,json_query(%q<rolled>,extract,$.formula)))
+          json_fill(v(DATA`TEMPLATE`ROLL`RESULT),/tier,u(%!/API`TIER,%0,%q<rolled_c1>,%q<rolled_c2>),/action,%0,/challenge/0,%q<rolled_c1>,/challenge/1,%q<rolled_c2>,/match,eq(%q<rolled_c1>,%q<rolled_c2>),/text,%1 vs %q<rolled_c1> and %q<rolled_c2>,/roll,json_query(%q<rolled>,extract,$.id),/formula,json_query(%q<rolled>,extract,$.formula))
         flags: [funsyntax]
+      DATA`TEMPLATE`CHECK`ROLLED: |-
+        {"tier":"","action":null,"challenge":null,"match":null,"stat":null,"target":"","label":"","text":"","roll":null,"formula":""}
       # %0 the key, %1 the stat, %2 all the adds, %3 the target as given.
       FUN`CHECK`ROLLED:
         value: |-
-          setq(rolled_check,u(%!/FUN`ROLL`ACTION,add(%1,%2)))[json(object,tier,json(string,json_query(%q<rolled_check>,extract,$.tier)),action,json_query(%q<rolled_check>,extract,$.action),challenge,json_query(%q<rolled_check>,extract,$.challenge),match,json_query(%q<rolled_check>,extract,$.match),stat,%1,target,json(string,%3),label,json(string,u(%!/FUN`LIST`LABEL,STAT,%0)),text,json(string,json_query(%q<rolled_check>,extract,$.text)),roll,json_query(%q<rolled_check>,extract,$.roll),formula,json(string,json_query(%q<rolled_check>,extract,$.formula)))]
+          setq(rolled_check,u(%!/FUN`ROLL`ACTION,add(%1,%2)))[json_fill(v(DATA`TEMPLATE`CHECK`ROLLED),/tier,json_query(%q<rolled_check>,extract,$.tier),/action,json_query(%q<rolled_check>,extract,$.action),/challenge,json_query(%q<rolled_check>,extract,$.challenge),/match,json_query(%q<rolled_check>,extract,$.match),/stat,%1,/target,%3,/label,u(%!/FUN`LIST`LABEL,STAT,%0),/text,json_query(%q<rolled_check>,extract,$.text),/roll,json_query(%q<rolled_check>,extract,$.roll),/formula,json_query(%q<rolled_check>,extract,$.formula))]
         flags: [funsyntax]
 
       # ---- screens ------------------------------------------------------------------
@@ -1636,10 +1646,12 @@ objects:
         value: |-
           The Ironsworn sheet's functions for other packages. See the package README.
         flags: [VISUAL]
+      DATA`TEMPLATE`API`TRAITS: |-
+        {"key":"","label":"","group":"stat","always":true}
       # JSON list of the stats: [{"key","label","group","always"}], group stat. always is true for every one.
       API`TRAITS:
         value: |-
-          json_array(iter(u(%!/FUN`LIST`ALL,STAT),json(object,key,json(string,lcstr(%i0)),label,json(string,u(%!/FUN`LIST`LABEL,STAT,%i0)),group,json(string,stat),always,json(boolean,1)),%b,|),|)
+          json_array(iter(u(%!/FUN`LIST`ALL,STAT),json_fill(v(DATA`TEMPLATE`API`TRAITS),/key,lcstr(%i0),/label,u(%!/FUN`LIST`LABEL,STAT,%i0)),%b,|),|)
         flags: [VISUAL]
       API`ALWAYS:
         value: |-

@@ -1,7 +1,7 @@
 format: "1.20"
 package: sheet-charge
 title: "Charge sheet"
-version: 1.2.4
+version: 1.2.5
 authors: [SharpMUSH]
 description: "A Charge character sheet: details, twelve actions rated in dots, momentum, a stress clock with a condition, milestones and talents built up on a ledger, encounters that keep their own copy of each sheet, with threats, danger clocks and consequences, plus progress clocks. +check rolls an action's dice against a risk for the room and gains momentum; push yourself, add tension, assist a friend, and make determination and fortune rolls. Based on the Charge SRD under CC BY 4.0 and Blades in the Dark under CC BY 3.0."
 license: MIT
@@ -696,13 +696,15 @@ objects:
         value: |-
           @assert cor(not(strlen(%q<check_copy>)),not(get(%q<check_copy>`OUT)))=@pemit %#=notice(SHEET,You are taken out of encounter %q<check_enc>. Its GM brings you back with +encounter/return.,warn); @assert cor(not(strlen(%q<check_vs_typed>)),strlen(%q<check_enc>))=@pemit %#=notice(SHEET,vs <threat> rolls against a threat in your encounter here%, and you are in no encounter here.,warn); @assert cor(not(strlen(%q<check_vs_typed>)),strlen(%q<check_foe>))=@pemit %#=notice(SHEET,There is no threat '%q<check_vs_typed>' in encounter %q<check_enc>. +encounter shows them.,warn); @assert cor(not(strlen(%q<check_foe>)),strmatch(get(%q<check_foe_at>`KIND),threat))=@pemit %#=notice(SHEET,[get(%q<check_foe_at>)] is a danger clock: complications fill it%, not rolls.,warn); @assert cor(not(strlen(%q<check_foe>)),not(u(%!/FUN`FOE`FULL,%q<check_enc>,%q<check_foe>)))=@pemit %#=notice(SHEET,[get(%q<check_foe_at>)] is overcome already.,warn)
         flags: [cmdsyntax]
+      DATA`TEMPLATE`CHECK`AFTER: |-
+        {"tier":"","risk":"","effect":"","action":"","foe":"","ticked":null,"roll":null}
       # %0 API`CHECK's JSON, after an action roll in an encounter: ticks the threat named with vs (1, 2 or 3 for the
       # effect, one more on a critical; nothing on a bad outcome), keeps the roll as LAST on the roller's copy, and
       # returns " +2 on Dockside thugs [####..] 4/6 (moderate risk, standard effect)." or nothing.
       FUN`CHECK`AFTER:
         value: |-
           setqm(after_tier,json_query(%0,extract,$.tier),
-          after_ticks,if(cand(strlen(%q<check_foe>),member(crit-success success partial,%q<after_tier>)),add(member(v(DATA`EFFECTS),json_query(%0,extract,$.effect)),strmatch(%q<after_tier>,crit-success)),0))[if(%q<after_ticks>,null(u(%!/FUN`FOE`TICK,%q<check_enc>,%q<check_foe>,%q<after_ticks>)))][if(strlen(%q<check_copy>),null(attrib_set(%q<check_copy>`LAST,json(object,tier,json(string,%q<after_tier>),risk,json(string,json_query(%0,extract,$.target)),effect,json(string,json_query(%0,extract,$.effect)),action,json(string,%q<trait_key>),foe,json(string,%q<check_foe>),ticked,%q<after_ticks>,roll,json_query(%0,extract,$.roll)))))][if(strlen(%q<check_foe>),%b[if(%q<after_ticks>,+%q<after_ticks> on,No progress on)] [u(%!/FUN`FOE`LINE,%q<check_enc>,%q<check_foe>)].)]
+          after_ticks,if(cand(strlen(%q<check_foe>),member(crit-success success partial,%q<after_tier>)),add(member(v(DATA`EFFECTS),json_query(%0,extract,$.effect)),strmatch(%q<after_tier>,crit-success)),0))[if(%q<after_ticks>,null(u(%!/FUN`FOE`TICK,%q<check_enc>,%q<check_foe>,%q<after_ticks>)))][if(strlen(%q<check_copy>),null(attrib_set(%q<check_copy>`LAST,json_fill(v(DATA`TEMPLATE`CHECK`AFTER),/tier,%q<after_tier>,/risk,json_query(%0,extract,$.target),/effect,json_query(%0,extract,$.effect),/action,%q<trait_key>,/foe,%q<check_foe>,/ticked,%q<after_ticks>,/roll,json_query(%0,extract,$.roll)))))][if(strlen(%q<check_foe>),%b[if(%q<after_ticks>,+%q<after_ticks> on,No progress on)] [u(%!/FUN`FOE`LINE,%q<check_enc>,%q<check_foe>)].)]
         flags: [funsyntax]
 
       # ---- +clock -----------------------------------------------------------------
@@ -751,6 +753,8 @@ objects:
         value: |-
           @if not(hasattr(%<who>,CHARGE))={&CHARGE %<who>=This character's Charge sheet. +sheet shows it.; @set %<who>/CHARGE=wizard; @set %<who>/CHARGE=no_command}; @if strlen(%<value>)={&CHARGE`%<leaf> %<who>=%<value>},{&CHARGE`%<leaf> %<who>}
         flags: [cmdsyntax]
+      DATA`TEMPLATE`API`RECORD: |-
+        {"n":null,"by":"","phase":""}
       # %0 a character, %1 an entry's JSON ({"kind",...}): writes it on their ledger, numbered after the last, stamped with who
       # made it and the phase (chargen before approval, staff for a keeper, else play), and returns its number. A chargen dots
       # entry for an action rewrites the one before it, so the ledger keeps one per action from chargen.
@@ -760,7 +764,7 @@ objects:
           record_key,ucstr(json_query(%1,extract,$.action)),
           record_phase,cond(not(isapproved(%0)),chargen,u(%!/FUN`PERM`KEEPER,%#),staff,play),
           record_reuse,if(cand(strmatch(%q<record_phase>,chargen),strmatch(%q<record_kind>,dots)),first(iter(u(%!/FUN`LEDGER`LIVE,u(%!/FUN`LEDGER`ENTRIES,%0)),if(cand(strmatch(elements(%i0,2,~),dots),strmatch(elements(%i0,3,~),%q<record_key>),strmatch(elements(%i0,5,~),chargen)),first(%i0,~)),|,%b))),
-          record_n,firstof(%q<record_reuse>,inc(lmax(0 [iter(lattr(%0/CHARGE`LEDGER`*),last(%i0,`))]))))[u(%!/FUN`DO`ROOT,%0)][null(attrib_set(%0/CHARGE`LEDGER`%q<record_n>,json_mod(%1,patch,json(object,n,%q<record_n>,by,json(string,objid(%#)),phase,json(string,%q<record_phase>)))))][null(set(%0/CHARGE`LEDGER`%q<record_n>,wizard))][u(%!/FUN`TOTALS`WRITE,%0)]%q<record_n>
+          record_n,firstof(%q<record_reuse>,inc(lmax(0 [iter(lattr(%0/CHARGE`LEDGER`*),last(%i0,`))]))))[u(%!/FUN`DO`ROOT,%0)][null(attrib_set(%0/CHARGE`LEDGER`%q<record_n>,json_mod(%1,patch,json_fill(v(DATA`TEMPLATE`API`RECORD),/n,%q<record_n>,/by,objid(%#),/phase,%q<record_phase>))))][null(set(%0/CHARGE`LEDGER`%q<record_n>,wizard))][u(%!/FUN`TOTALS`WRITE,%0)]%q<record_n>
         flags: [VISUAL]
       # %0 a character, %1 XP for the milestones ledger (else the build ledger): its entry numbers, oldest first. An
       # entry without the wizard flag is not read.
@@ -810,6 +814,8 @@ objects:
         value: |-
           setq(totals_json,u(%!/FUN`TOTALS`BUILD,%0))[u(%!/FUN`DO`ROOT,%0)][null(attrib_set(%0/CHARGE`TOTALS,%q<totals_json>))][null(set(%0/CHARGE`TOTALS,wizard))]
         flags: [funsyntax]
+      DATA`TEMPLATE`TOTALS`BUILD: |-
+        {"ratings":"","advanced":"","talents":"","given":null,"earned":null,"spent":null,"milestones":null}
       # %0 a character: {"ratings","advanced","talents","given","earned","spent","milestones"} from the build ledger's live
       # entries and the milestones ledger. ratings and advanced are KEY:n lists, talents a |-list, given the starting dots
       # handed out, earned the milestones given less those taken, spent one for each advance and talent.
@@ -819,7 +825,7 @@ objects:
           totals_ratings,u(%!/FUN`BUILD`RATINGS),
           totals_advanced,iter(u(%!/FUN`LIST`ALL,ACTION),%i0:[u(%!/FUN`BUILD`ROWADVANCES,%i0)]),
           totals_spent,words(iter(%q<build_rows>,if(match(advance talent,elements(%i0,2,~)),x),|,%b)),
-          totals_earned,ladd(0 [iter(u(%!/FUN`LEDGER`ENTRIES,%0,XP),elements(%i0,4,~),|,%b)]))[json(object,ratings,json(string,%q<totals_ratings>),advanced,json(string,%q<totals_advanced>),talents,json(string,u(%!/FUN`BUILD`TALENTS)),given,sub(ladd(0 [iter(%q<totals_ratings>,after(%i0,:))]),ladd(0 [iter(%q<totals_advanced>,after(%i0,:))])),earned,%q<totals_earned>,spent,%q<totals_spent>,milestones,sub(%q<totals_earned>,%q<totals_spent>))]
+          totals_earned,ladd(0 [iter(u(%!/FUN`LEDGER`ENTRIES,%0,XP),elements(%i0,4,~),|,%b)]))[json_fill(v(DATA`TEMPLATE`TOTALS`BUILD),/ratings,%q<totals_ratings>,/advanced,%q<totals_advanced>,/talents,u(%!/FUN`BUILD`TALENTS),/given,sub(ladd(0 [iter(%q<totals_ratings>,after(%i0,:))]),ladd(0 [iter(%q<totals_advanced>,after(%i0,:))])),/earned,%q<totals_earned>,/spent,%q<totals_spent>,/milestones,sub(%q<totals_earned>,%q<totals_spent>))]
         flags: [funsyntax]
       FUN`BUILD`RATINGS:
         value: |-
@@ -1172,6 +1178,8 @@ objects:
           setq(part_keys,squish(iter(%q<sum_all>,if(cand(strmatch(get({{store}}/ENC`%0`FOE`%i0`KIND),%1),eq(u(%!/FUN`FOE`FULL,%0,%i0),%2)),%i0))))[if(words(%q<part_keys>),%3: [itemize(iter(%q<part_keys>,get({{store}}/ENC`%0`FOE`%i0),%b,|),|)].)]
         flags: [funsyntax]
 
+      DATA`TEMPLATE`INC`ENCOUNTER`CONSEQUENCE: |-
+        {"kind":"","rating":null,"foe":"","ticked":null,"danger":"","action":""}
       # ---- consequences -----------------------------------------------------------
       # +encounter/consequence <name>=<kind> [<danger>]: the GM picks the consequence of a member's last roll there,
       # a partial success or a bad outcome. Its rating is the roll's risk. It waits on the member's copy (PENDING)
@@ -1179,7 +1187,7 @@ objects:
       # (+encounter/protect). LAST on the copy is their last roll there.
       INC`ENCOUNTER`CONSEQUENCE:
         value: |-
-          @assert cand(strlen(%q<cmd_left_side>),strlen(%q<cmd_right_side>))=@pemit %#=notice(ENCOUNTER,+encounter/consequence <name>=<kind> gives a member the consequence of their last roll: [itemize(v(DATA`CONSEQUENCES),,or)]. A complication names its danger clock after it.,warn); @include/args %!/INC`NEED`ENCOUNTER=number,; @include %!/INC`NEED`RUNS; @include/args %!/INC`NEED`MEMBER=name,%q<cmd_left_side>; @include %!/INC`ENCOUNTER`CONSEQUENCE`CHECK; think attrib_set(%q<cons_copy>`PENDING,json(object,kind,json(string,%q<cons_kind>),rating,u(%!/FUN`RISK`RATING,json_query(%q<cons_last>,extract,$.risk)),foe,json(string,json_query(%q<cons_last>,extract,$.foe)),ticked,json_query(%q<cons_last>,extract,$.ticked),danger,json(string,%q<cons_danger>),action,json(string,json_query(%q<cons_last>,extract,$.action)))); @remit get({{store}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,tone(strong,name(%#)) gives [name(%q<sheet_who>)] a consequence: [u(%!/FUN`CONSEQUENCE`TEXT,%q<enc_n>,get(%q<cons_copy>`PENDING))]. [tone(muted,[name(%q<sheet_who>)] takes it with +encounter/accept%, resists it with +check/determination <momentum>%, or a friend takes it with +encounter/protect [name(%q<sheet_who>)].)])
+          @assert cand(strlen(%q<cmd_left_side>),strlen(%q<cmd_right_side>))=@pemit %#=notice(ENCOUNTER,+encounter/consequence <name>=<kind> gives a member the consequence of their last roll: [itemize(v(DATA`CONSEQUENCES),,or)]. A complication names its danger clock after it.,warn); @include/args %!/INC`NEED`ENCOUNTER=number,; @include %!/INC`NEED`RUNS; @include/args %!/INC`NEED`MEMBER=name,%q<cmd_left_side>; @include %!/INC`ENCOUNTER`CONSEQUENCE`CHECK; think attrib_set(%q<cons_copy>`PENDING,json_fill(v(DATA`TEMPLATE`INC`ENCOUNTER`CONSEQUENCE),/kind,%q<cons_kind>,/rating,u(%!/FUN`RISK`RATING,json_query(%q<cons_last>,extract,$.risk)),/foe,json_query(%q<cons_last>,extract,$.foe),/ticked,json_query(%q<cons_last>,extract,$.ticked),/danger,%q<cons_danger>,/action,json_query(%q<cons_last>,extract,$.action))); @remit get({{store}}/ENC`%q<enc_n>`ROOM)=notice(ENCOUNTER,tone(strong,name(%#)) gives [name(%q<sheet_who>)] a consequence: [u(%!/FUN`CONSEQUENCE`TEXT,%q<enc_n>,get(%q<cons_copy>`PENDING))]. [tone(muted,[name(%q<sheet_who>)] takes it with +encounter/accept%, resists it with +check/determination <momentum>%, or a friend takes it with +encounter/protect [name(%q<sheet_who>)].)])
         flags: [cmdsyntax]
       # Reads cons_copy, cons_kind, cons_last and cons_danger, and refuses an unknown kind, a last roll that earned
       # none, a consequence already waiting, or a complication with no danger.
@@ -1495,11 +1503,13 @@ objects:
         value: |-
           The Charge sheet's functions for other packages. See the package README.
         flags: [VISUAL]
+      DATA`TEMPLATE`API`TRAITS: |-
+        {"key":"","label":"","always":true}
       # JSON list of the actions: [{"key","label","always"}]. always is true for every one: an action with no dots
       # rolls two dice and keeps the lower.
       API`TRAITS:
         value: |-
-          json_array(iter(u(%!/FUN`LIST`ALL,ACTION),json(object,key,json(string,lcstr(%i0)),label,json(string,u(%!/FUN`LIST`LABEL,ACTION,%i0)),always,json(boolean,1)),%b,|),|)
+          json_array(iter(u(%!/FUN`LIST`ALL,ACTION),json_fill(v(DATA`TEMPLATE`API`TRAITS),/key,lcstr(%i0),/label,u(%!/FUN`LIST`LABEL,ACTION,%i0)),%b,|),|)
         flags: [VISUAL]
       API`ALWAYS:
         value: |-
@@ -1573,12 +1583,14 @@ objects:
         value: |-
           [u(%!/FUN`BUILD`PREPARE,%0,1)]%q<build_milestones>
         flags: [VISUAL]
+      DATA`TEMPLATE`API`MILESTONE: |-
+        {"n":null,"kind":"milestone","count":null,"reason":"","by":"","phase":""}
       # %0 a character, %1 milestones to give (or take, below 0), %2 why (80 characters, no | or ~): records it on
       # the milestones ledger (CHARGE`XP`<n>, stamped like a build entry), rewrites the totals and returns the new count.
       API`MILESTONE:
         value: |-
           setqm(xp_phase,cond(not(isapproved(%0)),chargen,u(%!/FUN`PERM`KEEPER,%#),staff,play),
-          xp_n,inc(lmax(0 [iter(lattr(%0/CHARGE`XP`*),last(%i0,`))])))[u(%!/FUN`DO`ROOT,%0)][null(attrib_set(%0/CHARGE`XP`%q<xp_n>,json(object,n,%q<xp_n>,kind,"milestone",count,%1,reason,json(string,left(edit(%2,|,,~,),80)),by,json(string,objid(%#)),phase,json(string,%q<xp_phase>))))][null(set(%0/CHARGE`XP`%q<xp_n>,wizard))][u(%!/FUN`TOTALS`WRITE,%0)][u(%!/API`MILESTONES,%0)]
+          xp_n,inc(lmax(0 [iter(lattr(%0/CHARGE`XP`*),last(%i0,`))])))[u(%!/FUN`DO`ROOT,%0)][null(attrib_set(%0/CHARGE`XP`%q<xp_n>,json_fill(v(DATA`TEMPLATE`API`MILESTONE),/n,%q<xp_n>,/count,%1,/reason,left(edit(%2,|,,~,),80),/by,objid(%#),/phase,%q<xp_phase>)))][null(set(%0/CHARGE`XP`%q<xp_n>,wizard))][u(%!/FUN`TOTALS`WRITE,%0)][u(%!/API`MILESTONES,%0)]
         flags: [VISUAL]
       # Named: %<roller> an objid, %<trait> an action key, %<modifier> dice to add (or take), %<target> the risk,
       # %<effect> the effect (standard when empty), %<live> 1 to roll the sheet even in an encounter. Rolls the pool and keeps the roll (roll() record), and returns
@@ -1588,12 +1600,14 @@ objects:
         value: |-
           cond(not(hastype(%<roller>,player)),#-1 There is no character to roll for.,not(strlen(setr(check_found,u(%!/FUN`LIST`FIND,ACTION,%<trait>)))),#-1 There is no action '%<trait>'.,u(%!/FUN`CHECK`ROLLED,%q<check_found>,max(0,add(u(%!/API`RATING,%<roller>,%q<check_found>,%<live>),firstof(%<modifier>,0))),firstof(%<target>,moderate),firstof(%<effect>,standard)))
         flags: [VISUAL]
+      DATA`TEMPLATE`CHECK`ROLLED: |-
+        {"tier":"","total":null,"sixes":null,"dice":null,"target":"","effect":"","label":"","text":"","roll":null,"formula":""}
       # %0 the key, %1 the pool, %2 the risk, %3 the effect.
       FUN`CHECK`ROLLED:
         value: |-
           setqm(rolled,u(%!/FUN`POOL`ROLL,%1),
           rolled_total,json_query(%q<rolled>,extract,$.total),
-          rolled_sixes,u(%!/FUN`POOL`SIXES,%q<rolled>,%1))[json(object,tier,json(string,u(%!/API`TIER,%q<rolled_total>,%q<rolled_sixes>)),total,%q<rolled_total>,sixes,%q<rolled_sixes>,dice,%1,target,json(string,%2),effect,json(string,%3),label,json(string,u(%!/FUN`LIST`LABEL,ACTION,%0)),text,json(string,json_query(%q<rolled>,extract,$.text)),roll,json_query(%q<rolled>,extract,$.id),formula,json(string,json_query(%q<rolled>,extract,$.formula)))]
+          rolled_sixes,u(%!/FUN`POOL`SIXES,%q<rolled>,%1))[json_fill(v(DATA`TEMPLATE`CHECK`ROLLED),/tier,u(%!/API`TIER,%q<rolled_total>,%q<rolled_sixes>),/total,%q<rolled_total>,/sixes,%q<rolled_sixes>,/dice,%1,/target,%2,/effect,%3,/label,u(%!/FUN`LIST`LABEL,ACTION,%0),/text,json_query(%q<rolled>,extract,$.text),/roll,json_query(%q<rolled>,extract,$.id),/formula,json_query(%q<rolled>,extract,$.formula))]
         flags: [funsyntax]
 
       # ---- lifecycle ----------------------------------------------------------------

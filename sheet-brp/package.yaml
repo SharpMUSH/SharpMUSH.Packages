@@ -1,7 +1,7 @@
 format: "1.20"
 package: sheet-brp
 title: "Percentile sheet (BRP)"
-version: 2.3.3
+version: 2.3.4
 authors: [SharpMUSH]
 description: "A percentile character sheet on the Basic Roleplaying rules: seven characteristics and a skill list with base chances the game edits, built from a ledger, with point-buy character creation, experience checks that raise skills, hit points, power points and coin, an audited coin ledger, and encounters that play from copies of the sheets, with creatures from a bestiary the game edits, hit locations and an order of play. +check rolls 1d100 under a skill or a characteristic roll, doubled or halved for difficulty, and reads critical, special, success, failure or fumble. The skill list is ORC Licensed Material from Basic Roleplaying: Universal Game Engine."
 license: MIT
@@ -1018,11 +1018,13 @@ objects:
         value: |-
           think setq(entry_n,u(%!/FUN`ENTRY`ADD,%<who>,%<kind>,%<key>,%<value>,%<phase>))
         flags: [cmdsyntax]
+      DATA`TEMPLATE`ENTRY`ADD: |-
+        {"n":null,"kind":"","key":"","value":"","phase":"","by":"","at":null}
       # A ledger entry written from a function: %0 who, %1 kind, %2 key, %3 value, %4 phase. Returns its number.
       # A chargen entry rewrites the chargen entry in force of the same kind and key.
       FUN`ENTRY`ADD:
         value: |-
-          setq(ea_n,if(strmatch(%4,chargen),u(%!/FUN`LEDGER`CHARGENOF,%0,%1,%2)))[setq(ea_n,firstof(%q<ea_n>,inc(lmax(0 [iter(lattr(%0/BRP`LEDGER`*),last(%i0,`))]))))][u(%!/FUN`API`ROOT,%0)][attrib_set(%0/BRP`LEDGER`%q<ea_n>,json(object,n,%q<ea_n>,kind,json(string,%1),key,json(string,%2),value,json(string,%3),phase,json(string,%4),by,json(string,objid(%#)),at,secs()))][set(%0/BRP`LEDGER`%q<ea_n>,wizard)][if(hasattr(%0/BRP`MERGED),attrib_set(%0/BRP`MERGED))]%q<ea_n>
+          setq(ea_n,if(strmatch(%4,chargen),u(%!/FUN`LEDGER`CHARGENOF,%0,%1,%2)))[setq(ea_n,firstof(%q<ea_n>,inc(lmax(0 [iter(lattr(%0/BRP`LEDGER`*),last(%i0,`))]))))][u(%!/FUN`API`ROOT,%0)][attrib_set(%0/BRP`LEDGER`%q<ea_n>,json_fill(v(DATA`TEMPLATE`ENTRY`ADD),/n,%q<ea_n>,/kind,%1,/key,%2,/value,%3,/phase,%4,/by,objid(%#),/at,secs()))][set(%0/BRP`LEDGER`%q<ea_n>,wizard)][if(hasattr(%0/BRP`MERGED),attrib_set(%0/BRP`MERGED))]%q<ea_n>
         flags: [funsyntax]
       # %<who> joins encounter %<n> with a copy of their sheet: hit points, power points and coin. Its experience
       # checks start empty. It goes last in their BRP`ENCOUNTERS.
@@ -1388,10 +1390,12 @@ objects:
         value: |-
           setq(fk_key,ucstr(edit(trim(%0),%b,-)))[cond(cand(regmatch(%q<fk_key>,^%[A-Z0-9-%]+$),hasattr({{store}},FOE`%q<fk_key>)),%q<fk_key>,first(iter(lattr({{store}}/FOE`*),if(not(comp(lcstr(get({{store}}/%i0)),lcstr(trim(%0)))),last(%i0,`)))))]
         flags: [funsyntax]
+      DATA`TEMPLATE`FOE`MAKE: |-
+        {"key":"","label":"","str":null,"con":null,"siz":null,"dex":null,"pow":null,"hp":null,"hpmax":null,"armor":null,"attack":null,"weapon":"","damage":"","db":"","notes":""}
       # %0 an encounter, %1 a bestiary key: a new foe copied from it. Returns its number.
       FUN`FOE`MAKE:
         value: |-
-          setq(fm_k,inc(lmax(0 [u(%!/FUN`FOE`NUMS,%0)])))[attrib_set({{encounters}}/ENC`%0`FOE`%q<fm_k>,json(object,key,json(string,%1),label,json(string,[get({{store}}/FOE`%1)] %q<fm_k>),str,u(%!/FUN`FOE`STORE,%1,STR,10),con,u(%!/FUN`FOE`STORE,%1,CON,10),siz,u(%!/FUN`FOE`STORE,%1,SIZ,10),dex,u(%!/FUN`FOE`STORE,%1,DEX,10),pow,u(%!/FUN`FOE`STORE,%1,POW,10),hp,u(%!/FUN`KIND`HP,%1),hpmax,u(%!/FUN`KIND`HP,%1),armor,u(%!/FUN`FOE`STORE,%1,ARMOR,0),attack,u(%!/FUN`FOE`STORE,%1,ATTACK,40),weapon,json(string,u(%!/FUN`FOE`STORE,%1,WEAPON,Strike)),damage,json(string,u(%!/FUN`FOE`STORE,%1,DAMAGE,1d6)),db,json(string,u(%!/FUN`KIND`DB,%1)),notes,json(string,get({{store}}/FOE`%1`NOTES))))]%q<fm_k>
+          setq(fm_k,inc(lmax(0 [u(%!/FUN`FOE`NUMS,%0)])))[attrib_set({{encounters}}/ENC`%0`FOE`%q<fm_k>,json_fill(v(DATA`TEMPLATE`FOE`MAKE),/key,%1,/label,[get({{store}}/FOE`%1)] %q<fm_k>,/str,u(%!/FUN`FOE`STORE,%1,STR,10),/con,u(%!/FUN`FOE`STORE,%1,CON,10),/siz,u(%!/FUN`FOE`STORE,%1,SIZ,10),/dex,u(%!/FUN`FOE`STORE,%1,DEX,10),/pow,u(%!/FUN`FOE`STORE,%1,POW,10),/hp,u(%!/FUN`KIND`HP,%1),/hpmax,u(%!/FUN`KIND`HP,%1),/armor,u(%!/FUN`FOE`STORE,%1,ARMOR,0),/attack,u(%!/FUN`FOE`STORE,%1,ATTACK,40),/weapon,u(%!/FUN`FOE`STORE,%1,WEAPON,Strike),/damage,u(%!/FUN`FOE`STORE,%1,DAMAGE,1d6),/db,u(%!/FUN`KIND`DB,%1),/notes,get({{store}}/FOE`%1`NOTES)))]%q<fm_k>
         flags: [funsyntax]
       # %0 a kind, %1 a field, %2 its default.
       FUN`FOE`STORE:
@@ -1433,12 +1437,14 @@ objects:
         value: |-
           setq(fh_hp,u(%!/FUN`FOE`GET,%0,%1,hp))[if(gt(%q<fh_hp>,0),%q<fh_hp>/[u(%!/FUN`FOE`GET,%0,%1,hpmax)] hit points,down)]
         flags: [funsyntax]
+      DATA`TEMPLATE`FOE`ATTACK: |-
+        {"hit":null,"level":"","damage":null,"text":"","roll":null}
       # %0 an encounter, %1 a creature: rolls 1d100 against its attack and, on a hit, its damage and damage bonus.
       # A special or critical hit rolls the weapon's dice twice (impaling); a critical also ignores armour, which the caller
       # leaves off. Returns {"hit","level","damage","text","roll"}.
       FUN`FOE`ATTACK:
         value: |-
-          setqm(fa_chance,u(%!/FUN`FOE`GET,%0,%1,attack),fa_dice,[u(%!/FUN`FOE`GET,%0,%1,damage)],fa_db,u(%!/FUN`FOE`GET,%0,%1,db))[setq(fa_att,roll(1d100,,record))][setq(fa_level,u(%!/FUN`CHANCE`LEVEL,json_query(%q<fa_att>,extract,$.total),%q<fa_chance>,1))][setq(fa_hit,member(critical special success,%q<fa_level>))][setq(fa_dmg,if(%q<fa_hit>,roll([if(member(critical special,%q<fa_level>),u(%!/FUN`DICE`DOUBLE,%q<fa_dice>),%q<fa_dice>)]%q<fa_db>,,record)))][json(object,hit,t(%q<fa_hit>),level,json(string,%q<fa_level>),damage,if(%q<fa_hit>,max(0,json_query(%q<fa_dmg>,extract,$.total)),0),text,json(string,[json_query(%q<fa_att>,extract,$.text)] vs %q<fa_chance>%%: [switch(%q<fa_level>,critical,a critical hit,special,a special hit,success,a hit,fumble,a fumble,a miss)][if(%q<fa_hit>,%, [json_query(%q<fa_dmg>,extract,$.text)] damage)]),roll,json_query(%q<fa_att>,extract,$.id))]
+          setqm(fa_chance,u(%!/FUN`FOE`GET,%0,%1,attack),fa_dice,[u(%!/FUN`FOE`GET,%0,%1,damage)],fa_db,u(%!/FUN`FOE`GET,%0,%1,db))[setq(fa_att,roll(1d100,,record))][setq(fa_level,u(%!/FUN`CHANCE`LEVEL,json_query(%q<fa_att>,extract,$.total),%q<fa_chance>,1))][setq(fa_hit,member(critical special success,%q<fa_level>))][setq(fa_dmg,if(%q<fa_hit>,roll([if(member(critical special,%q<fa_level>),u(%!/FUN`DICE`DOUBLE,%q<fa_dice>),%q<fa_dice>)]%q<fa_db>,,record)))][json_fill(v(DATA`TEMPLATE`FOE`ATTACK),/hit,t(%q<fa_hit>),/level,%q<fa_level>,/damage,if(%q<fa_hit>,max(0,json_query(%q<fa_dmg>,extract,$.total)),0),/text,[json_query(%q<fa_att>,extract,$.text)] vs %q<fa_chance>%%: [switch(%q<fa_level>,critical,a critical hit,special,a special hit,success,a hit,fumble,a fumble,a miss)][if(%q<fa_hit>,%, [json_query(%q<fa_dmg>,extract,$.text)] damage)],/roll,json_query(%q<fa_att>,extract,$.id))]
         flags: [funsyntax]
       # %0 dice such as 1d8+1: twice the dice.
       FUN`DICE`DOUBLE:
@@ -1529,11 +1535,13 @@ objects:
         value: |-
           sort(iter(lattr(%0/BRP`%1LEDGER`*),if(hasflag(%0/%i0,wizard),last(%i0,`))),n)
         flags: [funsyntax]
+      DATA`TEMPLATE`BOOK`ADD: |-
+        {"n":null,"delta":null,"total":null,"item":"","label":"","reason":"","by":"","at":null}
       # %0 a character, %1 a book, %2 the change, %3 why, %4 the item, %5 its label: a new entry, then the cached
       # total. Nothing for no change.
       FUN`BOOK`ADD:
         value: |-
-          if(%2,[setqm(book_cache,u(%!/FUN`BOOK`CACHE,%1,%4),book_n,inc(lmax(0 [iter(lattr(%0/BRP`%1LEDGER`*),last(%i0,`))])))][setq(book_had,get(%0/%q<book_cache>))][setqm(book_total,add(firstof(before(%q<book_had>,|),0),%2),book_label,firstof(%5,after(%q<book_had>,|)))][u(%!/FUN`API`ROOT,%0)][attrib_set(%0/BRP`%1LEDGER`%q<book_n>,json(object,n,%q<book_n>,delta,%2,total,%q<book_total>,item,json(string,%4),label,json(string,%q<book_label>),reason,json(string,left(%3,200)),by,json(string,objid(%#)),at,secs()))][set(%0/BRP`%1LEDGER`%q<book_n>,wizard)][u(%!/FUN`BOOK`SET,%0,%q<book_cache>,%q<book_total>,if(u(%!/FUN`BOOK`LABELLED,%1),%q<book_label>))][u(%!/FUN`BOOK`TRIM,%0,%1)])
+          if(%2,[setqm(book_cache,u(%!/FUN`BOOK`CACHE,%1,%4),book_n,inc(lmax(0 [iter(lattr(%0/BRP`%1LEDGER`*),last(%i0,`))])))][setq(book_had,get(%0/%q<book_cache>))][setqm(book_total,add(firstof(before(%q<book_had>,|),0),%2),book_label,firstof(%5,after(%q<book_had>,|)))][u(%!/FUN`API`ROOT,%0)][attrib_set(%0/BRP`%1LEDGER`%q<book_n>,json_fill(v(DATA`TEMPLATE`BOOK`ADD),/n,%q<book_n>,/delta,%2,/total,%q<book_total>,/item,%4,/label,%q<book_label>,/reason,left(%3,200),/by,objid(%#),/at,secs()))][set(%0/BRP`%1LEDGER`%q<book_n>,wizard)][u(%!/FUN`BOOK`SET,%0,%q<book_cache>,%q<book_total>,if(u(%!/FUN`BOOK`LABELLED,%1),%q<book_label>))][u(%!/FUN`BOOK`TRIM,%0,%1)])
         flags: [funsyntax]
       # %0 a character, %1 a cache attribute, %2 the total, %3 a label: writes the cache; 0 removes it.
       FUN`BOOK`SET:
@@ -1718,12 +1726,16 @@ objects:
         value: |-
           The percentile sheet's functions for other packages. See the package README.
         flags: [VISUAL]
+      DATA`TEMPLATE`API`TRAITS: |-
+        {"key":"","label":"","group":"characteristic","always":true}
+      DATA`TEMPLATE`API`TRAITS`2: |-
+        {"key":"","label":"","group":"","always":false}
       # JSON list of the characteristic rolls and skills: [{"key","label","group","always"}], group
       # characteristic or the skill's category. always is true for a characteristic roll and a skill with a base
       # chance above 0 for an average character.
       API`TRAITS:
         value: |-
-          json_array(iter(u(%!/FUN`TRAIT`ROLLS),json(object,key,json(string,lcstr(%i0)),label,json(string,u(%!/FUN`TRAIT`LABEL,%i0)),group,json(string,characteristic),always,json(boolean,1)),%b,|)|[iter(u(%!/FUN`LIST`ALL,SKILL),json(object,key,json(string,lcstr(%i0)),label,json(string,get({{store}}/SKILL`%i0)),group,json(string,default({{store}}/SKILL`%i0`CATEGORY,mental)),always,json(boolean,gt(u(%!/FUN`SKILL`BASE,,%i0),0))),%b,|)],|)
+          json_array(iter(u(%!/FUN`TRAIT`ROLLS),json_fill(v(DATA`TEMPLATE`API`TRAITS),/key,lcstr(%i0),/label,u(%!/FUN`TRAIT`LABEL,%i0)),%b,|)|[iter(u(%!/FUN`LIST`ALL,SKILL),json_fill(v(DATA`TEMPLATE`API`TRAITS`2),/key,lcstr(%i0),/label,get({{store}}/SKILL`%i0),/group,default({{store}}/SKILL`%i0`CATEGORY,mental),/always,gt(u(%!/FUN`SKILL`BASE,,%i0),0)),%b,|)],|)
         flags: [VISUAL]
       # The keys an average character can roll, lower case.
       API`ALWAYS:
@@ -1817,6 +1829,8 @@ objects:
         value: |-
           setq(check_api_key,ucstr(u(%!/FUN`TRAIT`FIND,%<trait>)))[cond(not(hastype(%<roller>,player)),#-1 There is no character to roll for.,not(strlen(%q<check_api_key>)),#-1 There is no characteristic or skill '%<trait>'.,strmatch(%q<check_api_key>,SIZ),#-1 SIZ has no roll of its own.,u(%!/FUN`CHECK`ROLLED,%<roller>,%q<check_api_key>,firstof(%<target>,average),firstof(%<modifier>,0)))]
         flags: [VISUAL]
+      DATA`TEMPLATE`CHECK`ROLLED: |-
+        {"tier":"","level":"","total":"","rating":null,"chance":null,"target":"","label":"","text":"","roll":"","formula":""}
       # %0 the roller, %1 the key, %2 the level, %3 percent to add.
       FUN`CHECK`ROLLED:
         value: |-
@@ -1824,7 +1838,7 @@ objects:
           rolled_chance,add(u(%!/FUN`CHANCE`AT,%q<rolled_rating>,%2),%3),
           rolled,if(member(automatic impossible,%2),,roll(1d100,,record)),
           rolled_total,if(strlen(%q<rolled>),json_query(%q<rolled>,extract,$.total)),
-          rolled_level,switch(%2,automatic,automatic,impossible,failure,u(%!/FUN`CHANCE`LEVEL,%q<rolled_total>,%q<rolled_chance>,cor(strmatch(u(%!/FUN`TRAIT`KIND,%1),CHAR),gte(u(%!/FUN`SKILL`BASE,%q<build_chars>,%1),5)))))[json(object,tier,json(string,u(%!/API`TIER,%q<rolled_level>)),level,json(string,%q<rolled_level>),total,json(string,%q<rolled_total>),rating,%q<rolled_rating>,chance,%q<rolled_chance>,target,json(string,%2),label,json(string,u(%!/FUN`TRAIT`LABEL,%1)),text,json(string,if(strlen(%q<rolled>),json_query(%q<rolled>,extract,$.text))),roll,json(string,if(strlen(%q<rolled>),json_query(%q<rolled>,extract,$.id))),formula,json(string,if(strlen(%q<rolled>),1d100)))]
+          rolled_level,switch(%2,automatic,automatic,impossible,failure,u(%!/FUN`CHANCE`LEVEL,%q<rolled_total>,%q<rolled_chance>,cor(strmatch(u(%!/FUN`TRAIT`KIND,%1),CHAR),gte(u(%!/FUN`SKILL`BASE,%q<build_chars>,%1),5)))))[json_fill(v(DATA`TEMPLATE`CHECK`ROLLED),/tier,u(%!/API`TIER,%q<rolled_level>),/level,%q<rolled_level>,/total,%q<rolled_total>,/rating,%q<rolled_rating>,/chance,%q<rolled_chance>,/target,%2,/label,u(%!/FUN`TRAIT`LABEL,%1),/text,if(strlen(%q<rolled>),json_query(%q<rolled>,extract,$.text)),/roll,if(strlen(%q<rolled>),json_query(%q<rolled>,extract,$.id)),/formula,if(strlen(%q<rolled>),1d100))]
         flags: [funsyntax]
 
       # ---- lifecycle --------------------------------------------------------------

@@ -1,7 +1,7 @@
 format: "1.20"
 package: sheet-pbta
 title: "PbtA sheet"
-version: 2.3.4
+version: 2.3.5
 authors: [SharpMUSH]
 description: "A Powered by the Apocalypse character sheet built from a ledger: playbooks, stats and moves the game edits, guided character creation, advances, forward, ongoing, hold, harm, and XP with its own audited ledger. +sheet shows and builds it, +check rolls 2d6 plus a stat for a move, and +encounter plays a scene from copies of the sheets, with foes from a bestiary the game edits, and GM moves. Ships the Dungeon World basic and special moves (CC BY 3.0) as its example set."
 license: MIT
@@ -1079,13 +1079,15 @@ objects:
         value: |-
           @if not(hasattr(%<who>,PBTA))={&PBTA %<who>=This character's PbtA sheet. +sheet shows it.; @set %<who>/PBTA=wizard; @set %<who>/PBTA=no_command}
         flags: [cmdsyntax]
+      DATA`TEMPLATE`INC`DO`ENTRY: |-
+        {"n":null,"kind":"","key":"","value":"","phase":"","by":"","at":null}
       # A ledger entry: %<who>, %<kind>, %<key>, %<value>, %<phase> (chargen, play or staff). A chargen entry
       # rewrites the chargen entry in force of the same kind and key (any playbook for a playbook); every other
       # entry is numbered after the last. entry_n is its number. Each has the wizard attribute flag, and an
       # entry without it is never read.
       INC`DO`ENTRY:
         value: |-
-          @include/args %!/INC`DO`ROOT=who,%<who>; think setq(entry_n,if(strmatch(%<phase>,chargen),u(%!/FUN`LEDGER`CHARGENOF,%<who>,%<kind>,if(strmatch(%<kind>,playbook),*,%<key>)))); think setq(entry_n,firstof(%q<entry_n>,inc(lmax(0 [iter(lattr(%<who>/PBTA`LEDGER`*),last(%i0,`))])))); &PBTA`LEDGER`%q<entry_n> %<who>=[json(object,n,%q<entry_n>,kind,json(string,%<kind>),key,json(string,%<key>),value,json(string,%<value>),phase,json(string,%<phase>),by,json(string,objid(%#)),at,secs())]; @set %<who>/PBTA`LEDGER`%q<entry_n>=wizard; &PBTA`MERGED %<who>
+          @include/args %!/INC`DO`ROOT=who,%<who>; think setq(entry_n,if(strmatch(%<phase>,chargen),u(%!/FUN`LEDGER`CHARGENOF,%<who>,%<kind>,if(strmatch(%<kind>,playbook),*,%<key>)))); think setq(entry_n,firstof(%q<entry_n>,inc(lmax(0 [iter(lattr(%<who>/PBTA`LEDGER`*),last(%i0,`))])))); &PBTA`LEDGER`%q<entry_n> %<who>=[json_fill(v(DATA`TEMPLATE`INC`DO`ENTRY),/n,%q<entry_n>,/kind,%<kind>,/key,%<key>,/value,%<value>,/phase,%<phase>,/by,objid(%#),/at,secs())]; @set %<who>/PBTA`LEDGER`%q<entry_n>=wizard; &PBTA`MERGED %<who>
         flags: [cmdsyntax]
       # Removes a chargen entry outright: %<who>, %<n>.
       INC`DO`UNENTRY:
@@ -1176,13 +1178,15 @@ objects:
           if(match(%0,%1),ldelete(%0,match(%0,%1)),%0)
         flags: [funsyntax]
 
+      DATA`TEMPLATE`VIEW`LIVE: |-
+        {"playbook":"","stats":"","moves":"","forward":null,"ongoing":null,"hold":"","harm":null,"encounter":""}
       # ---- views --------------------------------------------------------------------
       # A view is what a roll or a screen reads: a JSON object with playbook, stats (STR=1 DEX=0 ...), moves
       # (every move the character has), forward, ongoing, hold (MOVE=n pairs), harm and encounter (its number, or
       # empty for the sheet itself). FUN`VIEW`LIVE builds it from the ledger; an encounter's copy is one.
       FUN`VIEW`LIVE:
         value: |-
-          setq(view_rows,u(%!/FUN`LEDGER`MERGED,%0))[setq(view_playbook,u(%!/FUN`BUILD`PLAYBOOK,%q<view_rows>))][json(object,playbook,json(string,%q<view_playbook>),stats,json(string,iter(u(%!/FUN`LIST`ALL,STAT),%i0=[u(%!/FUN`BUILD`STAT,%q<view_rows>,%i0)])),moves,json(string,filterbool(%!/FUN`VIEW`HASMOVE,u(%!/FUN`LIST`ALL,MOVE),,,%q<view_playbook>,u(%!/FUN`BUILD`TAKEN,%q<view_rows>))),forward,default(%0/PBTA`FORWARD,0),ongoing,default(%0/PBTA`ONGOING,0),hold,json(string,get(%0/PBTA`HOLD)),harm,default(%0/PBTA`HARM,0),encounter,json(string,))]
+          setq(view_rows,u(%!/FUN`LEDGER`MERGED,%0))[setq(view_playbook,u(%!/FUN`BUILD`PLAYBOOK,%q<view_rows>))][json_fill(v(DATA`TEMPLATE`VIEW`LIVE),/playbook,%q<view_playbook>,/stats,iter(u(%!/FUN`LIST`ALL,STAT),%i0=[u(%!/FUN`BUILD`STAT,%q<view_rows>,%i0)]),/moves,filterbool(%!/FUN`VIEW`HASMOVE,u(%!/FUN`LIST`ALL,MOVE),,,%q<view_playbook>,u(%!/FUN`BUILD`TAKEN,%q<view_rows>)),/forward,default(%0/PBTA`FORWARD,0),/ongoing,default(%0/PBTA`ONGOING,0),/hold,get(%0/PBTA`HOLD),/harm,default(%0/PBTA`HARM,0))]
         flags: [funsyntax]
       # %0 a move, %1 a playbook, %2 the moves taken: 1 when a basic move, one of the playbook's starting moves, or taken.
       FUN`VIEW`HASMOVE:
@@ -1519,11 +1523,15 @@ objects:
         value: |-
           The PbtA sheet's functions for other packages. See the package README.
         flags: [VISUAL]
+      DATA`TEMPLATE`API`TRAITS: |-
+        {"key":"","label":"","group":"stat","always":true}
+      DATA`TEMPLATE`API`TRAITS`2: |-
+        {"key":"","label":"","group":"move","always":false}
       # JSON list of the stats and moves: [{"key","label","group","always"}], group stat or move. A move's key is
       # move-<key>. Every stat is always; a move is always when it is basic, since everyone has it.
       API`TRAITS:
         value: |-
-          json_array(iter(u(%!/FUN`LIST`ALL,STAT),json(object,key,json(string,lcstr(%i0)),label,json(string,u(%!/FUN`STAT`LABEL,%i0)),group,json(string,stat),always,json(boolean,1)),%b,|)|[iter(u(%!/FUN`LIST`ALL,MOVE),json(object,key,json(string,move-[lcstr(%i0)]),label,json(string,u(%!/FUN`MOVE`LABEL,%i0)),group,json(string,move),always,json(boolean,not(strlen(get({{store}}/MOVE`%i0`PLAYBOOK))))),%b,|)],|)
+          json_array(iter(u(%!/FUN`LIST`ALL,STAT),json_fill(v(DATA`TEMPLATE`API`TRAITS),/key,lcstr(%i0),/label,u(%!/FUN`STAT`LABEL,%i0)),%b,|)|[iter(u(%!/FUN`LIST`ALL,MOVE),json_fill(v(DATA`TEMPLATE`API`TRAITS`2),/key,move-[lcstr(%i0)],/label,u(%!/FUN`MOVE`LABEL,%i0),/always,not(strlen(get({{store}}/MOVE`%i0`PLAYBOOK)))),%b,|)],|)
         flags: [VISUAL]
       # The keys every character can roll, lower case: the stats and the basic moves.
       API`ALWAYS:
@@ -1624,10 +1632,12 @@ objects:
         value: |-
           setq(fk_key,ucstr(edit(trim(%0),%b,-)))[cond(cand(regmatch(%q<fk_key>,^%[A-Z0-9-%]+$),hasattr({{store}},FOE`%q<fk_key>)),%q<fk_key>,first(iter(lattr({{store}}/FOE`*),if(not(comp(lcstr(get({{store}}/%i0)),lcstr(trim(%0)))),last(%i0,`)))))]
         flags: [funsyntax]
+      DATA`TEMPLATE`FOE`MAKE: |-
+        {"key":"","label":"","hp":null,"hpmax":null,"armor":null,"damage":"","tags":"","instinct":"","moves":""}
       # %0 an encounter, %1 a bestiary key: a new foe copied from it. Returns its number.
       FUN`FOE`MAKE:
         value: |-
-          setq(fm_k,inc(lmax(0 [u(%!/FUN`FOE`NUMS,%0)])))[attrib_set({{encounters}}/ENC`%0`FOE`%q<fm_k>,json(object,key,json(string,%1),label,json(string,[get({{store}}/FOE`%1)] %q<fm_k>),hp,u(%!/FUN`FOE`STORE,%1,HP,6),hpmax,u(%!/FUN`FOE`STORE,%1,HP,6),armor,u(%!/FUN`FOE`STORE,%1,ARMOR,0),damage,json(string,u(%!/FUN`FOE`STORE,%1,DAMAGE,1d6)),tags,json(string,get({{store}}/FOE`%1`TAGS)),instinct,json(string,get({{store}}/FOE`%1`INSTINCT)),moves,json(string,get({{store}}/FOE`%1`MOVES))))]%q<fm_k>
+          setq(fm_k,inc(lmax(0 [u(%!/FUN`FOE`NUMS,%0)])))[attrib_set({{encounters}}/ENC`%0`FOE`%q<fm_k>,json_fill(v(DATA`TEMPLATE`FOE`MAKE),/key,%1,/label,[get({{store}}/FOE`%1)] %q<fm_k>,/hp,u(%!/FUN`FOE`STORE,%1,HP,6),/hpmax,u(%!/FUN`FOE`STORE,%1,HP,6),/armor,u(%!/FUN`FOE`STORE,%1,ARMOR,0),/damage,u(%!/FUN`FOE`STORE,%1,DAMAGE,1d6),/tags,get({{store}}/FOE`%1`TAGS),/instinct,get({{store}}/FOE`%1`INSTINCT),/moves,get({{store}}/FOE`%1`MOVES)))]%q<fm_k>
         flags: [funsyntax]
       # %0 a kind, %1 a field, %2 its default.
       FUN`FOE`STORE:
@@ -1673,11 +1683,13 @@ objects:
         value: |-
           sort(iter(lattr(%0/PBTA`%1LEDGER`*),if(hasflag(%0/%i0,wizard),last(%i0,`))),n)
         flags: [funsyntax]
+      DATA`TEMPLATE`BOOK`ADD: |-
+        {"n":null,"delta":null,"total":null,"item":"","label":"","reason":"","by":"","at":null}
       # %0 a character, %1 a book, %2 the change, %3 why, %4 the item, %5 its label: a new entry, then the cached
       # total. Nothing for no change.
       FUN`BOOK`ADD:
         value: |-
-          if(%2,[setqm(book_cache,u(%!/FUN`BOOK`CACHE,%1,%4),book_n,inc(lmax(0 [iter(lattr(%0/PBTA`%1LEDGER`*),last(%i0,`))])))][setq(book_had,get(%0/%q<book_cache>))][setqm(book_total,add(firstof(before(%q<book_had>,|),0),%2),book_label,firstof(%5,after(%q<book_had>,|)))][u(%!/FUN`API`ROOT,%0)][attrib_set(%0/PBTA`%1LEDGER`%q<book_n>,json(object,n,%q<book_n>,delta,%2,total,%q<book_total>,item,json(string,%4),label,json(string,%q<book_label>),reason,json(string,left(%3,200)),by,json(string,objid(%#)),at,secs()))][set(%0/PBTA`%1LEDGER`%q<book_n>,wizard)][u(%!/FUN`BOOK`SET,%0,%q<book_cache>,%q<book_total>,if(u(%!/FUN`BOOK`LABELLED,%1),%q<book_label>))][u(%!/FUN`BOOK`TRIM,%0,%1)])
+          if(%2,[setqm(book_cache,u(%!/FUN`BOOK`CACHE,%1,%4),book_n,inc(lmax(0 [iter(lattr(%0/PBTA`%1LEDGER`*),last(%i0,`))])))][setq(book_had,get(%0/%q<book_cache>))][setqm(book_total,add(firstof(before(%q<book_had>,|),0),%2),book_label,firstof(%5,after(%q<book_had>,|)))][u(%!/FUN`API`ROOT,%0)][attrib_set(%0/PBTA`%1LEDGER`%q<book_n>,json_fill(v(DATA`TEMPLATE`BOOK`ADD),/n,%q<book_n>,/delta,%2,/total,%q<book_total>,/item,%4,/label,%q<book_label>,/reason,left(%3,200),/by,objid(%#),/at,secs()))][set(%0/PBTA`%1LEDGER`%q<book_n>,wizard)][u(%!/FUN`BOOK`SET,%0,%q<book_cache>,%q<book_total>,if(u(%!/FUN`BOOK`LABELLED,%1),%q<book_label>))][u(%!/FUN`BOOK`TRIM,%0,%1)])
         flags: [funsyntax]
       # %0 a character, %1 a cache attribute, %2 the total, %3 a label: writes the cache; 0 removes it.
       FUN`BOOK`SET:
@@ -1746,13 +1758,15 @@ objects:
           setqm(check_api_move,u(%!/FUN`TRAIT`MOVE,%1),
           check_api_stat,cond(strlen(u(%!/FUN`TRAIT`MOVE,%1)),if(strlen(%2),ucstr(%2),u(%!/FUN`V`BEST,%0,u(%!/FUN`MOVE`STATS,u(%!/FUN`TRAIT`MOVE,%1)))),1,ucstr(%1)))[cond(cand(strlen(%q<check_api_move>),not(hasattr({{store}},MOVE`%q<check_api_move>))),#-1 There is no move '%1'.,cand(not(strlen(%q<check_api_move>)),not(u(%!/FUN`IS`STAT,%q<check_api_stat>))),#-1 There is no stat '%1'.,cand(strlen(%q<check_api_move>),not(u(%!/FUN`V`HAS,%0,%q<check_api_move>))),#-1 You don't have [u(%!/FUN`MOVE`LABEL,%q<check_api_move>)].,cand(strlen(%q<check_api_move>),strlen(%2),not(member(u(%!/FUN`MOVE`STATS,%q<check_api_move>),%q<check_api_stat>))),#-1 [u(%!/FUN`MOVE`LABEL,%q<check_api_move>)] [u(%!/FUN`DISPLAY`ROLLSWITH,%q<check_api_move>)].,1,u(%!/FUN`CHECK`ROLLED,%q<check_api_move>,%q<check_api_stat>,add(if(strlen(%q<check_api_stat>),u(%!/FUN`V`STAT,%0,%q<check_api_stat>),0),firstof(%3,0),firstof(%4,0)),%4))]
         flags: [funsyntax]
+      DATA`TEMPLATE`CHECK`ROLLED: |-
+        {"tier":"","total":null,"target":"","margin":"","label":"","text":"","roll":null,"formula":"","move":"","stat":"","outcome":""}
       # %0 the move key or nothing, %1 the stat key or nothing, %2 what is added, %3 the difficulty's modifier.
       FUN`CHECK`ROLLED:
         value: |-
           setqm(rolled_formula,2d6[if(gte(%2,0),+%2,%2)],
           rolled,roll(%q<rolled_formula>,,record),
           rolled_total,json_query(%q<rolled>,extract,$.total),
-          rolled_tier,u(%!/API`TIER,%q<rolled_total>))[json(object,tier,json(string,%q<rolled_tier>),total,%q<rolled_total>,target,json(string,%3),margin,json(string,),label,json(string,u(%!/FUN`CHECK`LABEL,%0,%1)),text,json(string,json_query(%q<rolled>,extract,$.text)),roll,json_query(%q<rolled>,extract,$.id),formula,json(string,%q<rolled_formula>),move,json(string,lcstr(%0)),stat,json(string,lcstr(%1)),outcome,json(string,if(strlen(%0),get({{store}}/MOVE`%0`[switch(%q<rolled_tier>,crit-success,HIT,success,HIT,partial,PARTIAL,MISS)]))))]
+          rolled_tier,u(%!/API`TIER,%q<rolled_total>))[json_fill(v(DATA`TEMPLATE`CHECK`ROLLED),/tier,%q<rolled_tier>,/total,%q<rolled_total>,/target,%3,/label,u(%!/FUN`CHECK`LABEL,%0,%1),/text,json_query(%q<rolled>,extract,$.text),/roll,json_query(%q<rolled>,extract,$.id),/formula,%q<rolled_formula>,/move,lcstr(%0),/stat,lcstr(%1),/outcome,if(strlen(%0),get({{store}}/MOVE`%0`[switch(%q<rolled_tier>,crit-success,HIT,success,HIT,partial,PARTIAL,MISS)])))]
         flags: [funsyntax]
       # "Defy Danger (+Dex)", "Last Breath", or a stat's label.
       FUN`CHECK`LABEL:

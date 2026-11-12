@@ -1,7 +1,7 @@
 format: "1.20"
 package: duties-ironsworn
 title: "Duties: Ironsworn rolls"
-version: 1.1.2
+version: 1.1.3
 authors: [SharpMUSH]
 description: "Lets Duties roll on the Ironsworn sheet: a roll provider called ironsworn, so a duty's checks make action rolls with a stat against two challenge dice, with help adding to the action score, and experience or momentum as rewards. Pick it with +config duties/system=ironsworn."
 license: MIT
@@ -69,13 +69,15 @@ objects:
           provider_helped,gt(u(%!/FUN`MODS`HELPERS,%<mods>),0),
           provider_rolled,if(strlen(%q<provider_adds>),uargs({{sheet-ironsworn/sheet}}/API`CHECK,roller,%<roller>,trait,%<trait>,modifier,%q<provider_helped>,target,%q<provider_adds>)))[cond(not(strlen(%q<provider_adds>)),#-1 NO SUCH DIFFICULTY,strmatch(%q<provider_rolled>,#-*),%q<provider_rolled>,u(%!/FUN`CHECK`RESULT,%q<provider_rolled>))]
         flags: [funsyntax]
+      DATA`TEMPLATE`CHECK`RESULT: |-
+        {"tier":"","text":"","roll":"","margin":null,"system":{"action":null,"challenge":null,"match":null,"stat":null,"adds":null,"helped":null}}
       # %0 the sheet's check JSON.
       FUN`CHECK`RESULT:
         value: |-
           setqm(result_tier,json_query(%0,extract,$.tier),
           result_action,json_query(%0,extract,$.action),
           result_c1,json_query(%0,extract,$.challenge%[0%]),
-          result_c2,json_query(%0,extract,$.challenge%[1%]))[json(object,tier,json(string,%q<result_tier>),text,json(string,[json_query(%0,extract,$.label)]: [json_query(%0,extract,$.text)]: [u(%!/FUN`TIER`WORDS,%q<result_tier>)][if(%q<provider_helped>,%b%(+1 for the help%))]),roll,json(string,json_query(%0,extract,$.roll)),margin,sub(%q<result_action>,max(%q<result_c1>,%q<result_c2>)),system,json(object,action,%q<result_action>,challenge,json_query(%0,extract,$.challenge),match,json_query(%0,extract,$.match),stat,json_query(%0,extract,$.stat),adds,%q<provider_adds>,helped,%q<provider_helped>))]
+          result_c2,json_query(%0,extract,$.challenge%[1%]))[json_fill(v(DATA`TEMPLATE`CHECK`RESULT),/tier,%q<result_tier>,/text,[json_query(%0,extract,$.label)]: [json_query(%0,extract,$.text)]: [u(%!/FUN`TIER`WORDS,%q<result_tier>)][if(%q<provider_helped>,%b%(+1 for the help%))],/roll,json_query(%0,extract,$.roll),/margin,sub(%q<result_action>,max(%q<result_c1>,%q<result_c2>)),/system/action,%q<result_action>,/system/challenge,json_query(%0,extract,$.challenge),/system/match,json_query(%0,extract,$.match),/system/stat,json_query(%0,extract,$.stat),/system/adds,%q<provider_adds>,/system/helped,%q<provider_helped>)]
         flags: [funsyntax]
       FUN`TIER`WORDS:
         value: |-

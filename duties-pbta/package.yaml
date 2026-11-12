@@ -1,7 +1,7 @@
 format: "1.20"
 package: duties-pbta
 title: "Duties: PbtA sheet rolls"
-version: 1.0.4
+version: 1.0.5
 authors: [SharpMUSH]
 description: "Lets Duties roll on the PbtA sheet: a roll provider called pbta, so a duty's checks make a move or roll a stat, 2d6 plus the stat, with aid from helpers, forward and ongoing, and XP as a reward. Pick it with +config duties/system=pbta."
 license: MIT
@@ -74,9 +74,11 @@ objects:
         value: |-
           cond(strmatch(%<difficulty>,trivial),u(%!/FUN`CHECK`TRIVIAL,%<trait>),not(isint(u({{sheet-pbta/sheet}}/API`TARGET,%<difficulty>))),#-1 NO SUCH DIFFICULTY,not(strlen(u({{sheet-pbta/sheet}}/API`LABEL,%<trait>))),#-1 There is no move or stat '%<trait>'.,1,u(%!/FUN`CHECK`ROLL,%<roller>,%<trait>,%<difficulty>,%<mods>))
         flags: [funsyntax]
+      DATA`TEMPLATE`CHECK`TRIVIAL: |-
+        {"tier":"success","text":"","roll":"","margin":"","system":{"rolled":false}}
       FUN`CHECK`TRIVIAL:
         value: |-
-          json(object,tier,json(string,success),text,json(string,[u({{sheet-pbta/sheet}}/API`LABEL,%0)]: trivial%, no roll),roll,json(string,),margin,json(string,),system,json(object,rolled,json(boolean,0)))
+          json_fill(v(DATA`TEMPLATE`CHECK`TRIVIAL),/text,[u({{sheet-pbta/sheet}}/API`LABEL,%0)]: trivial%, no roll)
         flags: [funsyntax]
       # %0 the roller, %1 the trait, %2 the difficulty, %3 the mods. Rolls first, and spends the forward only when
       # the roll went through.
@@ -87,10 +89,12 @@ objects:
           provider_ongoing,default(%0/PBTA`ONGOING,0),
           provider_rolled,uargs({{sheet-pbta/sheet}}/API`CHECK,roller,%0,trait,%1,modifier,add(%q<provider_aid>,u({{sheet-pbta/sheet}}/API`MODIFIERS,%0)),target,u({{sheet-pbta/sheet}}/API`TARGET,%2)))[if(strmatch(%q<provider_rolled>,#-*),%q<provider_rolled>,null(u({{sheet-pbta/sheet}}/API`SPEND,%0))[u(%!/FUN`CHECK`RESULT,%q<provider_rolled>)])]
         flags: [funsyntax]
+      DATA`TEMPLATE`CHECK`RESULT: |-
+        {"tier":"","text":"","roll":null,"margin":"","system":{"rolled":true,"move":"","stat":"","total":null,"aid":null,"forward":null,"ongoing":null,"outcome":""}}
       # %0 the sheet's check JSON.
       FUN`CHECK`RESULT:
         value: |-
-          json(object,tier,json(string,json_query(%0,extract,$.tier)),text,json(string,[json_query(%0,extract,$.label)]: [json_query(%0,extract,$.text)][u(%!/FUN`CHECK`EXTRAS)]),roll,json_query(%0,extract,$.roll),margin,json(string,),system,json(object,rolled,json(boolean,1),move,json(string,json_query(%0,extract,$.move)),stat,json(string,json_query(%0,extract,$.stat)),total,json_query(%0,extract,$.total),aid,%q<provider_aid>,forward,%q<provider_forward>,ongoing,%q<provider_ongoing>,outcome,json(string,json_query(%0,extract,$.outcome))))
+          json_fill(v(DATA`TEMPLATE`CHECK`RESULT),/tier,json_query(%0,extract,$.tier),/text,[json_query(%0,extract,$.label)]: [json_query(%0,extract,$.text)][u(%!/FUN`CHECK`EXTRAS)],/roll,json_query(%0,extract,$.roll),/system/move,json_query(%0,extract,$.move),/system/stat,json_query(%0,extract,$.stat),/system/total,json_query(%0,extract,$.total),/system/aid,%q<provider_aid>,/system/forward,%q<provider_forward>,/system/ongoing,%q<provider_ongoing>,/system/outcome,json_query(%0,extract,$.outcome))
         flags: [funsyntax]
       FUN`CHECK`EXTRAS:
         value: |-

@@ -1,7 +1,7 @@
 format: "1.20"
 package: duties-fitd
 title: "Duties: Forged in the Dark rolls"
-version: 1.0.3
+version: 1.0.4
 authors: [SharpMUSH]
 description: "Lets Duties roll on the Forged in the Dark sheet: a roll provider called fitd, so a duty's checks roll an action's dice against a position, with assists and pushes paid in stress, and coin or stress relief as rewards. Pick it with +config duties/system=fitd."
 license: MIT
@@ -71,10 +71,12 @@ objects:
           provider_dice,u(%!/FUN`DIFFICULTY`DICE,%<difficulty>),
           provider_key,u({{sheet-fitd/sheet}}/API`FIND,%<trait>))[cond(not(strlen(%q<provider_position>)),#-1 NO SUCH DIFFICULTY,not(hastype(%<roller>,player)),#-1 There is no character to roll for.,not(strlen(%q<provider_key>)),#-1 There is no action '%<trait>'.,strmatch(%q<provider_position>,none),u(%!/FUN`CHECK`FREE,%q<provider_key>),u(%!/FUN`CHECK`ROLL,%<roller>,%q<provider_key>,%<mods>))]
         flags: [funsyntax]
+      DATA`TEMPLATE`CHECK`FREE: |-
+        {"tier":"success","text":"","roll":"","system":{"position":"none"}}
       # %0 the action: a success with no roll.
       FUN`CHECK`FREE:
         value: |-
-          json(object,tier,json(string,success),text,json(string,[u({{sheet-fitd/sheet}}/API`LABEL,%0)]: no roll needed),roll,json(string,),system,json(object,position,json(string,none)))
+          json_fill(v(DATA`TEMPLATE`CHECK`FREE),/text,[u({{sheet-fitd/sheet}}/API`LABEL,%0)]: no roll needed)
         flags: [funsyntax]
       # %0 the roller, %1 the action, %2 %<mods>. Charges the assist and the push, rolls, and builds the result.
       FUN`CHECK`ROLL:
@@ -84,10 +86,12 @@ objects:
           provider_charged,if(strlen(%q<provider_helper>),u({{sheet-fitd/sheet}}/API`STRESS,%q<provider_helper>,1))[if(%q<provider_push>,u({{sheet-fitd/sheet}}/API`STRESS,%0,2))],
           provider_rolled,uargs({{sheet-fitd/sheet}}/API`CHECK,roller,%0,trait,%1,modifier,add(%q<provider_dice>,t(strlen(%q<provider_helper>)),%q<provider_push>),target,%q<provider_position>))[if(strmatch(%q<provider_rolled>,#-*),%q<provider_rolled>,u(%!/FUN`CHECK`RESULT,%q<provider_rolled>))]
         flags: [funsyntax]
+      DATA`TEMPLATE`CHECK`RESULT: |-
+        {"tier":"","text":"","roll":null,"system":{"position":"","effect":"standard","dice":null,"highest":null,"sixes":null,"assist":"","push":false}}
       # %0 the sheet's check JSON.
       FUN`CHECK`RESULT:
         value: |-
-          json(object,tier,json(string,json_query(%0,extract,$.tier)),text,json(string,[json_query(%0,extract,$.label)] %([json_query(%0,extract,$.target)]%): [json_query(%0,extract,$.text)][u(%!/FUN`CHECK`EXTRAS)]),roll,json_query(%0,extract,$.roll),system,json(object,position,json(string,json_query(%0,extract,$.target)),effect,json(string,standard),dice,json_query(%0,extract,$.dice),highest,json_query(%0,extract,$.total),sixes,json_query(%0,extract,$.sixes),assist,json(string,%q<provider_helper>),push,json(boolean,%q<provider_push>)))
+          json_fill(v(DATA`TEMPLATE`CHECK`RESULT),/tier,json_query(%0,extract,$.tier),/text,[json_query(%0,extract,$.label)] %([json_query(%0,extract,$.target)]%): [json_query(%0,extract,$.text)][u(%!/FUN`CHECK`EXTRAS)],/roll,json_query(%0,extract,$.roll),/system/position,json_query(%0,extract,$.target),/system/dice,json_query(%0,extract,$.dice),/system/highest,json_query(%0,extract,$.total),/system/sixes,json_query(%0,extract,$.sixes),/system/assist,%q<provider_helper>,/system/push,%q<provider_push>)
         flags: [funsyntax]
       FUN`CHECK`EXTRAS:
         value: |-
