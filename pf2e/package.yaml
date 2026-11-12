@@ -1,7 +1,7 @@
 format: "1.20"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.10.20"
+version: "0.10.21"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, downtime (+downtime: Earn Income, Crafting, Learn a Spell, Retraining), loot, stashes and shops with unidentified magic items (+loot, +identify), and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -114,7 +114,7 @@ objects:
       # ledger read again costs a few hundred function calls. The key is the ledger with the package's
       # version, the books and CACHE`STAMP, which the updater and the deity table change. CACHE lists
       # the keys oldest first; past DATA`CACHE`KEEP the oldest goes.
-      DATA`CACHE`VERSION: "0.10.20"
+      DATA`CACHE`VERSION: "0.10.21"
       DATA`CACHE`KEEP: 200
       DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_itemalts check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_shieldrules check_bulkrules check_bulk check_bulk_enc check_bulk_max check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
       # The ItemAlteration properties the core applies, by the kind of item they reach.
@@ -3163,11 +3163,11 @@ objects:
             category,json(string,firstof(json_query(%0,extract,$.system.category),simple)),
             group,json(string,json_query(%0,extract,$.system.group)),
             base,json(string,firstof(json_query(%0,extract,$.system.baseItem),u(FUN`ITEM`SLUG,%0))),
-            traits,json(string,[setq(weapon_runes,json_map(me/FUN`RULE`SELECTOR,firstof(json_query(%0,extract,$.system.runes.property),json(array)),%b))][setq(weapon_traits,json_map(me/FUN`RULE`SELECTOR,firstof(json_query(%0,extract,$.system.traits.value),json(array)),%b))][squish(%q<weapon_traits> [setdiff(u(FUN`RUNE`ADDS,%q<weapon_runes>),%q<weapon_traits>)])]),
+            traits,json(string,u(FUN`STRIKE`WEAPON`TRAITS,%0)),
             property,json(string,%q<weapon_runes>),
             dice,firstof(json_query(%0,extract,$.system.damage.dice),1),
             die,json(string,u(FUN`STRIKE`DEIFIC,if(strlen(json_query(%0,extract,$.system.damage.dice)),edit(json_query(%0,extract,$.system.damage.die),",),d4),firstof(json_query(%0,extract,$.system.category),simple),firstof(json_query(%0,extract,$.system.baseItem),u(FUN`ITEM`SLUG,%0)))),
-            pers,json(string,if(json_query(%0,extract,$.system.damage.persistent.number),[json_query(%0,extract,$.system.damage.persistent.number)][if(isint(json_query(%0,extract,$.system.damage.persistent.faces)),d[json_query(%0,extract,$.system.damage.persistent.faces)])] [edit(json_query(%0,extract,$.system.damage.persistent.type),",)])),
+            pers,json(string,u(FUN`STRIKE`WEAPON`PERSISTENT,%0)),
             splash,firstof(json_query(%0,extract,$.system.splashDamage.value),0),
             type,json(string,firstof(json_query(%0,extract,$.system.damage.damageType),bludgeoning)),
             range,firstof(json_query(%0,extract,$.system.range),0),
@@ -3175,6 +3175,16 @@ objects:
             potency,firstof(json_query(%0,extract,$.system.runes.potency),0),
             striking,firstof(json_query(%0,extract,$.system.runes.striking),0),
             material,json(string,json_query(%0,extract,$.system.material.type)))]
+        flags: [funsyntax]
+      # %0 a weapon item: its traits with those its property runes add, setting weapon_runes and weapon_traits.
+      FUN`STRIKE`WEAPON`TRAITS:
+        value: |-
+          [setq(weapon_runes,json_map(me/FUN`RULE`SELECTOR,firstof(json_query(%0,extract,$.system.runes.property),json(array)),%b))][setq(weapon_traits,json_map(me/FUN`RULE`SELECTOR,firstof(json_query(%0,extract,$.system.traits.value),json(array)),%b))][squish(%q<weapon_traits> [setdiff(u(FUN`RUNE`ADDS,%q<weapon_runes>),%q<weapon_traits>)])]
+        flags: [funsyntax]
+      # %0 a weapon item: its persistent damage, such as 1d6 fire, or nothing.
+      FUN`STRIKE`WEAPON`PERSISTENT:
+        value: |-
+          if(json_query(%0,extract,$.system.damage.persistent.number),[json_query(%0,extract,$.system.damage.persistent.number)][if(isint(json_query(%0,extract,$.system.damage.persistent.faces)),d[json_query(%0,extract,$.system.damage.persistent.faces)])] [edit(json_query(%0,extract,$.system.damage.persistent.type),",)])
         flags: [funsyntax]
       # A rune's slug as Foundry's roll options give it: greaterFlaming as greater-flaming.
       FUN`RUNE`KEBAB:
@@ -6674,23 +6684,51 @@ objects:
           setqm(sheet_target,%q<web_who>,sheet_ledger,u(%!/FUN`LEDGER`OF,%q<web_who>))][
           u(%!/FUN`DAILY`PREPARE)][
           json(object,kind,"view",schema_version,1,title,json(string,name(%q<web_who>)),layout,"tabs",actions,json(object),pages,json_array(
-            [u(%!/WEB`PAGE,sheet,Sheet,1,
-              [u(%!/WEB`SECTION,,1,1,u(%!/WEB`KEYS,Level|Ancestry|Background|Class|Size|Languages)%r[u(%!/WEB`CHIPS,traits,Traits)]%r[u(%!/WEB`CHIPS,conditions,Conditions)])]%r[
-              u(%!/WEB`SECTION,Defences,2,1,u(%!/WEB`STATS,defences)%r[u(%!/WEB`KEYS,Shield|Senses|Defences)])]%r[
-              u(%!/WEB`SECTION,Attributes,3,1,u(%!/WEB`STATS,attributes))]%r[
-              u(%!/WEB`SECTION,Perception and saves,4,1,u(%!/WEB`STATS,saves))]%r[
-              u(%!/WEB`SECTION,Skills,5,1,u(%!/WEB`TABLE,skills,Skill~name Rank~rank~rank_color Modifier~mod))])]%r[
-            u(%!/WEB`PAGE,strikes,Strikes,2,
-              [u(%!/WEB`SECTION,Strikes,1,1,u(%!/WEB`TABLE,strikes,Strike~strike Attack~attack MAP~map Damage~damage Traits~traits))]%r[
-              u(%!/WEB`SECTION,Actions,2,1,u(%!/WEB`CHIPS,actions,,None.))])][if(cor(strlen(%q<cast_kind>),words(%q<cast_focus>),words(%q<cast_known>),words(%q<cast_innate>),words(graball(%q<check_entries>,ritual~*))),%r[u(%!/WEB`PAGE,spells,Spells,3,
-              [u(%!/WEB`SECTION,,1,1,u(%!/WEB`STATS,spellcasting))]%r[
-              u(%!/WEB`SECTION,Spells,2,1,u(%!/WEB`TABLE,spells,Spells~rank Left~left Which~spells))])])]%r[
-            u(%!/WEB`PAGE,feats,Feats,4,
-              [u(%!/WEB`SECTION,Feats and features,1,1,u(%!/WEB`CHIPS,feats,,None.))]%r[
-              u(%!/WEB`SECTION,,2,1,u(%!/WEB`KEYS,Not applied yet))])]%r[
-            u(%!/WEB`PAGE,gear,Gear,5,
-              [u(%!/WEB`SECTION,,1,1,u(%!/WEB`KEYS,Money|Bulk))]%r[
-              u(%!/WEB`SECTION,Belongings,2,1,u(%!/WEB`TABLE,gear,Item~item Count~count Where~where~where_color))])],%r))]
+            u(%!/WEB`SCHEMA`SHEET`MAIN)%r[
+            u(%!/WEB`SCHEMA`SHEET`STRIKES)][u(%!/WEB`SCHEMA`SHEET`SPELLS)]%r[
+            u(%!/WEB`SCHEMA`SHEET`FEATS)]%r[
+            u(%!/WEB`SCHEMA`SHEET`GEAR)],%r))]
+        flags: [funsyntax]
+      # The Sheet tab: who the character is, defences, attributes, saves and skills.
+      WEB`SCHEMA`SHEET`MAIN:
+        value: |-
+          [u(%!/WEB`PAGE,sheet,Sheet,1,
+          [u(%!/WEB`SECTION,,1,1,u(%!/WEB`KEYS,Level|Ancestry|Background|Class|Size|Languages)%r[u(%!/WEB`CHIPS,traits,Traits)]%r[u(%!/WEB`CHIPS,conditions,Conditions)])]%r[
+          u(%!/WEB`SECTION,Defences,2,1,u(%!/WEB`STATS,defences)%r[u(%!/WEB`KEYS,Shield|Senses|Defences)])]%r[
+          u(%!/WEB`SECTION,Attributes,3,1,u(%!/WEB`STATS,attributes))]%r[
+          u(%!/WEB`SECTION,Perception and saves,4,1,u(%!/WEB`STATS,saves))]%r[
+          u(%!/WEB`SECTION,Skills,5,1,u(%!/WEB`TABLE,skills,Skill~name Rank~rank~rank_color Modifier~mod))])]
+        flags: [funsyntax]
+      # The Strikes tab: strikes and actions.
+      WEB`SCHEMA`SHEET`STRIKES:
+        value: |-
+          [
+          u(%!/WEB`PAGE,strikes,Strikes,2,
+            [u(%!/WEB`SECTION,Strikes,1,1,u(%!/WEB`TABLE,strikes,Strike~strike Attack~attack MAP~map Damage~damage Traits~traits))]%r[
+            u(%!/WEB`SECTION,Actions,2,1,u(%!/WEB`CHIPS,actions,,None.))])]
+        flags: [funsyntax]
+      # The Spells tab, after a line break, only for a character with spellcasting or spells.
+      WEB`SCHEMA`SHEET`SPELLS:
+        value: |-
+          [if(cor(strlen(%q<cast_kind>),words(%q<cast_focus>),words(%q<cast_known>),words(%q<cast_innate>),words(graball(%q<check_entries>,ritual~*))),%r[u(%!/WEB`PAGE,spells,Spells,3,
+          [u(%!/WEB`SECTION,,1,1,u(%!/WEB`STATS,spellcasting))]%r[
+          u(%!/WEB`SECTION,Spells,2,1,u(%!/WEB`TABLE,spells,Spells~rank Left~left Which~spells))])])]
+        flags: [funsyntax]
+      # The Feats tab: feats, features and what is not applied yet.
+      WEB`SCHEMA`SHEET`FEATS:
+        value: |-
+          [
+          u(%!/WEB`PAGE,feats,Feats,4,
+            [u(%!/WEB`SECTION,Feats and features,1,1,u(%!/WEB`CHIPS,feats,,None.))]%r[
+            u(%!/WEB`SECTION,,2,1,u(%!/WEB`KEYS,Not applied yet))])]
+        flags: [funsyntax]
+      # The Gear tab: money, Bulk and belongings.
+      WEB`SCHEMA`SHEET`GEAR:
+        value: |-
+          [
+          u(%!/WEB`PAGE,gear,Gear,5,
+            [u(%!/WEB`SECTION,,1,1,u(%!/WEB`KEYS,Money|Bulk))]%r[
+            u(%!/WEB`SECTION,Belongings,2,1,u(%!/WEB`TABLE,gear,Item~item Count~count Where~where~where_color))])]
         flags: [funsyntax]
       DATA`WEB`DOCUMENT: |-
         {"kind":"view","schema_version":1,"title":"","pages":[{"key":"sheet","title":"","order":1,"sections":[]}],"actions":{}}
@@ -6749,44 +6787,81 @@ objects:
           setqm(check_daily,u(%!/FUN`DAILY`OF,%q<web_who>),web_stats,iter(u({{core}}/FUN`SHEET`STATS),u(%!/FUN`SHOW`STATISTIC,%i0),%b,%r),web_save_names,Perception Fortitude Reflex Will,web_staff,permission(%0,softcode.pf2e.staff),show_spellcaster,gt(u({{core}}/FUN`CHECK`RANK,spellcasting),0),show_spells,u(%!/FUN`SHOW`SPELLS),show_conditions,u(%!/FUN`SHOW`GRANTS,conditions),show_actions,u(%!/FUN`SHOW`GRANTS,actions))][
           setq(show_feats,setunion(trim(squish(iter(%q<check_grants>,if(match(spells conditions actions,elements(%i0,2,~)),,u(%!/FUN`SHOW`ITEM,elements(%i0,2,~),elements(%i0,3,~),elements(%i0,4,~))),%b,|),|),|),,|))][
           fold(%!/WEB`MERGE,
-            [u(%!/WEB`VALUE,Level,[%q<check_level>] %([u(%!/FUN`PURSE`TOTAL,%q<web_who>,xp)] XP%))]%r[
-            u(%!/WEB`VALUE,Ancestry,[u(%!/FUN`SHOW`GRANTED,%q<check_ancestry>)][if(strlen(%q<check_heritage>),%b%([u(%!/FUN`SHOW`GRANTED,%q<check_heritage>)]%))])]%r[
-            u(%!/WEB`VALUE,Background,u(%!/FUN`SHOW`GRANTED,%q<check_background>))]%r[
-            u(%!/WEB`VALUE,Class,[u(%!/FUN`SHOW`GRANTED,%q<check_class>)][if(strlen(%q<check_deity>),%, follows [json_query(u({{core}}/FUN`DEITY`GET,%q<check_deity>),extract,$.name)])])]%r[
-            u(%!/WEB`VALUE,Traits,itemize(%q<check_traits>))]%r[
-            u(%!/WEB`VALUE,Size,switch(u({{core}}/FUN`CHECK`SIZE),tiny,Tiny,sm,Small,lg,Large,huge,Huge,grg,Gargantuan,Medium))]%r[
-            u(%!/WEB`VALUE,Attributes,iter(str dex con int wis cha,[capstr(%i0)] [u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`CHECK`ABILITY,%i0))],%b,%b%b))]%r[
-            u(%!/WEB`VALUE,Hit points,[if(strlen(json_query(%q<check_daily>,extract,$.hp)),[json_query(%q<check_daily>,extract,$.hp)] of%b)][u({{core}}/FUN`CHECK`HP)][if(json_query(%q<check_daily>,extract,$.wounded),%b%(wounded [json_query(%q<check_daily>,extract,$.wounded)]%))])]%r[
-            u(%!/WEB`VALUE,Hero points,[u(%!/FUN`HERO`N,%q<check_daily>)] of 3)]%r[
-            u(%!/WEB`VALUE,AC,[add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`AC)))][if(strlen(%q<check_armor>),%b%([json_query(%q<check_armor>,extract,$.name)]%))])]%r[
-            u(%!/WEB`VALUE,Shield,if(strlen(%q<check_shield>),u(%!/FUN`SHOW`SHIELD)))]%r[
-            u(%!/WEB`VALUE,Speed,[u({{core}}/FUN`CHECK`SPEED)] feet[iter(u({{core}}/FUN`CHECK`SPEEDS),if(comp(first(%i0,~),land),%,%b[first(%i0,~)] [rest(%i0,~)] feet),%b,)])]%r[
-            u(%!/WEB`VALUE,Bulk,u(%!/FUN`SHOW`BULK))]%r[
-            u(%!/WEB`VALUE,Class DC,add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`CLASSDC))))]%r[
-            u(%!/WEB`VALUE,Spells,if(%q<show_spellcaster>,attack [u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,attack)))]%, DC [add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,dc)))]))]%r[
-            u(%!/WEB`VALUE,Senses,u(%!/FUN`SHOW`SENSES))]%r[
-            u(%!/WEB`VALUE,Defences,u(%!/FUN`SHOW`DEFENCES))]%r[
-            u(%!/WEB`ROWS,stats,json_array(iter(%q<web_stats>,u(%!/WEB`ROW,%i0,name rank mod),%r,%r),%r))]%r[
-            u(%!/WEB`ROWS,skills,json_array(trim(squish(iter(%q<web_stats>,if(match(%q<web_save_names>,first(%i0,|)),,u(%!/WEB`ROW,%i0|[u(%!/WEB`RANKCOLOR,elements(%i0,2,|))],name rank mod rank_color)),%r,~),~),b,~),~))]%r[
-            u(%!/WEB`ROWS,saves,json_array(iter(%q<web_save_names>,u(%!/WEB`TILE,%i0,elements(setr(web_s,grab(%q<web_stats>,%i0|*,%r)),3,|),elements(%q<web_s>,2,|),u(%!/WEB`RANKCOLOR,elements(%q<web_s>,2,|))),%b,%r),%r))]%r[
-            u(%!/WEB`ROWS,attributes,json_array(iter(str dex con int wis cha,u(%!/WEB`TILE,switch(%i0,str,Strength,dex,Dexterity,con,Constitution,int,Intelligence,wis,Wisdom,Charisma),u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`CHECK`ABILITY,%i0))),%b,%r),%r))]%r[
-            u(%!/WEB`ROWS,defences,u(%!/WEB`DEFENCES))]%r[
-            u(%!/WEB`ROWS,spellcasting,if(%q<show_spellcaster>,json_array([u(%!/WEB`TILE,Spellcasting,if(strlen(%q<cast_kind>),capstr(%q<cast_trad>),Innate),if(strlen(%q<cast_kind>),capstr(%q<cast_kind>),and focus),primary)]%r[u(%!/WEB`TILE,Spell DC,add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,dc))),,primary)]%r[u(%!/WEB`TILE,Spell attack,u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,attack))),,primary)],%r),json(array)))]%r[
-            u(%!/WEB`ROWS,spells,if(strlen(setr(web_book,u(%!/FUN`SHOW`BOOK`ROWS))),json_array(iter(%q<web_book>,u(%!/WEB`ROW,%i0,rank left spells),~,%r),%r),json(array)))]%r[
-            u(%!/WEB`ROWS,traits,u(%!/WEB`LIST,iter(%q<check_traits>,capstr(%i0),%b,|)))]%r[
-            u(%!/WEB`ROWS,conditions,u(%!/WEB`LIST,%q<show_conditions>,error))]%r[
-            u(%!/WEB`ROWS,feats,u(%!/WEB`LIST,%q<show_feats>))]%r[
-            u(%!/WEB`ROWS,actions,u(%!/WEB`LIST,%q<show_actions>,primary))]%r[
-            u(%!/WEB`ROWS,strikes,json_array(iter(u({{core}}/FUN`CHECK`STRIKES),u(%!/WEB`ROW,u(%!/FUN`SHOW`STRIKE,u({{core}}/FUN`STRIKE`LINE,%i0)),strike attack map damage traits),|,%r),%r))]%r[
-            u(%!/WEB`VALUE,Languages,itemize(iter(u(%!/FUN`SHOW`LANGUAGES),capstr(%i0))))]%r[
-            u(%!/WEB`VALUE,Money,u(%!/FUN`SHOW`MONEY,u(%!/FUN`PURSE`TOTAL,%q<web_who>,money)))]%r[
-            u(%!/WEB`ROWS,gear,json_array(iter(%q<check_gear>,u(%!/WEB`GEAR,%i0),%b,%r),%r))]%r[
-            u(%!/WEB`VALUE,Spells known,%q<show_spells>)]%r[
-            u(%!/WEB`VALUE,Feats and features,itemize(%q<show_feats>,|))]%r[
-            u(%!/WEB`VALUE,Actions,itemize(%q<show_actions>,|))]%r[
-            u(%!/WEB`VALUE,Conditions,itemize(%q<show_conditions>,|))]%r[
-            u(%!/WEB`VALUE,Not applied yet,itemize(%q<check_unapplied>,|))],
+            u(%!/WEB`DATA`SHEET`IDENTITY)%r[
+            u(%!/WEB`DATA`SHEET`STATUS)]%r[
+            u(%!/WEB`DATA`SHEET`CHECKS)]%r[
+            u(%!/WEB`DATA`SHEET`MAGIC)]%r[
+            u(%!/WEB`DATA`SHEET`LISTS)]%r[
+            u(%!/WEB`DATA`SHEET`BELONGINGS)],
             json(object),%r)]
+        flags: [funsyntax]
+      # The sheet values for who the character is: level, ancestry, background, class, traits, size and attributes.
+      WEB`DATA`SHEET`IDENTITY:
+        value: |-
+          [u(%!/WEB`VALUE,Level,[%q<check_level>] %([u(%!/FUN`PURSE`TOTAL,%q<web_who>,xp)] XP%))]%r[
+          u(%!/WEB`VALUE,Ancestry,[u(%!/FUN`SHOW`GRANTED,%q<check_ancestry>)][if(strlen(%q<check_heritage>),%b%([u(%!/FUN`SHOW`GRANTED,%q<check_heritage>)]%))])]%r[
+          u(%!/WEB`VALUE,Background,u(%!/FUN`SHOW`GRANTED,%q<check_background>))]%r[
+          u(%!/WEB`VALUE,Class,[u(%!/FUN`SHOW`GRANTED,%q<check_class>)][if(strlen(%q<check_deity>),%, follows [json_query(u({{core}}/FUN`DEITY`GET,%q<check_deity>),extract,$.name)])])]%r[
+          u(%!/WEB`VALUE,Traits,itemize(%q<check_traits>))]%r[
+          u(%!/WEB`VALUE,Size,switch(u({{core}}/FUN`CHECK`SIZE),tiny,Tiny,sm,Small,lg,Large,huge,Huge,grg,Gargantuan,Medium))]%r[
+          u(%!/WEB`VALUE,Attributes,iter(str dex con int wis cha,[capstr(%i0)] [u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`CHECK`ABILITY,%i0))],%b,%b%b))]
+        flags: [funsyntax]
+      # The sheet values for the shape the character is in: hit points, hero points, AC, shield, speed, Bulk, class
+      # DC, spells, senses and defences.
+      WEB`DATA`SHEET`STATUS:
+        value: |-
+          [
+          u(%!/WEB`VALUE,Hit points,[if(strlen(json_query(%q<check_daily>,extract,$.hp)),[json_query(%q<check_daily>,extract,$.hp)] of%b)][u({{core}}/FUN`CHECK`HP)][if(json_query(%q<check_daily>,extract,$.wounded),%b%(wounded [json_query(%q<check_daily>,extract,$.wounded)]%))])]%r[
+          u(%!/WEB`VALUE,Hero points,[u(%!/FUN`HERO`N,%q<check_daily>)] of 3)]%r[
+          u(%!/WEB`VALUE,AC,[add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`AC)))][if(strlen(%q<check_armor>),%b%([json_query(%q<check_armor>,extract,$.name)]%))])]%r[
+          u(%!/WEB`VALUE,Shield,if(strlen(%q<check_shield>),u(%!/FUN`SHOW`SHIELD)))]%r[
+          u(%!/WEB`VALUE,Speed,[u({{core}}/FUN`CHECK`SPEED)] feet[iter(u({{core}}/FUN`CHECK`SPEEDS),if(comp(first(%i0,~),land),%,%b[first(%i0,~)] [rest(%i0,~)] feet),%b,)])]%r[
+          u(%!/WEB`VALUE,Bulk,u(%!/FUN`SHOW`BULK))]%r[
+          u(%!/WEB`VALUE,Class DC,add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`CLASSDC))))]%r[
+          u(%!/WEB`VALUE,Spells,if(%q<show_spellcaster>,attack [u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,attack)))]%, DC [add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,dc)))]))]%r[
+          u(%!/WEB`VALUE,Senses,u(%!/FUN`SHOW`SENSES))]%r[
+          u(%!/WEB`VALUE,Defences,u(%!/FUN`SHOW`DEFENCES))]
+        flags: [funsyntax]
+      # The stats, skills, saves, attributes and defences rows, from web_stats and web_save_names.
+      WEB`DATA`SHEET`CHECKS:
+        value: |-
+          [
+          u(%!/WEB`ROWS,stats,json_array(iter(%q<web_stats>,u(%!/WEB`ROW,%i0,name rank mod),%r,%r),%r))]%r[
+          u(%!/WEB`ROWS,skills,json_array(trim(squish(iter(%q<web_stats>,if(match(%q<web_save_names>,first(%i0,|)),,u(%!/WEB`ROW,%i0|[u(%!/WEB`RANKCOLOR,elements(%i0,2,|))],name rank mod rank_color)),%r,~),~),b,~),~))]%r[
+          u(%!/WEB`ROWS,saves,json_array(iter(%q<web_save_names>,u(%!/WEB`TILE,%i0,elements(setr(web_s,grab(%q<web_stats>,%i0|*,%r)),3,|),elements(%q<web_s>,2,|),u(%!/WEB`RANKCOLOR,elements(%q<web_s>,2,|))),%b,%r),%r))]%r[
+          u(%!/WEB`ROWS,attributes,json_array(iter(str dex con int wis cha,u(%!/WEB`TILE,switch(%i0,str,Strength,dex,Dexterity,con,Constitution,int,Intelligence,wis,Wisdom,Charisma),u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`CHECK`ABILITY,%i0))),%b,%r),%r))]%r[
+          u(%!/WEB`ROWS,defences,u(%!/WEB`DEFENCES))]
+        flags: [funsyntax]
+      # The spellcasting and spells rows, empty for a character who does not cast; sets web_book.
+      WEB`DATA`SHEET`MAGIC:
+        value: |-
+          [
+          u(%!/WEB`ROWS,spellcasting,if(%q<show_spellcaster>,json_array([u(%!/WEB`TILE,Spellcasting,if(strlen(%q<cast_kind>),capstr(%q<cast_trad>),Innate),if(strlen(%q<cast_kind>),capstr(%q<cast_kind>),and focus),primary)]%r[u(%!/WEB`TILE,Spell DC,add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,dc))),,primary)]%r[u(%!/WEB`TILE,Spell attack,u(%!/FUN`SHOW`SIGNED,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,attack))),,primary)],%r),json(array)))]%r[
+          u(%!/WEB`ROWS,spells,if(strlen(setr(web_book,u(%!/FUN`SHOW`BOOK`ROWS))),json_array(iter(%q<web_book>,u(%!/WEB`ROW,%i0,rank left spells),~,%r),%r),json(array)))]
+        flags: [funsyntax]
+      # The traits, conditions, feats, actions and strikes rows.
+      WEB`DATA`SHEET`LISTS:
+        value: |-
+          [
+          u(%!/WEB`ROWS,traits,u(%!/WEB`LIST,iter(%q<check_traits>,capstr(%i0),%b,|)))]%r[
+          u(%!/WEB`ROWS,conditions,u(%!/WEB`LIST,%q<show_conditions>,error))]%r[
+          u(%!/WEB`ROWS,feats,u(%!/WEB`LIST,%q<show_feats>))]%r[
+          u(%!/WEB`ROWS,actions,u(%!/WEB`LIST,%q<show_actions>,primary))]%r[
+          u(%!/WEB`ROWS,strikes,json_array(iter(u({{core}}/FUN`CHECK`STRIKES),u(%!/WEB`ROW,u(%!/FUN`SHOW`STRIKE,u({{core}}/FUN`STRIKE`LINE,%i0)),strike attack map damage traits),|,%r),%r))]
+        flags: [funsyntax]
+      # The languages, money and gear, then the text values for spells known, feats, actions, conditions and what is
+      # not applied yet.
+      WEB`DATA`SHEET`BELONGINGS:
+        value: |-
+          [
+          u(%!/WEB`VALUE,Languages,itemize(iter(u(%!/FUN`SHOW`LANGUAGES),capstr(%i0))))]%r[
+          u(%!/WEB`VALUE,Money,u(%!/FUN`SHOW`MONEY,u(%!/FUN`PURSE`TOTAL,%q<web_who>,money)))]%r[
+          u(%!/WEB`ROWS,gear,json_array(iter(%q<check_gear>,u(%!/WEB`GEAR,%i0),%b,%r),%r))]%r[
+          u(%!/WEB`VALUE,Spells known,%q<show_spells>)]%r[
+          u(%!/WEB`VALUE,Feats and features,itemize(%q<show_feats>,|))]%r[
+          u(%!/WEB`VALUE,Actions,itemize(%q<show_actions>,|))]%r[
+          u(%!/WEB`VALUE,Conditions,itemize(%q<show_conditions>,|))]%r[
+          u(%!/WEB`VALUE,Not applied yet,itemize(%q<check_unapplied>,|))]
         flags: [funsyntax]
       WEB`MERGE:
         value: |-
@@ -7575,14 +7650,49 @@ objects:
           setq(enc_conds,u(FUN`ENC`C,%0,conds))][
           setq(enc_fxc,u(FUN`ENC`FXCONDS,%0))][
           \[[squish(trim(
-            [if(strmatch(u(FUN`ENC`C,%0,kind),pc),
-              json_map(%!/FUN`ENC`LEDGER`KEEP,u({{commands}}/FUN`LEDGER`OF,u(FUN`ENC`C,%0,who)),\,),
-              [json(object,kind,"level",level,u(FUN`ENC`LEVEL,%0),n,1)][iter(u(FUN`ENC`C,%0,abil),\,[json(object,kind,"grant",pack,"familiar-abilities",id,json(string,%i0),choices,firstof(json_query(u(FUN`ENC`C,%0,abch),extract,$.%i0),json(object)),n,add(600000,inum(0)))],%b,)])]\,[
-            iter(setunion(setr(enc_keys,setunion(json_map(%!/FUN`JSON`KEY,%q<enc_conds>,%b),iter(%q<enc_fxc>,first(%i0,~)))) [iter(%q<enc_keys>,u(FUN`ENC`IMPLIED,%i0))],),if(strlen(setr(enc_cid,u({{core}}/FUN`ITEM`FIND,conditions,%i0))),json(object,kind,"grant",pack,"conditions",id,json(string,%q<enc_cid>),badge,if(setr(enc_badge,firstof(json_query(%q<enc_conds>,extract,$.%i0),after(grab(%q<enc_fxc>,%i0~*),~))),%q<enc_badge>,null),n,add(100000,inum(0)))),%b,\,)]\,[
-            iter(json_map(%!/FUN`JSON`KEY,setr(enc_used,firstof(u(FUN`ENC`C,%0,used),json(object))),%b),json_fill(v(DATA`TEMPLATE`ENC`LEDGER),/id,%i0,/qty,first(json_query(%q<enc_used>,extract,$.%i0),|),/where,rest(json_query(%q<enc_used>,extract,$.%i0),|),/n,add(200000,inum(0))),%b,\,)]\,[
-            iter(u(FUN`FX`LIVE,setr(enc_fx,firstof(u(FUN`ENC`C,%0,fx),json(object)))),json_fill(v(DATA`TEMPLATE`ENC`LEDGER`2),/pack,edit(json_query(%q<enc_fx>,extract,$\["%i0"\].pack),",),/id,%i0,/choices,json_mod(firstof(json_query(%q<enc_fx>,extract,$\["%i0"\].ch),json(object)),patch,json(object,effectLevel,json_query(%q<enc_fx>,extract,$\["%i0"\].lvl))),/badge,firstof(json_query(%q<enc_fx>,extract,$\["%i0"\].badge),null),/n,add(300000,inum(0))),%b,\,)]\,[
-            iter(json_map(%!/FUN`JSON`KEY,setr(enc_tg,firstof(u(FUN`ENC`C,%0,tg),json(object))),%b),json_fill(v(DATA`TEMPLATE`ENC`LEDGER`3),/domain,before(%i0,|),/option,after(%i0,|),/value,if(first(json_query(%q<enc_tg>,extract,$\["%i0"\]),|),true,false),/selection,if(strlen(setr(enc_tgsel,rest(json_query(%q<enc_tg>,extract,$\["%i0"\]),|))),json(string,%q<enc_tgsel>),null),/n,add(400000,inum(0))),%b,\,)]\,[
-            iter(squish([if(strmatch(u(FUN`ENC`C,%0,kind),npc),self:type:[if(t(u(FUN`ENC`C,%0,hazard)),hazard,npc)])] [if(t(u(FUN`ENC`C,%0,raised)),self:shield:raised self:effect:raise-a-shield)] [if(strlen(setr(enc_shst,u(FUN`ENC`C,%0,shst))),self:shield:%q<enc_shst>)]),json(object,kind,"option",option,json(string,%i0),n,add(500000,inum(0))),%b,\,)],\,),\,)]\]]
+            u(FUN`ENC`LEDGER`BASE,%0)\,[
+            u(FUN`ENC`LEDGER`CONDS)]\,[
+            u(FUN`ENC`LEDGER`USED,%0)]\,[
+            u(FUN`ENC`LEDGER`FX,%0)]\,[
+            u(FUN`ENC`LEDGER`TOGGLES,%0)]\,[
+            u(FUN`ENC`LEDGER`OPTIONS,%0)],\,),\,)]\]]
+        flags: [funsyntax]
+      # %0 a combatant's index: a PC's own ledger entries, or an NPC's level and familiar abilities.
+      FUN`ENC`LEDGER`BASE:
+        value: |-
+          [if(strmatch(u(FUN`ENC`C,%0,kind),pc),
+          json_map(%!/FUN`ENC`LEDGER`KEEP,u({{commands}}/FUN`LEDGER`OF,u(FUN`ENC`C,%0,who)),\,),
+          [json(object,kind,"level",level,u(FUN`ENC`LEVEL,%0),n,1)][iter(u(FUN`ENC`C,%0,abil),\,[json(object,kind,"grant",pack,"familiar-abilities",id,json(string,%i0),choices,firstof(json_query(u(FUN`ENC`C,%0,abch),extract,$.%i0),json(object)),n,add(600000,inum(0)))],%b,)])]
+        flags: [funsyntax]
+      # A grant for each condition in enc_conds and enc_fxc (set by FUN`ENC`LEDGER), with the ones they imply.
+      FUN`ENC`LEDGER`CONDS:
+        value: |-
+          [
+          iter(setunion(setr(enc_keys,setunion(json_map(%!/FUN`JSON`KEY,%q<enc_conds>,%b),iter(%q<enc_fxc>,first(%i0,~)))) [iter(%q<enc_keys>,u(FUN`ENC`IMPLIED,%i0))],),if(strlen(setr(enc_cid,u({{core}}/FUN`ITEM`FIND,conditions,%i0))),json(object,kind,"grant",pack,"conditions",id,json(string,%q<enc_cid>),badge,if(setr(enc_badge,firstof(json_query(%q<enc_conds>,extract,$.%i0),after(grab(%q<enc_fxc>,%i0~*),~))),%q<enc_badge>,null),n,add(100000,inum(0)))),%b,\,)]
+        flags: [funsyntax]
+      # %0 a combatant's index: an entry for each item it has used up.
+      FUN`ENC`LEDGER`USED:
+        value: |-
+          [
+          iter(json_map(%!/FUN`JSON`KEY,setr(enc_used,firstof(u(FUN`ENC`C,%0,used),json(object))),%b),json_fill(v(DATA`TEMPLATE`ENC`LEDGER),/id,%i0,/qty,first(json_query(%q<enc_used>,extract,$.%i0),|),/where,rest(json_query(%q<enc_used>,extract,$.%i0),|),/n,add(200000,inum(0))),%b,\,)]
+        flags: [funsyntax]
+      # %0 a combatant's index: a grant for each effect still running on it.
+      FUN`ENC`LEDGER`FX:
+        value: |-
+          [
+          iter(u(FUN`FX`LIVE,setr(enc_fx,firstof(u(FUN`ENC`C,%0,fx),json(object)))),json_fill(v(DATA`TEMPLATE`ENC`LEDGER`2),/pack,edit(json_query(%q<enc_fx>,extract,$\["%i0"\].pack),",),/id,%i0,/choices,json_mod(firstof(json_query(%q<enc_fx>,extract,$\["%i0"\].ch),json(object)),patch,json(object,effectLevel,json_query(%q<enc_fx>,extract,$\["%i0"\].lvl))),/badge,firstof(json_query(%q<enc_fx>,extract,$\["%i0"\].badge),null),/n,add(300000,inum(0))),%b,\,)]
+        flags: [funsyntax]
+      # %0 a combatant's index: a toggle entry for each roll option it has set.
+      FUN`ENC`LEDGER`TOGGLES:
+        value: |-
+          [
+          iter(json_map(%!/FUN`JSON`KEY,setr(enc_tg,firstof(u(FUN`ENC`C,%0,tg),json(object))),%b),json_fill(v(DATA`TEMPLATE`ENC`LEDGER`3),/domain,before(%i0,|),/option,after(%i0,|),/value,if(first(json_query(%q<enc_tg>,extract,$\["%i0"\]),|),true,false),/selection,if(strlen(setr(enc_tgsel,rest(json_query(%q<enc_tg>,extract,$\["%i0"\]),|))),json(string,%q<enc_tgsel>),null),/n,add(400000,inum(0))),%b,\,)]
+        flags: [funsyntax]
+      # %0 a combatant's index: the roll options its kind and raised shield give.
+      FUN`ENC`LEDGER`OPTIONS:
+        value: |-
+          [
+          iter(squish([if(strmatch(u(FUN`ENC`C,%0,kind),npc),self:type:[if(t(u(FUN`ENC`C,%0,hazard)),hazard,npc)])] [if(t(u(FUN`ENC`C,%0,raised)),self:shield:raised self:effect:raise-a-shield)] [if(strlen(setr(enc_shst,u(FUN`ENC`C,%0,shst))),self:shield:%q<enc_shst>)]),json(object,kind,"option",option,json(string,%i0),n,add(500000,inum(0))),%b,\,)]
         flags: [funsyntax]
       # The conditions a combatant's effects grant (GrantItem of a condition whose predicate holds for the effect's
       # choices), each slug~badge value: Leaden Steps brings encumbered, Synesthesia on a critical failure stunned 2.
