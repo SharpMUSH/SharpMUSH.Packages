@@ -70,6 +70,8 @@ jobs:
         env:
           SHARPMUSH_PACKAGES_PATH: ${{ github.workspace }}/packages
           TUNIT_DISABLE_HTML_REPORTER: "true"
+          ENGINE_REF: ${{ matrix.sharpmush-ref }}
+          MAIN_REF: ${{ vars.SHARPMUSH_REF || 'main' }}
         timeout-minutes: 30
         run: |
           if grep -rqs --include=*.cs "namespace SharpMUSH.Tests.PackageLibrary;" SharpMUSH.Tests.Integration; then
@@ -77,7 +79,14 @@ jobs:
           else
             filter="/*/*/Duties*/*"
           fi
-          dotnet run --project SharpMUSH.Tests.Integration -- --treenode-filter "$filter" --output Detailed
+          # A release's dependencies are fixed when it is tagged, and an advisory published later fails its
+          # restore (NU1902 is an error under TreatWarningsAsErrors) without saying anything about the
+          # packages. main keeps the audit.
+          audit=""
+          if [ "$ENGINE_REF" != "$MAIN_REF" ]; then
+            audit="-p:NuGetAudit=false"
+          fi
+          dotnet run --project SharpMUSH.Tests.Integration $audit -- --treenode-filter "$filter" --output Detailed
 
   checks:
     runs-on: ubuntu-latest
