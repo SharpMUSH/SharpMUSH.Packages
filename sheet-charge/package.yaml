@@ -644,7 +644,8 @@ objects:
         value: |-
           @assert cand(isint(%q<cmd_argument>),gte(%q<cmd_argument>,0))=@pemit %#=notice(SHEET,+check/determination <momentum> resists a consequence: one die for each momentum you spend%, such as +check/determination 2.,warn); think setq(determination_have,u(%!/API`CHARGES,%q<viewer_objid>)); @assert lte(%q<cmd_argument>,%q<determination_have>)=@pemit %#=notice(SHEET,You have %q<determination_have> momentum.,warn); @include %!/INC`CHECK`DETERMINATION`ROLL; @break %q<cmd_private>=@pemit %#=notice(SHEET,You privately make %q<determination_line>); @remit %l=notice(SHEET,tone(strong,name(%#)) makes %q<determination_line>)
         flags: [cmdsyntax]
-      # Rolls %q<cmd_argument> dice and sets determination_line to the roll and the consequence it resists.
+      # Spends %q<cmd_argument> momentum, rolls that many dice, and sets determination_line to the roll and the
+      # consequence it resists.
       INC`CHECK`DETERMINATION`ROLL:
         value: |-
           think setqm(determination_rolled,u(%!/FUN`POOL`ROLL,%q<cmd_argument>),determination_tier,u(%!/API`TIER,json_query(%q<determination_rolled>,extract,$.total),u(%!/FUN`POOL`SIXES,%q<determination_rolled>,%q<cmd_argument>)),determination_left,u(%!/API`MOMENTUM,%q<viewer_objid>,-%q<cmd_argument>)); think setq(determination_line,a determination roll with %q<cmd_argument> momentum: [json_query(%q<determination_rolled>,extract,$.text)]: [tone(u(%!/FUN`DISPLAY`TIERTONE,%q<determination_tier>),u(%!/FUN`DISPLAY`RESISTED,%q<determination_tier>))]. [name(%#)] has %q<determination_left> momentum. [tone(muted,%(roll [json_query(%q<determination_rolled>,extract,$.id)]%))]); think setq(determination_line,%q<determination_line>[u(%!/FUN`CONSEQUENCE`RESIST,%q<determination_tier>)])
