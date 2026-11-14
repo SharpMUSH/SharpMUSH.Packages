@@ -63,7 +63,12 @@ steps:
     sees: ["Healing 1d8[", "${livia.name} regains"]
     not_sees: basic Fortitude
   - as: cleric
+    run: +cast Heal with 2 actions=${livia.name},${dhamp.name}
+    sees: "has one target"
+    not_sees: casts
+    because: the two-action variant is chosen by its one target, so a second is refused before anything is spent
+  - as: cleric
     run: +cast Heal with 2 actions=${dhamp.name}
-    sees: ["vitality.", "${dhamp.name} takes"]
+    sees: ["(vs. Undead)", "basic Fortitude", "vitality.", "${dhamp.name}: 1d20["]
     not_sees: "${dhamp.name} regains"
     because: the two-action variant against a dhampir is the one that harms
