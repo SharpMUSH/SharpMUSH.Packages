@@ -1,7 +1,7 @@
 format: "1.20"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.11.0"
+version: "0.12.0"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, downtime (+downtime: Earn Income, Crafting, Learn a Spell, Retraining), loot, stashes and shops with unidentified magic items (+loot, +identify), and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -114,7 +114,7 @@ objects:
       # ledger read again costs a few hundred function calls. The key is the ledger with the package's
       # version, the books and CACHE`STAMP, which the updater and the deity table change. CACHE lists
       # the keys oldest first; past DATA`CACHE`KEEP the oldest goes.
-      DATA`CACHE`VERSION: "0.11.0"
+      DATA`CACHE`VERSION: "0.12.0"
       DATA`CACHE`KEEP: 200
       DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_itemalts check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_shieldrules check_bulkrules check_bulk check_bulk_enc check_bulk_max check_attrs check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
       # The ItemAlteration properties the core applies, by the kind of item they reach.
@@ -5480,7 +5480,7 @@ objects:
       # one goes with everything it brought; a class with one key attribute boosts it at once.
       INC`BUILD`PICK:
         value: |-
-          @include %!/INC`BUILD`GUARD; @include %!/INC`BUILD`PICK`FIND; @include %!/INC`BUILD`BEGIN; @include/nobreak %!/INC`BUILD`CLEAR; @include/nobreak %!/INC`BUILD`FUNDS; think setqm(grant_pack,%q<build_pack>,grant_id,%q<build_id>,grant_choices,,grant_parent,if(strmatch(%q<build_step>,heritage),elements(u(%!/FUN`BUILD`GRANT`OF,ancestry),1,~)),grant_step,%q<build_step>,grant_level,,grant_depth,0); @include %!/INC`BUILD`GRANT; think setq(build_picked,%q<build_last>); @include/nobreak %!/INC`BUILD`CLASS`KEY; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)][capstr(%q<build_step>)]: [json_query(%q<build_item>,extract,$.name)].,ok); @wait 0={think u(%!/FUN`BUILD`LOAD); @pemit %#=u(%!/FUN`BUILD`NEXT)}
+          @include %!/INC`BUILD`GUARD; @include %!/INC`BUILD`PICK`FIND; @include %!/INC`BUILD`BEGIN; @include/nobreak %!/INC`BUILD`CLEAR; @include/nobreak %!/INC`BUILD`FUNDS; think setqm(grant_pack,%q<build_pack>,grant_id,%q<build_id>,grant_choices,,grant_parent,if(strmatch(%q<build_step>,heritage),elements(u(%!/FUN`BUILD`GRANT`OF,ancestry),1,~)),grant_step,%q<build_step>,grant_level,,grant_depth,0); @include %!/INC`BUILD`GRANT; think setq(build_picked,%q<build_last>); @include/nobreak %!/INC`BUILD`CLASS`KEY; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)][capstr(%q<build_step>)]: [json_query(%q<build_item>,extract,$.name)].,ok); @include/nobreak %!/INC`BUILD`PICK`INNATE; @wait 0={think u(%!/FUN`BUILD`LOAD); @pemit %#=u(%!/FUN`BUILD`NEXT)}
         flags: [cmdsyntax]
       # +build pick: finds the item named in %q<cmd_rest> in %q<build_pack> (%q<build_id>, %q<build_item>), and stops
       # unless there is exactly one, or the heritage does not fit.
@@ -5496,6 +5496,14 @@ objects:
       INC`BUILD`CLASS`KEY:
         value: |-
           @break cor(not(strmatch(%q<build_step>,class)),neq(json_query(json_query(%q<build_item>,extract,$.system.keyAbility.value),size),1)); think setq(entry_json,json(object,kind,"boost",ability,json(string,json_query(%q<build_item>,extract,$.system.keyAbility.value\[0\])),step,"boost-class",parent,%q<build_picked>)); @include %!/INC`BUILD`PUT
+        flags: [cmdsyntax]
+      # Innate spells a pick brings that its rules do not, as <step>:<name>~<spell>~<uses a day, 0 at will>, |-separated.
+      # Blessed's text gives Guidance at will, or another blessing the GM chooses: staff take it off with
+      # +build/uninnate and add theirs. The entry hangs off the pick, so picking another background drops it.
+      DATA`BUILD`INNATE: "background:Blessed~Guidance~0"
+      INC`BUILD`PICK`INNATE:
+        value: |-
+          think setq(build_innate,grab(v(DATA`BUILD`INNATE),%q<build_step>:[json_query(%q<build_item>,extract,$.name)]~*,|)); @break not(strlen(%q<build_innate>)); think setq(build_innate_id,u({{core}}/FUN`ITEM`FIND,spells,elements(%q<build_innate>,2,~))); @break not(strlen(%q<build_innate_id>)); @break words(squish(iter(graball(%q<check_entries>,innate~[ucstr(%q<build_innate_id>)]~*),if(comp(elements(%i0,8,~),innate-%q<build_step>),x))))=@pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)]The sheet has [u(%!/FUN`SHOW`SPELLNAME,%q<build_innate_id>)] as an innate spell already.,ok); think setq(entry_json,json(object,kind,"innate",id,json(string,%q<build_innate_id>),per,elements(%q<build_innate>,3,~),step,json(string,innate-%q<build_step>),parent,%q<build_picked>)); @include %!/INC`BUILD`PUT; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)]Innate spell: [u(%!/FUN`SHOW`SPELLNAME,%q<build_innate_id>)] %([if(elements(%q<build_innate>,3,~),elements(%q<build_innate>,3,~) a day,at will)]%)%, from [json_query(%q<build_item>,extract,$.name)].,ok)
         flags: [cmdsyntax]
       DATA`TEMPLATE`INC`BUILD`BOOST: |-
         {"kind":"","ability":"","step":"","parent":null}
@@ -7962,8 +7970,8 @@ objects:
         flags: [funsyntax]
       FUN`ACT`STRIKE`INHAND:
         value: |-
-          @@(%0 a Strike from FUN`ACT`STRIKES: 1 when it is a melee Strike ready without drawing a weapon)[
-          cand(not(u(FUN`ACT`STRIKE`RANGED,%0)),cor(strmatch(last(%0,|),npc:*),not(strlen(json_query(last(%0,|),extract,$.where)))))]
+          @@(%0 a Strike from FUN`ACT`STRIKES: 1 when it is a melee Strike ready without drawing a weapon, act_at's drawn ones too)[
+          cand(not(u(FUN`ACT`STRIKE`RANGED,%0)),cor(strmatch(last(%0,|),npc:*),not(strlen(json_query(last(%0,|),extract,$.where))),member(u(FUN`ENC`C,%q<act_at>,drawn),u(FUN`ACT`STRIKE`DRAWID,%0))))]
         flags: [funsyntax]
       FUN`ACT`STRIKE`RANGED:
         value: |-
@@ -8427,9 +8435,28 @@ objects:
           u(FUN`ACT`ROLL,%q<strike_total>,%q<strike_ac>,if(%q<strike_pc>,%q<strike_domains>),%q<act_tgtopts> [if(%q<strike_pc>,%q<strike_options>)])[
           u(FUN`ACT`RUNE`DOS)][
           u(FUN`ACT`NOTEFX`KEEP)][
-          if(t(%q<strike_react>),[u(FUN`ENC`SET,%q<act_at>,react,1)][setq(spend_warn,)],[u(FUN`ENC`SET,%q<act_at>,map,inc(u(FUN`ENC`C,%q<act_at>,map)))][u(FUN`ACTION`SPEND,%q<act_at>,1)])][
+          if(t(%q<strike_react>),[u(FUN`ENC`SET,%q<act_at>,react,1)][setqm(spend_warn,,strike_drawsay,)],[u(FUN`ENC`SET,%q<act_at>,map,inc(u(FUN`ENC`C,%q<act_at>,map)))][u(FUN`ACTION`SPEND,%q<act_at>,add(1,u(FUN`ACT`STRIKE`DRAW)))])][
           setq(strike_crit,cand(eq(%q<roll_degree>,3),not(u(FUN`ACT`IMMUNE,%q<act_target>,critical-hits))))][
-          setq(enc_say,[u(FUN`ENC`C,%q<act_at>,name)] Strikes [u(FUN`ENC`C,%q<act_target>,name)] with [first(%q<act_strike>,|)][if(t(%q<strike_react>),%bas a reaction)]: [json_query(%q<roll_record>,extract,$.text)][u(FUN`ACT`TAGS)][if(%q<strike_map>,%b%(MAP -%q<strike_map>%))] vs AC [if(cor(%q<enc_gm>,strmatch(u(FUN`ENC`C,%q<act_target>,kind),pc)),%q<strike_ac>,?)]: [tone(strong,u(FUN`ACT`DEGREE,%q<roll_degree>))][u(FUN`ACT`ADJUSTED)][if(strlen(%q<rune_dos>),%b%(%q<rune_dos>%, [lcstr(u(FUN`ACT`DEGREE,%q<rune_dos_was>))] rolled%))][if(cand(eq(%q<roll_degree>,3),not(%q<strike_crit>)),%, but [u(FUN`ENC`C,%q<act_target>,name)] is immune to critical hits)].[u(FUN`ACT`NOTES)])]
+          setq(enc_say,%q<strike_drawsay>[u(FUN`ENC`C,%q<act_at>,name)] Strikes [u(FUN`ENC`C,%q<act_target>,name)] with [first(%q<act_strike>,|)][if(t(%q<strike_react>),%bas a reaction)]: [json_query(%q<roll_record>,extract,$.text)][u(FUN`ACT`TAGS)][if(%q<strike_map>,%b%(MAP -%q<strike_map>%))] vs AC [if(cor(%q<enc_gm>,strmatch(u(FUN`ENC`C,%q<act_target>,kind),pc)),%q<strike_ac>,?)]: [tone(strong,u(FUN`ACT`DEGREE,%q<roll_degree>))][u(FUN`ACT`ADJUSTED)][if(strlen(%q<rune_dos>),%b%(%q<rune_dos>%, [lcstr(u(FUN`ACT`DEGREE,%q<rune_dos_was>))] rolled%))][if(cand(eq(%q<roll_degree>,3),not(%q<strike_crit>)),%, but [u(FUN`ENC`C,%q<act_target>,name)] is immune to critical hits)].[u(FUN`ACT`NOTES)])]
+        flags: [funsyntax]
+      # A character's Strike with a weapon the sheet carries but does not hold draws it first: an Interact action,
+      # none with Quick Draw. The combatant's drawn field keeps the item ids of what it has drawn this encounter, so
+      # the next Strike with it needs no draw; a consumable, such as a bomb, is drawn for every Strike. Sets
+      # strike_drawsay; 1 when the draw costs an action.
+      FUN`ACT`STRIKE`DRAW:
+        value: |-
+          @@(after FUN`ACT`STRIKE`SETUP for act_at's act_strike)[
+          setqm(strike_drawsay,,sd_src,last(%q<act_strike>,|),sd_id,u(FUN`ACT`STRIKE`DRAWID,%q<act_strike>),sd_drawn,u(FUN`ENC`C,%q<act_at>,drawn))][
+          if(cor(strmatch(%q<sd_src>,npc:*),not(strlen(json_query(%q<sd_src>,extract,$.where))),member(%q<sd_drawn>,%q<sd_id>)),0,
+            [if(not(strlen(after(elements(%q<act_strike>,6,|),~))),u(FUN`ENC`SET,%q<act_at>,drawn,json(string,trim(%q<sd_drawn> %q<sd_id>))))][
+            setq(sd_quick,t(member(%q<check_options>,feat:quick-draw)))][
+            setq(strike_drawsay,[u(FUN`ENC`C,%q<act_at>,name)] draws [first(%q<act_strike>,|)][if(%q<sd_quick>,%bwith Quick Draw)].%b)][
+            not(%q<sd_quick>)])]
+        flags: [funsyntax]
+      FUN`ACT`STRIKE`DRAWID:
+        value: |-
+          @@(%0 a Strike from FUN`ACT`STRIKES: its weapon's item id, or its name)[
+          firstof(json_query(last(%0,|),extract,$.id),edit(first(%0,|),%b,_))]
         flags: [funsyntax]
       # Plans the damage for the degree of success and deals it, keeping what a Shield Block needs.
       FUN`ACT`STRIKE`DAMAGE:
@@ -8856,14 +8883,18 @@ objects:
           setqm(cast_atk,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,attack)),cast_dc,add(10,u({{core}}/FUN`CHECK`TOTAL,u({{core}}/FUN`CHECK`SPELL,dc))))]
         flags: [funsyntax]
       # The damage and healing rolled once for every target: cast_dmg_parts, cast_dmg_text, cast_heal_n, cast_heal_text, and cast_say.
+      # A spell whose one roll heals some targets and harms others (spell_both with both left) rolls its formula once:
+      # the healing is that roll, and the damage that number with the damage's own bonuses.
       FUN`CAST`ROLLS:
         value: |-
           @@(spell_ registers)[
           setqm(cast_dmg_parts,,cast_dmg_text,,cast_heal_n,0,cast_heal_text,,cast_say,)][
-          if(cor(strlen(%q<spell_dmg>),strlen(%q<spell_pers>)),
-            [u({{core}}/FUN`DAMAGE`SPELL,%q<spell_dmg>,%q<spell_pers>,)][u({{core}}/FUN`DAMAGE`FORMULA,2)][u(FUN`ACT`DAMAGE`ROLL)][
-            setqm(cast_iwropts,squish(%q<dmg_options> [if(strlen(json_query(%q<spell_sys>,extract,$.area.type)),area-damage)]),cast_dmg_parts,%q<dmg_parts>,cast_dmg_text,trim(%q<dmg_text>),cast_dmg_raw,%q<dmg_raw>,spell_pers,iter(%q<dmg_pers>,first(%i0,~),|,%,%b))])][
+          setq(cast_shared,cand(%q<spell_both>,strlen(%q<spell_heal>),strlen(%q<spell_dmg>)))][
           if(strlen(%q<spell_heal>),[u(FUN`ACT`DAMAGE,%q<spell_heal>,0)][setqm(cast_heal_n,%q<dmg_total>,cast_heal_text,trim(%q<dmg_text>))])][
+          setq(cast_dmg_in,if(%q<cast_shared>,iter(%q<spell_dmg>,if(comp(trim(%i0),%q<spell_heal> %q<spell_bothtype>),trim(%i0),%q<cast_heal_n> %q<spell_bothtype>),%,,%,%b),%q<spell_dmg>))][
+          if(cor(strlen(%q<spell_dmg>),strlen(%q<spell_pers>)),
+            [u({{core}}/FUN`DAMAGE`SPELL,%q<cast_dmg_in>,%q<spell_pers>,)][u({{core}}/FUN`DAMAGE`FORMULA,2)][u(FUN`ACT`DAMAGE`ROLL)][
+            setqm(cast_iwropts,squish(%q<dmg_options> [if(strlen(json_query(%q<spell_sys>,extract,$.area.type)),area-damage)]),cast_dmg_parts,%q<dmg_parts>,cast_dmg_text,trim(%q<dmg_text>),cast_dmg_raw,%q<dmg_raw>,spell_pers,iter(%q<dmg_pers>,first(%i0,~),|,%,%b))])][
           setq(cast_say,trim(squish([if(%q<spell_attack>,Spell attack [u(FUN`SHOW`SIGNED,%q<cast_atk>)].)] [if(strlen(%q<spell_save>),DC %q<cast_dc> [if(%q<spell_basic>,basic%b)][capstr(%q<spell_save>)].)] [if(strlen(%q<cast_dmg_text>),Damage %q<cast_dmg_text>[if(gt(words(%q<cast_dmg_parts>,|),1),%b= %q<cast_dmg_raw>)].)] [if(strlen(%q<spell_pers>),Persistent %q<spell_pers>.)] [if(strlen(%q<cast_heal_text>),Healing %q<cast_heal_text>.)])))]
         flags: [funsyntax]
       FUN`CAST`HEAD:
@@ -10899,7 +10930,7 @@ objects:
         - `+build/choose <number or name>=<option>`: a choice a feature asks for, such as `+build/choose instinct=giant` or `+build/choose deity=Solenne` (`+help pf2e deity`). `+build/list choice instinct` lists the options.
         - `+build/spell <name>`, `+build/unspell <name>`: the spells a spontaneous caster, a wizard or a witch knows, and focus spells. `+build/list spells 1` lists the rank 1 spells of your tradition, `+build/list spells cantrips` the cantrips, `+build/list spells 1 any` every tradition's. A spontaneous caster learns as many spells of a rank as they have slots, a wizard's spellbook and a witch's familiar hold 10 cantrips and 5 spells plus 2 a level. A cleric or druid learns none: they prepare any common spell of their tradition.
         - `+build/signature <spell>\[ at <rank>\]`: a signature spell, with the Signature Spells feature.
-        - `+build/innate <spell>\[=<times a day>\]`: a spell you cast innately, from a feat such as Otherworldly Magic: a cantrip at will, another spell once a day unless you give a count (0 for at will). It uses Charisma and at least trained proficiency. `+build/uninnate <spell>` takes it off.
+        - `+build/innate <spell>\[=<times a day>\]`: a spell you cast innately, from a feat such as Otherworldly Magic: a cantrip at will, another spell once a day unless you give a count (0 for at will). It uses Charisma and at least trained proficiency. `+build/uninnate <spell>` takes it off. The Blessed background brings Guidance at will; when the GM gives another blessing instead, take Guidance off with `+build/uninnate Guidance` (staff, once the sheet is finished) and add that one.
         - `+build/formula <item>`, `+build/unformula <item>`: formulas for alchemical items of your level or lower, four from Alchemical Crafting and two a level from an alchemist's formula book.
 
         ## Gear
@@ -10920,7 +10951,7 @@ objects:
       HELP`PF2E`SHEET: |-
         `+sheet` shows your character: level and experience, ancestry, background, class and deity, traits, size, attributes, hit points, AC with the armor worn, the shield held, Speed and other movement, Bulk, class DC, spell attack and DC, senses, weaknesses, resistances and immunities, every skill and save with its rank and modifier, Lores, Strikes, languages, money, gear, spells by rank, feats and features, actions and conditions.
 
-        - Every weapon has a Strike, held ones first; one that is carried says so, because you draw it before you Strike with it.
+        - Every weapon has a Strike, held ones first; one that is carried says so. On your turn, your first Strike with a carried weapon in an encounter draws it, which costs one more action, or none with Quick Draw; a bomb or other consumable is drawn for every Strike. A reaction can't draw a weapon.
         - `+sheet` shows your own; staff add a name: `+sheet Amiri`.
         - Bulk is counted as Foundry counts it. Gear held or worn counts its Bulk; carried gear counts what it weighs stowed, and armor that is not worn counts one step more. Ten light items are 1 Bulk, ammunition counts by its bundle, and 1,000 coins are 1 Bulk.
         - You are encumbered past 5 plus your Strength modifier and can carry at most 10 plus it; feats, items and effects such as Hefty Hauler and Ant Haul raise both. Past the first you have the encumbered condition, which makes you clumsy 1 and takes 10 feet off your Speeds, in checks and encounters too.

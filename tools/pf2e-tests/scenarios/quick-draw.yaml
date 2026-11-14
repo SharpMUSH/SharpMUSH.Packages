@@ -1,0 +1,49 @@
+# A Strike with a weapon the sheet carries but does not hold draws it first, one more action; after that it is
+# in hand for the encounter. With Quick Draw the draw costs nothing.
+install: [pf2e]
+feed: [ancestries/Human, heritages/Skilled Human, classes/Fighter, equipment/Dagger, feats/Quick Draw]
+players:
+  blade: { room: yard }
+  post: { room: yard }
+steps:
+  - god: "@tel me=${blade}"
+  - as: blade
+    run: +build/ancestry Human
+  - as: blade
+    run: +build/heritage Skilled Human
+  - as: blade
+    run: +build/class Fighter
+  - as: blade
+    run: +build/buy Dagger
+  - as: post
+    run: +build/ancestry Human
+  - as: post
+    run: +build/heritage Skilled Human
+  - as: post
+    run: +build/class Fighter
+  - god: +enc/start
+  - god: +enc/add ${blade.name}
+  - god: +enc/init
+  - god: +enc/next
+  - god: +enc/add ${post.name}
+  - as: blade
+    run: +enc/strike ${post.name}=Dagger
+    sees: "${blade.name} draws Dagger. ${blade.name} Strikes ${post.name} with Dagger"
+  - eval: "[u(${object:pf2e/table}/FUN`ENC`LOAD,loc(me))][u(${object:pf2e/table}/FUN`ENC`C,0,acts)]"
+    is: "2"
+    because: the draw is an action of its own
+  - as: blade
+    run: +enc/strike ${post.name}=Dagger
+    sees: "${blade.name} Strikes ${post.name} with Dagger"
+    not_sees: draws
+  - eval: "[u(${object:pf2e/table}/FUN`ENC`LOAD,loc(me))][u(${object:pf2e/table}/FUN`ENC`C,0,acts)]"
+    is: "3"
+    because: the dagger stays drawn
+  - god: +enc/next
+  - as: blade
+    run: +enc/react ${post.name}=Dagger
+    sees: "${blade.name} Strikes ${post.name} with Dagger as a reaction"
+    because: the dagger drawn on the fighter's turn is in hand for a Reactive Strike
+  - eval: "[u(${object:pf2e/table}/FUN`ENC`LOAD,loc(me))][setq(act_at,1,act_strike,Dagger|0|||5|~|||||[json(object,id,\"DAGGER\",where,\"carried\")],check_options,feat:quick-draw)][u(${object:pf2e/table}/FUN`ACT`STRIKE`DRAW)]-%q<strike_drawsay>"
+    sees: "0-${post.name} draws Dagger with Quick Draw."
+    because: Quick Draw draws the weapon as part of the Strike

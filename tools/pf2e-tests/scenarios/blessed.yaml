@@ -1,0 +1,35 @@
+# The Blessed background's text gives Guidance as a divine innate spell at will, which Foundry's rules leave out.
+# The innate spell hangs off the background, so picking another background takes it away.
+install: [pf2e]
+feed: [ancestries/Human, heritages/Skilled Human, backgrounds/Blessed, backgrounds/Acolyte, spells/Guidance]
+players:
+  saint: { room: shrine }
+steps:
+  - as: saint
+    run: +build/ancestry Human
+  - as: saint
+    run: +build/heritage Skilled Human
+  - as: saint
+    run: +build/background Blessed
+    sees: ["Background: Blessed.", "Innate spell: Guidance (at will), from Blessed."]
+  - as: saint
+    run: +build/background Blessed
+    sees: "Innate spell: Guidance (at will), from Blessed."
+    because: picking it again replaces the old pick and what it brought
+  - as: saint
+    run: +build/innate Guidance
+    sees: "The sheet has Guidance as an innate spell already."
+    because: the background put Guidance on the sheet
+  - as: saint
+    run: +build/background Acolyte
+    sees: "Background: Acolyte."
+    not_sees: Innate spell
+  - as: saint
+    run: +build/innate Guidance
+    sees: "Innate spell: Guidance (at will)."
+    because: Acolyte brings no innate spell, and Blessed's Guidance went with it
+  - as: saint
+    run: +build/background Blessed
+    sees: "The sheet has Guidance as an innate spell already."
+    not_sees: "from Blessed"
+    because: Guidance added by hand is not added twice
