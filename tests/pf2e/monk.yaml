@@ -325,6 +325,9 @@ steps:
   - eval: "[u(${object:pf2e/core}/FUN`CHECK`PREPARE,u(${object:pf2e/commands}/FUN`LEDGER`OF,${qi}))][u(${object:pf2e/core}/FUN`CHECK`RANK,spellcasting)] [u(${object:pf2e/core}/FUN`CHECK`SPELLKEY)]"
     is: 1 wis
     because: Qi Spells makes the monk trained in spellcasting, with Wisdom
+  - eval: "[u(${object:pf2e/core}/FUN`CHECK`PREPARE,u(${object:pf2e/commands}/FUN`LEDGER`OF,${qi}))][setq(pick_source,focus,pick_opts,item:trait:monk item:trait:focus)][u(${object:pf2e/core}/FUN`CHECK`SPELLKEY)]-[setq(pick_opts,item:trait:wizard item:trait:focus)][u(${object:pf2e/core}/FUN`CHECK`SPELLKEY)]-[setq(pick_source,prepared,pick_opts,item:trait:monk)][u(${object:pf2e/core}/FUN`CHECK`SPELLKEY)]-"
+    is: wis---
+    because: Qi Spells gives Wisdom to monk focus spells only, not another class's focus spells or other spells
   - as: stone
     run: +build/ancestry Human
   - as: stone

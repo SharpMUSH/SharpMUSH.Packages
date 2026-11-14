@@ -3040,9 +3040,10 @@ objects:
           u(FUN`CHECK`MODS,ability~[u(FUN`CHECK`ABILITY,%q<classdc_key>)]~%q<classdc_key>~0 proficiency~[u(FUN`CHECK`PROFICIENCY,max(u(FUN`CHECK`RANK,classdc),if(strlen(%q<check_class>),u(FUN`CHECK`RANK,u(FUN`ITEM`SLUG,u(FUN`CHECK`ITEM,%q<check_class>))),0)))]~proficiency~0,class class-dc all %q<classdc_key>-based,)]
         flags: [funsyntax]
       # The attribute spells are cast with when an option, not the class's key attribute, decides it:
-      # option~attribute~sources, the spells it covers by pick_source (and the sheet's figures, with none picked).
-      # Qi Spells makes a monk's focus spells Wisdom spells.
-      DATA`SPELL`KEYS: feat:qi-spells~wis~focus
+      # option~attribute~sources~trait: the spells it covers, by pick_source and a trait in pick_opts; with none
+      # picked (the sheet's figures), a character of the class the trait names. Qi Spells makes monk focus spells
+      # Wisdom spells.
+      DATA`SPELL`KEYS: feat:qi-spells~wis~focus~monk
       # Spell attack modifiers (%0 attack) or spell DC modifiers (%0 dc, 10 plus their total), from the key attribute and the spellcasting proficiency.
       FUN`CHECK`SPELL:
         value: |-
@@ -3052,8 +3053,15 @@ objects:
         flags: [funsyntax]
       FUN`CHECK`SPELLKEY:
         value: |-
-          @@(check_options, pick_source: the attribute DATA`SPELL`KEYS gives, or nothing)[
-          first(iter(v(DATA`SPELL`KEYS),if(cand(member(%q<check_options>,first(%i0,~)),cor(not(strlen(%q<pick_source>)),member(edit(elements(%i0,3,~),|,%b),%q<pick_source>))),elements(%i0,2,~))))]
+          @@(check_options, pick_source, pick_opts: the attribute DATA`SPELL`KEYS gives, or nothing)[
+          first(iter(v(DATA`SPELL`KEYS),if(cand(member(%q<check_options>,first(%i0,~)),u(FUN`CHECK`SPELLKEY`COVERS,%i0)),elements(%i0,2,~))))]
+        flags: [funsyntax]
+      FUN`CHECK`SPELLKEY`COVERS:
+        value: |-
+          @@(%0 a DATA`SPELL`KEYS entry: 1 when it covers the spell picked, or the sheet's figures with none)[
+          if(strlen(%q<pick_source>),
+            cand(member(edit(elements(%0,3,~),|,%b),%q<pick_source>),member(%q<pick_opts>,item:trait:[elements(%0,4,~)])),
+            t(member(%q<check_options>,class:[elements(%0,4,~)])))]
         flags: [funsyntax]
       # Hit points: the ancestry's, the class's plus Constitution for each level, and the hp and
       # hp-per-level synthetics.
