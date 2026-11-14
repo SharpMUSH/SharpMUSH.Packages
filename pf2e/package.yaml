@@ -1,7 +1,7 @@
 format: "1.20"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.10.22"
+version: "0.10.23"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, downtime (+downtime: Earn Income, Crafting, Learn a Spell, Retraining), loot, stashes and shops with unidentified magic items (+loot, +identify), and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -114,7 +114,7 @@ objects:
       # ledger read again costs a few hundred function calls. The key is the ledger with the package's
       # version, the books and CACHE`STAMP, which the updater and the deity table change. CACHE lists
       # the keys oldest first; past DATA`CACHE`KEEP the oldest goes.
-      DATA`CACHE`VERSION: "0.10.22"
+      DATA`CACHE`VERSION: "0.10.23"
       DATA`CACHE`KEEP: 200
       DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_itemalts check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_shieldrules check_bulkrules check_bulk check_bulk_enc check_bulk_max check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
       # The ItemAlteration properties the core applies, by the kind of item they reach.
@@ -5403,7 +5403,7 @@ objects:
       # one goes with everything it brought; a class with one key attribute boosts it at once.
       INC`BUILD`PICK:
         value: |-
-          @include %!/INC`BUILD`GUARD; @include %!/INC`BUILD`PICK`FIND; @include %!/INC`BUILD`BEGIN; @include/nobreak %!/INC`BUILD`CLEAR; @include/nobreak %!/INC`BUILD`FUNDS; think setqm(grant_pack,%q<build_pack>,grant_id,%q<build_id>,grant_choices,,grant_parent,if(strmatch(%q<build_step>,heritage),elements(u(%!/FUN`BUILD`GRANT`OF,ancestry),1,~)),grant_step,%q<build_step>,grant_level,,grant_depth,0); @include %!/INC`BUILD`GRANT; think setq(build_picked,u(%!/FUN`BUILD`GRANT`N,%q<build_pack>,%q<build_id>)); @include/nobreak %!/INC`BUILD`CLASS`KEY; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)][capstr(%q<build_step>)]: [json_query(%q<build_item>,extract,$.name)].,ok); @wait 0={think u(%!/FUN`BUILD`LOAD); @pemit %#=u(%!/FUN`BUILD`NEXT)}
+          @include %!/INC`BUILD`GUARD; @include %!/INC`BUILD`PICK`FIND; @include %!/INC`BUILD`BEGIN; @include/nobreak %!/INC`BUILD`CLEAR; @include/nobreak %!/INC`BUILD`FUNDS; think setqm(grant_pack,%q<build_pack>,grant_id,%q<build_id>,grant_choices,,grant_parent,if(strmatch(%q<build_step>,heritage),elements(u(%!/FUN`BUILD`GRANT`OF,ancestry),1,~)),grant_step,%q<build_step>,grant_level,,grant_depth,0); @include %!/INC`BUILD`GRANT; think setq(build_picked,%q<build_last>); @include/nobreak %!/INC`BUILD`CLASS`KEY; @pemit %#=notice(PF2E,[u(%!/FUN`BUILD`WHO)][capstr(%q<build_step>)]: [json_query(%q<build_item>,extract,$.name)].,ok); @wait 0={think u(%!/FUN`BUILD`LOAD); @pemit %#=u(%!/FUN`BUILD`NEXT)}
         flags: [cmdsyntax]
       # +build pick: finds the item named in %q<cmd_rest> in %q<build_pack> (%q<build_id>, %q<build_item>), and stops
       # unless there is exactly one, or the heritage does not fit.
@@ -5418,7 +5418,7 @@ objects:
         flags: [cmdsyntax]
       INC`BUILD`CLASS`KEY:
         value: |-
-          @break cor(not(strmatch(%q<build_step>,class)),neq(json_query(%q<build_item>,extract,$.system.keyAbility.value.length),1)); think setq(entry_json,json(object,kind,"boost",ability,json(string,json_query(%q<build_item>,extract,$.system.keyAbility.value\[0\])),step,"boost-class",parent,%q<build_picked>)); @include %!/INC`BUILD`PUT
+          @break cor(not(strmatch(%q<build_step>,class)),neq(json_query(json_query(%q<build_item>,extract,$.system.keyAbility.value),size),1)); think setq(entry_json,json(object,kind,"boost",ability,json(string,json_query(%q<build_item>,extract,$.system.keyAbility.value\[0\])),step,"boost-class",parent,%q<build_picked>)); @include %!/INC`BUILD`PUT
         flags: [cmdsyntax]
       DATA`TEMPLATE`INC`BUILD`BOOST: |-
         {"kind":"","ability":"","step":"","parent":null}
