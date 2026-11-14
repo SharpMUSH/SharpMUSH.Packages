@@ -9775,7 +9775,7 @@ objects:
       # %0 who.inc.<condition>.<amount>: raises the condition on %q<ap_at> and adds it to %q<actn_fx>.
       FUN`ACTION`APPLY`INCREASE:
         value: |-
-          [setq(ap_v,add(firstof(json_query(u(FUN`ENC`C,%q<ap_at>,conds),extract,$\["[elements(%0,3,.)]"\]),0),elements(%0,4,.)))][u(FUN`ENC`PATCH,%q<ap_at>,json(object,conds,json(object,elements(%0,3,.),%q<ap_v>)))][setq(actn_fx,%q<actn_fx> %q<ap_name> is [elements(%0,3,.)] %q<ap_v>.[if(cand(strmatch(elements(%0,3,.),dying),gte(%q<ap_v>,4)),%b%q<ap_name> dies.)])]
+          [setq(ap_v,add(firstof(json_query(u(FUN`ENC`C,%q<ap_at>,conds),extract,$\["[elements(%0,3,.)]"\]),0),elements(%0,4,.)))][u(FUN`ENC`PATCH,%q<ap_at>,json(object,conds,json(object,elements(%0,3,.),%q<ap_v>)))][setq(actn_fx,%q<actn_fx> %q<ap_name> is [elements(%0,3,.)] %q<ap_v>.[if(strmatch(elements(%0,3,.),dying),[null(u(FUN`ENC`DYINGAT,%q<ap_at>))][if(gte(%q<ap_v>,%q<dy_max>),%b%q<ap_name> dies.)])])]
         flags: [funsyntax]
       # %0 who.twheal.<DC>: rolls Treat Wounds' healing, or its damage on a critical failure, on %q<ap_at> and adds it
       # to %q<actn_fx>.

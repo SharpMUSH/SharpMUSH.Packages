@@ -10,8 +10,8 @@ grant or offer by uuid (a self effect too), and a class's or ancestry's features
 pack always comes, and the language lines (labels such as PF2E.SpecificRule...) the items name.
 
 The test written has `install` with pf2e first, and steps before the scenario's own that hand each item's
-feed lines to the updater's INC`IMPORT`LINE, as a run of the updater does. With --check nothing is written,
-and the exit status is 1 when a test is not what its scenario gives.
+feed lines to the updater's INC`IMPORT`LINE, as a run of the updater does. A test whose scenario is gone is removed.
+With --check nothing is written, and the exit status is 1 when a test is not what its scenario gives, or has no scenario.
 """
 import json, os, re, sys
 
@@ -164,7 +164,7 @@ def main():
 	lang = read_lang()
 	scenarios = os.path.join(HERE, "scenarios")
 	os.makedirs(OUT, exist_ok=True)
-	stale = []
+	stale, orphans = [], False
 	for name in sorted(os.listdir(scenarios)):
 		if not name.endswith(".yaml"):
 			continue
@@ -176,9 +176,16 @@ def main():
 			if not check:
 				with open(target, "w", encoding="utf-8", newline="\n") as out:
 					out.write(written)
+	# A test whose scenario is gone.
+	for name in sorted(os.listdir(OUT)):
+		if name.endswith(".yaml") and not os.path.exists(os.path.join(scenarios, name)):
+			print(("orphan: " if check else "removed: ") + os.path.join("tests", "pf2e", name))
+			orphans = True
+			if not check:
+				os.remove(os.path.join(OUT, name))
 	for name in stale:
 		print(("stale: " if check else "wrote: ") + os.path.join("tests", "pf2e", name))
-	sys.exit(1 if check and stale else 0)
+	sys.exit(1 if check and (stale or orphans) else 0)
 
 
 if __name__ == "__main__":

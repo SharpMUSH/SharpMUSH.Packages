@@ -1,9 +1,9 @@
 # The rules that change dying and a night's rest: Diehard raises the dying value that kills to 5, and the
-# hillock halfling's heritage adds the level to the Hit Points a rest gives back.
+# same holds when First Aid raises dying; the hillock halfling's heritage adds the level to the Hit Points a rest gives back.
 install: [pf2e]
 feed: [ancestries/Human, heritages/Skilled Human, ancestries/Halfling, heritages/Hillock Halfling, classes/Fighter, feats/General Training, feats/Diehard]
 players:
-  dee:
+  dee: { room: ward }
   pip:
 steps:
   - as: dee
@@ -21,6 +21,15 @@ steps:
   - eval: "[u(${object:pf2e/core}/FUN`CHECK`PREPARE,u(${object:pf2e/commands}/FUN`LEDGER`OF,${dee}))][u(${object:pf2e/core}/FUN`CHECK`ATTR,dying.max)] [u(${object:pf2e/core}/FUN`CHECK`ATTR,dying.recoveryDC)] [%q<check_unapplied>]"
     is: 5 10
     because: Diehard makes dying 5 the one that kills, and its rule is applied
+  - god: "@tel me=${dee}"
+  - god: +enc/start
+  - god: +enc/add ${dee.name}
+  - eval: "[u(${object:pf2e/table}/FUN`ENC`LOAD,loc(me))][setq(ap_at,0,ap_name,Dee,actn_fx,)][u(${object:pf2e/table}/FUN`ACTION`APPLY`INCREASE,t.inc.dying.4)]%q<actn_fx>"
+    sees: Dee is dying 4.
+    not_sees: dies
+    because: a failed First Aid that brings Diehard's character to dying 4 leaves them alive
+  - eval: "[u(${object:pf2e/table}/FUN`ENC`LOAD,loc(me))][setq(ap_at,0,ap_name,Dee,actn_fx,)][u(${object:pf2e/table}/FUN`ACTION`APPLY`INCREASE,t.inc.dying.5)]%q<actn_fx>"
+    sees: Dee dies.
   - as: pip
     run: +build/ancestry Halfling
   - as: pip
