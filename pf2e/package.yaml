@@ -6676,18 +6676,11 @@ objects:
             not(strlen(%0)), u(%!/WEB`SAY,Sign in with a character to see their sheet.),
             not(strlen(%q<web_who>)), u(%!/WEB`SAY,There is no sheet of [firstof(%1,yours)] you may see.),
             not(words(lattr(%q<web_who>/PF2E`LEDGER`*))), u(%!/WEB`SAY,[name(%q<web_who>)] has no sheet yet. +build makes one.),
-            u(%!/WEB`SCHEMA`KEPT,%q<web_who>))]
-        flags: [funsyntax]
-      # The tabs are kept with memo() as the values are (WEB`DATA`KEPT).
-      WEB`SCHEMA`KEPT:
-        value: |-
-          @@(%0 whose sheet: the sheet's tabs)[
-          setq(web_kept,memo(%!/WEB`SCHEMA`SHEET,objid(%0),name(%0)))][
-          if(strmatch(%q<web_kept>,#-1 MEMO REFUSES*),u(%!/WEB`SCHEMA`SHEET,objid(%0),name(%0)),%q<web_kept>)]
+            u(%!/WEB`KEPT,SCHEMA,%q<web_who>,0))]
         flags: [funsyntax]
       WEB`SCHEMA`SHEET:
         value: |-
-          @@(%0 whose sheet, %1 their name: the sheet's tabs. Spells only for a character with spellcasting or spells)[
+          @@(%0 whose sheet, %1 unused, %2 their name: the sheet's tabs. Spells only for a character with spellcasting or spells)[
           setq(web_who,num(%0))][
           setqm(sheet_target,%q<web_who>,sheet_ledger,u(%!/FUN`LEDGER`OF,%q<web_who>))][
           u(%!/FUN`DAILY`PREPARE)][
@@ -6785,16 +6778,38 @@ objects:
         value: |-
           @@(%0 the viewer, %1 a name: the page's values)[
           setq(web_who,u(%!/WEB`WHO,%0,%1))][
-          json(object,fields,if(cand(strlen(%0),strlen(%q<web_who>),words(lattr(%q<web_who>/PF2E`LEDGER`*))),u(%!/WEB`DATA`KEPT,%q<web_who>,permission(%0,softcode.pf2e.staff)),json(object)))]
+          json(object,fields,if(cand(strlen(%0),strlen(%q<web_who>),words(lattr(%q<web_who>/PF2E`LEDGER`*))),u(%!/WEB`KEPT,DATA,%q<web_who>,permission(%0,softcode.pf2e.staff)),json(object)))]
         flags: [funsyntax]
-      # The sheet's values are kept with memo() until an attribute they were read from changes, so a page that is
-      # opened again costs the reads, not the sheet. The name is an argument because a rename changes no attribute.
-      # memo() refuses a sheet whose rules cache was not written yet; that sheet is read in full, which writes it.
-      WEB`DATA`KEPT:
+      # The page's tabs and values are kept with memo() until an attribute they were read from changes, so a page
+      # opened again costs the reads, not the sheet. The name is a key because a rename changes no attribute, and
+      # staff because the gear rows show them more. memo() refuses a sheet whose rules cache is not written yet
+      # (writing it is a side effect) or whose rules roll a formula, and the sheet is then read again with u(). So
+      # that never costs two builds of a cold sheet, a character whose PF2E` attributes changed since the last
+      # build (WEB`BUILT`<number>) is read with u() straight away, which writes the caches; and a character whose
+      # rules roll a formula (WEB`NOMEMO`<route>`<number>) is read with u() until their attributes change again. A
+      # sheet refused for a cache write is tried with memo() again next time, once the read with u() wrote it.
+      WEB`KEPT:
         value: |-
-          @@(%0 whose sheet, %1 1 when the viewer is staff: every value the page shows)[
-          setq(web_kept,memo(%!/WEB`DATA`SHEET,objid(%0),%1,name(%0)))][
-          if(strmatch(%q<web_kept>,#-1 MEMO REFUSES*),u(%!/WEB`DATA`SHEET,objid(%0),%1,name(%0)),%q<web_kept>)]
+          @@(%0 DATA or SCHEMA, %1 whose sheet, %2 1 when the viewer is staff: the route's answer)[
+          setqm(web_route,%0,web_n,after(num(%1),#),web_state,u(%!/WEB`STATE,%1))][
+          if(strmatch(get(%!/WEB`BUILT`%q<web_n>),%q<web_state>),
+            u(%!/WEB`KEPT`TRY,%1,%2),
+            [null(attrib_set(%!/WEB`BUILT`%q<web_n>,%q<web_state>))][u(%!/WEB`%0`SHEET,objid(%1),%2,name(%1))])]
+        flags: [funsyntax]
+      WEB`KEPT`TRY:
+        value: |-
+          @@(%0 whose sheet, %1 staff; web_route, web_n, web_state: the kept answer, or one read again when memo refuses it)[
+          if(strmatch(get(%!/WEB`NOMEMO`%q<web_route>`%q<web_n>),%q<web_state>),
+            u(%!/WEB`%q<web_route>`SHEET,objid(%0),%1,name(%0)),
+            [setq(web_kept,memo(%!/WEB`%q<web_route>`SHEET,objid(%0),%1,name(%0)))][
+            if(strmatch(%q<web_kept>,#-1 MEMO REFUSES*),
+              [if(strmatch(%q<web_kept>,*NONDETERMINISTIC*),null(attrib_set(%!/WEB`NOMEMO`%q<web_route>`%q<web_n>,%q<web_state>)))][u(%!/WEB`%q<web_route>`SHEET,objid(%0),%1,name(%0))],
+              %q<web_kept>)])]
+        flags: [funsyntax]
+      WEB`STATE:
+        value: |-
+          @@(%0 a character: a digest of their PF2E` attributes and the rules' stamp, which changes when anything the sheet is built from on them does)[
+          digest(sha1,[iter(lattr(%0/PF2E`*),%i0=[get(%0/%i0)],%b,|)]|[get({{core}}/CACHE`STAMP)]|[get({{core}}/DATA`CACHE`VERSION)])]
         flags: [funsyntax]
       WEB`DATA`SHEET:
         value: |-
