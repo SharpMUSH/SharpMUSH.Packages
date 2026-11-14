@@ -1,7 +1,7 @@
 format: "1.20"
 package: pf2e
 title: Pathfinder 2e rules
-version: "0.10.21"
+version: "0.10.22"
 authors: [SharpMUSH]
 description: "Pathfinder Second Edition rules in softcode, read the way Foundry VTT's pf2e system reads them, with character sheets kept as a ledger: +build, +sheet, +check, spellcasting (+spells, +prepare, +cast, +rest), a deity table the game fills (+deity), alchemy (+alchemy), encounters with effects and battle forms that keep their own copy of each character, built from the bestiary with elite and weak creatures and hazards (+enc), exploration, skill challenges, Recall Knowledge, downtime (+downtime: Earn Income, Crafting, Learn a Spell, Retraining), loot, stashes and shops with unidentified magic items (+loot, +identify), and audited awards with levels and runes (+pf2e/award)."
 license: MIT
@@ -114,7 +114,7 @@ objects:
       # ledger read again costs a few hundred function calls. The key is the ledger with the package's
       # version, the books and CACHE`STAMP, which the updater and the deity table change. CACHE lists
       # the keys oldest first; past DATA`CACHE`KEEP the oldest goes.
-      DATA`CACHE`VERSION: "0.10.21"
+      DATA`CACHE`VERSION: "0.10.22"
       DATA`CACHE`KEEP: 200
       DATA`CACHE`REGISTERS: check_actor check_actortraits check_adjstrike check_adjust check_ancestry check_armor check_background check_class check_conditions check_craftgrants check_crafting check_deity check_deity_spells check_deity_weapons check_domopts check_dynamic check_entries check_favored check_favoredrules check_flats check_form check_forms check_formulas check_gear check_grants check_heritage check_index check_itemalts check_level check_martial check_names check_options check_rankdyn check_resgrants check_resources check_rollopts check_rollrules check_shield check_shieldrules check_bulkrules check_bulk check_bulk_enc check_bulk_max check_static check_stats check_strikes check_synthetics check_toggles check_traits check_unapplied check_upgrades
       # The ItemAlteration properties the core applies, by the kind of item they reach.
@@ -6676,11 +6676,19 @@ objects:
             not(strlen(%0)), u(%!/WEB`SAY,Sign in with a character to see their sheet.),
             not(strlen(%q<web_who>)), u(%!/WEB`SAY,There is no sheet of [firstof(%1,yours)] you may see.),
             not(words(lattr(%q<web_who>/PF2E`LEDGER`*))), u(%!/WEB`SAY,[name(%q<web_who>)] has no sheet yet. +build makes one.),
-            u(%!/WEB`SCHEMA`SHEET))]
+            u(%!/WEB`SCHEMA`KEPT,%q<web_who>))]
+        flags: [funsyntax]
+      # The tabs are kept with memo() as the values are (WEB`DATA`KEPT).
+      WEB`SCHEMA`KEPT:
+        value: |-
+          @@(%0 whose sheet: the sheet's tabs)[
+          setq(web_kept,memo(%!/WEB`SCHEMA`SHEET,objid(%0),name(%0)))][
+          if(strmatch(%q<web_kept>,#-1 MEMO REFUSES*),u(%!/WEB`SCHEMA`SHEET,objid(%0),name(%0)),%q<web_kept>)]
         flags: [funsyntax]
       WEB`SCHEMA`SHEET:
         value: |-
-          @@(web_who whose sheet: the sheet's tabs. Spells only for a character with spellcasting or spells)[
+          @@(%0 whose sheet, %1 their name: the sheet's tabs. Spells only for a character with spellcasting or spells)[
+          setq(web_who,num(%0))][
           setqm(sheet_target,%q<web_who>,sheet_ledger,u(%!/FUN`LEDGER`OF,%q<web_who>))][
           u(%!/FUN`DAILY`PREPARE)][
           json(object,kind,"view",schema_version,1,title,json(string,name(%q<web_who>)),layout,"tabs",actions,json(object),pages,json_array(
@@ -6777,14 +6785,24 @@ objects:
         value: |-
           @@(%0 the viewer, %1 a name: the page's values)[
           setq(web_who,u(%!/WEB`WHO,%0,%1))][
-          json(object,fields,if(cand(strlen(%0),strlen(%q<web_who>),words(lattr(%q<web_who>/PF2E`LEDGER`*))),u(%!/WEB`DATA`SHEET,%0),json(object)))]
+          json(object,fields,if(cand(strlen(%0),strlen(%q<web_who>),words(lattr(%q<web_who>/PF2E`LEDGER`*))),u(%!/WEB`DATA`KEPT,%q<web_who>,permission(%0,softcode.pf2e.staff)),json(object)))]
+        flags: [funsyntax]
+      # The sheet's values are kept with memo() until an attribute they were read from changes, so a page that is
+      # opened again costs the reads, not the sheet. The name is an argument because a rename changes no attribute.
+      # memo() refuses a sheet whose rules cache was not written yet; that sheet is read in full, which writes it.
+      WEB`DATA`KEPT:
+        value: |-
+          @@(%0 whose sheet, %1 1 when the viewer is staff: every value the page shows)[
+          setq(web_kept,memo(%!/WEB`DATA`SHEET,objid(%0),%1,name(%0)))][
+          if(strmatch(%q<web_kept>,#-1 MEMO REFUSES*),u(%!/WEB`DATA`SHEET,objid(%0),%1,name(%0)),%q<web_kept>)]
         flags: [funsyntax]
       WEB`DATA`SHEET:
         value: |-
-          @@(%0 the viewer; web_who whose sheet: every value the page shows)[
+          @@(%0 whose sheet, %1 1 when the viewer is staff, %2 their name: every value the page shows)[
+          setqm(web_who,num(%0),web_staff,%1)][
           setqm(sheet_target,%q<web_who>,sheet_ledger,u(%!/FUN`LEDGER`OF,%q<web_who>))][
           u(%!/FUN`DAILY`PREPARE)][
-          setqm(check_daily,u(%!/FUN`DAILY`OF,%q<web_who>),web_stats,iter(u({{core}}/FUN`SHEET`STATS),u(%!/FUN`SHOW`STATISTIC,%i0),%b,%r),web_save_names,Perception Fortitude Reflex Will,web_staff,permission(%0,softcode.pf2e.staff),show_spellcaster,gt(u({{core}}/FUN`CHECK`RANK,spellcasting),0),show_spells,u(%!/FUN`SHOW`SPELLS),show_conditions,u(%!/FUN`SHOW`GRANTS,conditions),show_actions,u(%!/FUN`SHOW`GRANTS,actions))][
+          setqm(check_daily,u(%!/FUN`DAILY`OF,%q<web_who>),web_stats,iter(u({{core}}/FUN`SHEET`STATS),u(%!/FUN`SHOW`STATISTIC,%i0),%b,%r),web_save_names,Perception Fortitude Reflex Will,show_spellcaster,gt(u({{core}}/FUN`CHECK`RANK,spellcasting),0),show_spells,u(%!/FUN`SHOW`SPELLS),show_conditions,u(%!/FUN`SHOW`GRANTS,conditions),show_actions,u(%!/FUN`SHOW`GRANTS,actions))][
           setq(show_feats,setunion(trim(squish(iter(%q<check_grants>,if(match(spells conditions actions,elements(%i0,2,~)),,u(%!/FUN`SHOW`ITEM,elements(%i0,2,~),elements(%i0,3,~),elements(%i0,4,~))),%b,|),|),|),,|))][
           fold(%!/WEB`MERGE,
             u(%!/WEB`DATA`SHEET`IDENTITY)%r[
