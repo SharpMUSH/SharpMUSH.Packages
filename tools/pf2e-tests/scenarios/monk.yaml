@@ -1,0 +1,55 @@
+# Qi Spells makes a monk a trained Wisdom caster of qi spells, which need the feat. A stance whose Strike
+# replaces all others (Mountain Stance's falling stone) leaves only that Strike. +enc/act on its own lists the
+# actions that bring an effect.
+install: [pf2e]
+feed: [ancestries/Human, heritages/Skilled Human, classes/Monk, feats/Qi Spells, feats/Mountain Stance, spells/Inner Upheaval]
+players:
+  qi: { room: dojo }
+  stone: { room: dojo }
+steps:
+  - god: "@tel me=${qi}"
+  - as: qi
+    run: +build/ancestry Human
+  - as: qi
+    run: +build/heritage Skilled Human
+  - as: qi
+    run: +build/class Monk
+    sees: "Class: Monk."
+  - as: qi
+    run: +build/spell Inner Upheaval
+    sees: "Inner Upheaval is a qi spell: it comes with the Qi Spells feat."
+  - as: qi
+    run: +build/feat class-1=Qi Spells
+    sees: "Class feat at level 1: Qi Spells."
+  - as: qi
+    run: +build/spell Inner Upheaval
+    sees: "Spell: Inner Upheaval (focus spell)."
+  - eval: "[u(${object:pf2e/core}/FUN`CHECK`PREPARE,u(${object:pf2e/commands}/FUN`LEDGER`OF,${qi}))][u(${object:pf2e/core}/FUN`CHECK`RANK,spellcasting)] [u(${object:pf2e/core}/FUN`CHECK`SPELLKEY)]"
+    is: 1 wis
+    because: Qi Spells makes the monk trained in spellcasting, with Wisdom
+  - eval: "[u(${object:pf2e/core}/FUN`CHECK`PREPARE,u(${object:pf2e/commands}/FUN`LEDGER`OF,${qi}))][setq(pick_source,focus,pick_opts,item:trait:monk item:trait:focus)][u(${object:pf2e/core}/FUN`CHECK`SPELLKEY)]-[setq(pick_opts,item:trait:wizard item:trait:focus)][u(${object:pf2e/core}/FUN`CHECK`SPELLKEY)]-[setq(pick_source,prepared,pick_opts,item:trait:monk)][u(${object:pf2e/core}/FUN`CHECK`SPELLKEY)]-"
+    is: wis---
+    because: Qi Spells gives Wisdom to monk focus spells only, not another class's focus spells or other spells
+  - as: stone
+    run: +build/ancestry Human
+  - as: stone
+    run: +build/heritage Skilled Human
+  - as: stone
+    run: +build/class Monk
+  - as: stone
+    run: +build/feat class-1=Mountain Stance
+    sees: "Class feat at level 1: Mountain Stance."
+  - god: +enc/start
+  - god: +enc/add ${stone.name}
+  - god: +enc/init
+  - god: +enc/next
+  - as: stone
+    run: +enc/act
+    sees: "${stone.name}'s actions that bring an effect: Mountain Stance."
+  - as: stone
+    run: +enc/act Mountain Stance
+    sees: Mountain Stance
+  - eval: "[u(${object:pf2e/table}/FUN`ENC`LOAD,loc(me))][u(${object:pf2e/table}/FUN`ENC`PREPARE,0)][u(${object:pf2e/core}/FUN`CHECK`STRIKES)]"
+    sees: '"slug":"falling-stone"'
+    not_sees: '"slug":"fist"'
+    because: the only Strikes a monk in Mountain Stance can make are falling stone

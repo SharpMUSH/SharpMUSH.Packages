@@ -1,0 +1,69 @@
+# Vitality and void damage by the target's healing: a dhampir (negative healing) takes vitality damage and
+# none from void; a living character the reverse. Toughness lowers the recovery check's DC by 1.
+install: [pf2e]
+feed: [ancestries/Human, heritages/Dhampir, heritages/Skilled Human, classes/Fighter, feats/General Training, feats/Toughness]
+players:
+  dhamp: { room: arena }
+  livia: { room: arena }
+steps:
+  - god: "@tel me=${dhamp}"
+  - as: dhamp
+    run: +build/ancestry Human
+    sees: "Ancestry: Human."
+  - as: dhamp
+    run: +build/heritage Dhampir
+    sees: "Heritage: Dhampir."
+  - as: dhamp
+    run: +build/class Fighter
+    sees: "Class: Fighter."
+  - as: livia
+    run: +build/ancestry Human
+  - as: livia
+    run: +build/heritage Skilled Human
+  - as: livia
+    run: +build/class Fighter
+  - as: livia
+    run: +build/feat ancestry-1=General Training
+    sees: "Ancestry feat at level 1: General Training."
+  - as: livia
+    run: +build/choose General Training=Toughness
+    sees: "General Training: Feat: Toughness."
+  - god: +enc/start
+  - god: +enc/add ${dhamp.name}
+  - god: +enc/add ${livia.name}
+  - god: +enc/damage ${dhamp.name}=3 vitality
+  - heard: livia
+    containing: "${dhamp.name} takes 3 damage (3 = 3 vitality)."
+    count: 1
+    because: negative healing makes vitality damage hurt
+  - god: +enc/damage ${dhamp.name}=3 void
+  - heard: livia
+    containing: "${dhamp.name} takes 0 damage (3 = 3 void, with no effect from void)."
+    count: 1
+    because: void damage only hurts the living
+  - god: +enc/damage ${livia.name}=3 void
+  - heard: livia
+    containing: "${livia.name} takes 3 damage (3 = 3 void)."
+    count: 1
+  - god: +enc/damage ${livia.name}=3 vitality
+  - heard: livia
+    containing: "${livia.name} takes 0 damage (3 = 3 vitality, with no effect from vitality)."
+    count: 1
+  - eval: "[u(${object:pf2e/core}/FUN`CHECK`PREPARE,u(${object:pf2e/commands}/FUN`LEDGER`OF,${dhamp}))][u(${object:pf2e/core}/FUN`CHECK`ATTR,hp.negativeHealing)] [words(%q<check_names>,|)] [%q<check_unapplied>]"
+    sees: "1 "
+    not_sees: Dhampir (ActiveEffectLike)
+    because: the heritage gives negative healing, and every rule of it is applied now
+  - god: +enc/damage ${livia.name}=100 slashing
+  - heard: livia
+    containing: "${livia.name} takes 100 damage and falls, dying 1"
+    count: 1
+  - god: +enc/init
+  - god: +enc/next
+    repeat: 2
+  - heard: livia
+    containing: "'s recovery check: "
+    count: 1
+  - heard: livia
+    containing: "vs DC 10, "
+    count: 1
+    because: Toughness lowers the recovery check's DC from 11 (10 plus dying 1) to 10
