@@ -1,0 +1,33 @@
+# The rules that change dying and a night's rest: Diehard raises the dying value that kills to 5, and the
+# hillock halfling's heritage adds the level to the Hit Points a rest gives back.
+install: [pf2e]
+feed: [ancestries/Human, heritages/Skilled Human, ancestries/Halfling, heritages/Hillock Halfling, classes/Fighter, feats/General Training, feats/Diehard]
+players:
+  dee:
+  pip:
+steps:
+  - as: dee
+    run: +build/ancestry Human
+  - as: dee
+    run: +build/heritage Skilled Human
+  - as: dee
+    run: +build/class Fighter
+  - as: dee
+    run: +build/feat ancestry-1=General Training
+    sees: "Ancestry feat at level 1: General Training."
+  - as: dee
+    run: +build/choose General Training=Diehard
+    sees: "General Training: Feat: Diehard."
+  - eval: "[u(${object:pf2e/core}/FUN`CHECK`PREPARE,u(${object:pf2e/commands}/FUN`LEDGER`OF,${dee}))][u(${object:pf2e/core}/FUN`CHECK`ATTR,dying.max)] [u(${object:pf2e/core}/FUN`CHECK`ATTR,dying.recoveryDC)] [%q<check_unapplied>]"
+    is: 5 10
+    because: Diehard makes dying 5 the one that kills, and its rule is applied
+  - as: pip
+    run: +build/ancestry Halfling
+  - as: pip
+    run: +build/heritage Hillock Halfling
+    sees: "Heritage: Hillock Halfling."
+  - as: pip
+    run: +build/class Fighter
+  - eval: "[u(${object:pf2e/core}/FUN`CHECK`PREPARE,u(${object:pf2e/commands}/FUN`LEDGER`OF,${pip}))][u(${object:pf2e/core}/FUN`CHECK`RESTHP)] [%q<check_unapplied>]"
+    is: "2"
+    because: a rest gives the Constitution modifier (at least 1) times level 1, plus 1 for the heritage

@@ -124,6 +124,9 @@ jobs:
       - name: Check the PF2e cache version follows the package version
         run: python3 tools/check-pf2e-cache-version.py
 
+      - name: Check the PF2e behaviour tests are what their scenarios give
+        run: python3 -I tools/pf2e-tests/build.py --check
+
   release:
     # Tags <package-dir>/v<version> for every package version on main that has
     # no tag yet, at the last commit that touched the package's directory.

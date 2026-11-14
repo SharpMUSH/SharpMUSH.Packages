@@ -98,6 +98,14 @@ An `as`, `god` or `eval` step may check its output with `sees`, `not_sees`, `is`
 
 A name that matches nothing fails the test.
 
+### PF2e tests
+
+The files in `pf2e/` are written by `tools/pf2e-tests/build.py` from `tools/pf2e-tests/scenarios`: a
+scenario names the Foundry items it reads (`feed: [classes/Cleric, heritages/Dhampir]`), and the build puts
+steps first that load those items, and what they bring, from `pf2e-feed` the way the updater does. Edit the
+scenario, then run `python3 -I tools/pf2e-tests/build.py`; the `checks` job fails a test that is not what its
+scenario gives.
+
 ### Writing one
 
 - Look for text that only this test can produce: a player's name or a `unique` word, never "the

@@ -1,0 +1,64 @@
+# Heal and Harm decide by each target, not by side: Heal hurts a target with negative healing (a basic
+# Fortitude save against vitality damage) and heals a living one. Outside an encounter it leaves a dhampir
+# as they were.
+install: [pf2e]
+feed: [ancestries/Human, heritages/Dhampir, heritages/Skilled Human, classes/Cleric, class-features/Cloistered Cleric, classes/Fighter, spells/Heal, spells/Harm, feats/Domain Initiate]
+players:
+  cleric: { room: chapel }
+  dhamp: { room: chapel }
+  livia: { room: chapel }
+steps:
+  - god: "@tel me=${cleric}"
+  - god: +deity/samples
+  - as: cleric
+    run: +build/ancestry Human
+  - as: cleric
+    run: +build/heritage Skilled Human
+  - as: cleric
+    run: +build/class Cleric
+    sees: "Class: Cleric."
+  - as: cleric
+    run: +build/choose Deity=Solenne
+    sees: "Deity (Cleric): Solenne."
+  - as: cleric
+    run: +build/choose Divine Font=Heal
+    sees: "Divine Font: Heal."
+  - as: cleric
+    run: +build/choose Doctrine=Cloistered Cleric
+    sees: "Doctrine: Cloistered Cleric."
+  - as: dhamp
+    run: +build/ancestry Human
+  - as: dhamp
+    run: +build/heritage Dhampir
+  - as: dhamp
+    run: +build/class Fighter
+  - as: livia
+    run: +build/ancestry Human
+  - as: livia
+    run: +build/heritage Skilled Human
+  - as: livia
+    run: +build/class Fighter
+  - as: cleric
+    run: +cast Heal=${dhamp.name}
+    sees: "${dhamp.name} is not healed by it."
+    because: outside an encounter Heal does nothing to a dhampir
+  # Only the cleric has initiative, so the first turn is theirs; the others join during it.
+  - god: +enc/start
+  - god: +enc/add ${cleric.name}
+  - god: +enc/init
+  - god: +enc/next
+  - heard: dhamp
+    containing: "${cleric.name}'s turn."
+    count: 1
+  - god: +enc/add ${dhamp.name}
+  - god: +enc/add ${livia.name}
+  - god: +enc/damage ${livia.name}=5 slashing
+  - as: cleric
+    run: +cast Heal=${dhamp.name}
+    sees: ["basic Fortitude", "vitality.", "${dhamp.name}: 1d20["]
+    not_sees: "${dhamp.name} regains"
+    because: vitality damage hurts a dhampir, who saves against it
+  - as: cleric
+    run: +cast Heal=${livia.name}
+    sees: ["Healing 1d8[", "${livia.name} regains"]
+    not_sees: basic Fortitude
