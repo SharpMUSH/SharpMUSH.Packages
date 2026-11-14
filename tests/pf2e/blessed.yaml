@@ -284,6 +284,10 @@ steps:
     run: +build/background Blessed
     sees: ["Background: Blessed.", "Innate spell: Guidance (at will), from Blessed."]
   - as: saint
+    run: +build/background Blessed
+    sees: "Innate spell: Guidance (at will), from Blessed."
+    because: picking it again replaces the old pick and what it brought
+  - as: saint
     run: +build/innate Guidance
     sees: "The sheet has Guidance as an innate spell already."
     because: the background put Guidance on the sheet
@@ -295,3 +299,8 @@ steps:
     run: +build/innate Guidance
     sees: "Innate spell: Guidance (at will)."
     because: Acolyte brings no innate spell, and Blessed's Guidance went with it
+  - as: saint
+    run: +build/background Blessed
+    sees: "The sheet has Guidance as an innate spell already."
+    not_sees: "from Blessed"
+    because: Guidance added by hand is not added twice

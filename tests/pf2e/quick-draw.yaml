@@ -331,6 +331,11 @@ steps:
   - eval: "[u(${object:pf2e/table}/FUN`ENC`LOAD,loc(me))][u(${object:pf2e/table}/FUN`ENC`C,0,acts)]"
     is: "3"
     because: the dagger stays drawn
+  - god: +enc/next
+  - as: blade
+    run: +enc/react ${post.name}=Dagger
+    sees: "${blade.name} Strikes ${post.name} with Dagger as a reaction"
+    because: the dagger drawn on the fighter's turn is in hand for a Reactive Strike
   - eval: "[u(${object:pf2e/table}/FUN`ENC`LOAD,loc(me))][setq(act_at,1,act_strike,Dagger|0|||5|~|||||[json(object,id,\"DAGGER\",where,\"carried\")],check_options,feat:quick-draw)][u(${object:pf2e/table}/FUN`ACT`STRIKE`DRAW)]-%q<strike_drawsay>"
     sees: "0-${post.name} draws Dagger with Quick Draw."
     because: Quick Draw draws the weapon as part of the Strike

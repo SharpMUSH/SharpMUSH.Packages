@@ -1,5 +1,6 @@
 # Generated from tools/pf2e-tests/scenarios/heal-area.yaml; edit that and run build.py.
-# Three-action Heal heals the living and harms a dhampir with one roll: the living regain what the roll deals.
+# Three-action Heal heals the living and harms a dhampir with one roll: the damage is the healing roll, not a
+# second roll.
 install: [pf2e]
 players:
   cleric: { room: chapel }
@@ -433,6 +434,6 @@ steps:
   - god: +enc/damage ${livia.name}=5 slashing
   - as: cleric
     run: +cast Heal with 3 actions=${livia.name},${dhamp.name}
-    sees: ["vitality.", "from the same roll.", "${livia.name} regains", "${dhamp.name}: 1d20["]
-    not_sees: "Healing 1d8["
-    because: the living and the dhampir share one roll, so the healing is not rolled apart
+    sees: ["Healing 1d8[", "${livia.name} regains", "${dhamp.name}: 1d20["]
+    not_sees: "Damage 1d8["
+    because: the healing roll is the damage too, so the damage is not rolled apart
