@@ -39,9 +39,9 @@ steps:
   - as: livia
     run: +build/class Fighter
   - as: cleric
-    run: +cast Heal=${dhamp.name}
+    run: +cast Heal with 2 actions=${dhamp.name}
     sees: "${dhamp.name} is not healed by it."
-    because: outside an encounter Heal does nothing to a dhampir
+    because: outside an encounter Heal does nothing to a dhampir, and two-action Heal reads its variant by target too
   # Only the cleric has initiative, so the first turn is theirs; the others join during it.
   - god: +enc/start
   - god: +enc/add ${cleric.name}
@@ -62,3 +62,8 @@ steps:
     run: +cast Heal=${livia.name}
     sees: ["Healing 1d8[", "${livia.name} regains"]
     not_sees: basic Fortitude
+  - as: cleric
+    run: +cast Heal with 2 actions=${dhamp.name}
+    sees: ["vitality.", "${dhamp.name} takes"]
+    not_sees: "${dhamp.name} regains"
+    because: the two-action variant against a dhampir is the one that harms

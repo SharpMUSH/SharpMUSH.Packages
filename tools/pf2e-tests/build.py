@@ -61,7 +61,7 @@ def read_feed():
 					item_id, _hash, leaf, value = line.split(" ", 3)
 					key = (entry["pack"], item_id)
 					record = items.setdefault(key, {"file": entry["path"], "book": book["slug"], "lines": {}})
-					record["lines"][leaf.split("`")[0]] = line
+					record["lines"][leaf] = line
 					if leaf == "ITEM":
 						record["item"] = json.loads(value)
 						names.setdefault((entry["pack"], record["item"]["name"].lower()), item_id)
@@ -123,9 +123,10 @@ def load_steps(items, wanted, lang):
 	for pack, item_id in wanted:
 		record = items[(pack, item_id)]
 		steps.append(f"  - god: {yaml_string('&FEED`CURRENT ${object:pf2e/updater}=' + '|'.join([record['file'], pack, record['book'], 'test']))}")
-		for leaf in ("ITEM", "TEXT"):
-			if leaf in record["lines"]:
-				steps.append(f"  - god: {yaml_string('&FEED`BODY ${object:pf2e/updater}=' + record['lines'][leaf])}")
+		# Every leaf in feed order (ITEM, TEXT, each EMBED`<ID>), less HASH, which marks a finished import.
+		for leaf, line in record["lines"].items():
+			if leaf != "HASH":
+				steps.append(f"  - god: {yaml_string('&FEED`BODY ${object:pf2e/updater}=' + line)}")
 				steps.append("  - god: \"@trigger ${object:pf2e/updater}/INC`IMPORT`LINE=1\"")
 	return steps
 

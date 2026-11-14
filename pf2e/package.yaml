@@ -3039,9 +3039,10 @@ objects:
           setq(classdc_key,firstof(u(FUN`CHECK`KEY),str))][
           u(FUN`CHECK`MODS,ability~[u(FUN`CHECK`ABILITY,%q<classdc_key>)]~%q<classdc_key>~0 proficiency~[u(FUN`CHECK`PROFICIENCY,max(u(FUN`CHECK`RANK,classdc),if(strlen(%q<check_class>),u(FUN`CHECK`RANK,u(FUN`ITEM`SLUG,u(FUN`CHECK`ITEM,%q<check_class>))),0)))]~proficiency~0,class class-dc all %q<classdc_key>-based,)]
         flags: [funsyntax]
-      # The attribute spells are cast with when an option, not the class's key attribute, decides it: option~attribute.
-      # Qi Spells makes a monk a Wisdom caster.
-      DATA`SPELL`KEYS: feat:qi-spells~wis
+      # The attribute spells are cast with when an option, not the class's key attribute, decides it:
+      # option~attribute~sources, the spells it covers by pick_source (and the sheet's figures, with none picked).
+      # Qi Spells makes a monk's focus spells Wisdom spells.
+      DATA`SPELL`KEYS: feat:qi-spells~wis~focus
       # Spell attack modifiers (%0 attack) or spell DC modifiers (%0 dc, 10 plus their total), from the key attribute and the spellcasting proficiency.
       FUN`CHECK`SPELL:
         value: |-
@@ -3051,8 +3052,8 @@ objects:
         flags: [funsyntax]
       FUN`CHECK`SPELLKEY:
         value: |-
-          @@(check_options: the attribute DATA`SPELL`KEYS gives, or nothing)[
-          first(iter(v(DATA`SPELL`KEYS),if(member(%q<check_options>,first(%i0,~)),last(%i0,~))))]
+          @@(check_options, pick_source: the attribute DATA`SPELL`KEYS gives, or nothing)[
+          first(iter(v(DATA`SPELL`KEYS),if(cand(member(%q<check_options>,first(%i0,~)),cor(not(strlen(%q<pick_source>)),member(edit(elements(%i0,3,~),|,%b),%q<pick_source>))),elements(%i0,2,~))))]
         flags: [funsyntax]
       # Hit points: the ancestry's, the class's plus Constitution for each level, and the hp and
       # hp-per-level synthetics.
@@ -8827,7 +8828,7 @@ objects:
       # A cast outside an encounter: the slot spent from the sheet's day, the rolls shown, healing onto the characters named.
       INC`CAST`FREE:
         value: |-
-          think setqm(sheet_target,%#,sheet_ledger,u({{commands}}/FUN`LEDGER`OF,%#)); think u({{commands}}/FUN`DAILY`PREPARE); @include %!/INC`CAST`PICK; think setq(cast_who,squish(iter(%q<cast_targets>,pmatch(trim(%i0)),%,,%b))); @assert not(words(iter(%q<cast_who>,if(hastype(%i0,player),,x))))=@pemit %#=notice(PF2E,Name characters to cast on%, separated by commas.,warn); think u(%!/FUN`SPELL`PREPARE,1); think u({{commands}}/FUN`DAILY`SPEND,%q<cast_id>); @include {{commands}}/INC`DAILY`WRITE; think u(%!/FUN`CAST`ROLLS); think setq(cast_healed,if(cand(strlen(%q<spell_heal>),words(%q<cast_who>)),iter(%q<cast_who>,u(%!/FUN`CAST`HEALFREE,%i0),%b,%,%b))); @remit %l=notice(PF2E,[u(%!/FUN`CAST`HEAD)][if(strlen(%q<cast_say>),%r%q<cast_say>)][if(strlen(%q<cast_healed>),%r%q<cast_healed>.)])
+          think setqm(sheet_target,%#,sheet_ledger,u({{commands}}/FUN`LEDGER`OF,%#)); think u({{commands}}/FUN`DAILY`PREPARE); @include %!/INC`CAST`PICK; think setq(cast_who,squish(iter(%q<cast_targets>,pmatch(trim(%i0)),%,,%b))); @assert not(words(iter(%q<cast_who>,if(hastype(%i0,player),,x))))=@pemit %#=notice(PF2E,Name characters to cast on%, separated by commas.,warn); think setq(cast_bytype,u(%!/FUN`CAST`BYTYPE)); think u(%!/FUN`SPELL`PREPARE,1); think u({{commands}}/FUN`DAILY`SPEND,%q<cast_id>); @include {{commands}}/INC`DAILY`WRITE; think u(%!/FUN`CAST`ROLLS); think setq(cast_healed,if(cand(strlen(%q<spell_heal>),words(%q<cast_who>)),iter(%q<cast_who>,u(%!/FUN`CAST`HEALFREE,%i0),%b,%,%b))); @remit %l=notice(PF2E,[u(%!/FUN`CAST`HEAD)][if(strlen(%q<cast_say>),%r%q<cast_say>)][if(strlen(%q<cast_healed>),%r%q<cast_healed>.)])
         flags: [cmdsyntax]
       # Parses cmd_args and picks what the cast spends: cast_id, cast_targets, arg_ and pick_ registers.
       INC`CAST`PICK:
@@ -8867,8 +8868,8 @@ objects:
           @@(%0 a character healed outside an encounter: writes their day, gives the line)[
           setqm(heal_ledger,u({{commands}}/FUN`LEDGER`OF,%0),heal_old_target,%q<sheet_target>)][
           null(u({{core}}/FUN`CHECK`PREPARE,%q<heal_ledger>))][
-          setqm(iwr_traits,%q<check_traits>,iwr_neg,t(member(%q<check_options>,self:negative-healing)))][
-          if(cand(%q<spell_both>,u(FUN`ACT`IWR`AFFECTED,%q<spell_bothtype>)),name(%0) is not healed by it,u(FUN`CAST`HEALFREE`WRITE,%0))]
+          setqm(iwr_traits,%q<check_traits>,iwr_neg,cor(member(%q<check_options>,self:negative-healing),member(%q<check_traits>,undead)))][
+          if(cand(strlen(%q<cast_bytype>),u(FUN`ACT`IWR`AFFECTED,%q<cast_bytype>)),name(%0) is not healed by it,u(FUN`CAST`HEALFREE`WRITE,%0))]
         flags: [funsyntax]
       FUN`CAST`HEALFREE`WRITE:
         value: |-
@@ -9109,13 +9110,27 @@ objects:
       FUN`CAST`HEALING:
         value: |-
           @@(cast_on the targets, cast_side the caster's side)[
-          null(u(FUN`SPELL`PREPARE,2))][
-          if(%q<spell_both>,
-            [setq(heals_each,setunion(iter(%q<cast_on>,u(FUN`CAST`HEALS,%i0)),))][switch(%q<heals_each>,1,1,0,0,2)],
+          setq(cast_bytype,u(FUN`CAST`BYTYPE))][
+          switch(1,
+            %q<spell_both>,[setq(heals_each,setunion(iter(%q<cast_on>,u(FUN`CAST`HEALS,%i0)),))][switch(%q<heals_each>,1,1,0,0,2)],
+            t(strlen(%q<cast_bytype>)),u(FUN`CAST`HEALS,first(%q<cast_on>)),
             strmatch(u(FUN`ENC`C,first(%q<cast_on>),side),%q<cast_side>))]
         flags: [funsyntax]
       # Foundry's isAffectedBy: a spell that heals or harms by target harms whoever its damage type affects
       # (vitality the undead and anyone with void healing, void everyone else) and heals the rest.
+      # The damage type of a spell that heals or harms by target, or nothing: one roll that does both (spell_both), or
+      # a variant that heals beside one that harms at the actions given (two-action Heal: vs. the living, vs. the
+      # undead). Leaves the spell_ registers as FUN`SPELL`PREPARE,2 reads them, spell_bothtype that type.
+      FUN`CAST`BYTYPE:
+        value: |-
+          @@(cast_ and arg_ registers)[
+          null(u(FUN`SPELL`PREPARE,0))][
+          setq(bytype_dmg,if(strlen(%q<spell_heal>),,%q<spell_dmg>))][
+          null(u(FUN`SPELL`PREPARE,1))][
+          setq(bytype_heals,cand(strlen(%q<spell_heal>),not(strlen(%q<spell_dmg>))))][
+          null(u(FUN`SPELL`PREPARE,2))][
+          if(%q<spell_both>,%q<spell_bothtype>,if(cand(strlen(%q<bytype_dmg>),%q<bytype_heals>),[setr(spell_bothtype,last(first(%q<bytype_dmg>,\,)))]))]
+        flags: [funsyntax]
       FUN`CAST`HEALS:
         value: |-
           @@(%0 a target's index; spell_bothtype: 1 when the spell heals it)[
