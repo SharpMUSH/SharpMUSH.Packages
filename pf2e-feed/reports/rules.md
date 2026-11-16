@@ -1,6 +1,6 @@
 # Rule elements and licence filter
 
-Foundry pf2e commit `d2be8e53704e3d87c53498c504620337ccd61fa2`.
+Foundry pf2e commit `c7ee13c62747b7ab6aae7192b03c8584e13cb9f1`.
 
 Every rule element kind in the feed, with how often it appears and on how many items. The pf2e package
 applies the kinds it has a handler for and shows the others as unsupported on the sheet.
@@ -11,9 +11,9 @@ applies the kinds it has a handler for and shows the others as unsupported on th
 | RollOption | 689 | 561 |
 | ItemAlteration | 529 | 330 |
 | ActiveEffectLike | 504 | 356 |
-| GrantItem | 399 | 325 |
+| GrantItem | 400 | 326 |
 | Note | 354 | 268 |
-| ChoiceSet | 326 | 278 |
+| ChoiceSet | 327 | 279 |
 | DamageDice | 229 | 195 |
 | AdjustModifier | 169 | 114 |
 | Resistance | 161 | 116 |
@@ -49,8 +49,8 @@ applies the kinds it has a handler for and shows the others as unsupported on th
 
 | Licence | Book | Items |
 | --- | --- | --- |
-| ORC | Pathfinder Impossible Magic | 1260 |
-| ORC | Pathfinder Treasure Vault (Remastered) | 1252 |
+| ORC | Pathfinder Impossible Magic | 1261 |
+| ORC | Pathfinder Treasure Vault (Remastered) | 1254 |
 | ORC | Pathfinder Guns & Gears | 771 |
 | ORC | Pathfinder Battlecry! | 757 |
 | ORC | Pathfinder War of Immortals | 638 |
@@ -61,7 +61,7 @@ applies the kinds it has a handler for and shows the others as unsupported on th
 | OGL | Pathfinder Lost Omens The Grand Bazaar | 398 |
 | OGL | Pathfinder Lost Omens Ancestry Guide | 316 |
 | OGL | Pathfinder Core Rulebook | 298 |
-| ORC | Pathfinder Feybound | 274 |
+| ORC | Pathfinder Feybound | 276 |
 | ORC | Pathfinder Lost Omens Cheliax, Infernal Inheritance | 274 |
 | OGL | Pathfinder Lost Omens Impossible Lands | 272 |
 | ORC | Pathfinder Lost Omens Divine Mysteries | 267 |
