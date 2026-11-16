@@ -1,7 +1,7 @@
 format: "1.16"
 package: radio
 title: "Radio"
-version: 1.8.2
+version: 1.9.0
 authors: [SharpMUSH]
 description: "Radio: +radio frequencies players tune in to, speak on and recall, with moderators, admins and their own locks. Built on @feed: the engine keeps each frequency's lines and listeners; this package keeps the names, lists and rules."
 license: MIT
@@ -44,11 +44,11 @@ roles:
       softcode.radio.moderate: allow
 
 objects:
-  # The radio: the @feed kind's owner, so its attributes are the kind's tie-ins, and the command object.
-  # WIZARD because it defines the feed kind and adds the +radio command and its hook.
-  # +radio is an @hook/override/inline target of a command STARTUP adds with /noparse/rsnoparse, so what a
-  # player types reaches the code as typed and nothing a player wrote is evaluated. So is `.`, the short alias:
-  # a one-character added command is a token, so `.wild hello` runs `. wild hello`.
+  # The radio: the @feed kind's owner, so its attributes are the kind's tie-ins, and the command object. WIZARD
+  # because it defines the feed kind and adds the +radio command and its hook. +radio is an @hook/override/inline
+  # target of a command STARTUP adds with @command/add, so its argument is evaluated as the player who typed it, as a
+  # built-in command's is. The hook runs with /localize/clearregs, so a register the argument sets never reaches the
+  # code. So is `.`, the short alias: a one-character added command is a token, so `.wild hello` runs `. wild hello`.
   #
   # What the engine keeps, per frequency: the feed radio/<id> (its lines within its limits, who is tuned
   # in, who is gagged). What this object keeps, in attributes: everything that is only how +radio works.
@@ -475,9 +475,11 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot. Defining the kind
       # again changes nothing.
       STARTUP: |-
-        @feed/define radio={{radio}}; @feed/describe radio=The +radio frequencies.; @command/add/noparse/rsnoparse +radio; @hook/override/inline +radio={{radio}},CMD`RADIO; @command/add/noparse/rsnoparse .; @hook/override/inline .={{radio}},CMD`DOT
+        @feed/define radio={{radio}}; @feed/describe radio=The +radio frequencies.; @command/add +radio; @hook/override/inline/localize/clearregs +radio={{radio}},CMD`RADIO; @command/add .; @hook/override/inline/localize/clearregs .={{radio}},CMD`DOT
       AINSTALL: |-
         @teleport {{radio}}=#2; @trigger {{radio}}/STARTUP
+      AUPDATE: |-
+        @trigger {{radio}}/STARTUP
 
   # The +help topics. A plain thing, not the WIZARD radio: the librarian cannot u() a privileged object's
   # attributes. Bodies are evaluated, so brackets, parentheses and percent signs are escaped.

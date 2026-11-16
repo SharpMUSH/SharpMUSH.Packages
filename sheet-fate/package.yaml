@@ -1,7 +1,7 @@
 format: "1.20"
 package: sheet-fate
 title: "Fate sheet"
-version: 1.6.4
+version: 1.7.0
 authors: [SharpMUSH]
 description: "A Fate character sheet: skills or the six approaches on the ladder, aspects, stunts, stress tracks, consequences and fate points. +sheet shows and fills it in, +chargen walks a player through it, and +check rolls four Fate dice plus a rating against an opposition for the room. The build is a ledger of grants; staff give milestones and breakthroughs that stay on a log, and players spend them with +sheet/advance. +encounter gives each encounter its own copy of fate points, stress and consequences, and runs a conflict: NPCs a GM builds with +npc, exchanges, harm, concessions, aspects on the scene and the GM's fate points. Fate Core and Fate Accelerated SRD material under CC BY 3.0."
 license: MIT
@@ -53,8 +53,9 @@ objects:
   # they joined, and FATE`USING the one they picked with +encounter/use.
   # The FATE root is wizard-flagged, so only this object writes them.
   #
-  # +sheet and +check are added with /noparse/rsnoparse and hooked to CMD`<word>, so what a player types
-  # reaches the code exactly as typed and nothing a player wrote is ever evaluated.
+  # +sheet and +check are added with @command/add and hooked to CMD`<word>, so each one's argument is evaluated as the
+  # player who typed it, as a built-in command's is. The hook runs with /localize/clearregs, so a register the
+  # argument sets never reaches the code.
   #
   # Trees: CMD` the hooked commands, INC`COMMAND` the parse and dispatch, INC`SHEET` and INC`CHECK` one
   # routine per switch, INC`NEED` the guards they share, INC`DO` the writes. FUN`TRAIT` the skills or
@@ -2090,7 +2091,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add/noparse/rsnoparse +sheet; @hook/override/inline +sheet=%!,CMD`SHEET; @command/add/noparse/rsnoparse +check; @hook/override/inline +check=%!,CMD`CHECK; @command/add/noparse/rsnoparse +encounter; @hook/override/inline +encounter=%!,CMD`ENCOUNTER; @command/add/noparse/rsnoparse +chargen; @hook/override/inline +chargen=%!,CMD`CHARGEN; @command/add/noparse/rsnoparse +npc; @hook/override/inline +npc=%!,CMD`NPC
+          @command/add +sheet; @hook/override/inline/localize/clearregs +sheet=%!,CMD`SHEET; @command/add +check; @hook/override/inline/localize/clearregs +check=%!,CMD`CHECK; @command/add +encounter; @hook/override/inline/localize/clearregs +encounter=%!,CMD`ENCOUNTER; @command/add +chargen; @hook/override/inline/localize/clearregs +chargen=%!,CMD`CHARGEN; @command/add +npc; @hook/override/inline/localize/clearregs +npc=%!,CMD`NPC
         flags: [cmdsyntax]
       AINSTALL:
         value: |-

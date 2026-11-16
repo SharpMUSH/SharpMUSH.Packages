@@ -1,7 +1,7 @@
 format: "1.20"
 package: fate-adversary-toolkit
 title: "Fate Adversary Toolkit (unofficial)"
-version: 1.0.3
+version: 1.1.0
 authors: [SharpMUSH]
 description: "Opposition for the Fate sheet, after the Fate Adversary Toolkit: a library of ready adversaries (threats, hitters, bosses and fillers) that +adversary/make copies into +npc at your game's power level, +adversary/build to make one by type from its skills, filler mobs that thin as they take stress, hazards, blocks and distractions in an encounter with +obstacle, countdowns with +countdown, and resistances and limitations on any NPC. Based on the Fate Adversary Toolkit SRD under CC BY 3.0. An unofficial fan package, not affiliated with or endorsed by Evil Hat Productions."
 license: MIT
@@ -28,8 +28,9 @@ objects:
   # Fate sheet's opposition (NPC`<n> on Fate Opposition) and encounters (ENC`<n>`OBS`<k> on Fate Encounters), and
   # calls the sheet's functions.
   #
-  # +adversary, +obstacle and +countdown are added with /noparse/rsnoparse and hooked to CMD`<word>, so what a
-  # player types reaches the code exactly as typed and nothing a player wrote is ever evaluated.
+  # +adversary, +obstacle and +countdown are added with @command/add and hooked to CMD`<word>, so each one's argument
+  # is evaluated as the player who typed it, as a built-in command's is. The hook runs with /localize/clearregs, so a
+  # register the argument sets never reaches the code.
   #
   # Trees: CMD` the hooked commands, INC`COMMAND` the parse and dispatch, INC`ADV`, INC`OBS` and INC`CD` one
   # routine per switch, INC`NEED` the guards. FUN`TPL` the library, FUN`BUILD` the recipes, FUN`MOB` filler
@@ -1015,7 +1016,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add/noparse/rsnoparse +adversary; @hook/override/inline +adversary=%!,CMD`ADVERSARY; @command/add/noparse/rsnoparse +obstacle; @hook/override/inline +obstacle=%!,CMD`OBSTACLE; @command/add/noparse/rsnoparse +countdown; @hook/override/inline +countdown=%!,CMD`COUNTDOWN
+          @command/add +adversary; @hook/override/inline/localize/clearregs +adversary=%!,CMD`ADVERSARY; @command/add +obstacle; @hook/override/inline/localize/clearregs +obstacle=%!,CMD`OBSTACLE; @command/add +countdown; @hook/override/inline/localize/clearregs +countdown=%!,CMD`COUNTDOWN
         flags: [cmdsyntax]
       AINSTALL:
         value: |-

@@ -1,7 +1,7 @@
 format: "1.20"
 package: duties
 title: "Duties"
-version: 1.3.5
+version: 1.4.0
 authors: [SharpMUSH]
 description: "Duties: short adventures a party plays through with +duty, from challenge to challenge. Everyone rolls at each challenge, the outcome picks the way on, and the steps nobody in the party has seen are favoured. Players write duties and submit them, a duty reviewer approves them, and staff choose which approved duties are on the active roster and when. The rolls come from a sheet system's bridge, such as duties-d20 or duties-fate."
 license: MIT
@@ -47,8 +47,9 @@ objects:
   # The command object, in the master room. WIZARD because it triggers the sheet system's grant on the
   # system's own object and tells party members wherever they are.
   #
-  # +duty is added with /noparse/rsnoparse and hooked to CMD`DUTY, so what a player types reaches the code
-  # exactly as typed and nothing a player wrote is ever evaluated: player text is only ever read with get().
+  # +duty is added with @command/add and hooked to CMD`DUTY, so what a player types is evaluated once, as
+  # that player, as a built-in command's argument is; after that player text is only ever read with get().
+  # The hook runs with /localize/clearregs, so a register the argument sets never reaches the code.
   #
   # A sheet system's bridge attaches PROVIDER`<NAME> here, holding its object. +config duties/system picks
   # one when several are installed. Without one, duties can be written but not checked or played.
@@ -1201,7 +1202,7 @@ objects:
       # ---- Lifecycle --------------------------------------------------------------------------------
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP: |-
-        @command/add/noparse/rsnoparse +duty; @hook/override/inline +duty=%!,CMD`DUTY; @command/add/noparse/rsnoparse +duties; @hook/override/inline +duties=%!,CMD`DUTIES
+        @command/add +duty; @hook/override/inline/localize/clearregs +duty=%!,CMD`DUTY; @command/add +duties; @hook/override/inline/localize/clearregs +duties=%!,CMD`DUTIES
       AINSTALL: |-
         @trigger %!/STARTUP
       AUPDATE: |-
