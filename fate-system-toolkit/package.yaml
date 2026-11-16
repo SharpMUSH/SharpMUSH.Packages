@@ -1,7 +1,7 @@
 format: "1.20"
 package: fate-system-toolkit
 title: "Fate System Toolkit (unofficial)"
-version: 1.1.3
+version: 1.2.0
 authors: [SharpMUSH]
 description: "Rules from the Fate System Toolkit for the Fate sheet: conditions that soak stress in place of consequences (fleeting, sticky and lasting, treated before they heal), a Wealth track for money that a player checks for a bonus on a roll and staff refill with audited parcels of loot, Stormcallers, magic drawn from five great storms at a cost in refresh, with barriers and each storm's own attacks; super skills that double for a fate point and step back after, with fate-point bids between powers; gadgets and magic items with a function, flaws and stunts; and cyberware on a cyber-heart, with surgery paid for in play. Based on the Fate System Toolkit SRD under CC BY 3.0. An unofficial fan package, not affiliated with or endorsed by Evil Hat Productions."
 license: MIT
@@ -40,8 +40,8 @@ objects:
   # OPTIONS (choices taken) or SLOT (the heart's aspect) beneath, charged together as the grant CYBER. Open power bids
   # live on the store, BID`<room number>.
   #
-  # +condition, +wealth, +storm, +super, +gadget and +aug are added with /noparse/rsnoparse and hooked to CMD`<word>,
-  # so what a player types reaches the code exactly as typed and nothing a player wrote is ever evaluated.
+  # +condition, +wealth, +storm, +super, +gadget and +aug are added with @command/add and hooked to CMD`<word>, so
+  # each one's argument is evaluated as the player who typed it, as a built-in command's is.
   #
   # Trees: CMD` the hooked commands, INC`COMMAND` the parse and dispatch, INC`COND`, INC`WEALTH`, INC`STORM`,
   # INC`SUPER`, INC`GADGET` and INC`AUG` one routine per switch, INC`NEED` the guards. FUN`LIST` the store's lists,
@@ -1577,7 +1577,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add/noparse/rsnoparse +condition; @hook/override/inline +condition=%!,CMD`CONDITION; @command/add/noparse/rsnoparse +wealth; @hook/override/inline +wealth=%!,CMD`WEALTH; @command/add/noparse/rsnoparse +storm; @hook/override/inline +storm=%!,CMD`STORM; @command/add/noparse/rsnoparse +super; @hook/override/inline +super=%!,CMD`SUPER; @command/add/noparse/rsnoparse +gadget; @hook/override/inline +gadget=%!,CMD`GADGET; @command/add/noparse/rsnoparse +aug; @hook/override/inline +aug=%!,CMD`AUG
+          @command/add +condition; @hook/override/inline +condition=%!,CMD`CONDITION; @command/add +wealth; @hook/override/inline +wealth=%!,CMD`WEALTH; @command/add +storm; @hook/override/inline +storm=%!,CMD`STORM; @command/add +super; @hook/override/inline +super=%!,CMD`SUPER; @command/add +gadget; @hook/override/inline +gadget=%!,CMD`GADGET; @command/add +aug; @hook/override/inline +aug=%!,CMD`AUG
         flags: [cmdsyntax]
       AINSTALL:
         value: |-

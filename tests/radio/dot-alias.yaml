@@ -1,6 +1,6 @@
 # .<frequency> <message> speaks on one of the player's frequencies, named without its spaces or by a start that
 # fits only that one. A name typed in full wins over a longer one it begins; a start that fits several sends
-# nothing. What follows is never evaluated.
+# nothing. What follows is evaluated as the player, as say is.
 install: [radio, radio-help, radio-config]
 cleanup: ["@feed/undefine radio"]
 players:
@@ -38,38 +38,38 @@ steps:
     run: .wild ${said}-1, 50% off [add(1,2)]
   - heard: bo
     containing: ${said}-1,
-    lines: ['<Wild> ${ann.name} says, "${said}-1, 50% off [add(1,2)]"']
+    lines: ['<Wild> ${ann.name} says, "${said}-1, 50% off 3"']
   - as: ann
     run: .WI ${said}-2, 50% off [add(1,2)]
   - heard: bo
     containing: ${said}-2,
-    lines: ['<Wild> ${ann.name} says, "${said}-2, 50% off [add(1,2)]"']
+    lines: ['<Wild> ${ann.name} says, "${said}-2, 50% off 3"']
   - as: ann
     run: .w ${said}-3, 50% off [add(1,2)]
   - heard: bo
     containing: ${said}-3,
-    lines: ['<Wild> ${ann.name} says, "${said}-3, 50% off [add(1,2)]"']
+    lines: ['<Wild> ${ann.name} says, "${said}-3, 50% off 3"']
   - as: ann
     run: .ops ${said}-4, 50% off [add(1,2)]
   - heard: bo
     containing: ${said}-4,
-    lines: ['<Ops> ${ann.name} says, "${said}-4, 50% off [add(1,2)]"']
+    lines: ['<Ops> ${ann.name} says, "${said}-4, 50% off 3"']
     because: a name typed in full wins over a longer one it begins
   - as: ann
     run: .opse ${said}-5, 50% off [add(1,2)]
   - heard: bo
     containing: ${said}-5,
-    lines: ['<Opsec> ${ann.name} says, "${said}-5, 50% off [add(1,2)]"']
+    lines: ['<Opsec> ${ann.name} says, "${said}-5, 50% off 3"']
   - as: ann
     run: .nightwatch ${said}-6, 50% off [add(1,2)]
   - heard: bo
     containing: ${said}-6,
-    lines: ['<Night Watch> ${ann.name} says, "${said}-6, 50% off [add(1,2)]"']
+    lines: ['<Night Watch> ${ann.name} says, "${said}-6, 50% off 3"']
   - as: ann
     run: .n ${said}-7, 50% off [add(1,2)]
   - heard: bo
     containing: ${said}-7,
-    lines: ['<Night Watch> ${ann.name} says, "${said}-7, 50% off [add(1,2)]"']
+    lines: ['<Night Watch> ${ann.name} says, "${said}-7, 50% off 3"']
 
   - as: ann
     run: .w :${posed}

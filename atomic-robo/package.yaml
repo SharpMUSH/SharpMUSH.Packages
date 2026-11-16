@@ -1,7 +1,7 @@
 format: "1.20"
 package: atomic-robo
 title: "Atomic Robo (unofficial)"
-version: 1.1.3
+version: 1.2.0
 authors: [SharpMUSH]
 description: "Pulp action science and super robots on the Fate sheet: characters pick three modes (Action, Banter, Intrigue, Science, or weird ones such as Robot and Pilot) that rate their skills, take mega-stunts, invent gadgets with catches and flaws, brainstorm a hypothesis together, and pilot giant machines whose scale counts in a fight, against enemy robots and monsters with a scale of their own. Based on the Atomic Robo RPG SRD and the Fate System Toolkit, both under CC BY 3.0. An unofficial fan package, not affiliated with or endorsed by Evil Hat Productions or the creators of Atomic Robo."
 license: MIT
@@ -35,8 +35,8 @@ objects:
   # CATCH`<n> beneath). It writes FATE`RATING`<SKILL> and FATE`BOXES`<TRACK> from the modes, so the sheet,
   # +check and Duties read the right numbers.
   #
-  # +mode, +machine, +invent and +brainstorm are added with /noparse/rsnoparse and hooked to CMD`<word>, so
-  # what a player types reaches the code exactly as typed and nothing a player wrote is ever evaluated.
+  # +mode, +machine, +invent and +brainstorm are added with @command/add and hooked to CMD`<word>, so each one's
+  # argument is evaluated as the player who typed it, as a built-in command's is.
   #
   # Trees: CMD` the hooked commands, INC`COMMAND` the parse and dispatch, INC`MODE`, INC`MACHINE`, INC`INVENT`
   # and INC`BRAINSTORM` one routine per switch, INC`NEED` the guards, INC`DO` the writes. FUN`MODE`, FUN`SKILL`,
@@ -1076,7 +1076,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add/noparse/rsnoparse +mode; @hook/override/inline +mode=%!,CMD`MODE; @command/add/noparse/rsnoparse +machine; @hook/override/inline +machine=%!,CMD`MACHINE; @command/add/noparse/rsnoparse +invent; @hook/override/inline +invent=%!,CMD`INVENT; @command/add/noparse/rsnoparse +brainstorm; @hook/override/inline +brainstorm=%!,CMD`BRAINSTORM
+          @command/add +mode; @hook/override/inline +mode=%!,CMD`MODE; @command/add +machine; @hook/override/inline +machine=%!,CMD`MACHINE; @command/add +invent; @hook/override/inline +invent=%!,CMD`INVENT; @command/add +brainstorm; @hook/override/inline +brainstorm=%!,CMD`BRAINSTORM
         flags: [cmdsyntax]
       AINSTALL:
         value: |-
