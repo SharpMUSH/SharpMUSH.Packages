@@ -30,9 +30,11 @@ for a game that also has `plus-help`.
 A keeper holds `softcode.tables.admin`, which the package's **Table Keeper** role grants. Keepers
 read every table, locked or not.
 
-`+table` is added with `@command/add/noparse` and hooked to the command object (its `STARTUP`, run
-by `AINSTALL` and at every boot), so a row typed as `Storm: [u(FN`TABLE`ROLL,squall)]` is stored as
-code and runs at each roll rather than when it is typed. Uninstalling leaves the added command until
+`+table` is added with `@command/add` and hooked to the command object (its `STARTUP`, run by
+`AINSTALL` and at every boot), so what a player types is evaluated as them, as a built-in command's
+argument is. A row that rolls another table is typed with its brackets escaped,
+`Storm: \[u(FN`TABLE`ROLL,squall)\]`, so it is stored as code and runs at each roll rather than when
+it is typed. Uninstalling leaves the added command until
 the next restart, as with any `@command/add`.
 
 ## How a table rolls

@@ -29,7 +29,8 @@ objects:
   # calls the sheet's functions.
   #
   # +adversary, +obstacle and +countdown are added with @command/add and hooked to CMD`<word>, so each one's argument
-  # is evaluated as the player who typed it, as a built-in command's is.
+  # is evaluated as the player who typed it, as a built-in command's is. The hook runs with /localize/clearregs, so a
+  # register the argument sets never reaches the code.
   #
   # Trees: CMD` the hooked commands, INC`COMMAND` the parse and dispatch, INC`ADV`, INC`OBS` and INC`CD` one
   # routine per switch, INC`NEED` the guards. FUN`TPL` the library, FUN`BUILD` the recipes, FUN`MOB` filler
@@ -1015,7 +1016,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add +adversary; @hook/override/inline +adversary=%!,CMD`ADVERSARY; @command/add +obstacle; @hook/override/inline +obstacle=%!,CMD`OBSTACLE; @command/add +countdown; @hook/override/inline +countdown=%!,CMD`COUNTDOWN
+          @command/add +adversary; @hook/override/inline/localize/clearregs +adversary=%!,CMD`ADVERSARY; @command/add +obstacle; @hook/override/inline/localize/clearregs +obstacle=%!,CMD`OBSTACLE; @command/add +countdown; @hook/override/inline/localize/clearregs +countdown=%!,CMD`COUNTDOWN
         flags: [cmdsyntax]
       AINSTALL:
         value: |-

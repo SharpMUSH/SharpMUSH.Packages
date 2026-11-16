@@ -1,7 +1,7 @@
 format: "1.20"
 package: roll-tables
 title: Roll Tables
-version: 1.1.1
+version: 1.2.0
 authors: [SharpMUSH]
 description: "Roll tables: weather, encounters and names kept as softcode data, shown with +table, rolled in the room with +table/roll, and published to the wiki."
 license: MIT
@@ -34,8 +34,10 @@ roles:
 objects:
   # The command object. WIZARD so that @remit reaches the roller's room wherever it is, @wiki can
   # write the page a table is published to, and STARTUP can add the command. +table is added with
-  # @command/add/noparse and hooked to CMD`TABLE, so what a player types reaches the code exactly as
-  # typed: a row such as Storm: [u(FN`TABLE`ROLL,squall)] is stored as code, not rolled on the way in.
+  # @command/add and hooked to CMD`TABLE, so what a player types is evaluated as that player, as a
+  # built-in command's argument is: a row that should roll another table at each roll is typed with its
+  # brackets escaped, Storm: \[u(FN`TABLE`ROLL,squall)\], and stored as code. The hook runs with
+  # /localize/clearregs, so a register the argument sets never reaches the code.
   # The object also sits in the master room, so +table answers as a $-command before STARTUP has run.
   #
   # Trees: CMD` the $-command, INC`TABLE` one routine per switch, INC`NEED` the guards they share,
@@ -49,9 +51,9 @@ objects:
     flags: [WIZARD]
     attributes:
       # Commands added with @command/add and their hooks last until a restart, so STARTUP sets them on
-      # every boot. /noparse and /rsnoparse hand the hook the text as typed; /inline runs it in place.
+      # every boot. /inline runs the hook in place; /localize/clearregs gives it registers of its own.
       STARTUP: |-
-        @command/add/noparse/rsnoparse +table; @hook/override/inline +table={{roll_tables}},CMD`TABLE
+        @command/add +table; @hook/override/inline/localize/clearregs +table={{roll_tables}},CMD`TABLE
       AINSTALL: |-
         @trigger {{roll_tables}}/STARTUP
       AUPDATE: |-
@@ -621,7 +623,7 @@ objects:
 
         ## Rows that roll other tables
 
-        A row's result is evaluated when it is rolled, as the Roll Tables Data object, so a row can roll another table with ``%[u%(FN`TABLE`ROLL,<name>%)%]``. Typed into `+table/row`, the call is stored as it is and runs at each roll. Rolls nest at most five deep; a sixth shows as too deep to roll.
+        A row's result is evaluated when it is rolled, as the Roll Tables Data object, so a row can roll another table. What you type into `+table/row` is evaluated once, as you, so type the call with its brackets escaped, ``\\%[u%(FN`TABLE`ROLL,<name>%)\\%]``: it is stored as code and runs at each roll. Rolls nest at most five deep; a sixth shows as too deep to roll.
 
         ```
         +table/row weather/7=20|Storm: %[u%(FN`TABLE`ROLL,squall%)%]

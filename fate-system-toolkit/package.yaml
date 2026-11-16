@@ -41,7 +41,8 @@ objects:
   # live on the store, BID`<room number>.
   #
   # +condition, +wealth, +storm, +super, +gadget and +aug are added with @command/add and hooked to CMD`<word>, so
-  # each one's argument is evaluated as the player who typed it, as a built-in command's is.
+  # each one's argument is evaluated as the player who typed it, as a built-in command's is. The hook runs with
+  # /localize/clearregs, so a register the argument sets never reaches the code.
   #
   # Trees: CMD` the hooked commands, INC`COMMAND` the parse and dispatch, INC`COND`, INC`WEALTH`, INC`STORM`,
   # INC`SUPER`, INC`GADGET` and INC`AUG` one routine per switch, INC`NEED` the guards. FUN`LIST` the store's lists,
@@ -1577,7 +1578,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add +condition; @hook/override/inline +condition=%!,CMD`CONDITION; @command/add +wealth; @hook/override/inline +wealth=%!,CMD`WEALTH; @command/add +storm; @hook/override/inline +storm=%!,CMD`STORM; @command/add +super; @hook/override/inline +super=%!,CMD`SUPER; @command/add +gadget; @hook/override/inline +gadget=%!,CMD`GADGET; @command/add +aug; @hook/override/inline +aug=%!,CMD`AUG
+          @command/add +condition; @hook/override/inline/localize/clearregs +condition=%!,CMD`CONDITION; @command/add +wealth; @hook/override/inline/localize/clearregs +wealth=%!,CMD`WEALTH; @command/add +storm; @hook/override/inline/localize/clearregs +storm=%!,CMD`STORM; @command/add +super; @hook/override/inline/localize/clearregs +super=%!,CMD`SUPER; @command/add +gadget; @hook/override/inline/localize/clearregs +gadget=%!,CMD`GADGET; @command/add +aug; @hook/override/inline/localize/clearregs +aug=%!,CMD`AUG
         flags: [cmdsyntax]
       AINSTALL:
         value: |-

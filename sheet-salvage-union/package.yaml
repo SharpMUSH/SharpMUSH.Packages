@@ -51,7 +51,8 @@ objects:
   # QUIRK, SYSTEMS and MODULES (lists of keys), SP, EP, HEAT and SCRAP`<tech>. An unset meter is at its start.
   #
   # +sheet, +mech, +check and +crawler are added with @command/add and hooked to CMD`<word>, so each one's argument is
-  # evaluated as the player who typed it, as a built-in command's is.
+  # evaluated as the player who typed it, as a built-in command's is. The hook runs with /localize/clearregs, so a
+  # register the argument sets never reaches the code.
   #
   # Trees: CMD` the hooked commands, INC`COMMAND` the parse and dispatch, INC`SHEET`, INC`MECH`, INC`CHECK` and
   # INC`CRAWLER` one routine per switch, INC`NEED` the guards they share, INC`DO` the writes. FUN`FIND` looks up
@@ -2083,7 +2084,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @dolist sheet mech check crawler encounter={@command/add +##; @hook/override/inline +##=%!,CMD`[ucstr(##)]}
+          @dolist sheet mech check crawler encounter={@command/add +##; @hook/override/inline/localize/clearregs +##=%!,CMD`[ucstr(##)]}
         flags: [cmdsyntax]
       AINSTALL:
         value: |-

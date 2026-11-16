@@ -54,8 +54,8 @@ objects:
   # wizard-flagged, so only this object writes any of them.
   #
   # +sheet, +check and +encounter are added with @command/add and hooked to CMD`<word>, so each one's argument is
-  # evaluated as the player who typed it, as a built-in command's is. Move text on the store is read with get(), never
-  # evaluated.
+  # evaluated as the player who typed it, as a built-in command's is. The hook runs with /localize/clearregs, so a
+  # register the argument sets never reaches the code. Move text on the store is read with get(), never evaluated.
   #
   # Trees: CMD` the hooked commands, INC`COMMAND` the parse and dispatch, INC`SHEET`, INC`CHECK` and
   # INC`ENCOUNTER` one routine per switch, INC`NEED` the guards they share, INC`DO` the writes. FUN`LEDGER`
@@ -1778,7 +1778,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add +sheet; @hook/override/inline +sheet=%!,CMD`SHEET; @command/add +check; @hook/override/inline +check=%!,CMD`CHECK; @command/add +encounter; @hook/override/inline +encounter=%!,CMD`ENCOUNTER; @command/add +foe; @hook/override/inline +foe=%!,CMD`FOE
+          @command/add +sheet; @hook/override/inline/localize/clearregs +sheet=%!,CMD`SHEET; @command/add +check; @hook/override/inline/localize/clearregs +check=%!,CMD`CHECK; @command/add +encounter; @hook/override/inline/localize/clearregs +encounter=%!,CMD`ENCOUNTER; @command/add +foe; @hook/override/inline/localize/clearregs +foe=%!,CMD`FOE
         flags: [cmdsyntax]
       AINSTALL:
         value: |-

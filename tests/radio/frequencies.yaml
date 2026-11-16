@@ -43,10 +43,10 @@ steps:
 
   # A message is evaluated as the player who sent it, as say's is.
   - as: ann
-    run: +radio pol=${raw} [add(1,2)] 50% off
+    run: +radio pol=${raw} [add(1,2)] [name(%#)] 50% off
   - heard: bo
     containing: ${raw}
-    lines: ['<Police> Officer ${ann.name} says, "${raw} 3 50% off"']
+    lines: ['<Police> Officer ${ann.name} says, "${raw} 3 ${ann.name} 50% off"']
 
   - as: ann
     run: +radio/alterego Police=Unit 4
@@ -59,7 +59,7 @@ steps:
   - as: bo
     run: +radio/recall Police=2
     sees:
-      - '<Police> Officer ${ann.name} says, "${raw} 3 50% off"'
+      - '<Police> Officer ${ann.name} says, "${raw} 3 ${ann.name} 50% off"'
       - '<Police> Officer Unit 4 says, "${unit}"'
     not_sees: ${posed}
     because: recall=2 shows the last two lines

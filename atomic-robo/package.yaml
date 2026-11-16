@@ -36,7 +36,8 @@ objects:
   # +check and Duties read the right numbers.
   #
   # +mode, +machine, +invent and +brainstorm are added with @command/add and hooked to CMD`<word>, so each one's
-  # argument is evaluated as the player who typed it, as a built-in command's is.
+  # argument is evaluated as the player who typed it, as a built-in command's is. The hook runs with
+  # /localize/clearregs, so a register the argument sets never reaches the code.
   #
   # Trees: CMD` the hooked commands, INC`COMMAND` the parse and dispatch, INC`MODE`, INC`MACHINE`, INC`INVENT`
   # and INC`BRAINSTORM` one routine per switch, INC`NEED` the guards, INC`DO` the writes. FUN`MODE`, FUN`SKILL`,
@@ -1076,7 +1077,7 @@ objects:
       # @command/add and @hook last until a restart, so STARTUP sets them on every boot.
       STARTUP:
         value: |-
-          @command/add +mode; @hook/override/inline +mode=%!,CMD`MODE; @command/add +machine; @hook/override/inline +machine=%!,CMD`MACHINE; @command/add +invent; @hook/override/inline +invent=%!,CMD`INVENT; @command/add +brainstorm; @hook/override/inline +brainstorm=%!,CMD`BRAINSTORM
+          @command/add +mode; @hook/override/inline/localize/clearregs +mode=%!,CMD`MODE; @command/add +machine; @hook/override/inline/localize/clearregs +machine=%!,CMD`MACHINE; @command/add +invent; @hook/override/inline/localize/clearregs +invent=%!,CMD`INVENT; @command/add +brainstorm; @hook/override/inline/localize/clearregs +brainstorm=%!,CMD`BRAINSTORM
         flags: [cmdsyntax]
       AINSTALL:
         value: |-

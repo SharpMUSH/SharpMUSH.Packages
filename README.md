@@ -42,7 +42,7 @@ The table is generated from [`index.yaml`](index.yaml); edit that file, then run
 <!-- packages-table:begin (generated from index.yaml by tools/readme-packages-table.py) -->
 | Package | Version | Description |
 |---|---|---|
-| [`roll-tables/`](roll-tables/) | 1.1.1 | Random tables as softcode data, rolled in the room with +table/roll and publishable to the wiki |
+| [`roll-tables/`](roll-tables/) | 1.2.0 | Random tables as softcode data, rolled in the room with +table/roll and publishable to the wiki |
 | [`roll-tables-help/`](roll-tables-help/) | 1.0.0 | Puts the roll table topics into +help |
 | [`pf2e-remaster/`](pf2e-remaster/) | 1.6.4 | Pathfinder Second Edition (Remaster) core rules as wiki pages (classes, ancestries, feats, spells, equipment, skills, conditions, DC tables; ORC License) |
 | [`sheet-d20/`](sheet-d20/) | 2.3.0 | d20 character sheet built from a ledger (abilities, skills, training, level, hit points, coin, gear), guided character creation, +check against a DC or a foe, and encounters with their own sheet copies, foes from a bestiary, initiative and conditions |
@@ -66,7 +66,7 @@ The table is generated from [`index.yaml`](index.yaml); edit that file, then run
 | [`fate-system-toolkit-help/`](fate-system-toolkit-help/) | 1.1.2 | Puts the Fate System Toolkit topics into +help |
 | [`fate-system-toolkit-config/`](fate-system-toolkit-config/) | 1.1.2 | Puts the Fate System Toolkit settings, conditions, storms and augs into +config |
 | [`fate-system-toolkit-wiki/`](fate-system-toolkit-wiki/) | 1.1.2 | Unofficial Fate System Toolkit rules reference as wiki pages; Fate System Toolkit SRD text under CC BY 3.0 |
-| [`duties/`](duties/) | 1.3.5 | +duty — short adventures a party plays from challenge to challenge, written by players, approved by duty reviewers and put on a seasonal roster; rolls come from a sheet system bridge |
+| [`duties/`](duties/) | 1.4.0 | +duty — short adventures a party plays from challenge to challenge, written by players, approved by duty reviewers and put on a seasonal roster; rolls come from a sheet system bridge |
 | [`duties-help/`](duties-help/) | 1.0.2 | Registers the duties topics with +help (requires duties and plus-help) |
 | [`duties-config/`](duties-config/) | 1.0.2 | Registers the duties settings and active roster with +config (requires duties and plus-config) |
 | [`duties-app/`](duties-app/) | 1.1.1 | Application package — registers duties as a portal page at /apps/duties, with a map editor for a duty's steps, the review of submitted duties and the active roster (requires duties) |
