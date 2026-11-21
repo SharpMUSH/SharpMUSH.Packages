@@ -14,7 +14,8 @@ room's rule set, else its zone's, else the game's default, and a game-wide event
 
 | Command | What it does |
 |---|---|
-| `+nf` or `+nf/board` | The game you are in, or your cards when you are not in one |
+| `+nf` | The game you are in, or your cards when you are not in one |
+| `+nf/board` | The game you are in; says so when you are not in one |
 | `+nf/cards` | Your cards, how many of each, and which are in your hand |
 | `+nf/card <card>` | One card, with its picture and its text art |
 | `+nf/deck [<card>, ...]` | Shows or chooses your hand of five; places left empty are filled with your strongest cards |
