@@ -281,7 +281,7 @@ objects:
       INC`STAKES`FRIENDLY: |-
         @include me/INC`GAME`WIPE
       INC`STAKES`SPOILS: |-
-        @dolist/inline u(FN`BOARD`TURNED)={think setq(game_spoil,extract(%q<game_cards>,##,1)); @include/args me/INC`OWN`MOVE=from,u(FN`GAME`PLAYER,after(%q<game_spoil>,:)),to,u(FN`GAME`PLAYER,extract(%q<game_owners>,##,1)),card,before(%q<game_spoil>,:),why,game %q<game_id>}; @pemit/list %q<game_a> %q<game_b>=notice(NINEFOLD,Spoils: [u(FN`SPOILS`SENTENCE)],info); @include me/INC`GAME`WIPE
+        think setq(game_done,); @dolist/inline u(FN`BOARD`TURNED)={think setq(game_spoil,extract(%q<game_cards>,##,1)); @include/args me/INC`OWN`MOVE=from,u(FN`GAME`PLAYER,after(%q<game_spoil>,:)),to,u(FN`GAME`PLAYER,extract(%q<game_owners>,##,1)),card,before(%q<game_spoil>,:),why,game %q<game_id>; think setq(game_done,%q<game_done> ##)}; @pemit/list %q<game_a> %q<game_b>=notice(NINEFOLD,Spoils: [u(FN`SPOILS`SENTENCE,squish(%q<game_done>),u(FN`BOARD`TURNED))],info); @include me/INC`GAME`WIPE
       INC`STAKES`PICK: |-
         &MATCH`%q<game_id> {{store}}=claim; &MATCH`%q<game_id>`LOSER {{store}}=objid(%q<game_loser_obj>); &MATCH`%q<game_id>`POOL {{store}}=get({{store}}/MATCH`%q<game_id>`START`[ucstr(u(FN`GAME`OTHER,%q<game_winner>))]); &CLAIM`[u(FN`KEY,%q<game_winner_obj>)] {{store}}=%q<game_id>; @dolist/inline %q<game_a> %q<game_b>={@break comp(get({{store}}/IN`[u(FN`KEY,##)]),%q<game_id>); &IN`[u(FN`KEY,##)] {{store}}}; @pemit %q<game_winner_obj>=notice(NINEFOLD,You may take one card from [name(%q<game_loser_obj>)]'s hand: [itemize(iter(get({{store}}/MATCH`%q<game_id>`POOL),u(FN`CARD`NAME,before(%i0,:)),%b,|),|)]. +nf/claim <card> takes it.,info)
       INC`GAME`WIPE: |-
@@ -595,9 +595,9 @@ objects:
       # Cards taken by Twin or Balance take what they beat, and so on.
       FN`PLACE`CASCADE: |-
         if(words(%0),setq(pc_new,setunion(squish(iter(%0,u(FN`PLACE`BASIC,%i0,%1))),))[u(FN`OWNERS`SET,%q<pc_new>,%1)][if(words(%q<pc_new>),%q<pc_new> [u(FN`PLACE`CASCADE,%q<pc_new>,%1)])])
-      # Who takes which cards under Spoils, from the loaded game.
+      # Who took which cards under Spoils: %0 the squares whose card changed hands, %1 every square that changed colour.
       FN`SPOILS`SENTENCE: |-
-        setq(ss_turned,u(FN`BOARD`TURNED))[if(words(%q<ss_turned>),itemize(squish(iter(a b,u(FN`SPOILS`SIDE,%i0),%b,|),|),|,and,;),No card changed colour%, so nobody takes one.)].
+        setq(ss_turned,%0)[if(words(%0),itemize(squish(iter(a b,u(FN`SPOILS`SIDE,%i0),%b,|),|),|,and,;),if(words(%1),No card changed hands%, as their owners no longer have them.,No card changed colour%, so nobody takes one.))].
       FN`SPOILS`SIDE: |-
         setq(sd_squares,squish(iter(%q<ss_turned>,if(strmatch(extract(%q<game_owners>,%i0,1),%0),%i0))))[if(words(%q<sd_squares>),[name(u(FN`GAME`PLAYER,%0))] takes [u(FN`TAKEN`NAMES,%q<sd_squares>)] from [name(u(FN`GAME`PLAYER,u(FN`GAME`OTHER,%0)))])]
       FN`TAKEN`NAMES: |-
