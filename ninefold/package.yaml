@@ -140,6 +140,38 @@ objects:
         How many changes to players' cards +nf/log keeps: grants, takebacks and cards won.
       DATA`CONFIG`LOGKEEP`EXAMPLE: |-
         500
+      DATA`CONFIG`ARTWIDTH: |-
+        32
+      DATA`CONFIG`ARTWIDTH`TYPE: |-
+        integer
+      DATA`CONFIG`ARTWIDTH`DEFAULT: |-
+        32
+      DATA`CONFIG`ARTWIDTH`MIN: |-
+        12
+      DATA`CONFIG`ARTWIDTH`MAX: |-
+        48
+      DATA`CONFIG`ARTWIDTH`LABEL: |-
+        Card art width
+      DATA`CONFIG`ARTWIDTH`DESCRIPTION: |-
+        How many characters wide a card's art box is. Every card's art is centred in a box this size, and its picture fills it.
+      DATA`CONFIG`ARTWIDTH`EXAMPLE: |-
+        32
+      DATA`CONFIG`ARTHEIGHT: |-
+        16
+      DATA`CONFIG`ARTHEIGHT`TYPE: |-
+        integer
+      DATA`CONFIG`ARTHEIGHT`DEFAULT: |-
+        16
+      DATA`CONFIG`ARTHEIGHT`MIN: |-
+        4
+      DATA`CONFIG`ARTHEIGHT`MAX: |-
+        24
+      DATA`CONFIG`ARTHEIGHT`LABEL: |-
+        Card art height
+      DATA`CONFIG`ARTHEIGHT`DESCRIPTION: |-
+        How many lines tall a card's art box is.
+      DATA`CONFIG`ARTHEIGHT`EXAMPLE: |-
+        16
 
       # ---- the rules ----------------------------------------------------------------------------
       # The rule words, in the order they are listed. Each DATA`RULE`<WORD> is its name, with ABOUT under it.
@@ -323,7 +355,7 @@ objects:
       INC`NF`SET: |-
         @include me/INC`NEED`STAFF; think setqm(card_text,before(%q<cmd_lhs>,/),card_field,lcstr(after(%q<cmd_lhs>,/))); @assert cand(pos(/,%q<cmd_lhs>),%q<cmd_equals>)=@pemit %#=notice(NINEFOLD,+nf/set <card>/<field>=<value>. The fields are [itemize(v(DATA`FIELDS))].,warn); @include me/INC`NEED`CARD; @assert member(v(DATA`FIELDS),%q<card_field>)=@pemit %#=notice(NINEFOLD,A card has no field %q<card_field>. The fields are [itemize(v(DATA`FIELDS))].,warn); @include me/INC`SET`[ucstr(%q<card_field>)]
       DATA`FIELDS: |-
-        name short edges tier affinity starter image art
+        name short edges tier affinity starter image art ascii
       INC`SET`NAME: |-
         think setq(card_name,%q<cmd_rhs>); @include me/INC`NEED`NAME; think setq(card_old,u(FN`CARD`NAME,%q<card_id>)); &CARD`%q<card_id> {{store}}=%q<card_name>; @pemit %#=notice(NINEFOLD,Card %q<card_id>%, %q<card_old>%, is called %q<card_name> now.,ok)
       INC`SET`SHORT: |-
@@ -338,9 +370,13 @@ objects:
         @assert cor(not(strlen(%q<cmd_rhs>)),cand(isint(%q<cmd_rhs>),gte(%q<cmd_rhs>,0),lte(%q<cmd_rhs>,9)))=@pemit %#=notice(NINEFOLD,How many copies a new player starts with: 0 to 9.,warn); &CARD`%q<card_id>`STARTER {{store}}=if(%q<cmd_rhs>,%q<cmd_rhs>); @pemit %#=notice(NINEFOLD,if(%q<cmd_rhs>,New players start with [u(FN`COPIES`SENTENCE,%q<cmd_rhs>,%q<card_id>)].,[u(FN`CARD`NAME,%q<card_id>)] is not in the starter set now.),ok)
       INC`SET`IMAGE: |-
         @assert cor(not(strlen(%q<cmd_rhs>)),u(FN`IMAGE`VALID,%q<cmd_rhs>))=@pemit %#=notice(NINEFOLD,A picture is an https:// address or a path on this game such as /api/wiki-assets/...,warn); &CARD`%q<card_id>`IMAGE {{store}}=%q<cmd_rhs>; @pemit %#=notice(NINEFOLD,if(strlen(%q<cmd_rhs>),[u(FN`CARD`NAME,%q<card_id>)]'s picture is %q<cmd_rhs> now.,[u(FN`CARD`NAME,%q<card_id>)] has no picture now.),ok)
-      # The art as typed, %r between lines: at most 8 lines of 24 characters, kept as written.
+      # The art as typed, %r between lines, kept as written: no more lines or characters than the art box holds.
       INC`SET`ART: |-
-        @assert u(FN`ART`VALID,%q<cmd_rhs>)=@pemit %#=notice(NINEFOLD,Card art is at most 8 lines of 24 characters%, %%r between lines.,warn); &CARD`%q<card_id>`ART {{store}}=%q<cmd_rhs>; @pemit %#=notice(NINEFOLD,[u(FN`CARD`NAME,%q<card_id>)] has new art:,ok); @pemit %#=u(FN`SCREEN`CARD,%q<card_id>,%#)
+        @assert u(FN`ART`VALID,%q<cmd_rhs>)=@pemit %#=notice(NINEFOLD,u(FN`ART`LIMIT),warn); &CARD`%q<card_id>`ART {{store}}=%q<cmd_rhs>; @pemit %#=notice(NINEFOLD,[u(FN`CARD`NAME,%q<card_id>)] has new art:,ok); @pemit %#=u(FN`SCREEN`CARD,%q<card_id>,%#)
+      # The art a client without UTF-8 is sent instead, line for line: printable ASCII only. Empty sends the art
+      # itself, its characters folded to ASCII.
+      INC`SET`ASCII: |-
+        @assert u(FN`ART`VALID,%q<cmd_rhs>)=@pemit %#=notice(NINEFOLD,u(FN`ART`LIMIT),warn); @assert u(FN`ART`ASCII,%q<cmd_rhs>)=@pemit %#=notice(NINEFOLD,The ASCII art uses only the characters on a US keyboard.,warn); &CARD`%q<card_id>`ART`ASCII {{store}}=%q<cmd_rhs>; @pemit %#=notice(NINEFOLD,if(strlen(%q<cmd_rhs>),[u(FN`CARD`NAME,%q<card_id>)] has new ASCII art.,[u(FN`CARD`NAME,%q<card_id>)]'s art is folded to ASCII for clients without UTF-8 now.),ok)
       # /delete <card> says what would go; /delete <card>=yes removes it and every copy players hold.
       INC`NF`DELETE: |-
         @include me/INC`NEED`STAFF; think setq(card_text,%q<cmd_lhs>); @include me/INC`NEED`CARD; @assert not(u(FN`CARD`INPLAY,%q<card_id>))=@pemit %#=notice(NINEFOLD,[u(FN`CARD`NAME,%q<card_id>)] is in a game now. Delete it when the game is over.,warn); think setq(card_holders,u(FN`CARD`HOLDERS,%q<card_id>)); @assert strmatch(%q<cmd_rhs>,yes)=@pemit %#=notice(NINEFOLD,This removes [u(FN`CARD`NAME,%q<card_id>)][case(words(%q<card_holders>),0,%, which nobody holds,1,%band the copies 1 player holds,%band the copies [words(%q<card_holders>)] players hold)]. +nf/delete %q<card_id>=yes to go ahead.,warn); @dolist/inline %q<card_holders>={&OWN`##`%q<card_id> {{store}}}; think setq(card_old,u(FN`CARD`NAME,%q<card_id>)); @wipe {{store}}/CARD`%q<card_id>`**; &CARD`%q<card_id> {{store}}; @pemit %#=notice(NINEFOLD,Card %q<card_id>%, %q<card_old>%, is gone.,ok)
@@ -470,7 +506,11 @@ objects:
       FN`TIER`OF: |-
         setq(to_total,ladd(%0))[cond(lte(%q<to_total>,13),1,lte(%q<to_total>,17),2,lte(%q<to_total>,21),3,lte(%q<to_total>,25),4,1,5)]
       FN`ART`VALID: |-
-        cand(lte(words(%0,%r),8),not(words(squish(iter(%0,if(gt(strlen(%i0),24),x),%r)))))
+        cand(lte(words(%0,%r),v(DATA`CONFIG`ARTHEIGHT)),not(words(squish(iter(%0,if(gt(strlen(%i0),v(DATA`CONFIG`ARTWIDTH)),x),%r)))))
+      FN`ART`ASCII: |-
+        not(words(squish(iter(%0,if(regmatch(%i0,^\[ -~\]*$),,x),%r))))
+      FN`ART`LIMIT: |-
+        Card art is at most [v(DATA`CONFIG`ARTHEIGHT)] lines of [v(DATA`CONFIG`ARTWIDTH)] characters%, %%r between lines.
       FN`IMAGE`VALID: |-
         cand(eq(words(%0),1),cor(strmatch(%0,https://*),strmatch(%0,http://*),strmatch(%0,/*)))
 
@@ -663,10 +703,22 @@ objects:
       # %0 a player, %1 the title.
       FN`SCREEN`COLLECTION: |-
         setqm(sc_pk,u(FN`KEY,%0),sc_ids,u(FN`OWN`CARDS,%q<sc_pk>),sc_hand,u(FN`DECK`HAND,%q<sc_pk>))[box(if(words(%q<sc_ids>),ldatatable(,#|Card|Edges|Tier|Affinity|Owned|In hand,iter(%q<sc_ids>,%i0|[u(FN`CARD`NAME,%i0)]|[u(FN`CARD`CROSS,%i0)]|[u(FN`CARD`TIER,%i0)]|[firstof(u(FN`CARD`AFFINITY,%i0),-)]|[u(FN`OWN`COUNT,%q<sc_pk>,%i0)]|[if(member(%q<sc_hand>,%i0),words(graball(%q<sc_hand>,%i0)),-)],,%*<^>),%*<^>),No cards yet.)%r[rule()]%r[words(u(FN`OWN`COPIES,%q<sc_pk>))] cards%, [words(%q<sc_ids>)] different. +nf/card <card> shows one%, +nf/deck chooses the hand of five.,%1)]
+      # The card's picture, with its art in the art box standing in for it where pictures are not shown, and
+      # its numbers beside it.
       FN`SCREEN`CARD: |-
-        box(u(FN`ART`TEXT,%0)%r[rule()]%r[fields(,Edges,u(FN`CARD`EDGES,%0),Tier,u(FN`CARD`TIER,%0),Affinity,firstof(u(FN`CARD`AFFINITY,%0),none),You own,u(FN`OWN`COUNT,u(FN`KEY,%1),%0),Picture,if(strlen(get({{store}}/CARD`%0`IMAGE)),image(get({{store}}/CARD`%0`IMAGE),get({{store}}/CARD`%0`IMAGE),160),none))],u(FN`CARD`NAME,%0) %(#%0%))
+        box(figure(get({{store}}/CARD`%0`IMAGE),u(FN`CARD`NAME,%0),firstof(u(FN`ART`CANVAS,%0),%(no art yet%)),left,fields(,Edges,u(FN`CARD`EDGES,%0),Tier,u(FN`CARD`TIER,%0),Affinity,firstof(u(FN`CARD`AFFINITY,%0),none),You own,u(FN`OWN`COUNT,u(FN`KEY,%1),%0))),u(FN`CARD`NAME,%0) %(#%0%))
       FN`ART`TEXT: |-
         firstof(get({{store}}/CARD`%0`ART),%(no art yet%))
+      # %0 a card: its art centred in the art box, every line as wide as the box. A line of the ASCII art stands
+      # in for its line of the art where the client is not sent UTF-8. A card with a picture and no art gets the
+      # box with "(no art yet)" in it, so the picture still fills it; with neither, nothing.
+      FN`ART`CANVAS: |-
+        setqm(ac_art,firstof(get({{store}}/CARD`%0`ART),if(strlen(get({{store}}/CARD`%0`IMAGE)),%(no art yet%))),ac_ascii,get({{store}}/CARD`%0`ART`ASCII),ac_w,v(DATA`CONFIG`ARTWIDTH),ac_h,v(DATA`CONFIG`ARTHEIGHT))[if(strlen(%q<ac_art>),u(FN`ART`BOXED))]
+      FN`ART`BOXED: |-
+        setqm(ac_n,max(words(%q<ac_art>,%r),words(%q<ac_ascii>,%r)),ac_mw,max(lmax(iter(%q<ac_art>,strlen(%i0),%r)),if(strlen(%q<ac_ascii>),lmax(iter(%q<ac_ascii>,strlen(%i0),%r)),0)))[setqm(ac_lp,max(0,div(sub(%q<ac_w>,%q<ac_mw>),2)),ac_tp,max(0,div(sub(%q<ac_h>,%q<ac_n>),2)))][iter(lnum(1,%q<ac_h>),u(FN`ART`ROW,sub(%i0,%q<ac_tp>)),%b,%r)]
+      # %0 a line of the art, counted from 1; outside it, a blank line.
+      FN`ART`ROW: |-
+        setq(ar_line,ljust(space(%q<ac_lp>)[if(cand(gte(%0,1),lte(%0,%q<ac_n>)),extract(%q<ac_art>,%0,1,%r))],%q<ac_w>))[if(strlen(%q<ac_ascii>),standin(%q<ar_line>,ljust(space(%q<ac_lp>)[if(cand(gte(%0,1),lte(%0,%q<ac_n>)),extract(%q<ac_ascii>,%0,1,%r))],%q<ac_w>)),%q<ar_line>)]
       FN`SCREEN`DECK: |-
         setq(sd_hand,iter(u(FN`DECK`HAND,u(FN`KEY,%0)),%i0:-))[box(u(FN`SCREEN`HAND,%q<sd_hand>)%r[rule()]%r+nf/deck <card>%, <card>%, ... chooses it. Cards you do not name are filled in with your strongest.,Your hand of five)]
       # %0 hand items <card>:<side>: a table of them.
@@ -805,7 +857,7 @@ objects:
 
       # One card: a view of it, or for a card keeper its editor.
       WEB`SCHEMA`CARD: |-
-        cond(not(u(FN`CARD`EXISTS,%1)),u(WEB`SCHEMA`SAY,There is no card %1.),u(WEB`STAFF,%0),u(WEB`FORM,u(FN`CARD`NAME,%1),v(DATA`WEB`CARD`ABOUT)%r[v(DATA`WEB`CARD`EDGES)]%r[v(DATA`WEB`CARD`PICTURE)]%r[json_fill(v(DATA`WEB`CARD`ART),/elements/1/value,u(WEB`ART`BLOCK,%1))]%r[v(DATA`WEB`CARD`BUTTONS)]),1,json_fill(v(DATA`WEB`CARD`VIEW),/title,u(FN`CARD`NAME,%1),/pages/0/sections/0/elements/1/value,u(WEB`ART`BLOCK,%1)))
+        cond(not(u(FN`CARD`EXISTS,%1)),u(WEB`SCHEMA`SAY,There is no card %1.),u(WEB`STAFF,%0),u(WEB`FORM,u(FN`CARD`NAME,%1),v(DATA`WEB`CARD`ABOUT)%r[v(DATA`WEB`CARD`EDGES)]%r[v(DATA`WEB`CARD`PICTURE)]%r[json_fill(v(DATA`WEB`CARD`ART),/elements/2/value,u(WEB`ART`BLOCK,%1))]%r[v(DATA`WEB`CARD`BUTTONS)]),1,json_fill(v(DATA`WEB`CARD`VIEW),/title,u(FN`CARD`NAME,%1),/pages/0/sections/0/elements/1/value,u(WEB`ART`BLOCK,%1)))
       WEB`ART`BLOCK: |-
         ```%r[u(FN`ART`TEXT,%0)]%r```
       DATA`WEB`CARD`VIEW: |-
@@ -817,7 +869,7 @@ objects:
       DATA`WEB`CARD`PICTURE: |-
         {"name":"Picture","order":3,"columns":2,"elements":[{"kind":"field","key":"image","label":"Picture","type":"image","placeholder":"/api/wiki-assets/lantern-moth.svg","help":"Upload a picture or choose one from the image library. SVG is best: it stays sharp at any size."},{"kind":"image","src_field":"image","alt":"The card's picture as saved"}]}
       DATA`WEB`CARD`ART: |-
-        {"name":"Text art","order":4,"columns":2,"elements":[{"kind":"field","key":"art","label":"Art for the game","type":"textarea","placeholder":" \\  .-.  /","help":"What players see in the game with +nf/card: up to 8 lines of 24 characters, shown in a fixed-width font."},{"kind":"markdown","value":""}]}
+        {"name":"Text art","order":4,"columns":2,"elements":[{"kind":"field","key":"art","label":"Art for the game","type":"textarea","placeholder":" ╲  ╭─╮  ╱","help":"What a player sees with +nf/card where pictures are not shown, centred in the art box (Card art width and height in the Ninefold settings). Unicode is fine; keep to characters one column wide."},{"kind":"field","key":"art_ascii","label":"The same art in ASCII","type":"textarea","placeholder":" \\  .-.  /","help":"Sent instead, line for line, to a client without UTF-8. Only the characters on a US keyboard. Empty folds the art above to ASCII."},{"kind":"markdown","value":"","span":2}]}
       DATA`WEB`CARD`BUTTONS: |-
         {"name":"","order":5,"elements":[{"kind":"button","label":"Save card","action":"act","values":{"op":"save"},"color":"primary","variant":"filled"},{"kind":"button","label":"Delete card","action":"act","values":{"op":"delete"},"confirm":"Delete this card and every copy players hold?","color":"error"},{"kind":"markdown","value":"[All cards](/apps/ninefold/cards)"}]}
 
@@ -874,7 +926,7 @@ objects:
       WEB`ROWS`MINE: |-
         setq(wr_hand,u(FN`DECK`HAND,%0))[u(WEB`JSON`ARRAY,iter(u(FN`OWN`CARDS,%0),json_fill(v(DATA`TEMPLATE`WEB`ROW`MINE),/id,%i0,/name,u(FN`CARD`NAME,%i0),/edges,u(FN`CARD`CROSS,%i0),/tier,u(FN`CARD`TIER,%i0),/affinity,firstof(u(FN`CARD`AFFINITY,%i0),-),/owned,u(FN`OWN`COUNT,%0,%i0),/hand,if(member(%q<wr_hand>,%i0),words(graball(%q<wr_hand>,%i0)),-)),%b,%r))]
       WEB`DATA`CARD: |-
-        if(u(FN`CARD`EXISTS,%1),u(WEB`JSON`OBJECT,u(WEB`STRING,card,%1)%r[u(WEB`STRING,name,u(FN`CARD`NAME,%1))]%r[u(WEB`STRING,short,get({{store}}/CARD`%1`SHORT))]%r[u(WEB`STRING,tier,u(FN`CARD`TIER,%1))]%r[u(WEB`STRING,affinity,u(FN`CARD`AFFINITY,%1))]%r[u(WEB`JSON`MEMBER,starter,json(number,firstof(get({{store}}/CARD`%1`STARTER),0)))]%r[u(WEB`JSON`MEMBER,top,json(number,u(FN`CARD`SIDE,%1,1)))]%r[u(WEB`JSON`MEMBER,right,json(number,u(FN`CARD`SIDE,%1,2)))]%r[u(WEB`JSON`MEMBER,bottom,json(number,u(FN`CARD`SIDE,%1,3)))]%r[u(WEB`JSON`MEMBER,left,json(number,u(FN`CARD`SIDE,%1,4)))]%r[u(WEB`STRING,image,get({{store}}/CARD`%1`IMAGE))]%r[u(WEB`STRING,art,get({{store}}/CARD`%1`ART))]%r[u(WEB`STRING,Edges,u(FN`CARD`EDGES,%1))]%r[u(WEB`STRING,Tier,u(FN`CARD`TIER,%1))]%r[u(WEB`STRING,Affinity,firstof(u(FN`CARD`AFFINITY,%1),none))]%r[u(WEB`STRING,You own,u(FN`OWN`COUNT,u(FN`KEY,%0),%1))]),json(object))
+        if(u(FN`CARD`EXISTS,%1),u(WEB`JSON`OBJECT,u(WEB`STRING,card,%1)%r[u(WEB`STRING,name,u(FN`CARD`NAME,%1))]%r[u(WEB`STRING,short,get({{store}}/CARD`%1`SHORT))]%r[u(WEB`STRING,tier,u(FN`CARD`TIER,%1))]%r[u(WEB`STRING,affinity,u(FN`CARD`AFFINITY,%1))]%r[u(WEB`JSON`MEMBER,starter,json(number,firstof(get({{store}}/CARD`%1`STARTER),0)))]%r[u(WEB`JSON`MEMBER,top,json(number,u(FN`CARD`SIDE,%1,1)))]%r[u(WEB`JSON`MEMBER,right,json(number,u(FN`CARD`SIDE,%1,2)))]%r[u(WEB`JSON`MEMBER,bottom,json(number,u(FN`CARD`SIDE,%1,3)))]%r[u(WEB`JSON`MEMBER,left,json(number,u(FN`CARD`SIDE,%1,4)))]%r[u(WEB`STRING,image,get({{store}}/CARD`%1`IMAGE))]%r[u(WEB`STRING,art,get({{store}}/CARD`%1`ART))]%r[u(WEB`STRING,art_ascii,get({{store}}/CARD`%1`ART`ASCII))]%r[u(WEB`STRING,Edges,u(FN`CARD`EDGES,%1))]%r[u(WEB`STRING,Tier,u(FN`CARD`TIER,%1))]%r[u(WEB`STRING,Affinity,firstof(u(FN`CARD`AFFINITY,%1),none))]%r[u(WEB`STRING,You own,u(FN`OWN`COUNT,u(FN`KEY,%0),%1))]),json(object))
       DATA`TEMPLATE`WEB`ROW`ALL: |-
         {"id":"","name":"","edges":"","tier":"","affinity":"","starter":"","holders":""}
       WEB`DATA`CARDS: |-
@@ -897,7 +949,7 @@ objects:
         think setqm(card_pk,u(FN`KEY,%q<web_viewer>),card_ids,u(WEB`BODY`WORDS,deck)); @assert every(FN`CARD`EXISTS,%q<card_ids>)=think setq(web_response,u(WEB`ERROR,One of those cards does not exist.)); @assert lte(words(%q<card_ids>),5)=think setq(web_response,u(WEB`ERROR,A hand is five cards. You chose [words(%q<card_ids>)].)); @assert u(FN`DECK`AFFORD,%q<card_pk>,%q<card_ids>)=think setq(web_response,u(WEB`ERROR,You do not have [u(FN`CARD`NAME,%q<card_short>)].)); &DECK`%q<card_pk> {{store}}=if(strmatch(setunion(%q<card_ids>,),setunion(u(FN`DECK`HAND,%q<card_pk>),)),get({{store}}/DECK`%q<card_pk>),%q<card_ids>); think setq(web_response,u(WEB`DONE,Your hand is [itemize(iter(u(FN`DECK`HAND,%q<card_pk>),u(FN`CARD`NAME,%i0),%b,|),|)].))
       # The card editor's Save: every field checked first, then all of them written.
       WEB`ACT`SAVE: |-
-        think setqm(card_id,u(WEB`BODY`GET,card),card_name,trim(u(WEB`BODY`GET,name)),card_short,trim(u(WEB`BODY`GET,short)),card_tier,u(WEB`BODY`GET,tier),card_aff,lcstr(u(WEB`BODY`GET,affinity)),card_starter,firstof(u(WEB`BODY`GET,starter),0),card_values,u(FN`VALUES`PARSE,iter(top right bottom left,u(WEB`BODY`GET,%i0))),card_image,trim(u(WEB`BODY`GET,image)),card_art,u(WEB`BODY`GET,art)); @assert u(FN`CARD`EXISTS,%q<card_id>)=think setq(web_response,u(WEB`ERROR,There is no such card.)); @assert strlen(%q<card_values>)=think setq(web_response,u(WEB`ERROR,Each edge is a whole number from 1 to 10.)); @assert u(WEB`NAME`OK,%q<card_name>,%q<card_id>)=think setq(web_response,u(WEB`ERROR,%q<web_problem>)); @assert cand(lte(strlen(%q<card_short>),5),not(pos(|,%q<card_short>)))=think setq(web_response,u(WEB`ERROR,The name on the board is up to 5 characters.)); @assert member(1 2 3 4 5,%q<card_tier>)=think setq(web_response,u(WEB`ERROR,A tier is 1 to 5.)); @assert cor(not(strlen(%q<card_aff>)),member(v(DATA`AFFINITIES),%q<card_aff>))=think setq(web_response,u(WEB`ERROR,That is not an affinity.)); @assert cand(isint(%q<card_starter>),gte(%q<card_starter>,0),lte(%q<card_starter>,9))=think setq(web_response,u(WEB`ERROR,The starter set holds 0 to 9 copies.)); @assert cor(not(strlen(%q<card_image>)),u(FN`IMAGE`VALID,%q<card_image>))=think setq(web_response,u(WEB`ERROR,A picture is an https:// address or a path on this game.)); @assert u(FN`ART`VALID,%q<card_art>)=think setq(web_response,u(WEB`ERROR,Text art is at most 8 lines of 24 characters.)); &CARD`%q<card_id> {{store}}=%q<card_name>; &CARD`%q<card_id>`SHORT {{store}}=%q<card_short>; &CARD`%q<card_id>`TIER {{store}}=%q<card_tier>; &CARD`%q<card_id>`AFFINITY {{store}}=%q<card_aff>; &CARD`%q<card_id>`STARTER {{store}}=if(%q<card_starter>,%q<card_starter>); &CARD`%q<card_id>`IMAGE {{store}}=%q<card_image>; &CARD`%q<card_id>`ART {{store}}=%q<card_art>; @include %!/INC`CARD`VALUES; think setq(web_response,u(WEB`DONE,Saved %q<card_name>.))
+        think setqm(card_id,u(WEB`BODY`GET,card),card_name,trim(u(WEB`BODY`GET,name)),card_short,trim(u(WEB`BODY`GET,short)),card_tier,u(WEB`BODY`GET,tier),card_aff,lcstr(u(WEB`BODY`GET,affinity)),card_starter,firstof(u(WEB`BODY`GET,starter),0),card_values,u(FN`VALUES`PARSE,iter(top right bottom left,u(WEB`BODY`GET,%i0))),card_image,trim(u(WEB`BODY`GET,image)),card_art,u(WEB`BODY`GET,art),card_ascii,u(WEB`BODY`GET,art_ascii)); @assert u(FN`CARD`EXISTS,%q<card_id>)=think setq(web_response,u(WEB`ERROR,There is no such card.)); @assert strlen(%q<card_values>)=think setq(web_response,u(WEB`ERROR,Each edge is a whole number from 1 to 10.)); @assert u(WEB`NAME`OK,%q<card_name>,%q<card_id>)=think setq(web_response,u(WEB`ERROR,%q<web_problem>)); @assert cand(lte(strlen(%q<card_short>),5),not(pos(|,%q<card_short>)))=think setq(web_response,u(WEB`ERROR,The name on the board is up to 5 characters.)); @assert member(1 2 3 4 5,%q<card_tier>)=think setq(web_response,u(WEB`ERROR,A tier is 1 to 5.)); @assert cor(not(strlen(%q<card_aff>)),member(v(DATA`AFFINITIES),%q<card_aff>))=think setq(web_response,u(WEB`ERROR,That is not an affinity.)); @assert cand(isint(%q<card_starter>),gte(%q<card_starter>,0),lte(%q<card_starter>,9))=think setq(web_response,u(WEB`ERROR,The starter set holds 0 to 9 copies.)); @assert cor(not(strlen(%q<card_image>)),u(FN`IMAGE`VALID,%q<card_image>))=think setq(web_response,u(WEB`ERROR,A picture is an https:// address or a path on this game.)); @assert u(FN`ART`VALID,%q<card_art>)=think setq(web_response,u(WEB`ERROR,u(FN`ART`LIMIT))); @assert u(FN`ART`VALID,%q<card_ascii>)=think setq(web_response,u(WEB`ERROR,u(FN`ART`LIMIT))); @assert u(FN`ART`ASCII,%q<card_ascii>)=think setq(web_response,u(WEB`ERROR,The ASCII art uses only the characters on a US keyboard.)); &CARD`%q<card_id> {{store}}=%q<card_name>; &CARD`%q<card_id>`SHORT {{store}}=%q<card_short>; &CARD`%q<card_id>`TIER {{store}}=%q<card_tier>; &CARD`%q<card_id>`AFFINITY {{store}}=%q<card_aff>; &CARD`%q<card_id>`STARTER {{store}}=if(%q<card_starter>,%q<card_starter>); &CARD`%q<card_id>`IMAGE {{store}}=%q<card_image>; &CARD`%q<card_id>`ART {{store}}=%q<card_art>; &CARD`%q<card_id>`ART`ASCII {{store}}=%q<card_ascii>; @include %!/INC`CARD`VALUES; think setq(web_response,u(WEB`DONE,Saved %q<card_name>.))
       # %0 a card name, %1 the card it is for (or nothing): 1 when it may be used; web_problem says why not.
       WEB`NAME`OK: |-
         setq(web_problem,cond(not(cand(strlen(%0),lte(strlen(%0),30),not(isint(%0)),not(pos(|,%0)),not(pos(`,%0)),not(pos(%,,%0)))),A card name is up to 30 characters%, not a number%, without | or a comma.,cor(not(strlen(setr(web_twin,u(FN`CARD`EXACT,%0)))),strmatch(%q<web_twin>,%1)),,1,Card %q<web_twin> is called %0 already.))[not(strlen(%q<web_problem>))]
@@ -1440,7 +1492,7 @@ objects:
 
         - `+nf/cards` lists your cards: their edges, tier and affinity, how many you have and which are in your
           hand of five.
-        - `+nf/card <card>` shows one card, with its picture and its text art.
+        - `+nf/card <card>` shows one card: its picture, or its text art where pictures are not shown, and its numbers.
         - `+nf/deck` shows your hand of five. `+nf/deck <card>, <card>, ...` chooses it; name a card twice to
           take two copies. Places you leave empty, or cards you no longer have, are filled in with your
           strongest cards.
@@ -1496,8 +1548,11 @@ objects:
         - `+nf/new <name>=<top> <right> <bottom> <left>` makes a card. Edges are 1 to 9 or A.
         - `+nf/set <card>/<field>=<value>` changes one: `name`, `short` (the name on the board, 5 letters),
           `edges`, `tier` (1 to 5), `affinity`, `starter` (copies every new player starts with), `image` (a
-          picture's address) or `art` (text art, `\%r` between lines, 8 lines of 24 at most). In art, type
-          `\\\\` for a backslash and `\%b` for a space at the start of a line; the portal's editor takes art as typed.
+          picture's address), `art` (text art, `\%r` between lines) or `ascii` (the same art in ASCII, for clients
+          without UTF-8; empty folds `art` to ASCII). In art, type `\\\\` for a backslash and `\%b` for a space at
+          the start of a line; the portal's editor takes art as typed.
+        - Art fits the art box, 32 characters by 16 lines unless the Ninefold settings change it, and is centred
+          in it. A client that shows pictures shows the card's picture in the box instead.
         - `+nf/delete <card>=yes` removes a card and every copy players hold.
         - `+nf/games` lists the games being played; `+nf/end <game>` stops one without paying its stakes.
 
