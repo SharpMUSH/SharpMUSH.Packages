@@ -474,11 +474,14 @@ objects:
         firstof(get({{store}}/CARD`%0`TIER),1)
       FN`CARD`TOTAL: |-
         add(u(FN`CARD`SIDE,%0,1),u(FN`CARD`SIDE,%0,2),u(FN`CARD`SIDE,%0,3),u(FN`CARD`SIDE,%0,4))
-      # The edges in a sentence, and in the short form tables use: T7 R3 B2 L5.
+      # The edges in a sentence; in the short form tables use, top/right/bottom/left: 7/3/2/5; and as a small
+      # card with each number on its side, three lines, a client without UTF-8 getting +-7-+ for the corners.
       FN`CARD`EDGES: |-
         top [u(FN`SHOW,u(FN`CARD`SIDE,%0,1))], right [u(FN`SHOW,u(FN`CARD`SIDE,%0,2))], bottom [u(FN`SHOW,u(FN`CARD`SIDE,%0,3))], left [u(FN`SHOW,u(FN`CARD`SIDE,%0,4))]
       FN`CARD`CROSS: |-
-        T[u(FN`SHOW,u(FN`CARD`SIDE,%0,1))] R[u(FN`SHOW,u(FN`CARD`SIDE,%0,2))] B[u(FN`SHOW,u(FN`CARD`SIDE,%0,3))] L[u(FN`SHOW,u(FN`CARD`SIDE,%0,4))]
+        [u(FN`SHOW,u(FN`CARD`SIDE,%0,1))]/[u(FN`SHOW,u(FN`CARD`SIDE,%0,2))]/[u(FN`SHOW,u(FN`CARD`SIDE,%0,3))]/[u(FN`SHOW,u(FN`CARD`SIDE,%0,4))]
+      FN`CARD`SIDES: |-
+        setqm(cs_t,u(FN`SHOW,u(FN`CARD`SIDE,%0,1)),cs_b,u(FN`SHOW,u(FN`CARD`SIDE,%0,3)))[standin(┌─%q<cs_t>─┐,+-%q<cs_t>-+)]%r[u(FN`SHOW,u(FN`CARD`SIDE,%0,4))][space(3)][u(FN`SHOW,u(FN`CARD`SIDE,%0,2))]%r[standin(└─%q<cs_b>─┘,+-%q<cs_b>-+)]
       # A card by its number, its whole name, or the start of one name only.
       FN`CARD`FIND: |-
         cond(u(FN`CARD`EXISTS,%0),%0,strlen(setr(cf_id,u(FN`CARD`EXACT,%0))),%q<cf_id>,1,u(FN`CARD`PREFIX,%0))
@@ -704,11 +707,11 @@ objects:
       # ---- screens ------------------------------------------------------------------------------
       # %0 a player, %1 the title.
       FN`SCREEN`COLLECTION: |-
-        setqm(sc_pk,u(FN`KEY,%0),sc_ids,u(FN`OWN`CARDS,%q<sc_pk>),sc_hand,u(FN`DECK`HAND,%q<sc_pk>))[box(if(words(%q<sc_ids>),ldatatable(,#|Card|Edges|Tier|Affinity|Owned|In hand,iter(%q<sc_ids>,%i0|[u(FN`CARD`NAME,%i0)]|[u(FN`CARD`CROSS,%i0)]|[u(FN`CARD`TIER,%i0)]|[firstof(u(FN`CARD`AFFINITY,%i0),-)]|[u(FN`OWN`COUNT,%q<sc_pk>,%i0)]|[if(member(%q<sc_hand>,%i0),words(graball(%q<sc_hand>,%i0)),-)],,%*<^>),%*<^>),No cards yet.)%r[rule()]%r[words(u(FN`OWN`COPIES,%q<sc_pk>))] cards%, [words(%q<sc_ids>)] different. +nf/card <card> shows one%, +nf/deck chooses the hand of five.,%1)]
+        setqm(sc_pk,u(FN`KEY,%0),sc_ids,u(FN`OWN`CARDS,%q<sc_pk>),sc_hand,u(FN`DECK`HAND,%q<sc_pk>))[box(if(words(%q<sc_ids>),ldatatable(,#|Card|Edges|Tier|Affinity|Owned|In hand,iter(%q<sc_ids>,%i0|[u(FN`CARD`NAME,%i0)]|[u(FN`CARD`CROSS,%i0)]|[u(FN`CARD`TIER,%i0)]|[firstof(u(FN`CARD`AFFINITY,%i0),-)]|[u(FN`OWN`COUNT,%q<sc_pk>,%i0)]|[if(member(%q<sc_hand>,%i0),words(graball(%q<sc_hand>,%i0)),-)],,%*<^>),%*<^>),No cards yet.)%r[rule()]%r[words(u(FN`OWN`COPIES,%q<sc_pk>))] cards%, [words(%q<sc_ids>)] different. Edges read top/right/bottom/left. +nf/card <card> shows one%, +nf/deck chooses the hand of five.,%1)]
       # The card's picture, with its art in the art box standing in for it where pictures are not shown, and
       # its numbers beside it.
       FN`SCREEN`CARD: |-
-        box(figure(get({{store}}/CARD`%0`IMAGE),u(FN`CARD`NAME,%0),firstof(u(FN`ART`CANVAS,%0),%(no art yet%)),left,fields(,Edges,u(FN`CARD`CROSS,%0),Tier,u(FN`CARD`TIER,%0),Affinity,firstof(u(FN`CARD`AFFINITY,%0),none),You own,u(FN`OWN`COUNT,u(FN`KEY,%1),%0))),u(FN`CARD`NAME,%0) %(#%0%))
+        box(figure(get({{store}}/CARD`%0`IMAGE),u(FN`CARD`NAME,%0),firstof(u(FN`ART`CANVAS,%0),%(no art yet%)),left,fields(,Edges,u(FN`CARD`SIDES,%0),Tier,u(FN`CARD`TIER,%0),Affinity,firstof(u(FN`CARD`AFFINITY,%0),none),You own,u(FN`OWN`COUNT,u(FN`KEY,%1),%0))),u(FN`CARD`NAME,%0) %(#%0%))
       FN`ART`TEXT: |-
         firstof(get({{store}}/CARD`%0`ART),%(no art yet%))
       # %0 a card: its art centred in the art box, every line as wide as the box. A line of the ASCII art stands
@@ -722,7 +725,7 @@ objects:
       FN`ART`ROW: |-
         setq(ar_line,ljust(space(%q<ac_lp>)[if(cand(gte(%0,1),lte(%0,%q<ac_n>)),extract(%q<ac_art>,%0,1,%r))],%q<ac_w>))[if(strlen(%q<ac_ascii>),standin(%q<ar_line>,ljust(space(%q<ac_lp>)[if(cand(gte(%0,1),lte(%0,%q<ac_n>)),extract(%q<ac_ascii>,%0,1,%r))],%q<ac_w>)),%q<ar_line>)]
       FN`SCREEN`DECK: |-
-        setq(sd_hand,iter(u(FN`DECK`HAND,u(FN`KEY,%0)),%i0:-))[box(u(FN`SCREEN`HAND,%q<sd_hand>)%r[rule()]%r+nf/deck <card>%, <card>%, ... chooses it. Cards you do not name are filled in with your strongest.,Your hand of five)]
+        setq(sd_hand,iter(u(FN`DECK`HAND,u(FN`KEY,%0)),%i0:-))[box(u(FN`SCREEN`HAND,%q<sd_hand>)%r[rule()]%rEdges read top/right/bottom/left. +nf/deck <card>%, <card>%, ... chooses it. Cards you do not name are filled in with your strongest.,Your hand of five)]
       # %0 hand items <card>:<side>: a table of them.
       FN`SCREEN`HAND: |-
         if(words(%0),ldatatable(,#|Card|Edges|Affinity,iter(%0,inum(0)|[u(FN`CARD`NAME,before(%i0,:))]|[u(FN`CARD`CROSS,before(%i0,:))]|[firstof(u(FN`CARD`AFFINITY,before(%i0,:)),-)],,%*<^>),%*<^>),No cards left.)
@@ -843,7 +846,7 @@ objects:
       WEB`SECTION`GAME: |-
         null(u(FN`GAME`LOAD,u(FN`GAME`OF,u(FN`KEY,%0)),%0))[json_fill(v(DATA`TEMPLATE`WEB`SECTION`GAME),/elements/1/value,```%r[u(FN`BOARD`DRAW)]%r```)]
       DATA`WEB`SECTION`CARDS: |-
-        {"name":"Your cards","order":2,"elements":[{"kind":"table","rows_field":"cards","empty":"You have no cards.","columns":[{"key":"name","label":"Card","link":"/apps/ninefold/card/{id}"},{"key":"edges","label":"Edges"},{"key":"tier","label":"Tier"},{"key":"affinity","label":"Affinity"},{"key":"owned","label":"Owned"},{"key":"hand","label":"In hand"}]}]}
+        {"name":"Your cards","order":2,"elements":[{"kind":"table","rows_field":"cards","empty":"You have no cards.","columns":[{"key":"name","label":"Card","link":"/apps/ninefold/card/{id}"},{"key":"edges","label":"Edges"},{"key":"tier","label":"Tier"},{"key":"affinity","label":"Affinity"},{"key":"owned","label":"Owned"},{"key":"hand","label":"In hand"}]},{"kind":"markdown","value":"Edges read top/right/bottom/left: 7/3/2/5 is 7 on top, 3 on the right, 2 on the bottom and 5 on the left."}]}
       DATA`TEMPLATE`WEB`SECTION`HAND: |-
         {"name":"Your hand of five","order":3,"elements":[{"kind":"field","key":"deck","label":"Cards in your hand","type":"multiselect","help":"Choose up to five. Places you leave empty are filled with your strongest cards. +nf/deck in the game can name a card twice.","options":null},{"kind":"button","label":"Save hand","action":"act","values":{"op":"deck"},"color":"primary","variant":"filled"}]}
       WEB`SECTION`HAND: |-
@@ -879,7 +882,7 @@ objects:
       WEB`SCHEMA`CARDS: |-
         u(WEB`FORM,Ninefold cards,v(DATA`WEB`CARDS`LIST)%r[v(DATA`WEB`CARDS`NEW)])
       DATA`WEB`CARDS`LIST: |-
-        {"name":"Every card","order":1,"elements":[{"kind":"table","rows_field":"all","empty":"There are no cards yet.","columns":[{"key":"id","label":"#"},{"key":"name","label":"Card","link":"/apps/ninefold/card/{id}"},{"key":"edges","label":"Edges"},{"key":"tier","label":"Tier"},{"key":"affinity","label":"Affinity"},{"key":"starter","label":"Starter set"},{"key":"holders","label":"Players holding it"}]},{"kind":"markdown","value":"[Back to Ninefold](/apps/ninefold) · [Rule sets](/apps/ninefold/rules)"}]}
+        {"name":"Every card","order":1,"elements":[{"kind":"table","rows_field":"all","empty":"There are no cards yet.","columns":[{"key":"id","label":"#"},{"key":"name","label":"Card","link":"/apps/ninefold/card/{id}"},{"key":"edges","label":"Edges"},{"key":"tier","label":"Tier"},{"key":"affinity","label":"Affinity"},{"key":"starter","label":"Starter set"},{"key":"holders","label":"Players holding it"}]},{"kind":"markdown","value":"Edges read top/right/bottom/left."},{"kind":"markdown","value":"[Back to Ninefold](/apps/ninefold) · [Rule sets](/apps/ninefold/rules)"}]}
       DATA`WEB`CARDS`NEW: |-
         {"name":"A new card","order":2,"columns":2,"elements":[{"kind":"field","key":"new_name","label":"Name","type":"text","placeholder":"Lantern Moth","validation":{"max_length":30}},{"kind":"field","key":"new_edges","label":"Edges, top right bottom left","type":"text","placeholder":"5 3 7 2","help":"Four numbers, 1 to 9 or A."},{"kind":"button","label":"Make the card","action":"act","values":{"op":"new"},"color":"primary","variant":"filled"}]}
 
@@ -1493,8 +1496,16 @@ objects:
         the winner take cards from the loser.
 
         - `+nf/cards` lists your cards: their edges, tier and affinity, how many you have and which are in your
-          hand of five.
-        - `+nf/card <card>` shows one card: its picture, or its text art where pictures are not shown, and its numbers.
+          hand of five. Lists give the edges top/right/bottom/left: `7/3/2/5` is 7 on top, 3 on the right, 2 on
+          the bottom and 5 on the left.
+        - `+nf/card <card>` shows one card: its picture, or its text art where pictures are not shown, and its
+          numbers, the edges drawn on the sides of a small card:
+
+        ```
+        Edges:%b%b%b%b+-7-+
+        %b%b%b%b%b%b%b%b%b%b5%b%b%b3
+        %b%b%b%b%b%b%b%b%b%b+-2-+
+        ```
         - `+nf/deck` shows your hand of five. `+nf/deck <card>, <card>, ...` chooses it; name a card twice to
           take two copies. Places you leave empty, or cards you no longer have, are filled in with your
           strongest cards.
