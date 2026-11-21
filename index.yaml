@@ -376,3 +376,20 @@ packages:
     package: scene-verse
     version: 2.0.0
     description: Verse and canon on scenes, and +scene/verses (requires scene)
+  - path: ninefold/
+    name: Ninefold
+    package: ninefold
+    version: 1.0.0
+    description: A card game for two on a three-by-three board, with a starter set for every player, cards staff give out and take back, and rule sets by room, zone or game-wide event
+  - path: ninefold-help/
+    package: ninefold-help
+    version: 1.0.0
+    description: Puts the Ninefold topics into +help
+  - path: ninefold-config/
+    package: ninefold-config
+    version: 1.0.0
+    description: Puts the Ninefold settings into +config
+  - path: ninefold-app/
+    package: ninefold-app
+    version: 1.0.0
+    description: Registers Ninefold as a portal page at /apps/ninefold, with the card and rule set editors

@@ -1,0 +1,45 @@
+format: "1.20"
+package: ninefold-help
+title: "Ninefold: +help topics"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Puts the Ninefold topics into +help: registers the ninefold package's help with the +help librarian, and points its messages at +help."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [ninefold, help, bridge]
+category: Games
+bridge: true
+requires_server: ">=1.0"
+verified_server: "1.0"
+
+# A bridge: it joins two packages that do not know about each other. ninefold keeps its topics on its own help
+# object, and plus-help reads any object registered with its librarian. This package is that registration, and
+# the line that points a message at +help; uninstalling it takes the topics out of +help, and neither package
+# changes.
+depends:
+  - package: ninefold
+    version: ">=1.0 <2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH.Packages
+      path: ninefold/
+      branch: main
+  - package: plus-help
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+
+objects:
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`NINEFOLD: |-
+        {{ninefold/ninefold_help}}
+
+  # Lines the command's messages end with when +help is here, through its FN`HINT: HINT`<message>.
+  - ref: message_hints
+    target: "{{ninefold/ninefold}}"
+    attributes:
+      HINT`SWITCHES: |-
+        +help ninefold lists the switches.
