@@ -1,0 +1,62 @@
+# Under Spoils every card that changed colour goes to the player who holds it at the end. A card its owner no
+# longer has, because a keeper took it back during the game, stays where it is and the notice leaves it out.
+install: [ninefold, ninefold-help]
+players:
+  keeper: { roles: [card-keeper], room: den }
+  ann: { room: den }
+  bo: { room: den }
+steps:
+  - as: keeper
+    run: +nf/ruleset spoiled=Spoiled Rules
+    sees: Spoiled Rules, is made
+  - as: keeper
+    run: +nf/ruleset spoiled/stakes=spoils
+    sees: Spoiled Rules is played for Spoils stakes now.
+  - as: keeper
+    run: +nf/room here=spoiled
+    sees: play Spoiled Rules now.
+  - as: ann
+    run: +nf/deck brass beetle, reed dancer, cinder newt, thistle sprite, pebble golem
+    sees: Your hand is Brass Beetle, Reed Dancer, Cinder Newt, Thistle Sprite, and Pebble Golem.
+  - as: bo
+    run: +nf/deck newt, sprite, moth, crow, imp
+    sees: Your hand is Cinder Newt, Thistle Sprite, Lantern Moth, Hollow Crow, and Puddle Imp.
+  - as: ann
+    run: +nf/challenge ${bo}
+    sees: for Spoils stakes.
+  - as: bo
+    run: +nf/accept
+    sees: ${bo.name} goes first.
+  - as: bo
+    run: +nf/play newt=1
+    sees: ${bo.name} plays Cinder Newt on square 1.
+  - as: ann
+    run: +nf/play reed=3
+    sees: ${ann.name} plays Reed Dancer on square 3.
+  - as: bo
+    run: +nf/play sprite=7
+    sees: ${bo.name} plays Thistle Sprite on square 7.
+  - as: ann
+    run: +nf/play newt=9
+    sees: ${ann.name} plays Cinder Newt on square 9.
+  - as: bo
+    run: +nf/play moth=2
+    sees: ${bo.name} plays Lantern Moth on square 2.
+  - as: ann
+    run: +nf/play sprite=8
+    sees: ${ann.name} plays Thistle Sprite on square 8. It takes Thistle Sprite.
+  - as: bo
+    run: +nf/play crow=4
+    sees: ${bo.name} plays Hollow Crow on square 4. It takes Thistle Sprite.
+  - as: ann
+    run: +nf/play beetle=5
+    sees: ${ann.name} plays Brass Beetle on square 5. It takes Hollow Crow.
+  - as: keeper
+    run: +nf/revoke ${bo.name}=Hollow Crow
+    sees: They have 0 now.
+  - as: bo
+    run: +nf/play imp=6
+    sees:
+      - "${bo.name} wins, 6 to 4."
+      - "Spoils: ${bo.name} takes Reed Dancer and Brass Beetle from ${ann.name}."
+    not_sees: Hollow Crow from

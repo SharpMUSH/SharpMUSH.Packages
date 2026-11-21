@@ -1,0 +1,45 @@
+format: "1.20"
+package: ninefold-app
+title: "Ninefold in the portal"
+version: 1.0.0
+kind: application
+authors: [SharpMUSH]
+description: "Registers Ninefold as a portal page at /apps/ninefold: the viewer's cards, their hand of five, the game they are playing and the rules where they stand, and for card keepers an editor for every card (name, edges, tier, affinity, starter copies, an uploaded picture and text art) and for the rule sets, where they apply and the game-wide event."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [portal, application, ninefold, cards, editor]
+category: Games
+requires_server: ">=1.0"
+verified_server: "1.0"
+
+# An application package owns no objects. The ninefold package serves the routes it points at: GET
+# /http/ninefold/schema and /http/ninefold/data, and POST /http/ninefold/act. Everything the page shows, and
+# every button on it, is decided by that softcode for the character viewing it.
+depends:
+  - package: ninefold
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH.Packages
+      path: ninefold/
+      branch: main
+
+# The installing admin chooses who may open the page, players by default.
+configure:
+  access:
+    label: "Minimum portal role that may open the page"
+    type: string
+    default: player
+
+# {path} is what follows /apps/ninefold/: nothing for the viewer's cards, card/<n> for one card, cards and rules
+# for the card keeper's editors.
+application:
+  slug: ninefold
+  display_name: Ninefold
+  icon: style
+  type: page
+  schema_url: http/ninefold/schema?at={path}
+  data_url: http/ninefold/data?at={path}
+  submit_route: http/ninefold/act
+  minimum_role: "{{?access}}"
+  nav_placement: Play
+  order: 65

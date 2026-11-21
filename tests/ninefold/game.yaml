@@ -1,0 +1,44 @@
+# Two players in one room play the Standard rules: the one challenged goes first, a card takes a touching card of
+# the other colour with a lower facing edge, a square or a turn that is not yours is refused, and giving up ends
+# the game with the other player the winner.
+install: [ninefold, ninefold-help]
+players:
+  ann: { room: hall }
+  bo: { room: hall }
+steps:
+  - as: ann
+    run: +nf/deck brass beetle, reed dancer, cinder newt, thistle sprite, pebble golem
+    sees: Your hand is Brass Beetle, Reed Dancer, Cinder Newt, Thistle Sprite, and Pebble Golem.
+  - as: bo
+    run: +nf/deck newt, sprite, moth, crow, imp
+    sees: Your hand is Cinder Newt, Thistle Sprite, Lantern Moth, Hollow Crow, and Puddle Imp.
+  - as: ann
+    run: +nf/challenge ${ann}
+    sees: You cannot challenge yourself.
+  - as: ann
+    run: +nf/challenge ${bo}
+    sees: 'Rules: Standard (Face Up), for Friendly stakes.'
+  - as: bo
+    run: +nf/accept
+    sees: ${bo.name} goes first.
+  - as: ann
+    run: +nf/play 1=1
+    sees: It is ${bo.name}'s turn.
+  - as: bo
+    run: +nf/play imp=5
+    sees: ${bo.name} plays Puddle Imp on square 5.
+  - as: ann
+    run: +nf/play 1=5
+    sees: Square 5 is taken.
+  - as: ann
+    run: +nf/play moth=4
+    sees: There is no moth in your hand.
+  - as: ann
+    run: +nf/play beetle=6
+    sees: ${ann.name} plays Brass Beetle on square 6. It takes Puddle Imp.
+  - as: bo
+    run: +nf/forfeit
+    sees: "${ann.name} wins: ${bo.name} gave up."
+  - as: ann
+    run: +nf/play 1=1
+    sees: You are not in a game.

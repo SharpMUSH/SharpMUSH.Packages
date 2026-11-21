@@ -127,6 +127,10 @@ The table is generated from [`index.yaml`](index.yaml); edit that file, then run
 | [`radio-config/`](radio-config/) | 1.0.1 | Registers the radio settings with +config (requires radio and plus-config) |
 | [`radio-scene/`](radio-scene/) | 1.4.3 | +radio/log — what a listener hears on a frequency goes into their scene, through a tap on the radio feed kind (requires radio and scene) |
 | [`scene-verse/`](scene-verse/) | 2.0.0 | Verse and canon on scenes, and +scene/verses (requires scene) |
+| [`ninefold/`](ninefold/) | 1.0.0 | A card game for two on a three-by-three board, with a starter set for every player, cards staff give out and take back, and rule sets by room, zone or game-wide event |
+| [`ninefold-help/`](ninefold-help/) | 1.0.0 | Puts the Ninefold topics into +help |
+| [`ninefold-config/`](ninefold-config/) | 1.0.0 | Puts the Ninefold settings into +config |
+| [`ninefold-app/`](ninefold-app/) | 1.0.0 | Registers Ninefold as a portal page at /apps/ninefold, with the card and rule set editors |
 <!-- packages-table:end -->
 
 Packages bundled with SharpMUSH (`+who`/`+where`, the HTTP handler, the

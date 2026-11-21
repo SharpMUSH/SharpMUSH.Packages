@@ -1,0 +1,32 @@
+# The rules of a game come from where it is played: the room's rule set, else its zone's, else the default. An
+# event that adds its rules adds them to that, and the stakes stay the local ones.
+install: [ninefold, ninefold-help]
+players:
+  keeper: { roles: [card-keeper] }
+  ann: { room: tavern }
+steps:
+  - as: ann
+    run: +nf/rules
+    sees: [Rule set, Standard, Friendly]
+  - god: "@tel ${keeper}=loc(${ann})"
+  - as: keeper
+    run: +nf/room here=tavern
+    sees: play Tavern Rules now.
+  - as: ann
+    run: +nf/rules
+    sees: [Tavern Rules, It is this room's rule set., Winner Picks]
+  - as: keeper
+    run: +nf/event festival=2h
+    sees: It adds Terrain and Overtime to the rules of every game.
+  - as: ann
+    run: +nf/rules
+    sees: [Tavern Rules + Festival of Elements, Terrain, Overtime, Winner Picks]
+  - as: keeper
+    run: +nf/event none
+    sees: There is no event now.
+  - as: keeper
+    run: +nf/room here=
+    sees: has no rule set of its own now.
+  - as: keeper
+    run: +nf/room here=nosuch
+    sees: There is no rule set called nosuch.

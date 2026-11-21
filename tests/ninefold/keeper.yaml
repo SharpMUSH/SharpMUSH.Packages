@@ -1,0 +1,62 @@
+# A card keeper gives and takes back cards, which the card log records, and makes and changes cards. Edges given
+# to +nf/new and /edges are stored as typed. Art fits the art box, and its ASCII version is ASCII only. A player without the role is refused.
+install: [ninefold, ninefold-help]
+players:
+  keeper: { roles: [card-keeper] }
+  ann:
+unique: [fox]
+steps:
+  - as: ann
+    run: +nf/grant ${ann}=Night Queen
+    sees: Permission denied. Only a card keeper can do that.
+  - as: keeper
+    run: +nf/grant ${ann}=Night Queen,2
+    sees: You give ${ann.name} 2 copies of Night Queen. They have 2 now.
+  - as: keeper
+    run: +nf/grant ${ann}=Night Queen,0
+    sees: The count is a number from 1 to 99.
+  - as: keeper
+    run: +nf/grant ${ann}=golem
+    sees: golem could be Pebble Golem or Bastion Golem.
+  - as: keeper
+    run: +nf/revoke ${ann}=Night Queen,3
+    sees: ${ann.name} has 2 copies of Night Queen.
+  - as: keeper
+    run: +nf/revoke ${ann}=Night Queen
+    sees: They have 1 now.
+  - as: keeper
+    run: +nf/log ${ann}
+    sees: [given by, taken back by]
+  - as: keeper
+    run: +nf/new ${fox}=3 7 2 A
+    sees: top 3, right 7, bottom 2, left A.
+  - as: keeper
+    run: +nf/new ${fox}=1 1 1 1
+    sees: is called ${fox} already.
+  - as: keeper
+    run: +nf/set ${fox}/edges=4 4 4 4
+    sees: ${fox} is top 4, right 4, bottom 4, left 4 now.
+  - as: keeper
+    run: +nf/set ${fox}/tier=9
+    sees: A tier is 1 to 5.
+  - as: keeper
+    run: +nf/set ${fox}/art=<◉>%r/█\\
+    sees: ${fox} has new art
+  - as: keeper
+    run: +nf/set ${fox}/ascii=<o>%r/#\\
+    sees: ${fox} has new ASCII art.
+  - as: keeper
+    run: +nf/card ${fox}
+    sees: [<◉>, "· Tier", "You own"]
+  - as: keeper
+    run: +nf/set ${fox}/ascii=<✓>
+    sees: The ASCII art uses only the characters on a US keyboard.
+  - as: keeper
+    run: +nf/set ${fox}/art=123456789012345678901234567890123
+    sees: Card art is at most 16 lines of 32 characters
+  - as: keeper
+    run: +nf/delete ${fox}
+    sees: which nobody holds.
+  - as: keeper
+    run: +nf/delete ${fox}=yes
+    sees: is gone.
