@@ -76,7 +76,8 @@ objects:
         if(hasattr(%!,HINT`%0),%b[u(%!/HINT`%0)])
       DATA`ROUTES: |-
         cards card deck rules challenge accept decline withdraw play board forfeit claim grant revoke collection new set delete ruleset rulesets zone room default event log games end
-      # %0 the switches as typed (/play), %1 everything after the first space.
+      # %0 the switches as typed (/play), %1 everything after the first space. cmd_raw is what follows the = untrimmed,
+      # for art, whose first line may start with spaces.
       FN`COMMAND`PARSE: |-
         setqm(
           cmd_words, lcstr(trim(edit(%0,/,%b))),
@@ -84,6 +85,7 @@ objects:
           cmd_arg, trim(%1),
           cmd_lhs, trim(before(%1,=)),
           cmd_rhs, trim(after(%1,=)),
+          cmd_raw, after(%1,=),
           cmd_equals, pos(=,%1),
           cmd_route, cond(gt(words(%q<cmd_words>),1),,not(strlen(%q<cmd_action>)),HOME,member(v(DATA`ROUTES),%q<cmd_action>),ucstr(%q<cmd_action>)))
 
@@ -372,11 +374,11 @@ objects:
         @assert cor(not(strlen(%q<cmd_rhs>)),u(FN`IMAGE`VALID,%q<cmd_rhs>))=@pemit %#=notice(NINEFOLD,A picture is an https:// address or a path on this game such as /api/wiki-assets/...,warn); &CARD`%q<card_id>`IMAGE {{store}}=%q<cmd_rhs>; @pemit %#=notice(NINEFOLD,if(strlen(%q<cmd_rhs>),[u(FN`CARD`NAME,%q<card_id>)]'s picture is %q<cmd_rhs> now.,[u(FN`CARD`NAME,%q<card_id>)] has no picture now.),ok)
       # The art as typed, %r between lines, kept as written: no more lines or characters than the art box holds.
       INC`SET`ART: |-
-        @assert u(FN`ART`VALID,%q<cmd_rhs>)=@pemit %#=notice(NINEFOLD,u(FN`ART`LIMIT),warn); &CARD`%q<card_id>`ART {{store}}=%q<cmd_rhs>; @pemit %#=notice(NINEFOLD,[u(FN`CARD`NAME,%q<card_id>)] has new art:,ok); @pemit %#=u(FN`SCREEN`CARD,%q<card_id>,%#)
+        @assert u(FN`ART`VALID,%q<cmd_raw>)=@pemit %#=notice(NINEFOLD,u(FN`ART`LIMIT),warn); &CARD`%q<card_id>`ART {{store}}=%q<cmd_raw>; @pemit %#=notice(NINEFOLD,[u(FN`CARD`NAME,%q<card_id>)] has new art:,ok); @pemit %#=u(FN`SCREEN`CARD,%q<card_id>,%#)
       # The art a client without UTF-8 is sent instead, line for line: printable ASCII only. Empty sends the art
       # itself, its characters folded to ASCII.
       INC`SET`ASCII: |-
-        @assert u(FN`ART`VALID,%q<cmd_rhs>)=@pemit %#=notice(NINEFOLD,u(FN`ART`LIMIT),warn); @assert u(FN`ART`ASCII,%q<cmd_rhs>)=@pemit %#=notice(NINEFOLD,The ASCII art uses only the characters on a US keyboard.,warn); &CARD`%q<card_id>`ART`ASCII {{store}}=%q<cmd_rhs>; @pemit %#=notice(NINEFOLD,if(strlen(%q<cmd_rhs>),[u(FN`CARD`NAME,%q<card_id>)] has new ASCII art.,[u(FN`CARD`NAME,%q<card_id>)]'s art is folded to ASCII for clients without UTF-8 now.),ok)
+        @assert u(FN`ART`VALID,%q<cmd_raw>)=@pemit %#=notice(NINEFOLD,u(FN`ART`LIMIT),warn); @assert u(FN`ART`ASCII,%q<cmd_raw>)=@pemit %#=notice(NINEFOLD,The ASCII art uses only the characters on a US keyboard.,warn); &CARD`%q<card_id>`ART`ASCII {{store}}=%q<cmd_raw>; @pemit %#=notice(NINEFOLD,if(strlen(%q<cmd_raw>),[u(FN`CARD`NAME,%q<card_id>)] has new ASCII art.,[u(FN`CARD`NAME,%q<card_id>)]'s art is folded to ASCII for clients without UTF-8 now.),ok)
       # /delete <card> says what would go; /delete <card>=yes removes it and every copy players hold.
       INC`NF`DELETE: |-
         @include me/INC`NEED`STAFF; think setq(card_text,%q<cmd_lhs>); @include me/INC`NEED`CARD; @assert not(u(FN`CARD`INPLAY,%q<card_id>))=@pemit %#=notice(NINEFOLD,[u(FN`CARD`NAME,%q<card_id>)] is in a game now. Delete it when the game is over.,warn); think setq(card_holders,u(FN`CARD`HOLDERS,%q<card_id>)); @assert strmatch(%q<cmd_rhs>,yes)=@pemit %#=notice(NINEFOLD,This removes [u(FN`CARD`NAME,%q<card_id>)][case(words(%q<card_holders>),0,%, which nobody holds,1,%band the copies 1 player holds,%band the copies [words(%q<card_holders>)] players hold)]. +nf/delete %q<card_id>=yes to go ahead.,warn); @dolist/inline %q<card_holders>={&OWN`##`%q<card_id> {{store}}}; think setq(card_old,u(FN`CARD`NAME,%q<card_id>)); @wipe {{store}}/CARD`%q<card_id>`**; &CARD`%q<card_id> {{store}}; @pemit %#=notice(NINEFOLD,Card %q<card_id>%, %q<card_old>%, is gone.,ok)
