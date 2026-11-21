@@ -1,0 +1,1589 @@
+format: "1.20"
+package: ninefold
+title: Ninefold
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Ninefold, a card game for two on a three-by-three board, in the spirit of the card games tucked inside classic JRPGs: every player starts with a set of cards, builds a hand of five and takes the board edge by edge. Rule sets change by room, by zone or for a game-wide event, staff hand out and take back cards, and a winner can take cards from the loser."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [game, cards, minigame, collection]
+category: Games
+requires_server: ">=1.0"
+verified_server: "1.0"
+
+# http-handler owns the GET/POST verb routers the portal routes hang off; the ninefold-app package shows them
+# at /apps/ninefold.
+depends:
+  - package: http-handler
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/http-handler/
+      branch: main
+
+# One permission: keeping the cards. Card keepers make and change cards and rule sets, say where a rule set
+# applies, run events, and hand cards out or take them back.
+categories:
+  roles:
+    - name: Games
+      description: Roles for the people who run the game's minigames.
+  permissions:
+    - name: Games
+      description: Running the game's minigames.
+permissions:
+  - name: softcode.ninefold.admin
+    category: Games
+    description: Make and change Ninefold cards and rule sets, say where rule sets apply, run events, and give or take back players' cards.
+roles:
+  - slug: card-keeper
+    name: Card Keeper
+    category: Games
+    priority: 11
+    permissions:
+      softcode.ninefold.admin: allow
+
+objects:
+  # The command object. WIZARD so @pemit reaches both players wherever they are, lzone() can read any room's
+  # zones, and STARTUP can add the commands. +ninefold and its short form +nf are added with @command/add and
+  # hooked to CMD`NINEFOLD, so what a player types is evaluated as that player, as a built-in command's
+  # argument is. The hook runs with /localize/clearregs, so a register the argument sets never reaches the code.
+  # The object also sits in the master room, so the commands answer as a $-command before STARTUP has run.
+  #
+  # Trees: CMD` the $-command, INC`NF` one routine per switch, INC`NEED` the guards they share, INC`GAME` the
+  # steps of a game, INC`OWN` changing what a player owns, FN` the functions, WEB` the portal pages, DATA`
+  # fixed text and JSON templates. Registers are led by their subject: cmd_ (the parsed command), card_ (a
+  # card), who_ (another player), game_ (the game in hand), rs_ (the rules that apply), set_ (a rule set).
+  - ref: ninefold
+    type: thing
+    name: Ninefold
+    location: "{{$master_room}}"
+    flags: [WIZARD]
+    parent: "{{ninefold_functions}}"
+    attributes:
+      STARTUP: |-
+        @command/add +ninefold; @command/add +nf; @hook/override/inline/localize/clearregs +ninefold={{ninefold}},CMD`NINEFOLD; @hook/override/inline/localize/clearregs +nf={{ninefold}},CMD`NINEFOLD
+      AINSTALL: |-
+        @trigger {{ninefold}}/STARTUP
+      AUPDATE: |-
+        @trigger {{ninefold}}/STARTUP
+      CMD`NINEFOLD:
+        value: |-
+          $(?is)^\+(?\:ninefold|nf)(/\S*)?(?\: +(.*))?$:think u(FN`COMMAND`PARSE,%1,%2); @assert strlen(%q<cmd_route>)=@pemit %#=notice(NINEFOLD,There is no +nf/%q<cmd_action>.[u(FN`HINT,SWITCHES)],warn); @include me/INC`NF`%q<cmd_route>
+        flags: [REGEXP]
+      # A line a bridge adds to one of this object's messages: HINT`<message>, set by a bridge such as
+      # ninefold-help. Empty when no bridge set one.
+      FN`HINT: |-
+        if(hasattr(%!,HINT`%0),%b[u(%!/HINT`%0)])
+      DATA`ROUTES: |-
+        cards card deck rules challenge accept decline withdraw play board forfeit claim grant revoke collection new set delete ruleset rulesets zone room default event log games end
+      # %0 the switches as typed (/play), %1 everything after the first space. cmd_raw is what follows the = untrimmed,
+      # for art, whose first line may start with spaces.
+      FN`COMMAND`PARSE: |-
+        setqm(
+          cmd_words, lcstr(trim(edit(%0,/,%b))),
+          cmd_action, first(%q<cmd_words>),
+          cmd_arg, trim(%1),
+          cmd_lhs, trim(before(%1,=)),
+          cmd_rhs, trim(after(%1,=)),
+          cmd_raw, after(%1,=),
+          cmd_equals, pos(=,%1),
+          cmd_route, cond(gt(words(%q<cmd_words>),1),,not(strlen(%q<cmd_action>)),HOME,member(v(DATA`ROUTES),%q<cmd_action>),ucstr(%q<cmd_action>)))
+
+      # ---- settings ------------------------------------------------------------------------------
+      # Each DATA`CONFIG`<NAME> is the value; the leaves under it tell +config what it accepts. The code reads
+      # the value with v() whether or not +config is installed.
+      DATA`CONFIG: |-
+        Ninefold settings.
+      DATA`CONFIG`LABEL: |-
+        Ninefold
+      DATA`CONFIG`CHALLENGE: |-
+        600
+      DATA`CONFIG`CHALLENGE`TYPE: |-
+        duration
+      DATA`CONFIG`CHALLENGE`DEFAULT: |-
+        600
+      DATA`CONFIG`CHALLENGE`MIN: |-
+        60
+      DATA`CONFIG`CHALLENGE`LABEL: |-
+        Challenge lasts
+      DATA`CONFIG`CHALLENGE`DESCRIPTION: |-
+        How long a challenge waits to be accepted before it lapses.
+      DATA`CONFIG`CHALLENGE`EXAMPLE: |-
+        10m
+      DATA`CONFIG`OVERTIME: |-
+        3
+      DATA`CONFIG`OVERTIME`TYPE: |-
+        integer
+      DATA`CONFIG`OVERTIME`DEFAULT: |-
+        3
+      DATA`CONFIG`OVERTIME`MIN: |-
+        2
+      DATA`CONFIG`OVERTIME`MAX: |-
+        9
+      DATA`CONFIG`OVERTIME`LABEL: |-
+        Overtime rounds
+      DATA`CONFIG`OVERTIME`DESCRIPTION: |-
+        Under the Overtime rule, how many rounds a drawn game is played, the first included, before it stays a draw.
+      DATA`CONFIG`OVERTIME`EXAMPLE: |-
+        3
+      DATA`CONFIG`LOGKEEP: |-
+        500
+      DATA`CONFIG`LOGKEEP`TYPE: |-
+        integer
+      DATA`CONFIG`LOGKEEP`DEFAULT: |-
+        500
+      DATA`CONFIG`LOGKEEP`MIN: |-
+        10
+      DATA`CONFIG`LOGKEEP`MAX: |-
+        5000
+      DATA`CONFIG`LOGKEEP`LABEL: |-
+        Card log length
+      DATA`CONFIG`LOGKEEP`DESCRIPTION: |-
+        How many changes to players' cards +nf/log keeps: grants, takebacks and cards won.
+      DATA`CONFIG`LOGKEEP`EXAMPLE: |-
+        500
+      DATA`CONFIG`ARTWIDTH: |-
+        32
+      DATA`CONFIG`ARTWIDTH`TYPE: |-
+        integer
+      DATA`CONFIG`ARTWIDTH`DEFAULT: |-
+        32
+      DATA`CONFIG`ARTWIDTH`MIN: |-
+        12
+      DATA`CONFIG`ARTWIDTH`MAX: |-
+        48
+      DATA`CONFIG`ARTWIDTH`LABEL: |-
+        Card art width
+      DATA`CONFIG`ARTWIDTH`DESCRIPTION: |-
+        How many characters wide a card's art box is. Every card's art is centred in a box this size, and its picture fills it.
+      DATA`CONFIG`ARTWIDTH`EXAMPLE: |-
+        32
+      DATA`CONFIG`ARTHEIGHT: |-
+        16
+      DATA`CONFIG`ARTHEIGHT`TYPE: |-
+        integer
+      DATA`CONFIG`ARTHEIGHT`DEFAULT: |-
+        16
+      DATA`CONFIG`ARTHEIGHT`MIN: |-
+        4
+      DATA`CONFIG`ARTHEIGHT`MAX: |-
+        24
+      DATA`CONFIG`ARTHEIGHT`LABEL: |-
+        Card art height
+      DATA`CONFIG`ARTHEIGHT`DESCRIPTION: |-
+        How many lines tall a card's art box is.
+      DATA`CONFIG`ARTHEIGHT`EXAMPLE: |-
+        16
+
+      # ---- the rules ----------------------------------------------------------------------------
+      # The rule words, in the order they are listed. Each DATA`RULE`<WORD> is its name, with ABOUT under it.
+      DATA`RULES: |-
+        faceup blind twin balance cascade walls terrain overtime
+      DATA`RULE`FACEUP: |-
+        Face Up
+      DATA`RULE`FACEUP`ABOUT: |-
+        Both hands are shown to both players.
+      DATA`RULE`BLIND: |-
+        Blind Draw
+      DATA`RULE`BLIND`ABOUT: |-
+        Each hand is five cards dealt at random from the player's cards, not their chosen hand.
+      DATA`RULE`TWIN: |-
+        Twin
+      DATA`RULE`TWIN`ABOUT: |-
+        A card whose edges equal the edges they touch on two or more cards takes those cards.
+      DATA`RULE`BALANCE: |-
+        Balance
+      DATA`RULE`BALANCE`ABOUT: |-
+        A card whose edge sums with two or more touching cards are the same takes those cards.
+      DATA`RULE`CASCADE: |-
+        Cascade
+      DATA`RULE`CASCADE`ABOUT: |-
+        Cards taken by Twin or Balance go on to take the cards they beat.
+      DATA`RULE`WALLS: |-
+        Hard Edges
+      DATA`RULE`WALLS`ABOUT: |-
+        For Twin, the edge of the board counts as an A.
+      DATA`RULE`TERRAIN: |-
+        Terrain
+      DATA`RULE`TERRAIN`ABOUT: |-
+        A few squares carry an affinity. A card of that affinity gains 1 on every edge there; any other loses 1.
+      DATA`RULE`OVERTIME: |-
+        Overtime
+      DATA`RULE`OVERTIME`ABOUT: |-
+        A drawn game is played again, each player holding the cards of their colour.
+      DATA`STAKES: |-
+        friendly pick spoils
+      DATA`STAKE`FRIENDLY: |-
+        Friendly
+      DATA`STAKE`FRIENDLY`ABOUT: |-
+        Nobody loses a card.
+      DATA`STAKE`PICK: |-
+        Winner Picks
+      DATA`STAKE`PICK`ABOUT: |-
+        The winner takes one card of their choice from the loser's hand.
+      DATA`STAKE`SPOILS: |-
+        Spoils
+      DATA`STAKE`SPOILS`ABOUT: |-
+        When the game ends, every card belongs to the player whose colour it shows.
+      DATA`AFFINITIES: |-
+        ember tide gale stone bloom shade
+
+      # ---- guards --------------------------------------------------------------------------------
+      INC`NEED`STAFF: |-
+        @assert permission(%#,softcode.ninefold.admin)=@pemit %#=notice(NINEFOLD,Permission denied. Only a card keeper can do that.,error)
+      # The card named by %q<card_text> (a number or a name): card_id.
+      INC`NEED`CARD: |-
+        @assert strlen(%q<card_text>)=@pemit %#=notice(NINEFOLD,Which card? Give its number or its name.,warn); @assert strlen(setr(card_id,u(FN`CARD`FIND,%q<card_text>)))=@pemit %#=notice(NINEFOLD,u(FN`CARD`MISSING,%q<card_text>),warn)
+      # The player named by %q<who_text>: who_obj and who_key.
+      INC`NEED`PLAYER: |-
+        @assert strlen(%q<who_text>)=@pemit %#=notice(NINEFOLD,Whose cards? Give a player's name.,warn); @assert cand(isdbref(setr(who_obj,pmatch(%q<who_text>))),hastype(%q<who_obj>,player))=@pemit %#=notice(NINEFOLD,There is no player called %q<who_text>.,warn); think setq(who_key,u(FN`KEY,%q<who_obj>))
+      # The game the player is in, loaded into the game_ registers.
+      INC`NEED`GAME: |-
+        @assert strlen(setr(game_id,u(FN`GAME`OF,u(FN`KEY,%#))))=@pemit %#=notice(NINEFOLD,You are not in a game. +nf/challenge <player> starts one.,warn); think u(FN`GAME`LOAD,%q<game_id>,%#)
+      INC`NEED`PLAYING: |-
+        @include me/INC`NEED`GAME; @assert strmatch(%q<game_state>,playing)=@pemit %#=notice(NINEFOLD,The game has not started. It waits for [name(%q<game_b>)] to accept.,warn)
+      # A rule set named by %q<set_text>: set_key.
+      INC`NEED`SET: |-
+        @assert strlen(%q<set_text>)=@pemit %#=notice(NINEFOLD,Which rule set? +nf/rulesets lists them.,warn); @assert u(FN`SET`EXISTS,setr(set_key,ucstr(%q<set_text>)))=@pemit %#=notice(NINEFOLD,There is no rule set called [lcstr(%q<set_text>)]. +nf/rulesets lists them.,warn)
+
+      # ---- playing: reading ---------------------------------------------------------------------
+      # +nf alone: the game when there is one, otherwise the player's cards.
+      INC`NF`HOME: |-
+        @break strlen(u(FN`GAME`OF,u(FN`KEY,%#)))={@include me/INC`NF`BOARD}; @include me/INC`NF`CARDS
+      INC`NF`BOARD: |-
+        @include me/INC`NEED`GAME; @pemit %#=u(FN`SCREEN`GAME,%#)
+      INC`NF`CARDS: |-
+        @pemit %#=u(FN`SCREEN`COLLECTION,%#,Your cards)
+      INC`NF`COLLECTION: |-
+        @include me/INC`NEED`STAFF; think setq(who_text,%q<cmd_arg>); @include me/INC`NEED`PLAYER; @pemit %#=u(FN`SCREEN`COLLECTION,%q<who_obj>,name(%q<who_obj>)'s cards)
+      INC`NF`CARD: |-
+        think setq(card_text,%q<cmd_arg>); @include me/INC`NEED`CARD; @pemit %#=u(FN`SCREEN`CARD,%q<card_id>,%#)
+      INC`NF`RULES: |-
+        think u(FN`RULES`RESOLVE,%l); @pemit %#=u(FN`SCREEN`RULES)
+      # /deck shows the hand of five; /deck <card>, <card>, ... chooses it.
+      INC`NF`DECK: |-
+        @break not(strlen(%q<cmd_arg>))={@pemit %#=u(FN`SCREEN`DECK,%#)}; think setqm(card_pk,u(FN`KEY,%#),card_ids,u(FN`DECK`PARSE,%q<cmd_arg>)); @assert not(strlen(%q<card_bad>))=@pemit %#=notice(NINEFOLD,u(FN`CARD`MISSING,%q<card_bad>),warn); @assert lte(words(%q<card_ids>),5)=@pemit %#=notice(NINEFOLD,A hand is five cards. You named [words(%q<card_ids>)].,warn); @assert strlen(%q<card_ids>)=@pemit %#=notice(NINEFOLD,+nf/deck <card>%, <card>%, ... with up to five cards.,warn); @assert u(FN`DECK`AFFORD,%q<card_pk>,%q<card_ids>)=@pemit %#=notice(NINEFOLD,You do not have enough copies of [u(FN`CARD`NAME,%q<card_short>)].,warn); &DECK`%q<card_pk> {{store}}=%q<card_ids>; @pemit %#=notice(NINEFOLD,Your hand is [itemize(iter(u(FN`DECK`HAND,%q<card_pk>),u(FN`CARD`NAME,%i0),%b,|),|)].,ok)
+
+      # ---- playing: a game ----------------------------------------------------------------------
+      INC`NF`CHALLENGE: |-
+        @assert strlen(%q<cmd_arg>)=@pemit %#=notice(NINEFOLD,Challenge whom? +nf/challenge <player>,warn); @assert cand(isdbref(setr(who_obj,locate(%#,%q<cmd_arg>,PFny))),hastype(%q<who_obj>,player))=@pemit %#=notice(NINEFOLD,There is nobody called %q<cmd_arg> here.,warn); @assert comp(objid(%q<who_obj>),%:)=@pemit %#=notice(NINEFOLD,You cannot challenge yourself.,warn); @assert hasflag(%q<who_obj>,connected)=@pemit %#=notice(NINEFOLD,name(%q<who_obj>) is not connected.,warn); think setqm(who_key,u(FN`KEY,%q<who_obj>),game_mine,u(FN`KEY,%#)); @include me/INC`GAME`SWEEP; @assert not(strlen(u(FN`GAME`OF,%q<game_mine>)))=@pemit %#=notice(NINEFOLD,You are in a game already. +nf shows it.,warn); @assert not(strlen(u(FN`GAME`OF,%q<who_key>)))=@pemit %#=notice(NINEFOLD,name(%q<who_obj>) is in a game already.,warn); @assert not(strlen(get({{store}}/CLAIM`%q<game_mine>)))=@pemit %#=notice(NINEFOLD,You have a card to claim first. +nf/claim shows the choices.,warn); @assert not(strlen(get({{store}}/CLAIM`%q<who_key>)))=@pemit %#=notice(NINEFOLD,name(%q<who_obj>) has a card to claim first.,warn); @assert gte(words(u(FN`OWN`COPIES,%q<game_mine>)),5)=@pemit %#=notice(NINEFOLD,You need at least five cards to play.,warn); @assert gte(words(u(FN`OWN`COPIES,%q<who_key>)),5)=@pemit %#=notice(NINEFOLD,name(%q<who_obj>) has fewer than five cards.,warn); think u(FN`RULES`RESOLVE,%l); @include me/INC`GAME`CREATE; @pemit %#=notice(NINEFOLD,You challenge [name(%q<who_obj>)] to Ninefold. [u(FN`RULES`LINE)] They have [u(FN`DURATION,v(DATA`CONFIG`CHALLENGE))] to accept.,info); @pemit %q<who_obj>=notice(NINEFOLD,[name(%#)] challenges you to Ninefold. [u(FN`RULES`LINE)] [cmdlink(+nf/accept,+nf/accept,Accept the challenge)] or [cmdlink(+nf/decline,+nf/decline,Decline it)].,info)
+      INC`NF`ACCEPT: |-
+        @include me/INC`NEED`GAME; @assert strmatch(%q<game_state>,invited)=@pemit %#=notice(NINEFOLD,Your game has started already. +nf shows it.,warn); @assert strmatch(%q<game_side>,b)=@pemit %#=notice(NINEFOLD,You challenged [name(%q<game_b>)]. They accept%, not you.,warn); @assert gte(words(u(FN`OWN`COPIES,u(FN`KEY,%q<game_a>))),5)=@pemit %#=notice(NINEFOLD,name(%q<game_a>) has fewer than five cards now.,warn); @assert gte(words(u(FN`OWN`COPIES,u(FN`KEY,%#))),5)=@pemit %#=notice(NINEFOLD,You need at least five cards to play.,warn); @assert not(strlen(get({{store}}/CLAIM`[u(FN`KEY,%#)])))=@pemit %#=notice(NINEFOLD,You have a card to claim first. +nf/claim shows the choices.,warn); @include me/INC`GAME`DEAL; think u(FN`GAME`LOAD,%q<game_id>,%#); @pemit/list %q<game_a> %q<game_b>=notice(NINEFOLD,[name(%q<game_b>)] accepts [name(%q<game_a>)]'s challenge. [name(%q<game_b>)] goes first.,info); @include me/INC`GAME`SHOW
+      INC`NF`DECLINE: |-
+        @include me/INC`NEED`GAME; @assert strmatch(%q<game_state>,invited)=@pemit %#=notice(NINEFOLD,Your game has started. +nf/forfeit gives it up.,warn); @assert strmatch(%q<game_side>,b)=@pemit %#=notice(NINEFOLD,That is your own challenge. +nf/withdraw takes it back.,warn); @pemit/list %q<game_a> %q<game_b>=notice(NINEFOLD,[name(%q<game_b>)] declines [name(%q<game_a>)]'s challenge.,info); @include me/INC`GAME`WIPE
+      INC`NF`WITHDRAW: |-
+        @include me/INC`NEED`GAME; @assert strmatch(%q<game_state>,invited)=@pemit %#=notice(NINEFOLD,Your game has started. +nf/forfeit gives it up.,warn); @assert strmatch(%q<game_side>,a)=@pemit %#=notice(NINEFOLD,That challenge is to you. +nf/decline turns it down.,warn); @pemit/list %q<game_a> %q<game_b>=notice(NINEFOLD,[name(%q<game_a>)] takes back the challenge to [name(%q<game_b>)].,info); @include me/INC`GAME`WIPE
+      INC`NF`FORFEIT: |-
+        @include me/INC`NEED`GAME; @break strmatch(%q<game_state>,invited)={@include me/INC`NF`[if(strmatch(%q<game_side>,a),WITHDRAW,DECLINE)]}; @pemit/list %q<game_a> %q<game_b>=notice(NINEFOLD,[name(%#)] gives up the game.,info); think setqm(game_winner,u(FN`GAME`OTHER,%q<game_side>),game_forfeit,1); @include me/INC`GAME`FINISH
+      # /play <card>=<square>: the card by its place in the hand or its name, the square 1 to 9.
+      INC`NF`PLAY: |-
+        @include me/INC`NEED`PLAYING; @assert strmatch(%q<game_turn>,%q<game_side>)=@pemit %#=notice(NINEFOLD,It is [name(u(FN`GAME`PLAYER,%q<game_turn>))]'s turn.,warn); @assert cand(%q<cmd_equals>,strlen(%q<cmd_lhs>))=@pemit %#=notice(NINEFOLD,+nf/play <card>=<square>: the card by its number in your hand or its name%, the square from 1 to 9.,warn); @assert member(1 2 3 4 5 6 7 8 9,%q<cmd_rhs>)=@pemit %#=notice(NINEFOLD,Squares are numbered 1 to 9%, left to right from the top.,warn); @assert strmatch(extract(%q<game_cards>,%q<cmd_rhs>,1),-)=@pemit %#=notice(NINEFOLD,Square %q<cmd_rhs> is taken.,warn); @assert strlen(setr(game_at,u(FN`HAND`FIND,%q<game_hand>,%q<cmd_lhs>)))=@pemit %#=notice(NINEFOLD,There is no %q<cmd_lhs> in your hand. +nf shows it.,warn); @include me/INC`GAME`PLACE; @include me/INC`GAME`AFTER
+      INC`NF`CLAIM: |-
+        @assert strlen(setr(game_id,get({{store}}/CLAIM`[u(FN`KEY,%#)])))=@pemit %#=notice(NINEFOLD,You have no card to claim.,warn); think setqm(game_loser,get({{store}}/MATCH`%q<game_id>`LOSER),game_pool,squish(iter(get({{store}}/MATCH`%q<game_id>`POOL),if(gt(u(FN`OWN`COUNT,u(FN`KEY,get({{store}}/MATCH`%q<game_id>`LOSER)),before(%i0,:)),0),%i0))))); @break not(words(%q<game_pool>))={@pemit %#=notice(NINEFOLD,[name(%q<game_loser>)] no longer has any of the cards you could take%, so there is nothing to claim.,info); &CLAIM`[u(FN`KEY,%#)] {{store}}; @wipe {{store}}/MATCH`%q<game_id>`**; &MATCH`%q<game_id> {{store}}}; @break not(strlen(%q<cmd_arg>))={@pemit %#=notice(NINEFOLD,You may take one of [name(%q<game_loser>)]'s cards: [itemize(iter(%q<game_pool>,u(FN`CARD`NAME,before(%i0,:)),%b,|),|)]. +nf/claim <card> takes it.,info)}; @assert strlen(setr(game_at,u(FN`HAND`FIND,%q<game_pool>,%q<cmd_arg>)))=@pemit %#=notice(NINEFOLD,%q<cmd_arg> is not one of the cards you may take.,warn); think setq(card_id,before(extract(%q<game_pool>,%q<game_at>,1),:)); @assert gt(u(FN`OWN`COUNT,u(FN`KEY,%q<game_loser>),%q<card_id>),0)=@pemit %#=notice(NINEFOLD,name(%q<game_loser>) no longer has [u(FN`CARD`NAME,%q<card_id>)]. Pick another.,warn); @include/args me/INC`OWN`MOVE=from,%q<game_loser>,to,%#,card,%q<card_id>,why,game %q<game_id>; @pemit %#=notice(NINEFOLD,You take [u(FN`CARD`NAME,%q<card_id>)] from [name(%q<game_loser>)].,ok); @pemit %q<game_loser>=notice(NINEFOLD,[name(%#)] takes your [u(FN`CARD`NAME,%q<card_id>)].,info); &CLAIM`[u(FN`KEY,%#)] {{store}}; @wipe {{store}}/MATCH`%q<game_id>`**; &MATCH`%q<game_id> {{store}}
+
+      # ---- a game's steps -----------------------------------------------------------------------
+      # MATCH`<n> holds the state (invited, playing or claim), with A and B the players' objids (A challenged,
+      # B accepted), ROOM, RULES, STAKES, TITLE, WHEN, ROUND, TURN (a or b), HAND`A and HAND`B (the cards still
+      # in hand, each <card>:<side it came from>), START`A and START`B (the hands dealt), SQ`<1-9> (the card on
+      # that square, <card>:<side it came from>) with OWNER under it, and TERRAIN`<1-9>. IN`<player> is the game
+      # a player is in.
+      INC`GAME`CREATE: |-
+        think setq(game_id,inc(get({{store}}/NEXTMATCH))); &NEXTMATCH {{store}}=%q<game_id>; &MATCH`%q<game_id> {{store}}=invited; &MATCH`%q<game_id>`A {{store}}=%:; &MATCH`%q<game_id>`B {{store}}=objid(%q<who_obj>); &MATCH`%q<game_id>`ROOM {{store}}=objid(%l); &MATCH`%q<game_id>`RULES {{store}}=%q<rs_rules>; &MATCH`%q<game_id>`STAKES {{store}}=%q<rs_stakes>; &MATCH`%q<game_id>`TITLE {{store}}=%q<rs_title>; &MATCH`%q<game_id>`WHEN {{store}}=secs(); &MATCH`%q<game_id>`LIFE {{store}}=v(DATA`CONFIG`CHALLENGE); &MATCH`%q<game_id>`ROUND {{store}}=1; &IN`%q<game_mine> {{store}}=%q<game_id>; &IN`%q<who_key> {{store}}=%q<game_id>
+      # A challenge that lapsed, or a game whose record is gone, no longer holds either player.
+      INC`GAME`SWEEP: |-
+        think setq(game_stale,squish(iter(%q<game_mine> %q<who_key>,if(cand(strlen(get({{store}}/IN`%i0)),not(strlen(u(FN`GAME`OF,%i0)))),%i0)))); @dolist/inline setunion(iter(%q<game_stale>,get({{store}}/IN`%i0)),)={@wipe {{store}}/MATCH`##`**; &MATCH`## {{store}}}; @dolist/inline %q<game_stale>={&IN`## {{store}}}
+      # The hands, the terrain and the first turn: the player who accepted goes first.
+      INC`GAME`DEAL: |-
+        think setqm(game_rules,get({{store}}/MATCH`%q<game_id>`RULES),game_hand_a,u(FN`DEAL`HAND,u(FN`KEY,%q<game_a>),a,%q<game_rules>),game_hand_b,u(FN`DEAL`HAND,u(FN`KEY,%q<game_b>),b,%q<game_rules>)); &MATCH`%q<game_id>`HAND`A {{store}}=%q<game_hand_a>; &MATCH`%q<game_id>`HAND`B {{store}}=%q<game_hand_b>; &MATCH`%q<game_id>`START`A {{store}}=%q<game_hand_a>; &MATCH`%q<game_id>`START`B {{store}}=%q<game_hand_b>; @include me/INC`GAME`TERRAIN; &MATCH`%q<game_id>`TURN {{store}}=b; &MATCH`%q<game_id>`WHEN {{store}}=secs(); &MATCH`%q<game_id> {{store}}=playing
+      INC`GAME`TERRAIN: |-
+        @wipe {{store}}/MATCH`%q<game_id>`TERRAIN; @dolist/inline if(member(%q<game_rules>,terrain),extract(shuffle(lnum(1,9)),1,rand(2,4)))={&MATCH`%q<game_id>`TERRAIN`## {{store}}=extract(v(DATA`AFFINITIES),rand(1,words(v(DATA`AFFINITIES))),1)}
+      # Puts hand card game_at on square cmd_rhs, works out what it takes and writes the board.
+      INC`GAME`PLACE: |-
+        think setqm(game_item,extract(%q<game_hand>,%q<game_at>,1),game_sq,%q<cmd_rhs>,game_before,%q<game_owners>); think setqm(game_cards,lreplace(%q<game_cards>,%q<game_sq>,%q<game_item>),game_owners,lreplace(%q<game_owners>,%q<game_sq>,%q<game_side>)); think u(FN`PLACE`RESULT,%q<game_sq>,%q<game_side>); &MATCH`%q<game_id>`SQ`%q<game_sq> {{store}}=%q<game_item>; @dolist/inline u(FN`BOARD`FILLED)={&MATCH`%q<game_id>`SQ`##`OWNER {{store}}=extract(%q<game_owners>,##,1)}; &MATCH`%q<game_id>`HAND`[ucstr(%q<game_side>)] {{store}}=ldelete(%q<game_hand>,%q<game_at>); &MATCH`%q<game_id>`TURN {{store}}=u(FN`GAME`OTHER,%q<game_side>); @pemit/list %q<game_a> %q<game_b>=notice(NINEFOLD,u(FN`PLACE`SENTENCE),info)
+      # After a card goes down: the board to both players, or the end of the game when the board is full.
+      INC`GAME`AFTER: |-
+        think u(FN`GAME`LOAD,%q<game_id>,%#); @break member(%q<game_cards>,-)={@include me/INC`GAME`SHOW}; think setqm(game_score_a,u(FN`GAME`SCORE,a),game_score_b,u(FN`GAME`SCORE,b),game_winner,cond(gt(%q<game_score_a>,%q<game_score_b>),a,lt(%q<game_score_a>,%q<game_score_b>),b,1,draw)); @include me/INC`GAME`SHOW; @break cand(strmatch(%q<game_winner>,draw),member(%q<game_rules>,overtime),lt(get({{store}}/MATCH`%q<game_id>`ROUND),v(DATA`CONFIG`OVERTIME)))={@include me/INC`GAME`OVERTIME}; @include me/INC`GAME`FINISH
+      INC`GAME`SHOW: |-
+        @pemit %q<game_a>=u(FN`SCREEN`GAME,%q<game_a>); @pemit %q<game_b>=u(FN`SCREEN`GAME,%q<game_b>)
+      # A draw under Overtime: each player takes up the cards of their colour, and the other player goes first.
+      INC`GAME`OVERTIME: |-
+        think setqm(game_round,inc(get({{store}}/MATCH`%q<game_id>`ROUND)),game_hand_a,u(FN`OVERTIME`HAND,a),game_hand_b,u(FN`OVERTIME`HAND,b)); &MATCH`%q<game_id>`ROUND {{store}}=%q<game_round>; &MATCH`%q<game_id>`HAND`A {{store}}=%q<game_hand_a>; &MATCH`%q<game_id>`HAND`B {{store}}=%q<game_hand_b>; @wipe {{store}}/MATCH`%q<game_id>`SQ; @include me/INC`GAME`TERRAIN; &MATCH`%q<game_id>`TURN {{store}}=if(mod(%q<game_round>,2),b,a); think u(FN`GAME`LOAD,%q<game_id>,%#); @pemit/list %q<game_a> %q<game_b>=notice(NINEFOLD,It is a draw%, so the game goes to overtime: round %q<game_round>. Each of you holds the cards of your colour.,info); @include me/INC`GAME`SHOW
+      # The end: game_winner is a, b or draw. The stakes are paid, then the game is cleared, unless the winner
+      # has a card to pick.
+      INC`GAME`FINISH: |-
+        think setqm(game_winner_obj,if(strmatch(%q<game_winner>,draw),,u(FN`GAME`PLAYER,%q<game_winner>)),game_loser_obj,if(strmatch(%q<game_winner>,draw),,u(FN`GAME`PLAYER,u(FN`GAME`OTHER,%q<game_winner>)))); @pemit/list %q<game_a> %q<game_b>=notice(NINEFOLD,if(strlen(%q<game_winner_obj>),[name(%q<game_winner_obj>)] wins[if(%q<game_forfeit>,: [name(%q<game_loser_obj>)] gave up.,%, [u(FN`GAME`SCORE,%q<game_winner>)] to [u(FN`GAME`SCORE,u(FN`GAME`OTHER,%q<game_winner>))].)],The game is a draw.),ok); @include me/INC`STAKES`[ucstr(if(strlen(%q<game_winner_obj>),%q<game_stakes>,friendly))]
+      INC`STAKES`FRIENDLY: |-
+        @include me/INC`GAME`WIPE
+      INC`STAKES`SPOILS: |-
+        think setq(game_done,); @dolist/inline u(FN`BOARD`TURNED)={think setq(game_spoil,extract(%q<game_cards>,##,1)); @include/args me/INC`OWN`MOVE=from,u(FN`GAME`PLAYER,after(%q<game_spoil>,:)),to,u(FN`GAME`PLAYER,extract(%q<game_owners>,##,1)),card,before(%q<game_spoil>,:),why,game %q<game_id>; think setq(game_done,%q<game_done> ##)}; @pemit/list %q<game_a> %q<game_b>=notice(NINEFOLD,Spoils: [u(FN`SPOILS`SENTENCE,squish(%q<game_done>),u(FN`BOARD`TURNED))],info); @include me/INC`GAME`WIPE
+      INC`STAKES`PICK: |-
+        &MATCH`%q<game_id> {{store}}=claim; &MATCH`%q<game_id>`LOSER {{store}}=objid(%q<game_loser_obj>); &MATCH`%q<game_id>`POOL {{store}}=get({{store}}/MATCH`%q<game_id>`START`[ucstr(u(FN`GAME`OTHER,%q<game_winner>))]); &CLAIM`[u(FN`KEY,%q<game_winner_obj>)] {{store}}=%q<game_id>; @dolist/inline %q<game_a> %q<game_b>={@break comp(get({{store}}/IN`[u(FN`KEY,##)]),%q<game_id>); &IN`[u(FN`KEY,##)] {{store}}}; @pemit %q<game_winner_obj>=notice(NINEFOLD,You may take one card from [name(%q<game_loser_obj>)]'s hand: [itemize(iter(get({{store}}/MATCH`%q<game_id>`POOL),u(FN`CARD`NAME,before(%i0,:)),%b,|),|)]. +nf/claim <card> takes it.,info)
+      INC`GAME`WIPE: |-
+        @dolist/inline %q<game_a> %q<game_b>={@break comp(get({{store}}/IN`[u(FN`KEY,##)]),%q<game_id>); &IN`[u(FN`KEY,##)] {{store}}}; @wipe {{store}}/MATCH`%q<game_id>`**; &MATCH`%q<game_id> {{store}}
+
+      # ---- changing what a player owns ----------------------------------------------------------
+      # A player who has never had a card changed owns the starter set, read from the cards themselves. The
+      # first change writes it down (STARTED`<player>), so a later change to the starter set leaves them be.
+      # %<player> a player's key.
+      INC`OWN`MATERIALIZE: |-
+        @dolist/inline if(hasattr({{store}},STARTED`%<player>),,u(FN`CARD`STARTERS))={&OWN`%<player>`## {{store}}=get({{store}}/CARD`##`STARTER)}; &STARTED`%<player> {{store}}=firstof(get({{store}}/STARTED`%<player>),secs())
+      # %<who> a player, %<card> a card, %<by> how many more (a negative number takes away), %<why> what for.
+      INC`OWN`CHANGE: |-
+        think setq(own_pk,u(FN`KEY,%<who>)); @include/args me/INC`OWN`MATERIALIZE=player,%q<own_pk>; think setq(own_now,max(0,add(u(FN`OWN`COUNT,%q<own_pk>,%<card>),%<by>))); &OWN`%q<own_pk>`%<card> {{store}}=if(%q<own_now>,%q<own_now>); @include/args me/INC`OWN`LOG=who,%<who>,card,%<card>,by,%<by>,why,%<why>
+      INC`OWN`MOVE: |-
+        think setq(move_pk,u(FN`KEY,%<from>)); @include/args me/INC`OWN`MATERIALIZE=player,%q<move_pk>; @break lt(u(FN`OWN`COUNT,%q<move_pk>,%<card>),1); @include/args me/INC`OWN`CHANGE=who,%<from>,card,%<card>,by,-1,why,lost in %<why>; @include/args me/INC`OWN`CHANGE=who,%<to>,card,%<card>,by,1,why,won in %<why>
+      # LOG`<n>: WHEN, WHO (the player's objid), BY (who did it), CARD, CHANGE and WHY. Old entries are dropped
+      # past DATA`CONFIG`LOGKEEP.
+      INC`OWN`LOG: |-
+        think setq(own_log,inc(get({{store}}/NEXTLOG))); &NEXTLOG {{store}}=%q<own_log>; &LOG`%q<own_log> {{store}}=%<card>; &LOG`%q<own_log>`WHEN {{store}}=secs(); &LOG`%q<own_log>`WHO {{store}}=objid(%<who>); &LOG`%q<own_log>`BY {{store}}=%:; &LOG`%q<own_log>`CHANGE {{store}}=%<by>; &LOG`%q<own_log>`WHY {{store}}=%<why>; think setq(own_cut,sub(%q<own_log>,v(DATA`CONFIG`LOGKEEP))); @dolist/inline squish(iter(lattr({{store}}/LOG`*),if(cand(isint(after(%i0,`)),lte(after(%i0,`),%q<own_cut>)),after(%i0,`))))={@wipe {{store}}/LOG`##`**; &LOG`## {{store}}}
+
+      # ---- staff: cards -------------------------------------------------------------------------
+      # /grant <player>=<card>[,<count>] and /revoke <player>=<card>[,<count>].
+      INC`NF`GRANT: |-
+        @include me/INC`NEED`STAFF; @include me/INC`NEED`HANDOUT; @include/args me/INC`OWN`CHANGE=who,%q<who_obj>,card,%q<card_id>,by,%q<card_count>,why,given by [name(%#)]; @pemit %#=notice(NINEFOLD,You give [name(%q<who_obj>)] [u(FN`COPIES`SENTENCE,%q<card_count>,%q<card_id>)]. They have [u(FN`OWN`COUNT,%q<who_key>,%q<card_id>)] now.,ok); @pemit %q<who_obj>=notice(NINEFOLD,[name(%#)] gives you [u(FN`COPIES`SENTENCE,%q<card_count>,%q<card_id>)].,info)
+      INC`NF`REVOKE: |-
+        @include me/INC`NEED`STAFF; @include me/INC`NEED`HANDOUT; @assert gte(setr(card_had,u(FN`OWN`COUNT,%q<who_key>,%q<card_id>)),%q<card_count>)=@pemit %#=notice(NINEFOLD,name(%q<who_obj>) has [u(FN`COPIES`SENTENCE,%q<card_had>,%q<card_id>)].,warn); @include/args me/INC`OWN`CHANGE=who,%q<who_obj>,card,%q<card_id>,by,-%q<card_count>,why,taken back by [name(%#)]; @pemit %#=notice(NINEFOLD,You take [u(FN`COPIES`SENTENCE,%q<card_count>,%q<card_id>)] back from [name(%q<who_obj>)]. They have [u(FN`OWN`COUNT,%q<who_key>,%q<card_id>)] now.,ok); @pemit %q<who_obj>=notice(NINEFOLD,[name(%#)] takes back [u(FN`COPIES`SENTENCE,%q<card_count>,%q<card_id>)].,info)
+      INC`NEED`HANDOUT: |-
+        think setqm(who_text,%q<cmd_lhs>,card_text,trim(before(%q<cmd_rhs>,%,)),card_count,if(strlen(trim(after(%q<cmd_rhs>,%,))),trim(after(%q<cmd_rhs>,%,)),1)); @assert %q<cmd_equals>=@pemit %#=notice(NINEFOLD,+nf/%q<cmd_action> <player>=<card>%[%,<count>%],warn); @include me/INC`NEED`PLAYER; @include me/INC`NEED`CARD; @assert cand(isint(%q<card_count>),gte(%q<card_count>,1),lte(%q<card_count>,99))=@pemit %#=notice(NINEFOLD,The count is a number from 1 to 99.,warn)
+      # /new <name>=<top> <right> <bottom> <left>
+      INC`NF`NEW: |-
+        @include me/INC`NEED`STAFF; @assert %q<cmd_equals>=@pemit %#=notice(NINEFOLD,+nf/new <name>=<top> <right> <bottom> <left>%, each 1 to 9 or A.,warn); think setq(card_name,%q<cmd_lhs>); @include me/INC`NEED`NAME; @assert strlen(setr(card_values,u(FN`VALUES`PARSE,%q<cmd_rhs>)))=@pemit %#=notice(NINEFOLD,Give four edges%, top right bottom left%, each 1 to 9 or A: +nf/new %q<card_name>=5 3 7 2,warn); think setq(card_id,inc(get({{store}}/NEXTCARD))); &NEXTCARD {{store}}=%q<card_id>; &CARD`%q<card_id> {{store}}=%q<card_name>; @include me/INC`CARD`VALUES; &CARD`%q<card_id>`TIER {{store}}=u(FN`TIER`OF,%q<card_values>); @pemit %#=notice(NINEFOLD,Card %q<card_id> is [u(FN`CARD`NAME,%q<card_id>)]%, [u(FN`CARD`EDGES,%q<card_id>)]. +nf/set %q<card_id>/<field>=<value> changes it.,ok)
+      # A card name from card_name: a few words, no | or `, not a number, and not another card's.
+      INC`NEED`NAME: |-
+        @assert cand(strlen(%q<card_name>),lte(strlen(%q<card_name>),30),not(isint(%q<card_name>)),not(pos(|,%q<card_name>)),not(pos(`,%q<card_name>)),not(pos(%,,%q<card_name>)))=@pemit %#=notice(NINEFOLD,A card name is up to 30 characters%, not a number%, without | or a comma.,warn); think setq(card_twin,u(FN`CARD`EXACT,%q<card_name>)); @assert cor(not(strlen(%q<card_twin>)),strmatch(%q<card_twin>,%q<card_id>))=@pemit %#=notice(NINEFOLD,Card %q<card_twin> is called %q<card_name> already.,warn)
+      INC`CARD`VALUES: |-
+        @dolist/inline TOP RIGHT BOTTOM LEFT={&CARD`%q<card_id>`## {{store}}=extract(%q<card_values>,#@,1)}
+      # /set <card>/<field>=<value>
+      INC`NF`SET: |-
+        @include me/INC`NEED`STAFF; think setqm(card_text,before(%q<cmd_lhs>,/),card_field,lcstr(after(%q<cmd_lhs>,/))); @assert cand(pos(/,%q<cmd_lhs>),%q<cmd_equals>)=@pemit %#=notice(NINEFOLD,+nf/set <card>/<field>=<value>. The fields are [itemize(v(DATA`FIELDS))].,warn); @include me/INC`NEED`CARD; @assert member(v(DATA`FIELDS),%q<card_field>)=@pemit %#=notice(NINEFOLD,A card has no field %q<card_field>. The fields are [itemize(v(DATA`FIELDS))].,warn); @include me/INC`SET`[ucstr(%q<card_field>)]
+      DATA`FIELDS: |-
+        name short edges tier affinity starter image art ascii
+      INC`SET`NAME: |-
+        think setq(card_name,%q<cmd_rhs>); @include me/INC`NEED`NAME; think setq(card_old,u(FN`CARD`NAME,%q<card_id>)); &CARD`%q<card_id> {{store}}=%q<card_name>; @pemit %#=notice(NINEFOLD,Card %q<card_id>%, %q<card_old>%, is called %q<card_name> now.,ok)
+      INC`SET`SHORT: |-
+        @assert cand(lte(strlen(%q<cmd_rhs>),5),not(pos(|,%q<cmd_rhs>)))=@pemit %#=notice(NINEFOLD,The short name on the board is up to 5 characters. Leave it empty to use the first five letters of the name.,warn); &CARD`%q<card_id>`SHORT {{store}}=%q<cmd_rhs>; @pemit %#=notice(NINEFOLD,[u(FN`CARD`NAME,%q<card_id>)] shows as [u(FN`CARD`SHORT,%q<card_id>)] on the board.,ok)
+      INC`SET`EDGES: |-
+        @assert strlen(setr(card_values,u(FN`VALUES`PARSE,%q<cmd_rhs>)))=@pemit %#=notice(NINEFOLD,Give four edges%, top right bottom left%, each 1 to 9 or A: +nf/set %q<card_id>/edges=5 3 7 2,warn); @include me/INC`CARD`VALUES; @pemit %#=notice(NINEFOLD,[u(FN`CARD`NAME,%q<card_id>)] is [u(FN`CARD`EDGES,%q<card_id>)] now.,ok)
+      INC`SET`TIER: |-
+        @assert cand(isint(%q<cmd_rhs>),gte(%q<cmd_rhs>,1),lte(%q<cmd_rhs>,5))=@pemit %#=notice(NINEFOLD,A tier is 1 to 5.,warn); &CARD`%q<card_id>`TIER {{store}}=%q<cmd_rhs>; @pemit %#=notice(NINEFOLD,[u(FN`CARD`NAME,%q<card_id>)] is tier %q<cmd_rhs> now.,ok)
+      INC`SET`AFFINITY: |-
+        think setq(card_aff,lcstr(%q<cmd_rhs>)); @assert cor(not(strlen(%q<card_aff>)),strmatch(%q<card_aff>,none),member(v(DATA`AFFINITIES),%q<card_aff>))=@pemit %#=notice(NINEFOLD,An affinity is one of [itemize(v(DATA`AFFINITIES))]%, or none.,warn); &CARD`%q<card_id>`AFFINITY {{store}}=if(strmatch(%q<card_aff>,none),,%q<card_aff>); @pemit %#=notice(NINEFOLD,[u(FN`CARD`NAME,%q<card_id>)] has [if(strlen(u(FN`CARD`AFFINITY,%q<card_id>)),the affinity [u(FN`CARD`AFFINITY,%q<card_id>)],no affinity)] now.,ok)
+      INC`SET`STARTER: |-
+        @assert cor(not(strlen(%q<cmd_rhs>)),cand(isint(%q<cmd_rhs>),gte(%q<cmd_rhs>,0),lte(%q<cmd_rhs>,9)))=@pemit %#=notice(NINEFOLD,How many copies a new player starts with: 0 to 9.,warn); &CARD`%q<card_id>`STARTER {{store}}=if(%q<cmd_rhs>,%q<cmd_rhs>); @pemit %#=notice(NINEFOLD,if(%q<cmd_rhs>,New players start with [u(FN`COPIES`SENTENCE,%q<cmd_rhs>,%q<card_id>)].,[u(FN`CARD`NAME,%q<card_id>)] is not in the starter set now.),ok)
+      INC`SET`IMAGE: |-
+        @assert cor(not(strlen(%q<cmd_rhs>)),u(FN`IMAGE`VALID,%q<cmd_rhs>))=@pemit %#=notice(NINEFOLD,A picture is an https:// address or a path on this game such as /api/wiki-assets/...,warn); &CARD`%q<card_id>`IMAGE {{store}}=%q<cmd_rhs>; @pemit %#=notice(NINEFOLD,if(strlen(%q<cmd_rhs>),[u(FN`CARD`NAME,%q<card_id>)]'s picture is %q<cmd_rhs> now.,[u(FN`CARD`NAME,%q<card_id>)] has no picture now.),ok)
+      # The art as typed, %r between lines, kept as written: no more lines or characters than the art box holds.
+      INC`SET`ART: |-
+        @assert u(FN`ART`VALID,%q<cmd_raw>)=@pemit %#=notice(NINEFOLD,u(FN`ART`LIMIT),warn); &CARD`%q<card_id>`ART {{store}}=%q<cmd_raw>; @pemit %#=notice(NINEFOLD,[u(FN`CARD`NAME,%q<card_id>)] has new art:,ok); @pemit %#=u(FN`SCREEN`CARD,%q<card_id>,%#)
+      # The art a client without UTF-8 is sent instead, line for line: printable ASCII only. Empty sends the art
+      # itself, its characters folded to ASCII.
+      INC`SET`ASCII: |-
+        @assert u(FN`ART`VALID,%q<cmd_raw>)=@pemit %#=notice(NINEFOLD,u(FN`ART`LIMIT),warn); @assert u(FN`ART`ASCII,%q<cmd_raw>)=@pemit %#=notice(NINEFOLD,The ASCII art uses only the characters on a US keyboard.,warn); &CARD`%q<card_id>`ART`ASCII {{store}}=%q<cmd_raw>; @pemit %#=notice(NINEFOLD,if(strlen(%q<cmd_raw>),[u(FN`CARD`NAME,%q<card_id>)] has new ASCII art.,[u(FN`CARD`NAME,%q<card_id>)]'s art is folded to ASCII for clients without UTF-8 now.),ok)
+      # /delete <card> says what would go; /delete <card>=yes removes it and every copy players hold.
+      INC`NF`DELETE: |-
+        @include me/INC`NEED`STAFF; think setq(card_text,%q<cmd_lhs>); @include me/INC`NEED`CARD; @assert not(u(FN`CARD`INPLAY,%q<card_id>))=@pemit %#=notice(NINEFOLD,[u(FN`CARD`NAME,%q<card_id>)] is in a game now. Delete it when the game is over.,warn); think setq(card_holders,u(FN`CARD`HOLDERS,%q<card_id>)); @assert strmatch(%q<cmd_rhs>,yes)=@pemit %#=notice(NINEFOLD,This removes [u(FN`CARD`NAME,%q<card_id>)][case(words(%q<card_holders>),0,%, which nobody holds,1,%band the copies 1 player holds,%band the copies [words(%q<card_holders>)] players hold)]. +nf/delete %q<card_id>=yes to go ahead.,warn); @dolist/inline %q<card_holders>={&OWN`##`%q<card_id> {{store}}}; think setq(card_old,u(FN`CARD`NAME,%q<card_id>)); @wipe {{store}}/CARD`%q<card_id>`**; &CARD`%q<card_id> {{store}}; @pemit %#=notice(NINEFOLD,Card %q<card_id>%, %q<card_old>%, is gone.,ok)
+      INC`NF`LOG: |-
+        @include me/INC`NEED`STAFF; @break not(strlen(%q<cmd_arg>))={@pemit %#=u(FN`SCREEN`LOG,)}; think setq(who_text,%q<cmd_arg>); @include me/INC`NEED`PLAYER; @pemit %#=u(FN`SCREEN`LOG,objid(%q<who_obj>))
+      INC`NF`GAMES: |-
+        @include me/INC`NEED`STAFF; @pemit %#=u(FN`SCREEN`GAMES)
+      # /end <game> stops a game without paying its stakes.
+      INC`NF`END: |-
+        @include me/INC`NEED`STAFF; @assert cand(isint(%q<cmd_arg>),hasattr({{store}},MATCH`%q<cmd_arg>))=@pemit %#=notice(NINEFOLD,There is no game %q<cmd_arg>. +nf/games lists them.,warn); think u(FN`GAME`LOAD,setr(game_id,%q<cmd_arg>),%#); @pemit/list %q<game_a> %q<game_b>=notice(NINEFOLD,[name(%#)] ends the game. Nobody wins or loses a card.,info); @include me/INC`GAME`WIPE; @dolist/inline u(FN`GAME`CLAIMS,%q<game_id>)={&## {{store}}}; @pemit %#=notice(NINEFOLD,Game %q<game_id> is ended.,ok)
+
+      # ---- staff: rule sets and where they apply ------------------------------------------------
+      # RULESET`<KEY> is a rule set's title, with RULES (rule words), STAKES and MODE (replace or add, for an
+      # event) under it. DEFAULT is the rule set played where nothing else applies. WHERE`ROOM`<room> and
+      # WHERE`ZONE`<zone> name the rule set for a room and for the rooms in a zone. EVENT is the rule set of a
+      # game-wide event, until EVENT`UNTIL (0 for until it is ended).
+      INC`NF`RULESETS: |-
+        @include me/INC`NEED`STAFF; @pemit %#=u(FN`SCREEN`RULESETS)
+      # /ruleset <key> shows one; /ruleset <key>=<title> makes or renames it; /ruleset <key>/<field>=<value>
+      # changes rules, stakes or mode; /ruleset <key>/delete=yes removes it.
+      INC`NF`RULESET: |-
+        @include me/INC`NEED`STAFF; think setqm(set_text,before(%q<cmd_lhs>,/),set_field,lcstr(after(%q<cmd_lhs>,/))); @break cand(not(pos(/,%q<cmd_lhs>)),%q<cmd_equals>)={@include me/INC`RULESET`TITLE}; @include me/INC`NEED`SET; @break not(pos(/,%q<cmd_lhs>))={@pemit %#=u(FN`SCREEN`RULESET,%q<set_key>)}; @assert member(rules stakes mode delete,%q<set_field>)=@pemit %#=notice(NINEFOLD,A rule set has rules%, stakes and mode. +nf/ruleset %q<set_text>/rules=twin balance,warn); @include me/INC`RULESET`%q<set_field>
+      INC`RULESET`TITLE: |-
+        @assert u(FN`SET`KEYOK,%q<set_text>)=@pemit %#=notice(NINEFOLD,A rule set's key is one word of letters%, digits%, - and _%, up to 20.,warn); @assert cand(strlen(%q<cmd_rhs>),lte(strlen(%q<cmd_rhs>),40),not(pos(|,%q<cmd_rhs>)))=@pemit %#=notice(NINEFOLD,Give it a title of up to 40 characters%, without |.,warn); think setqm(set_key,ucstr(%q<set_text>),set_new,not(u(FN`SET`EXISTS,ucstr(%q<set_text>)))); &RULESET`%q<set_key> {{store}}=%q<cmd_rhs>; @break %q<set_new>={&RULESET`%q<set_key>`STAKES {{store}}=friendly; &RULESET`%q<set_key>`MODE {{store}}=replace; @pemit %#=notice(NINEFOLD,Rule set [lcstr(%q<set_key>)]%, %q<cmd_rhs>%, is made: no rules%, friendly. +nf/ruleset [lcstr(%q<set_key>)]/rules=<rules> gives it rules.,ok)}; @pemit %#=notice(NINEFOLD,Rule set [lcstr(%q<set_key>)] is called %q<cmd_rhs> now.,ok)
+      INC`RULESET`RULES: |-
+        think setq(set_rules,lcstr(squish(edit(%q<cmd_rhs>,%,,%b)))); @assert every(FN`RULE`KNOWN,%q<set_rules>,%b,set_bad)=@pemit %#=notice(NINEFOLD,There is no rule %q<set_bad>. The rules are [itemize(v(DATA`RULES))].,warn); &RULESET`%q<set_key>`RULES {{store}}=u(FN`RULES`ORDER,%q<set_rules>); @pemit %#=notice(NINEFOLD,[u(FN`SET`TITLE,%q<set_key>)] plays [u(FN`RULES`NAMES,get({{store}}/RULESET`%q<set_key>`RULES))] now.,ok)
+      INC`RULESET`STAKES: |-
+        @assert member(v(DATA`STAKES),lcstr(%q<cmd_rhs>))=@pemit %#=notice(NINEFOLD,Stakes are [itemize(v(DATA`STAKES),%b,or)].,warn); &RULESET`%q<set_key>`STAKES {{store}}=lcstr(%q<cmd_rhs>); @pemit %#=notice(NINEFOLD,[u(FN`SET`TITLE,%q<set_key>)] is played for [u(FN`STAKES`NAME,lcstr(%q<cmd_rhs>))] stakes now.,ok)
+      INC`RULESET`MODE: |-
+        @assert member(replace add,lcstr(%q<cmd_rhs>))=@pemit %#=notice(NINEFOLD,The mode says what the rule set does as an event: replace the local rules%, or add its rules to them.,warn); &RULESET`%q<set_key>`MODE {{store}}=lcstr(%q<cmd_rhs>); @pemit %#=notice(NINEFOLD,As an event%, [u(FN`SET`TITLE,%q<set_key>)] [if(strmatch(lcstr(%q<cmd_rhs>),add),adds its rules to the local ones,replaces the local rules)] now.,ok)
+      INC`RULESET`DELETE: |-
+        @assert comp(get({{store}}/DEFAULT),%q<set_key>)=@pemit %#=notice(NINEFOLD,[u(FN`SET`TITLE,%q<set_key>)] is the default rule set. +nf/default <rule set> picks another first.,warn); @assert comp(u(FN`EVENT`LIVE),%q<set_key>)=@pemit %#=notice(NINEFOLD,[u(FN`SET`TITLE,%q<set_key>)] is the running event. +nf/event none ends it first.,warn); think setq(set_places,u(FN`SET`PLACES,%q<set_key>)); @assert strmatch(%q<cmd_rhs>,yes)=@pemit %#=notice(NINEFOLD,This removes [u(FN`SET`TITLE,%q<set_key>)][if(words(%q<set_places>),%band the [u(FN`PLURAL,words(%q<set_places>),room or zone,rooms and zones)] it applies to)]. +nf/ruleset [lcstr(%q<set_key>)]/delete=yes to go ahead.,warn); @dolist/inline %q<set_places>={&## {{store}}}; think setq(set_old,u(FN`SET`TITLE,%q<set_key>)); @wipe {{store}}/RULESET`%q<set_key>`**; &RULESET`%q<set_key> {{store}}; @pemit %#=notice(NINEFOLD,Rule set %q<set_old> is gone.,ok)
+      # /zone <zone>=<rule set> and /room <room>=<rule set>; an empty rule set clears it.
+      INC`NF`ZONE: |-
+        @include/args me/INC`WHERE`SET=kind,ZONE
+      INC`NF`ROOM: |-
+        @include/args me/INC`WHERE`SET=kind,ROOM
+      INC`WHERE`SET: |-
+        @include me/INC`NEED`STAFF; @assert %q<cmd_equals>=@pemit %#=notice(NINEFOLD,+nf/[lcstr(%<kind>)] <[lcstr(%<kind>)]>=<rule set>%, or nothing after = to clear it.,warn); @assert isdbref(setr(set_obj,locate(%#,%q<cmd_lhs>,*)))=@pemit %#=notice(NINEFOLD,There is nothing called %q<cmd_lhs> here. A dbref such as #123 finds it anywhere.,warn); @assert cor(strmatch(%<kind>,ZONE),hastype(%q<set_obj>,room))=@pemit %#=notice(NINEFOLD,name(%q<set_obj>) is not a room.,warn); @break not(strlen(%q<cmd_rhs>))={&WHERE`%<kind>`[u(FN`KEY,%q<set_obj>)] {{store}}; @pemit %#=notice(NINEFOLD,[name(%q<set_obj>)] has no rule set of its own now.,ok)}; think setq(set_text,%q<cmd_rhs>); @include me/INC`NEED`SET; &WHERE`%<kind>`[u(FN`KEY,%q<set_obj>)] {{store}}=%q<set_key>; @pemit %#=notice(NINEFOLD,Games [if(strmatch(%<kind>,ZONE),in rooms of the zone,in)] [name(%q<set_obj>)] play [u(FN`SET`TITLE,%q<set_key>)] now.,ok)
+      INC`NF`DEFAULT: |-
+        @include me/INC`NEED`STAFF; think setq(set_text,%q<cmd_arg>); @include me/INC`NEED`SET; &DEFAULT {{store}}=%q<set_key>; @pemit %#=notice(NINEFOLD,Where nothing else applies%, games play [u(FN`SET`TITLE,%q<set_key>)] now.,ok)
+      # /event shows the event; /event <rule set>[=<how long>] starts one; /event none ends it.
+      INC`NF`EVENT: |-
+        @include me/INC`NEED`STAFF; @break not(strlen(%q<cmd_lhs>))={@pemit %#=notice(NINEFOLD,u(FN`EVENT`SENTENCE),info)}; @break strmatch(%q<cmd_lhs>,none)={&EVENT {{store}}; &EVENT`UNTIL {{store}}; @pemit %#=notice(NINEFOLD,There is no event now.,ok)}; think setq(set_text,%q<cmd_lhs>); @include me/INC`NEED`SET; @assert cor(not(strlen(%q<cmd_rhs>)),strlen(setr(set_for,u(FN`DURATION`PARSE,%q<cmd_rhs>))))=@pemit %#=notice(NINEFOLD,How long: a number with m%, h or d%, such as 3h or 2d. Leave it out to run until +nf/event none.,warn); &EVENT {{store}}=%q<set_key>; &EVENT`UNTIL {{store}}=if(strlen(%q<cmd_rhs>),add(secs(),%q<set_for>),0); @pemit %#=notice(NINEFOLD,u(FN`EVENT`SENTENCE),ok)
+
+  # The functions. They read the store and the game_ registers a command loads; FN`SCREEN` draws what a
+  # command shows.
+  #
+  # FN`CARD` one card, FN`OWN` what a player owns, FN`DECK` and FN`DEAL` hands, FN`GAME` a game, FN`BOARD`
+  # and FN`PLACE` the board and what a card takes, FN`RULES` and FN`SET` rule sets, FN`SCREEN` screens.
+  - ref: ninefold_functions
+    type: thing
+    name: Ninefold Functions
+    location: "{{ninefold}}"
+    flags: [NO_COMMAND]
+    attributes:
+      # ---- small things -------------------------------------------------------------------------
+      # A player or object as the key its records use: #12:1795 is 12`1795.
+      FN`KEY: |-
+        edit(after(objid(%0),#),:,`)
+      # An edge as it is shown: 10 is A.
+      FN`SHOW: |-
+        if(eq(%0,10),A,%0)
+      FN`PLURAL: |-
+        %0 [if(eq(%0,1),%1,%2)]
+      # A number of seconds in words.
+      FN`DURATION: |-
+        cond(gte(%0,86400),u(FN`PLURAL,round(fdiv(%0,86400),0),day,days),gte(%0,3600),u(FN`PLURAL,round(fdiv(%0,3600),0),hour,hours),1,u(FN`PLURAL,max(1,round(fdiv(%0,60),0)),minute,minutes))
+      # A length of time as typed (90m, 3h, 2d, or a number of hours): seconds, or nothing.
+      FN`DURATION`PARSE: |-
+        setqm(dp_unit,if(isint(%0),h,lcstr(right(%0,1))),dp_n,if(isint(%0),%0,left(%0,dec(strlen(%0)))))[if(cand(isint(%q<dp_n>),gt(%q<dp_n>,0),member(m h d,%q<dp_unit>)),mul(%q<dp_n>,switch(%q<dp_unit>,m,60,h,3600,86400)))]
+      FN`COPIES`SENTENCE: |-
+        u(FN`PLURAL,%0,copy,copies) of [u(FN`CARD`NAME,%1)]
+
+      # ---- one card -----------------------------------------------------------------------------
+      # CARD`<n> is a card's name, with SHORT (the name on the board, 5 letters), TOP RIGHT BOTTOM LEFT (its
+      # edges, 1 to 10), TIER (1 to 5), AFFINITY, STARTER (copies a new player starts with), IMAGE (a picture's
+      # address) and ART (lines of text art) under it. The number never changes, so a rename breaks nothing.
+      FN`CARD`IDS: |-
+        sort(iter(lattr({{store}}/CARD`*),after(%i0,`)),n)
+      FN`CARD`EXISTS: |-
+        cand(isint(%0),hasattr({{store}},CARD`%0))
+      FN`CARD`NAME: |-
+        get({{store}}/CARD`%0)
+      FN`CARD`SHORT: |-
+        firstof(get({{store}}/CARD`%0`SHORT),left(get({{store}}/CARD`%0),5))
+      # %0 a card, %1 an edge: 1 top, 2 right, 3 bottom, 4 left.
+      FN`CARD`SIDE: |-
+        firstof(get({{store}}/CARD`%0`[extract(TOP RIGHT BOTTOM LEFT,%1,1)]),1)
+      FN`CARD`AFFINITY: |-
+        get({{store}}/CARD`%0`AFFINITY)
+      FN`CARD`TIER: |-
+        firstof(get({{store}}/CARD`%0`TIER),1)
+      FN`CARD`TOTAL: |-
+        add(u(FN`CARD`SIDE,%0,1),u(FN`CARD`SIDE,%0,2),u(FN`CARD`SIDE,%0,3),u(FN`CARD`SIDE,%0,4))
+      # The edges in a sentence, and in the short form lists use, top/right/bottom/left: 7/3/2/5.
+      FN`CARD`EDGES: |-
+        top [u(FN`SHOW,u(FN`CARD`SIDE,%0,1))], right [u(FN`SHOW,u(FN`CARD`SIDE,%0,2))], bottom [u(FN`SHOW,u(FN`CARD`SIDE,%0,3))], left [u(FN`SHOW,u(FN`CARD`SIDE,%0,4))]
+      FN`CARD`CROSS: |-
+        [u(FN`SHOW,u(FN`CARD`SIDE,%0,1))]/[u(FN`SHOW,u(FN`CARD`SIDE,%0,2))]/[u(FN`SHOW,u(FN`CARD`SIDE,%0,3))]/[u(FN`SHOW,u(FN`CARD`SIDE,%0,4))]
+      # A card by its number, its whole name, or the start of one name only.
+      FN`CARD`FIND: |-
+        cond(u(FN`CARD`EXISTS,%0),%0,strlen(setr(cf_id,u(FN`CARD`EXACT,%0))),%q<cf_id>,1,u(FN`CARD`PREFIX,%0))
+      FN`CARD`EXACT: |-
+        first(squish(iter(u(FN`CARD`IDS),if(not(comp(lcstr(get({{store}}/CARD`%i0)),lcstr(%0))),%i0))))
+      FN`CARD`PREFIX: |-
+        setq(cp_ids,squish(iter(u(FN`CARD`IDS),if(u(FN`NAME`STARTS,lcstr(get({{store}}/CARD`%i0)),lcstr(%0)),%i0))))[if(eq(words(%q<cp_ids>),1),%q<cp_ids>)]
+      # 1 when name %0 starts with %1, or has a word that does: "beetle" finds Brass Beetle.
+      FN`NAME`STARTS: |-
+        cor(eq(pos(%1,%0),1),gt(pos(%b%1,%0),0))
+      # Why FN`CARD`FIND found nothing for %0: no such card, or a name that fits several.
+      FN`CARD`MISSING: |-
+        setq(cm_ids,squish(iter(u(FN`CARD`IDS),if(u(FN`NAME`STARTS,lcstr(get({{store}}/CARD`%i0)),lcstr(%0)),%i0))))[if(gt(words(%q<cm_ids>),1),%0 could be [itemize(iter(%q<cm_ids>,u(FN`CARD`NAME,%i0),%b,|),|,or)]. Give more of its name or its number.,There is no card called %0.)]
+      FN`CARD`STARTERS: |-
+        squish(iter(u(FN`CARD`IDS),if(gt(firstof(get({{store}}/CARD`%i0`STARTER),0),0),%i0)))
+      # The keys of the players who have written-down copies of card %0.
+      FN`CARD`HOLDERS: |-
+        squish(iter(lattr({{store}}/OWN`*`*`%0),extract(%i0,2,2,`)))
+      # 1 when card %0 is in a hand or on the board of a game.
+      FN`CARD`INPLAY: |-
+        words(squish(iter(lattr({{store}}/MATCH`**),if(cor(member(get({{store}}/%i0),%0:a),member(get({{store}}/%i0),%0:b)),%i0))))
+      # Four edges as typed (1 to 9 or A, top right bottom left): the numbers, or nothing.
+      FN`VALUES`PARSE: |-
+        setq(vp_values,iter(%0,switch(lcstr(%i0),a,10,%i0)))[if(cand(eq(words(%q<vp_values>),4),every(FN`VALUE`OK,%q<vp_values>)),%q<vp_values>)]
+      FN`VALUE`OK: |-
+        cand(isint(%0),gte(%0,1),lte(%0,10))
+      FN`TIER`OF: |-
+        setq(to_total,ladd(%0))[cond(lte(%q<to_total>,13),1,lte(%q<to_total>,17),2,lte(%q<to_total>,21),3,lte(%q<to_total>,25),4,1,5)]
+      FN`ART`VALID: |-
+        cand(lte(words(%0,%r),v(DATA`CONFIG`ARTHEIGHT)),not(words(squish(iter(%0,if(gt(strlen(%i0),v(DATA`CONFIG`ARTWIDTH)),x),%r)))))
+      FN`ART`ASCII: |-
+        not(words(squish(iter(%0,if(regmatch(%i0,^\[ -~\]*$),,x),%r))))
+      FN`ART`LIMIT: |-
+        Card art is at most [v(DATA`CONFIG`ARTHEIGHT)] lines of [v(DATA`CONFIG`ARTWIDTH)] characters%, %%r between lines.
+      FN`IMAGE`VALID: |-
+        cand(eq(words(%0),1),cor(strmatch(%0,https://*),strmatch(%0,http://*),strmatch(%0,/*)))
+
+      # ---- what a player owns -------------------------------------------------------------------
+      # OWN`<player>`<card> is how many copies a player has. A player with no STARTED`<player> has never had a
+      # card changed and owns the starter set as the cards say now.
+      FN`OWN`COUNT: |-
+        if(hasattr({{store}},STARTED`%0),firstof(get({{store}}/OWN`%0`%1),0),firstof(get({{store}}/CARD`%1`STARTER),0))
+      FN`OWN`CARDS: |-
+        squish(iter(u(FN`CARD`IDS),if(gt(u(FN`OWN`COUNT,%0,%i0),0),%i0)))
+      # Every copy: a card owned twice is in the list twice.
+      FN`OWN`COPIES: |-
+        squish(iter(u(FN`OWN`CARDS,%0),repeat(%i0%b,u(FN`OWN`COUNT,%0,%i0))))
+
+      # ---- hands --------------------------------------------------------------------------------
+      # A hand as typed, cards between commas: their numbers. card_bad is the first that names no card.
+      FN`DECK`PARSE: |-
+        setq(card_bad,)[squish(iter(%0,u(FN`DECK`ONE,trim(%i0)),%,,%b))]
+      FN`DECK`ONE: |-
+        setq(dk_id,u(FN`CARD`FIND,%0))[if(strlen(%q<dk_id>),%q<dk_id>,setq(card_bad,firstof(%q<card_bad>,%0)))]
+      # 1 when player %0 has a copy for every card in %1; card_short is a card they have too few of.
+      FN`DECK`AFFORD: |-
+        setq(card_short,first(squish(iter(setunion(%1,),if(gt(words(graball(%1,%i0)),u(FN`OWN`COUNT,%0,%i0)),%i0)))))[not(strlen(%q<card_short>))]
+      # The five cards a player plays: the hand they chose, as far as they still own it, then their strongest.
+      FN`DECK`HAND: |-
+        setqm(dh_copies,u(FN`OWN`COPIES,%0),dh_hand,)[null(iter(get({{store}}/DECK`%0),u(FN`DECK`TAKE,%i0)))][extract(squish(%q<dh_hand> [revwords(sortkey(FN`CARD`TOTAL,%q<dh_copies>,n))]),1,5)]
+      FN`DECK`TAKE: |-
+        if(member(%q<dh_copies>,%0),setq(dh_hand,%q<dh_hand> %0)[setq(dh_copies,ldelete(%q<dh_copies>,member(%q<dh_copies>,%0)))])
+      # %0 a player's key, %1 their side, %2 the rules: their hand for a game, each card <card>:<side>.
+      FN`DEAL`HAND: |-
+        iter(if(member(%2,blind),extract(shuffle(u(FN`OWN`COPIES,%0)),1,5),u(FN`DECK`HAND,%0)),%i0:%1)
+      # Under Overtime: the cards of side %0's colour on the board, and what is left in their hand.
+      FN`OVERTIME`HAND: |-
+        squish(iter(lnum(1,9),if(strmatch(extract(%q<game_owners>,%i0,1),%0),extract(%q<game_cards>,%i0,1))) [get({{store}}/MATCH`%q<game_id>`HAND`[ucstr(%0)])])
+      # %0 a hand, %1 what was typed: the place in the hand of the card it names, or nothing.
+      FN`HAND`FIND: |-
+        cond(cand(isint(%1),gte(%1,1),lte(%1,words(%0))),%1,strlen(setr(hf_at,u(FN`HAND`EXACT,%0,lcstr(%1)))),%q<hf_at>,1,u(FN`HAND`PREFIX,%0,lcstr(%1)))
+      FN`HAND`EXACT: |-
+        first(squish(iter(%0,if(not(comp(lcstr(u(FN`CARD`NAME,before(%i0,:))),%1)),inum(0)))))
+      FN`HAND`PREFIX: |-
+        setq(hp_at,squish(iter(%0,if(u(FN`NAME`STARTS,lcstr(u(FN`CARD`NAME,before(%i0,:))),%1),inum(0)))))[if(eq(words(setunion(iter(%q<hp_at>,before(extract(%0,%i0,1),:)),)),1),first(%q<hp_at>))]
+
+      # ---- a game -------------------------------------------------------------------------------
+      # %0 a game: 1 while it is being played, or while its challenge has not lapsed.
+      FN`GAME`LIVE: |-
+        switch(get({{store}}/MATCH`%0),playing,1,invited,lt(sub(secs(),get({{store}}/MATCH`%0`WHEN)),firstof(get({{store}}/MATCH`%0`LIFE),v(DATA`CONFIG`CHALLENGE))),0)
+      # %0 a player's key: the game they are in, or nothing.
+      FN`GAME`OF: |-
+        setq(go_id,get({{store}}/IN`%0))[if(cand(strlen(%q<go_id>),u(FN`GAME`LIVE,%q<go_id>)),%q<go_id>)]
+      FN`GAME`OTHER: |-
+        if(strmatch(%0,a),b,a)
+      FN`GAME`PLAYER: |-
+        get({{store}}/MATCH`%q<game_id>`[ucstr(%0)])
+      # Loads game %0 into the game_ registers, as player %1 sees it.
+      FN`GAME`LOAD: |-
+        setqm(game_id,%0,
+          game_state,get({{store}}/MATCH`%0),
+          game_a,get({{store}}/MATCH`%0`A),
+          game_b,get({{store}}/MATCH`%0`B),
+          game_side,if(strmatch(objid(%1),%q<game_a>),a,b),
+          game_turn,get({{store}}/MATCH`%0`TURN),
+          game_rules,get({{store}}/MATCH`%0`RULES),
+          game_stakes,firstof(get({{store}}/MATCH`%0`STAKES),friendly),
+          game_title,get({{store}}/MATCH`%0`TITLE),
+          game_hand_a,get({{store}}/MATCH`%0`HAND`A),
+          game_hand_b,get({{store}}/MATCH`%0`HAND`B),
+          game_hand,if(strmatch(%q<game_side>,a),%q<game_hand_a>,%q<game_hand_b>),
+          game_cards,iter(lnum(1,9),firstof(get({{store}}/MATCH`%0`SQ`%i0),-)),
+          game_owners,iter(lnum(1,9),firstof(get({{store}}/MATCH`%0`SQ`%i0`OWNER),-)),
+          game_terrain,iter(lnum(1,9),firstof(get({{store}}/MATCH`%0`TERRAIN`%i0),-)))
+      # A side's score: the cards of its colour on the board and the cards left in its hand.
+      FN`GAME`SCORE: |-
+        add(words(graball(%q<game_owners>,%0)),words(if(strmatch(%0,a),%q<game_hand_a>,%q<game_hand_b>)))
+      FN`GAME`CLAIMS: |-
+        squish(iter(lattr({{store}}/CLAIM`**),if(not(comp(get({{store}}/%i0),%0)),%i0)))
+
+      # ---- the board ----------------------------------------------------------------------------
+      # Squares are 1 to 9, left to right from the top. Edges are 1 top, 2 right, 3 bottom, 4 left.
+      FN`BOARD`FILLED: |-
+        squish(iter(lnum(1,9),if(strmatch(extract(%q<game_cards>,%i0,1),-),,%i0)))
+      # The squares whose card shows the other player's colour from the one it came from.
+      FN`BOARD`TURNED: |-
+        squish(iter(u(FN`BOARD`FILLED),if(strmatch(after(extract(%q<game_cards>,%i0,1),:),extract(%q<game_owners>,%i0,1)),,%i0)))
+      # %0 a square, %1 an edge: the square beyond it, or 0 at the board's edge.
+      FN`BOARD`NEXT: |-
+        switch(%1,1,if(gt(%0,3),sub(%0,3),0),2,if(mod(%0,3),inc(%0),0),3,if(lt(%0,7),add(%0,3),0),if(eq(mod(%0,3),1),0,dec(%0)))
+      FN`BOARD`OPPOSITE: |-
+        inc(mod(inc(%0),4))
+      # %0 a square, %1 an edge: the card's edge there, with the square's terrain, or 0 for no card.
+      FN`BOARD`VALUE: |-
+        setq(bv_item,extract(%q<game_cards>,%0,1))[if(strmatch(%q<bv_item>,-),0,max(1,min(10,add(u(FN`CARD`SIDE,before(%q<bv_item>,:),%1),u(FN`TERRAIN`SHIFT,%0,before(%q<bv_item>,:))))))]
+      # %0 a square, %1 a card: 1 when the square's affinity is the card's, -1 when it is another, 0 for none.
+      FN`TERRAIN`SHIFT: |-
+        setq(ts_aff,extract(%q<game_terrain>,%0,1))[if(strmatch(%q<ts_aff>,-),0,if(strmatch(u(FN`CARD`AFFINITY,%1),%q<ts_aff>),1,-1))]
+
+      # ---- what a card takes --------------------------------------------------------------------
+      # %0 the square just played, %1 its side. Changes game_owners and leaves what it took in pl_special
+      # (by Twin or Balance, named in ps_kind), pl_basic (by a higher edge) and pl_cascade.
+      FN`PLACE`RESULT: |-
+        setq(pl_special,u(FN`PLACE`SPECIAL,%0,%1))[u(FN`OWNERS`SET,%q<pl_special>,%1)][setq(pl_basic,u(FN`PLACE`BASIC,%0,%1))][u(FN`OWNERS`SET,%q<pl_basic>,%1)][setq(pl_cascade,if(member(%q<game_rules>,cascade),u(FN`PLACE`CASCADE,%q<pl_special>,%1)))]
+      # The other side's cards that square %0 beats edge to edge.
+      FN`PLACE`BASIC: |-
+        squish(iter(1 2 3 4,u(FN`PLACE`BEATS,%0,%i0,%1)))
+      FN`PLACE`BEATS: |-
+        setq(pb_next,u(FN`BOARD`NEXT,%0,%1))[if(cand(%q<pb_next>,strmatch(extract(%q<game_owners>,%q<pb_next>,1),u(FN`GAME`OTHER,%2)),gt(u(FN`BOARD`VALUE,%0,%1),u(FN`BOARD`VALUE,%q<pb_next>,u(FN`BOARD`OPPOSITE,%1)))),%q<pb_next>)]
+      FN`PLACE`SPECIAL: |-
+        setqm(ps_twin,if(member(%q<game_rules>,twin),u(FN`TWIN`HITS,%0)),ps_twin,if(gte(words(%q<ps_twin>),2),u(FN`ONLY`THEIRS,%q<ps_twin>,%1)),ps_bal,if(member(%q<game_rules>,balance),u(FN`ONLY`THEIRS,u(FN`BALANCE`HITS,%0),%1)),ps_kind,squish(if(words(%q<ps_twin>),twin) [if(words(%q<ps_bal>),balance)]))[setunion(%q<ps_twin>,%q<ps_bal>)]
+      # The squares, and w for a wall under Hard Edges, whose touching edge equals square %0's.
+      FN`TWIN`HITS: |-
+        squish(iter(1 2 3 4,u(FN`TWIN`EDGE,%0,%i0)))
+      FN`TWIN`EDGE: |-
+        setq(te_next,u(FN`BOARD`NEXT,%0,%1))[switch(1,eq(%q<te_next>,0),if(cand(member(%q<game_rules>,walls),eq(u(FN`BOARD`VALUE,%0,%1),10)),w),strmatch(extract(%q<game_owners>,%q<te_next>,1),-),,eq(u(FN`BOARD`VALUE,%0,%1),u(FN`BOARD`VALUE,%q<te_next>,u(FN`BOARD`OPPOSITE,%1))),%q<te_next>)]
+      # The squares whose sum with square %0's touching edge is shared by another touching square.
+      FN`BALANCE`HITS: |-
+        setq(bh_pairs,squish(iter(1 2 3 4,u(FN`BALANCE`EDGE,%0,%i0))))[squish(iter(%q<bh_pairs>,if(gt(words(graball(%q<bh_pairs>,*:[after(%i0,:)])),1),before(%i0,:))))]
+      FN`BALANCE`EDGE: |-
+        setq(be_next,u(FN`BOARD`NEXT,%0,%1))[if(cand(%q<be_next>,not(strmatch(extract(%q<game_owners>,%q<be_next>,1),-))),%q<be_next>:[add(u(FN`BOARD`VALUE,%0,%1),u(FN`BOARD`VALUE,%q<be_next>,u(FN`BOARD`OPPOSITE,%1)))])]
+      FN`ONLY`THEIRS: |-
+        squish(iter(%0,if(cand(isint(%i0),strmatch(extract(%q<game_owners>,%i0,1),u(FN`GAME`OTHER,%1))),%i0)))
+      FN`OWNERS`SET: |-
+        setq(game_owners,iter(lnum(1,9),if(member(%0,%i0),%1,extract(%q<game_owners>,%i0,1))))
+      # Cards taken by Twin or Balance take what they beat, and so on.
+      FN`PLACE`CASCADE: |-
+        if(words(%0),setq(pc_new,setunion(squish(iter(%0,u(FN`PLACE`BASIC,%i0,%1))),))[u(FN`OWNERS`SET,%q<pc_new>,%1)][if(words(%q<pc_new>),%q<pc_new> [u(FN`PLACE`CASCADE,%q<pc_new>,%1)])])
+      # Who took which cards under Spoils: %0 the squares whose card changed hands, %1 every square that changed colour.
+      FN`SPOILS`SENTENCE: |-
+        setq(ss_turned,%0)[if(words(%0),itemize(squish(iter(a b,u(FN`SPOILS`SIDE,%i0),%b,|),|),|,and,;),if(words(%1),No card changed hands%, as their owners no longer have them.,No card changed colour%, so nobody takes one.))].
+      FN`SPOILS`SIDE: |-
+        setq(sd_squares,squish(iter(%q<ss_turned>,if(strmatch(extract(%q<game_owners>,%i0,1),%0),%i0))))[if(words(%q<sd_squares>),[name(u(FN`GAME`PLAYER,%0))] takes [u(FN`TAKEN`NAMES,%q<sd_squares>)] from [name(u(FN`GAME`PLAYER,u(FN`GAME`OTHER,%0)))])]
+      FN`TAKEN`NAMES: |-
+        itemize(iter(%0,u(FN`CARD`NAME,before(extract(%q<game_cards>,%i0,1),:)),%b,|),|)
+      FN`PLACE`SENTENCE: |-
+        name(%#) plays [u(FN`CARD`NAME,before(%q<game_item>,:))] on square %q<game_sq>.[if(words(%q<pl_special>),%b[u(FN`RULES`NAMES,%q<ps_kind>)] takes [u(FN`TAKEN`NAMES,%q<pl_special>)].)][if(words(%q<pl_basic>),%bIt takes [u(FN`TAKEN`NAMES,%q<pl_basic>)].)][if(words(%q<pl_cascade>),%bCascade takes [u(FN`TAKEN`NAMES,squish(%q<pl_cascade>))].)]
+
+      # ---- rules --------------------------------------------------------------------------------
+      FN`RULE`KNOWN: |-
+        member(v(DATA`RULES),%0)
+      FN`RULES`ORDER: |-
+        squish(iter(v(DATA`RULES),if(member(%0,%i0),%i0)))
+      FN`RULES`NAMES: |-
+        if(words(%0),itemize(iter(%0,v(DATA`RULE`%i0),%b,|),|),no special rules)
+      FN`STAKES`NAME: |-
+        v(DATA`STAKE`%0)
+      FN`SET`EXISTS: |-
+        cand(strlen(%0),hasattr({{store}},RULESET`%0))
+      FN`SET`KEYOK: |-
+        cand(strlen(%0),eq(words(%0),1),lte(strlen(%0),20),not(pos(`,%0)),not(pos(*,%0)),not(pos(?,%0)),not(strmatch(%0,none)),valid(attrname,RULESET`%0))
+      FN`SET`TITLE: |-
+        if(u(FN`SET`EXISTS,%0),get({{store}}/RULESET`%0),No rule set)
+      FN`SET`DEFAULT: |-
+        setq(sd_key,get({{store}}/DEFAULT))[if(u(FN`SET`EXISTS,%q<sd_key>),%q<sd_key>)]
+      # The WHERE` attributes that name rule set %0.
+      FN`SET`PLACES: |-
+        squish(iter(lattr({{store}}/WHERE`**),if(not(comp(get({{store}}/%i0),%0)),%i0)))
+      # A WHERE`ROOM`<key> or WHERE`ZONE`<key> attribute: the object it names.
+      FN`PLACE`OBJ: |-
+        #[edit(extract(%0,3,2,`),`,:)]
+      # The running event's rule set, or nothing.
+      FN`EVENT`LIVE: |-
+        setq(ev_key,get({{store}}/EVENT))[if(cand(u(FN`SET`EXISTS,%q<ev_key>),cor(not(get({{store}}/EVENT`UNTIL)),lt(secs(),get({{store}}/EVENT`UNTIL)))),%q<ev_key>)]
+      FN`EVENT`SENTENCE: |-
+        if(strlen(setr(es_key,u(FN`EVENT`LIVE))),The event [u(FN`SET`TITLE,%q<es_key>)] is on [if(get({{store}}/EVENT`UNTIL),for another [u(FN`DURATION,sub(get({{store}}/EVENT`UNTIL),secs()))],until +nf/event none)]. It [if(strmatch(get({{store}}/RULESET`%q<es_key>`MODE),add),adds [u(FN`RULES`NAMES,get({{store}}/RULESET`%q<es_key>`RULES))] to the rules of every game,sets the rules of every game: [u(FN`RULES`NAMES,get({{store}}/RULESET`%q<es_key>`RULES))])].,There is no event now.)
+      # A room's zones, its first zone first.
+      FN`ZONES: |-
+        setq(zs_first,zone(%0))[if(isdbref(%q<zs_first>),if(member(lzone(%0),%q<zs_first>),lzone(%0),%q<zs_first>))]
+      FN`WHERE`ROOM: |-
+        setq(wr_key,get({{store}}/WHERE`ROOM`[u(FN`KEY,%0)]))[if(u(FN`SET`EXISTS,%q<wr_key>),%q<wr_key>)]
+      # The first of room %0's zones that has a rule set.
+      FN`WHERE`ZONE: |-
+        iter(u(FN`ZONES,%0),if(u(FN`SET`EXISTS,get({{store}}/WHERE`ZONE`[u(FN`KEY,%i0)])),%i0[ibreak()]))
+      # The rules for a game in room %0. The first that applies is used: a running event that replaces the
+      # rules, the room's own rule set, its zones' in order, the default. An event that adds its rules adds
+      # them to whichever of the others applies; the stakes stay that one's. Sets rs_key (the rule set),
+      # rs_rules, rs_stakes, rs_title and rs_from (why it applies).
+      FN`RULES`RESOLVE: |-
+        setqm(rs_event,u(FN`EVENT`LIVE),
+          rs_room,u(FN`WHERE`ROOM,%0),
+          rs_zone,if(strlen(%q<rs_room>),,u(FN`WHERE`ZONE,%0)),
+          rs_local,firstof(%q<rs_room>,if(strlen(%q<rs_zone>),get({{store}}/WHERE`ZONE`[u(FN`KEY,%q<rs_zone>)])),u(FN`SET`DEFAULT)),
+          rs_replace,cand(strlen(%q<rs_event>),not(strmatch(get({{store}}/RULESET`%q<rs_event>`MODE),add))),
+          rs_key,if(%q<rs_replace>,%q<rs_event>,%q<rs_local>),
+          rs_rules,u(FN`RULES`ORDER,get({{store}}/RULESET`%q<rs_key>`RULES) [if(cand(strlen(%q<rs_event>),not(%q<rs_replace>)),get({{store}}/RULESET`%q<rs_event>`RULES))]),
+          rs_stakes,firstof(get({{store}}/RULESET`%q<rs_key>`STAKES),friendly),
+          rs_title,u(FN`SET`TITLE,%q<rs_key>)[if(cand(strlen(%q<rs_event>),not(%q<rs_replace>)),%b+ [u(FN`SET`TITLE,%q<rs_event>)])],
+          rs_from,cond(%q<rs_replace>,the event [u(FN`SET`TITLE,%q<rs_event>)] is on,strlen(%q<rs_room>),it is this room's rule set,strlen(%q<rs_zone>),it is the rule set of the zone [name(%q<rs_zone>)],strlen(%q<rs_local>),it is the game's default,1,no rule set is chosen)[if(cand(strlen(%q<rs_event>),not(%q<rs_replace>)),%, and the event [u(FN`SET`TITLE,%q<rs_event>)] adds its rules)])
+      FN`RULES`LINE: |-
+        Rules: %q<rs_title> %([u(FN`RULES`NAMES,%q<rs_rules>)]%)%, for [u(FN`STAKES`NAME,%q<rs_stakes>)] stakes.
+
+      # ---- screens ------------------------------------------------------------------------------
+      # %0 a player, %1 the title.
+      FN`SCREEN`COLLECTION: |-
+        setqm(sc_pk,u(FN`KEY,%0),sc_ids,u(FN`OWN`CARDS,%q<sc_pk>),sc_hand,u(FN`DECK`HAND,%q<sc_pk>))[box(if(words(%q<sc_ids>),ldatatable(,#|Card|Edges|Tier|Affinity|Owned|In hand,iter(%q<sc_ids>,%i0|[u(FN`CARD`NAME,%i0)]|[u(FN`CARD`CROSS,%i0)]|[u(FN`CARD`TIER,%i0)]|[firstof(u(FN`CARD`AFFINITY,%i0),-)]|[u(FN`OWN`COUNT,%q<sc_pk>,%i0)]|[if(member(%q<sc_hand>,%i0),words(graball(%q<sc_hand>,%i0)),-)],,%*<^>),%*<^>),No cards yet.)%r[rule()]%r[words(u(FN`OWN`COPIES,%q<sc_pk>))] cards%, [words(%q<sc_ids>)] different. Edges read top/right/bottom/left. +nf/card <card> shows one%, +nf/deck chooses the hand of five.,%1)]
+      # %0 a card, %1 the player looking: the card as a card. Its name and tier on top; its edges round the
+      # picture, or round the art standing in for it where pictures are not shown; its affinity at the bottom
+      # right; how many the player owns under it. A side edge sits on the art box's middle line.
+      FN`SCREEN`CARD: |-
+        setqm(scd_w,v(DATA`CONFIG`ARTWIDTH),scd_h,v(DATA`CONFIG`ARTHEIGHT))[setqm(scd_in,add(%q<scd_w>,8),scd_mid,repeat(%r,div(dec(%q<scd_h>),2)),scd_at,space(add(4,div(dec(%q<scd_w>),2))))][box(%q<scd_at>[u(FN`SHOW,u(FN`CARD`SIDE,%0,1))]%r[flex(,item(%q<scd_mid>[u(FN`SHOW,u(FN`CARD`SIDE,%0,4))],2),item(figure(get({{store}}/CARD`%0`IMAGE),u(FN`CARD`NAME,%0),u(FN`ART`CANVAS,%0)),%q<scd_w>),item(%q<scd_mid>[u(FN`SHOW,u(FN`CARD`SIDE,%0,2))],>2))]%r%q<scd_at>[u(FN`SHOW,u(FN`CARD`SIDE,%0,3))]%r[rjust(firstof(u(FN`CARD`AFFINITY,%0),no affinity),%q<scd_in>)]%r[rule()]%rYou own [u(FN`OWN`COUNT,u(FN`KEY,%1),%0)].,[u(FN`CARD`NAME,%0)] %(#%0%) · Tier [u(FN`CARD`TIER,%0)],add(%q<scd_w>,12))]
+      FN`ART`TEXT: |-
+        firstof(get({{store}}/CARD`%0`ART),%(no art yet%))
+      # %0 a card: its art centred in the art box, every line as wide as the box. A line of the ASCII art stands
+      # in for its line of the art where the client is not sent UTF-8. A card with no art gets "(no art yet)".
+      FN`ART`CANVAS: |-
+        setqm(ac_art,firstof(get({{store}}/CARD`%0`ART),%(no art yet%)),ac_ascii,get({{store}}/CARD`%0`ART`ASCII),ac_w,v(DATA`CONFIG`ARTWIDTH),ac_h,v(DATA`CONFIG`ARTHEIGHT))[u(FN`ART`BOXED)]
+      FN`ART`BOXED: |-
+        setqm(ac_n,max(words(%q<ac_art>,%r),words(%q<ac_ascii>,%r)),ac_mw,max(lmax(iter(%q<ac_art>,strlen(%i0),%r)),if(strlen(%q<ac_ascii>),lmax(iter(%q<ac_ascii>,strlen(%i0),%r)),0)))[setqm(ac_lp,max(0,div(sub(%q<ac_w>,%q<ac_mw>),2)),ac_tp,max(0,div(sub(%q<ac_h>,%q<ac_n>),2)))][iter(lnum(1,%q<ac_h>),u(FN`ART`ROW,sub(%i0,%q<ac_tp>)),%b,%r)]
+      # %0 a line of the art, counted from 1; outside it, a blank line.
+      FN`ART`ROW: |-
+        setq(ar_line,ljust(space(%q<ac_lp>)[if(cand(gte(%0,1),lte(%0,%q<ac_n>)),extract(%q<ac_art>,%0,1,%r))],%q<ac_w>))[if(strlen(%q<ac_ascii>),standin(%q<ar_line>,ljust(space(%q<ac_lp>)[if(cand(gte(%0,1),lte(%0,%q<ac_n>)),extract(%q<ac_ascii>,%0,1,%r))],%q<ac_w>)),%q<ar_line>)]
+      FN`SCREEN`DECK: |-
+        setq(sd_hand,iter(u(FN`DECK`HAND,u(FN`KEY,%0)),%i0:-))[box(u(FN`SCREEN`HAND,%q<sd_hand>)%r[rule()]%rEdges read top/right/bottom/left. +nf/deck <card>%, <card>%, ... chooses it. Cards you do not name are filled in with your strongest.,Your hand of five)]
+      # %0 hand items <card>:<side>: a table of them.
+      FN`SCREEN`HAND: |-
+        if(words(%0),ldatatable(,#|Card|Edges|Affinity,iter(%0,inum(0)|[u(FN`CARD`NAME,before(%i0,:))]|[u(FN`CARD`CROSS,before(%i0,:))]|[firstof(u(FN`CARD`AFFINITY,before(%i0,:)),-)],,%*<^>),%*<^>),No cards left.)
+      # The rules where a game would be played, from the rs_ registers FN`RULES`RESOLVE set.
+      FN`SCREEN`RULES: |-
+        box(fields(,Rule set,%q<rs_title>,Why,capstr(%q<rs_from>).,Stakes,[u(FN`STAKES`NAME,%q<rs_stakes>)]: [v(DATA`STAKE`%q<rs_stakes>`ABOUT)])%r[rule()]%rA card takes each touching card of the other colour whose facing edge is lower. A is 10.[iter(%q<rs_rules>,%r[tone(strong,v(DATA`RULE`%i0))]: [v(DATA`RULE`%i0`ABOUT)],%b,)],Rules here)
+      # The game as player %0 sees it; the game_ registers are loaded.
+      FN`SCREEN`GAME: |-
+        setq(sg_side,if(strmatch(objid(%0),%q<game_a>),a,b))[box(u(FN`BOARD`DRAW)%r[rule()]%r[fields(,Score,u(FN`SCREEN`SCORE),Rules,%q<game_title> %([u(FN`RULES`NAMES,%q<game_rules>)]%),Stakes,u(FN`STAKES`NAME,%q<game_stakes>),Turn,u(FN`SCREEN`TURN,%0))]%r[rule()]%r[u(FN`SCREEN`HANDS)],Ninefold: [name(%q<game_a>)] and [name(%q<game_b>)])]
+      FN`SCREEN`SCORE: |-
+        tone(info,A [name(%q<game_a>)] [u(FN`GAME`SCORE,a)]) · [tone(warning,B [name(%q<game_b>)] [u(FN`GAME`SCORE,b)])]
+      FN`SCREEN`TURN: |-
+        cond(not(strmatch(%q<game_state>,playing)),Waiting for [name(%q<game_b>)] to accept,not(member(%q<game_cards>,-)),The board is full,strmatch(%q<game_turn>,%q<sg_side>),Yours: +nf/play <card>=<square>,1,[name(u(FN`GAME`PLAYER,%q<game_turn>))] to play)
+      # Your own hand, and the other's when the rules show it.
+      FN`SCREEN`HANDS: |-
+        Your hand:%r[u(FN`SCREEN`HAND,if(strmatch(%q<sg_side>,a),%q<game_hand_a>,%q<game_hand_b>))]%r[if(member(%q<game_rules>,faceup),[name(u(FN`GAME`PLAYER,u(FN`GAME`OTHER,%q<sg_side>)))]'s hand:%r[u(FN`SCREEN`HAND,if(strmatch(%q<sg_side>,a),%q<game_hand_b>,%q<game_hand_a>))],[name(u(FN`GAME`PLAYER,u(FN`GAME`OTHER,%q<sg_side>)))] holds [u(FN`PLURAL,words(if(strmatch(%q<sg_side>,a),%q<game_hand_b>,%q<game_hand_a>)),card,cards)].)]
+      # The board, three text lines a square. A card shows its owner (A or B), its four edges as they count
+      # there, its short name, and + or - when the square's terrain helps or hinders it. An empty square shows
+      # its number and its terrain.
+      DATA`BOARD`EDGE: |-
+        +---------+---------+---------+
+      FN`BOARD`DRAW: |-
+        v(DATA`BOARD`EDGE)%r[iter(1 2 3,u(FN`BOARD`ROW,%i0),%b,%r[v(DATA`BOARD`EDGE)]%r)]%r[v(DATA`BOARD`EDGE)]
+      FN`BOARD`ROW: |-
+        iter(1 2 3,u(FN`BOARD`LINE,%0,%i0),%b,%r)
+      FN`BOARD`LINE: |-
+        |[iter(1 2 3,u(FN`BOARD`CELL,add(mul(dec(%0),3),%i0),%1),%b,|)]|
+      FN`BOARD`CELL: |-
+        setq(bc_item,extract(%q<game_cards>,%0,1))[if(strmatch(%q<bc_item>,-),u(FN`CELL`EMPTY,%0,%1),u(FN`CELL`CARD,%0,%1,before(%q<bc_item>,:),extract(%q<game_owners>,%0,1)))]
+      FN`CELL`EMPTY: |-
+        switch(%1,1,space(9),2,center(%(%0%),9),tone(muted,center(u(FN`TERRAIN`LABEL,%0),9)))
+      FN`TERRAIN`LABEL: |-
+        setq(tl_aff,extract(%q<game_terrain>,%0,1))[if(strmatch(%q<tl_aff>,-),,%q<tl_aff>)]
+      FN`TERRAIN`MARK: |-
+        switch(u(FN`TERRAIN`SHIFT,%0,%1),1,+,-1,-,%b)
+      FN`CELL`CARD: |-
+        tone(if(strmatch(%3,a),info,warning),switch(%1,1,ucstr(%3)[space(3)][u(FN`SHOW,u(FN`BOARD`VALUE,%0,1))][space(4)],2,[u(FN`SHOW,u(FN`BOARD`VALUE,%0,4))] [ljust(u(FN`CARD`SHORT,%2),5)] [u(FN`SHOW,u(FN`BOARD`VALUE,%0,2))],[space(4)][u(FN`SHOW,u(FN`BOARD`VALUE,%0,3))][space(2)][u(FN`TERRAIN`MARK,%0,%2)][space(1)]))
+      # Every rule set, and where each applies.
+      FN`SCREEN`RULESETS: |-
+        setq(sr_keys,sort(iter(lattr({{store}}/RULESET`*),after(%i0,`))))[box(ldatatable(,Key|Title|Rules|Stakes|As an event,iter(%q<sr_keys>,[lcstr(%i0)]|[get({{store}}/RULESET`%i0)]|[u(FN`RULES`NAMES,get({{store}}/RULESET`%i0`RULES))]|[u(FN`STAKES`NAME,get({{store}}/RULESET`%i0`STAKES))]|[if(strmatch(get({{store}}/RULESET`%i0`MODE),add),adds,replaces)],,%*<^>),%*<^>)%r[rule()]%r[fields(,Default,u(FN`SET`TITLE,u(FN`SET`DEFAULT)),Event,u(FN`EVENT`SENTENCE),Rooms and zones,u(FN`SCREEN`PLACES))],Ninefold rule sets)]
+      FN`SCREEN`PLACES: |-
+        firstof(iter(squish(iter(lattr({{store}}/WHERE`**),if(u(FN`SET`EXISTS,get({{store}}/%i0)),%i0))),[if(strmatch(extract(%i0,2,1,`),ZONE),Zone,Room)] [name(u(FN`PLACE`OBJ,%i0))] %([num(u(FN`PLACE`OBJ,%i0))]%): [u(FN`SET`TITLE,get({{store}}/%i0))],%b,%r),none)
+      FN`SCREEN`RULESET: |-
+        box(fields(,Title,u(FN`SET`TITLE,%0),Rules,u(FN`RULES`NAMES,get({{store}}/RULESET`%0`RULES)),Stakes,u(FN`STAKES`NAME,get({{store}}/RULESET`%0`STAKES)),As an event,if(strmatch(get({{store}}/RULESET`%0`MODE),add),it adds its rules to the local ones,it replaces the local rules))%r[rule()]%r+nf/ruleset [lcstr(%0)]/rules=<rules> sets its rules: [itemize(v(DATA`RULES))]. /stakes= sets its stakes: [itemize(v(DATA`STAKES),%b,or)].,Rule set [lcstr(%0)])
+      # %0 a player's objid, or nothing for everyone: the last 20 changes to cards.
+      FN`SCREEN`LOG: |-
+        setq(sl_entries,extract(revwords(sort(squish(iter(lattr({{store}}/LOG`*),if(cor(not(strlen(%0)),strmatch(get({{store}}/%i0`WHO),%0)),after(%i0,`)))),n)),1,20))[box(if(words(%q<sl_entries>),ldatatable(,When|Player|Card|Change|Why,iter(%q<sl_entries>,[timefmt($Y-$m-$d $H:$M,get({{store}}/LOG`%i0`WHEN))]|[name(get({{store}}/LOG`%i0`WHO))]|[firstof(u(FN`CARD`NAME,get({{store}}/LOG`%i0)),#[get({{store}}/LOG`%i0)])]|[if(gt(get({{store}}/LOG`%i0`CHANGE),0),+)][get({{store}}/LOG`%i0`CHANGE)]|[get({{store}}/LOG`%i0`WHY)],,%*<^>),%*<^>),No cards have changed hands yet.),Ninefold card log)]
+      FN`SCREEN`GAMES: |-
+        setq(sg_ids,sort(squish(iter(lattr({{store}}/MATCH`*),if(cor(u(FN`GAME`LIVE,after(%i0,`)),strmatch(get({{store}}/%i0),claim)),after(%i0,`)))),n))[box(if(words(%q<sg_ids>),ldatatable(,Game|Players|State|Rules,iter(%q<sg_ids>,%i0|[name(get({{store}}/MATCH`%i0`A))] and [name(get({{store}}/MATCH`%i0`B))]|[get({{store}}/MATCH`%i0)]|[get({{store}}/MATCH`%i0`TITLE)],,%*<^>),%*<^>),Nobody is playing.)%r[rule()]%r+nf/end <game> ends one without paying its stakes.,Ninefold games)]
+
+      # ---- portal -------------------------------------------------------------------------------
+      # The ninefold-app package shows these at /apps/ninefold. The routes on the HTTP handler (at the end of
+      # the package) read WEB`SCHEMA and WEB`DATA, and run WEB`ACT here with @force, so writes run as this
+      # object. %<viewer> is the character the portal signed in as. Pages, by the address after
+      # /apps/ninefold/: nothing, the viewer's cards and hand; card/<n>, one card (its editor for a card
+      # keeper); cards, every card; rules, the rule sets and where they apply; rules/<key>, one rule set.
+      WEB`JSON`ARRAY: |-
+        if(strlen(setr(web_ja,trim(squish(%0,%r),b,%r))),json_array(%q<web_ja>,%r),json_array())
+      WEB`JSON`OBJECT: |-
+        if(strlen(%0),fold(WEB`JSON`MERGE,%0,json(object),%r),json(object))
+      WEB`JSON`MERGE: |-
+        json_mod(%0,patch,%1)
+      # One datum: key %0, JSON value %1.
+      WEB`JSON`MEMBER: |-
+        json(object,%0,json(object,value,%1,visible,json(boolean,true)))
+      WEB`STRING: |-
+        u(WEB`JSON`MEMBER,%0,json(string,%1))
+      # Field %0 of the posted JSON in %q<body>: a string unquoted, anything else as JSON, nothing when missing.
+      WEB`BODY`GET: |-
+        setq(web_got,json_query(%q<body>,get,%0))[switch(%q<web_got>,null,,"*,json_query(%q<web_got>,unescape),%q<web_got>)]
+      # A posted list of plain words (a multiselect): the words.
+      WEB`BODY`WORDS: |-
+        squish(edit(u(WEB`BODY`GET,%0),%[,%b,%],%b,",%b,%,,%b))
+      DATA`TEMPLATE`WEB`ERROR: |-
+        {"ok":false,"errors":{"_global":""}}
+      WEB`ERROR: |-
+        json_fill(v(DATA`TEMPLATE`WEB`ERROR),/errors/_global,%0)
+      DATA`TEMPLATE`WEB`DONE: |-
+        {"ok":true,"message":"","schema":null,"data":{"fields":null}}
+      # The answer after a change: message %0, the page drawn again with its data.
+      # The page an action was sent from, when the request does not say: the portal posts without ?at=.
+      WEB`ACT`PAGE: |-
+        switch(%0,save,card/[trim(u(WEB`BODY`GET,card))],saveset,rules/[lcstr(trim(u(WEB`BODY`GET,set)))],default,rules,event,rules,endevent,rules,place,rules,)
+      WEB`DONE: |-
+        json_fill(v(DATA`TEMPLATE`WEB`DONE),/message,%0,/schema,u(WEB`SCHEMA`PAGE,%q<web_viewer>,%q<web_at>),/data/fields,u(WEB`DATA`PAGE,%q<web_viewer>,%q<web_at>))
+      DATA`TEMPLATE`WEB`GO: |-
+        {"ok":true,"message":"","redirect":""}
+      WEB`GO: |-
+        json_fill(v(DATA`TEMPLATE`WEB`GO),/message,%0,/redirect,%1)
+      DATA`WEB`ACT: |-
+        {"transport":"http","method":"POST","route":"/http/ninefold/act","payload":"fields","on_error":{"bind_field_errors":true}}
+      WEB`STAFF: |-
+        cand(strlen(%0),permission(%0,softcode.ninefold.admin))
+      WEB`AT: |-
+        lcstr(trimpenn(%0,/,b))
+
+      # schemas: GET /http/ninefold/schema?at=<path>
+      WEB`SCHEMA: |-
+        u(WEB`SCHEMA`PAGE,%<viewer>,u(WEB`AT,%<at>))
+      WEB`SCHEMA`PAGE: |-
+        switch(1,not(cand(strlen(%0),hastype(%0,player))),u(WEB`SCHEMA`SAY,Sign in with a character to see your cards.),not(strlen(%1)),u(WEB`SCHEMA`HOME,%0),strmatch(%1,card/*),u(WEB`SCHEMA`CARD,%0,after(%1,/)),not(u(WEB`STAFF,%0)),u(WEB`SCHEMA`SAY,Only a card keeper can open this page.),strmatch(%1,cards),u(WEB`SCHEMA`CARDS),strmatch(%1,rules),u(WEB`SCHEMA`RULES),strmatch(%1,rules/*),u(WEB`SCHEMA`RULESET,ucstr(after(%1,/))),u(WEB`SCHEMA`SAY,There is no such page.))
+      DATA`WEB`SAY: |-
+        {"kind":"view","schema_version":1,"title":"Ninefold","pages":[{"key":"main","title":"Ninefold","order":1,"sections":[{"name":"","order":1,"elements":[{"kind":"markdown","value":""}]}]}],"actions":{}}
+      WEB`SCHEMA`SAY: |-
+        json_fill(v(DATA`WEB`SAY),/pages/0/sections/0/elements/0/value,%0)
+      DATA`TEMPLATE`WEB`FORM: |-
+        {"kind":"form","schema_version":1,"title":"","pages":[{"key":"main","title":"Ninefold","order":1,"sections":null}],"actions":{"act":{}}}
+      # A form titled %0 with the sections in %1, one a line.
+      WEB`FORM: |-
+        json_fill(v(DATA`TEMPLATE`WEB`FORM),/title,%0,/pages/0/sections,u(WEB`JSON`ARRAY,%1),/actions/act,v(DATA`WEB`ACT))
+
+      # The home page: the viewer's game, their cards, their hand of five, the rules where they stand, and for a
+      # card keeper the way to the editors.
+      WEB`SCHEMA`HOME: |-
+        u(WEB`FORM,,if(strlen(u(FN`GAME`OF,u(FN`KEY,%0))),u(WEB`SECTION`GAME,%0)%r)[v(DATA`WEB`SECTION`CARDS)]%r[u(WEB`SECTION`HAND,%0)]%r[v(DATA`WEB`SECTION`RULES)][if(u(WEB`STAFF,%0),%r[v(DATA`WEB`SECTION`STAFF)])])
+      DATA`TEMPLATE`WEB`SECTION`GAME: |-
+        {"name":"Your game","order":1,"elements":[{"kind":"keyvalue","fields":["Players","Score","Game rules","Turn"]},{"kind":"markdown","value":""},{"kind":"markdown","value":"Play in the game with `+nf/play <card>=<square>`."}]}
+      WEB`SECTION`GAME: |-
+        null(u(FN`GAME`LOAD,u(FN`GAME`OF,u(FN`KEY,%0)),%0))[json_fill(v(DATA`TEMPLATE`WEB`SECTION`GAME),/elements/1/value,```%r[u(FN`BOARD`DRAW)]%r```)]
+      DATA`WEB`SECTION`CARDS: |-
+        {"name":"Your cards","order":2,"elements":[{"kind":"table","rows_field":"cards","empty":"You have no cards.","columns":[{"key":"name","label":"Card","link":"/apps/ninefold/card/{id}"},{"key":"edges","label":"Edges"},{"key":"tier","label":"Tier"},{"key":"affinity","label":"Affinity"},{"key":"owned","label":"Owned"},{"key":"hand","label":"In hand"}]},{"kind":"markdown","value":"Edges read top/right/bottom/left: 7/3/2/5 is 7 on top, 3 on the right, 2 on the bottom and 5 on the left."}]}
+      DATA`TEMPLATE`WEB`SECTION`HAND: |-
+        {"name":"Your hand of five","order":3,"elements":[{"kind":"field","key":"deck","label":"Cards in your hand","type":"multiselect","help":"Choose up to five. Places you leave empty are filled with your strongest cards. +nf/deck in the game can name a card twice.","options":null},{"kind":"button","label":"Save hand","action":"act","values":{"op":"deck"},"color":"primary","variant":"filled"}]}
+      WEB`SECTION`HAND: |-
+        json_fill(v(DATA`TEMPLATE`WEB`SECTION`HAND),/elements/0/options,u(WEB`OPTIONS`CARDS,u(FN`OWN`CARDS,u(FN`KEY,%0))))
+      DATA`TEMPLATE`WEB`OPTION: |-
+        {"value":"","label":""}
+      WEB`OPTIONS`CARDS: |-
+        u(WEB`JSON`ARRAY,iter(%0,json_fill(v(DATA`TEMPLATE`WEB`OPTION),/value,%i0,/label,[u(FN`CARD`NAME,%i0)] %([u(FN`CARD`CROSS,%i0)]%)),%b,%r))
+      DATA`WEB`SECTION`RULES: |-
+        {"name":"Rules where you are","order":4,"elements":[{"kind":"keyvalue","fields":["Rule set","Why","Rules","Stakes"]}]}
+      DATA`WEB`SECTION`STAFF: |-
+        {"name":"Card keeper","order":5,"elements":[{"kind":"markdown","value":"[Edit the cards](/apps/ninefold/cards) · [Rule sets, regions and events](/apps/ninefold/rules)"}]}
+
+      # One card: a view of it, or for a card keeper its editor.
+      WEB`SCHEMA`CARD: |-
+        cond(not(u(FN`CARD`EXISTS,%1)),u(WEB`SCHEMA`SAY,There is no card %1.),u(WEB`STAFF,%0),u(WEB`FORM,u(FN`CARD`NAME,%1),v(DATA`WEB`CARD`ABOUT)%r[v(DATA`WEB`CARD`EDGES)]%r[v(DATA`WEB`CARD`PICTURE)]%r[json_fill(v(DATA`WEB`CARD`ART),/elements/2/value,u(WEB`ART`BLOCK,%1))]%r[v(DATA`WEB`CARD`BUTTONS)]),1,json_fill(v(DATA`WEB`CARD`VIEW),/title,u(FN`CARD`NAME,%1),/pages/0/sections/0/elements/1/value,u(WEB`ART`BLOCK,%1)))
+      WEB`ART`BLOCK: |-
+        ```%r[u(FN`ART`TEXT,%0)]%r```
+      DATA`WEB`CARD`VIEW: |-
+        {"kind":"view","schema_version":1,"title":"","pages":[{"key":"main","title":"Card","order":1,"sections":[{"name":"","order":1,"columns":2,"elements":[{"kind":"image","src_field":"image","alt":"The card's picture"},{"kind":"markdown","value":""},{"kind":"keyvalue","fields":["Edges","Tier","Affinity","You own"],"span":2},{"kind":"markdown","value":"[Back to your cards](/apps/ninefold)","span":2}]}]}],"actions":{}}
+      DATA`WEB`CARD`ABOUT: |-
+        {"name":"The card","order":1,"columns":2,"elements":[{"kind":"field","key":"card","type":"hidden"},{"kind":"field","key":"name","label":"Name","type":"text","placeholder":"Lantern Moth","validation":{"required":true,"max_length":30}},{"kind":"field","key":"short","label":"Name on the board","type":"text","placeholder":"Moth","help":"Up to 5 letters. Empty uses the first five letters of the name.","validation":{"max_length":5}},{"kind":"field","key":"tier","label":"Tier","type":"select","options":[{"value":"1","label":"1"},{"value":"2","label":"2"},{"value":"3","label":"3"},{"value":"4","label":"4"},{"value":"5","label":"5"}]},{"kind":"field","key":"affinity","label":"Affinity","type":"select","help":"Under the Terrain rule, a square of the card's affinity raises its edges by 1.","options":[{"value":"","label":"None"},{"value":"ember","label":"Ember"},{"value":"tide","label":"Tide"},{"value":"gale","label":"Gale"},{"value":"stone","label":"Stone"},{"value":"bloom","label":"Bloom"},{"value":"shade","label":"Shade"}]},{"kind":"field","key":"starter","label":"Copies in the starter set","type":"number","help":"How many copies every new player starts with. 0 leaves it out.","validation":{"min":0,"max":9}}]}
+      DATA`WEB`CARD`EDGES: |-
+        {"name":"Edges","order":2,"columns":4,"elements":[{"kind":"field","key":"top","label":"Top","type":"number","validation":{"required":true,"min":1,"max":10}},{"kind":"field","key":"right","label":"Right","type":"number","validation":{"required":true,"min":1,"max":10}},{"kind":"field","key":"bottom","label":"Bottom","type":"number","validation":{"required":true,"min":1,"max":10}},{"kind":"field","key":"left","label":"Left","type":"number","validation":{"required":true,"min":1,"max":10}},{"kind":"markdown","value":"Each edge is 1 to 10. The game shows 10 as A.","span":4}]}
+      DATA`WEB`CARD`PICTURE: |-
+        {"name":"Picture","order":3,"columns":2,"elements":[{"kind":"field","key":"image","label":"Picture","type":"image","placeholder":"/api/wiki-assets/lantern-moth.svg","help":"Upload a picture or choose one from the image library. SVG is best: it stays sharp at any size."},{"kind":"image","src_field":"image","alt":"The card's picture as saved"}]}
+      DATA`WEB`CARD`ART: |-
+        {"name":"Text art","order":4,"columns":2,"elements":[{"kind":"field","key":"art","label":"Art for the game","type":"textart","placeholder":" ╲  ╭─╮  ╱","help":"What a player sees with +nf/card where pictures are not shown, centred in the art box (Card art width and height in the Ninefold settings). Unicode is fine; keep to characters one column wide."},{"kind":"field","key":"art_ascii","label":"The same art in ASCII","type":"textart","placeholder":" \\  .-.  /","help":"Sent instead, line for line, to a client without UTF-8. Only the characters on a US keyboard. Empty folds the art above to ASCII."},{"kind":"markdown","value":"","span":2}]}
+      DATA`WEB`CARD`BUTTONS: |-
+        {"name":"","order":5,"elements":[{"kind":"button","label":"Save card","action":"act","values":{"op":"save"},"color":"primary","variant":"filled"},{"kind":"button","label":"Delete card","action":"act","values":{"op":"delete"},"confirm":"Delete this card and every copy players hold?","color":"error"},{"kind":"markdown","value":"[All cards](/apps/ninefold/cards)"}]}
+
+      # Every card, and a form for a new one.
+      WEB`SCHEMA`CARDS: |-
+        u(WEB`FORM,Ninefold cards,v(DATA`WEB`CARDS`LIST)%r[v(DATA`WEB`CARDS`NEW)])
+      DATA`WEB`CARDS`LIST: |-
+        {"name":"Every card","order":1,"elements":[{"kind":"table","rows_field":"all","empty":"There are no cards yet.","columns":[{"key":"id","label":"#"},{"key":"name","label":"Card","link":"/apps/ninefold/card/{id}"},{"key":"edges","label":"Edges"},{"key":"tier","label":"Tier"},{"key":"affinity","label":"Affinity"},{"key":"starter","label":"Starter set"},{"key":"holders","label":"Players holding it"}]},{"kind":"markdown","value":"Edges read top/right/bottom/left."},{"kind":"markdown","value":"[Back to Ninefold](/apps/ninefold) · [Rule sets](/apps/ninefold/rules)"}]}
+      DATA`WEB`CARDS`NEW: |-
+        {"name":"A new card","order":2,"columns":2,"elements":[{"kind":"field","key":"new_name","label":"Name","type":"text","placeholder":"Lantern Moth","validation":{"max_length":30}},{"kind":"field","key":"new_edges","label":"Edges, top right bottom left","type":"text","placeholder":"5 3 7 2","help":"Four numbers, 1 to 9 or A."},{"kind":"button","label":"Make the card","action":"act","values":{"op":"new"},"color":"primary","variant":"filled"}]}
+
+      # The rule sets, where they apply, the default and the event.
+      WEB`SCHEMA`RULES: |-
+        u(WEB`FORM,Ninefold rule sets,v(DATA`WEB`RULES`LIST)%r[u(WEB`RULES`WHERE)]%r[u(WEB`RULES`EVENT)]%r[u(WEB`RULES`PLACE)]%r[v(DATA`WEB`RULES`NEW)])
+      DATA`WEB`RULES`LIST: |-
+        {"name":"Rule sets","order":1,"elements":[{"kind":"table","rows_field":"sets","empty":"There are no rule sets.","columns":[{"key":"key","label":"Key","link":"/apps/ninefold/rules/{key}"},{"key":"title","label":"Title"},{"key":"rules","label":"Rules"},{"key":"stakes","label":"Stakes"},{"key":"mode","label":"As an event"}]},{"kind":"markdown","value":"A game uses the first of these that applies: a running event that replaces the rules, the room's own rule set, the rule set of the room's zone (its first zone first), then the default. An event that adds its rules adds them to that. [Back to Ninefold](/apps/ninefold) · [Cards](/apps/ninefold/cards)"}]}
+      DATA`TEMPLATE`WEB`RULES`WHERE: |-
+        {"name":"Where they apply","order":2,"columns":2,"elements":[{"kind":"table","rows_field":"places","empty":"No room or zone has a rule set of its own.","span":2,"columns":[{"key":"place","label":"Room or zone"},{"key":"kind","label":"Kind"},{"key":"set","label":"Rule set"}]},{"kind":"field","key":"default_set","label":"Default rule set","type":"select","options":null},{"kind":"button","label":"Set the default","action":"act","values":{"op":"default"}}]}
+      WEB`RULES`WHERE: |-
+        json_fill(v(DATA`TEMPLATE`WEB`RULES`WHERE),/elements/1/options,u(WEB`OPTIONS`SETS,0))
+      DATA`TEMPLATE`WEB`RULES`EVENT: |-
+        {"name":"Event","order":3,"columns":2,"elements":[{"kind":"keyvalue","fields":["Event"],"span":2},{"kind":"field","key":"event_set","label":"Rule set","type":"select","options":null},{"kind":"field","key":"event_hours","label":"Hours","type":"number","help":"0 runs it until you end it.","validation":{"min":0,"max":2160}},{"kind":"button","label":"Start the event","action":"act","values":{"op":"event"},"color":"primary","variant":"filled"},{"kind":"button","label":"End the event","action":"act","values":{"op":"endevent"},"confirm":"End the event now?","color":"error"}]}
+      WEB`RULES`EVENT: |-
+        json_fill(v(DATA`TEMPLATE`WEB`RULES`EVENT),/elements/1/options,u(WEB`OPTIONS`SETS,0))
+      DATA`TEMPLATE`WEB`RULES`PLACE: |-
+        {"name":"Give a room or zone a rule set","order":4,"columns":3,"elements":[{"kind":"field","key":"place","label":"Room or zone","type":"text","placeholder":"#123","help":"Its dbref, such as #123."},{"kind":"field","key":"place_kind","label":"It is","type":"select","options":[{"value":"room","label":"A room"},{"value":"zone","label":"A zone"}]},{"kind":"field","key":"place_set","label":"Rule set","type":"select","options":null},{"kind":"button","label":"Apply","action":"act","values":{"op":"place"},"span":3}]}
+      WEB`RULES`PLACE: |-
+        json_fill(v(DATA`TEMPLATE`WEB`RULES`PLACE),/elements/2/options,u(WEB`OPTIONS`SETS,1))
+      DATA`WEB`RULES`NEW: |-
+        {"name":"A new rule set","order":5,"columns":2,"elements":[{"kind":"field","key":"new_key","label":"Key","type":"text","placeholder":"tavern","help":"One word: letters, digits, - and _.","validation":{"max_length":20}},{"kind":"field","key":"new_title","label":"Title","type":"text","placeholder":"Tavern Rules","validation":{"max_length":40}},{"kind":"button","label":"Make the rule set","action":"act","values":{"op":"newset"},"color":"primary","variant":"filled"}]}
+      # Every rule set as select options; %0 1 adds "No rule set of its own" first.
+      WEB`OPTIONS`SETS: |-
+        u(WEB`JSON`ARRAY,if(%0,json_fill(v(DATA`TEMPLATE`WEB`OPTION),/value,,/label,No rule set of its own)%r)[iter(sort(iter(lattr({{store}}/RULESET`*),after(%i0,`))),json_fill(v(DATA`TEMPLATE`WEB`OPTION),/value,lcstr(%i0),/label,get({{store}}/RULESET`%i0)),%b,%r)])
+
+      # One rule set.
+      WEB`SCHEMA`RULESET: |-
+        if(u(FN`SET`EXISTS,%0),u(WEB`FORM,get({{store}}/RULESET`%0),u(WEB`RULESET`FORM)),u(WEB`SCHEMA`SAY,There is no rule set [lcstr(%0)].))
+      DATA`TEMPLATE`WEB`RULESET`FORM: |-
+        {"name":"","order":1,"columns":2,"elements":[{"kind":"field","key":"set","type":"hidden"},{"kind":"field","key":"title","label":"Title","type":"text","validation":{"required":true,"max_length":40}},{"kind":"field","key":"stakes","label":"Stakes","type":"select","options":[{"value":"friendly","label":"Friendly: nobody loses a card"},{"value":"pick","label":"Winner Picks: one card from the loser's hand"},{"value":"spoils","label":"Spoils: every card goes to the colour it shows"}]},{"kind":"field","key":"rules","label":"Rules","type":"multiselect","span":2,"options":null},{"kind":"field","key":"mode","label":"As an event","type":"select","span":2,"options":[{"value":"replace","label":"Replaces the rules wherever games are played"},{"value":"add","label":"Adds its rules to the rules wherever games are played"}]},{"kind":"markdown","value":"","span":2},{"kind":"button","label":"Save rule set","action":"act","values":{"op":"saveset"},"color":"primary","variant":"filled"},{"kind":"button","label":"Delete rule set","action":"act","values":{"op":"deleteset"},"confirm":"Delete this rule set? Rooms and zones that use it lose it.","color":"error"}]}
+      WEB`RULESET`FORM: |-
+        json_fill(v(DATA`TEMPLATE`WEB`RULESET`FORM),/elements/3/options,u(WEB`JSON`ARRAY,iter(v(DATA`RULES),json_fill(v(DATA`TEMPLATE`WEB`OPTION),/value,%i0,/label,v(DATA`RULE`%i0)),%b,%r)),/elements/5/value,[iter(v(DATA`RULES),**[v(DATA`RULE`%i0)]**: [v(DATA`RULE`%i0`ABOUT)],%b,%r%r)]%r%r%[Back to the rule sets%]%(/apps/ninefold/rules%))
+
+      # data: GET /http/ninefold/data?at=<path>
+      WEB`DATA: |-
+        json(object,fields,u(WEB`DATA`PAGE,%<viewer>,u(WEB`AT,%<at>)))
+      WEB`DATA`PAGE: |-
+        switch(1,not(cand(strlen(%0),hastype(%0,player))),json(object),not(strlen(%1)),u(WEB`DATA`HOME,%0),strmatch(%1,card/*),u(WEB`DATA`CARD,%0,after(%1,/)),not(u(WEB`STAFF,%0)),json(object),strmatch(%1,cards),u(WEB`DATA`CARDS),strmatch(%1,rules),u(WEB`DATA`RULES),strmatch(%1,rules/*),u(WEB`DATA`RULESET,ucstr(after(%1,/))),json(object))
+      WEB`DATA`HOME: |-
+        setqm(wd_pk,u(FN`KEY,%0),wd_game,u(FN`GAME`OF,u(FN`KEY,%0)))[u(FN`RULES`RESOLVE,loc(%0))][if(strlen(%q<wd_game>),u(FN`GAME`LOAD,%q<wd_game>,%0)[setq(sg_side,%q<game_side>)])][u(WEB`JSON`OBJECT,u(WEB`JSON`MEMBER,cards,u(WEB`ROWS`MINE,%q<wd_pk>))%r[u(WEB`JSON`MEMBER,deck,u(WEB`JSON`ARRAY,iter(setunion(u(FN`DECK`HAND,%q<wd_pk>),),json(string,%i0),%b,%r)))]%r[u(WEB`STRING,Rule set,%q<rs_title>)]%r[u(WEB`STRING,Why,capstr(%q<rs_from>).)]%r[u(WEB`STRING,Rules,capstr(u(FN`RULES`NAMES,%q<rs_rules>)))]%r[u(WEB`STRING,Stakes,u(FN`STAKES`NAME,%q<rs_stakes>))][if(strlen(%q<wd_game>),%r[u(WEB`DATA`GAME,%0)])])]
+      WEB`DATA`GAME: |-
+        u(WEB`STRING,Players,A is [name(%q<game_a>)]%, B is [name(%q<game_b>)])%r[u(WEB`STRING,Score,stripansi(u(FN`SCREEN`SCORE)))]%r[u(WEB`STRING,Game rules,%q<game_title> %([u(FN`RULES`NAMES,%q<game_rules>)]%))]%r[u(WEB`STRING,Turn,u(FN`SCREEN`TURN,%0))]
+      DATA`TEMPLATE`WEB`ROW`MINE: |-
+        {"id":"","name":"","edges":"","tier":"","affinity":"","owned":"","hand":""}
+      WEB`ROWS`MINE: |-
+        setq(wr_hand,u(FN`DECK`HAND,%0))[u(WEB`JSON`ARRAY,iter(u(FN`OWN`CARDS,%0),json_fill(v(DATA`TEMPLATE`WEB`ROW`MINE),/id,%i0,/name,u(FN`CARD`NAME,%i0),/edges,u(FN`CARD`CROSS,%i0),/tier,u(FN`CARD`TIER,%i0),/affinity,firstof(u(FN`CARD`AFFINITY,%i0),-),/owned,u(FN`OWN`COUNT,%0,%i0),/hand,if(member(%q<wr_hand>,%i0),words(graball(%q<wr_hand>,%i0)),-)),%b,%r))]
+      WEB`DATA`CARD: |-
+        if(u(FN`CARD`EXISTS,%1),u(WEB`JSON`OBJECT,u(WEB`STRING,card,%1)%r[u(WEB`STRING,name,u(FN`CARD`NAME,%1))]%r[u(WEB`STRING,short,get({{store}}/CARD`%1`SHORT))]%r[u(WEB`STRING,tier,u(FN`CARD`TIER,%1))]%r[u(WEB`STRING,affinity,u(FN`CARD`AFFINITY,%1))]%r[u(WEB`JSON`MEMBER,starter,json(number,firstof(get({{store}}/CARD`%1`STARTER),0)))]%r[u(WEB`JSON`MEMBER,top,json(number,u(FN`CARD`SIDE,%1,1)))]%r[u(WEB`JSON`MEMBER,right,json(number,u(FN`CARD`SIDE,%1,2)))]%r[u(WEB`JSON`MEMBER,bottom,json(number,u(FN`CARD`SIDE,%1,3)))]%r[u(WEB`JSON`MEMBER,left,json(number,u(FN`CARD`SIDE,%1,4)))]%r[u(WEB`STRING,image,get({{store}}/CARD`%1`IMAGE))]%r[u(WEB`STRING,art,get({{store}}/CARD`%1`ART))]%r[u(WEB`STRING,art_ascii,get({{store}}/CARD`%1`ART`ASCII))]%r[u(WEB`STRING,Edges,u(FN`CARD`EDGES,%1))]%r[u(WEB`STRING,Tier,u(FN`CARD`TIER,%1))]%r[u(WEB`STRING,Affinity,firstof(u(FN`CARD`AFFINITY,%1),none))]%r[u(WEB`STRING,You own,u(FN`OWN`COUNT,u(FN`KEY,%0),%1))]),json(object))
+      DATA`TEMPLATE`WEB`ROW`ALL: |-
+        {"id":"","name":"","edges":"","tier":"","affinity":"","starter":"","holders":""}
+      WEB`DATA`CARDS: |-
+        u(WEB`JSON`OBJECT,u(WEB`JSON`MEMBER,all,u(WEB`JSON`ARRAY,iter(u(FN`CARD`IDS),json_fill(v(DATA`TEMPLATE`WEB`ROW`ALL),/id,%i0,/name,u(FN`CARD`NAME,%i0),/edges,u(FN`CARD`CROSS,%i0),/tier,u(FN`CARD`TIER,%i0),/affinity,firstof(u(FN`CARD`AFFINITY,%i0),-),/starter,firstof(get({{store}}/CARD`%i0`STARTER),-),/holders,words(u(FN`CARD`HOLDERS,%i0))),%b,%r)))%r[u(WEB`STRING,new_name,)]%r[u(WEB`STRING,new_edges,)])
+      DATA`TEMPLATE`WEB`ROW`SET: |-
+        {"key":"","title":"","rules":"","stakes":"","mode":""}
+      DATA`TEMPLATE`WEB`ROW`PLACE: |-
+        {"place":"","kind":"","set":""}
+      WEB`DATA`RULES: |-
+        u(WEB`JSON`OBJECT,u(WEB`JSON`MEMBER,sets,u(WEB`JSON`ARRAY,iter(sort(iter(lattr({{store}}/RULESET`*),after(%i0,`))),json_fill(v(DATA`TEMPLATE`WEB`ROW`SET),/key,lcstr(%i0),/title,get({{store}}/RULESET`%i0),/rules,capstr(u(FN`RULES`NAMES,get({{store}}/RULESET`%i0`RULES))),/stakes,u(FN`STAKES`NAME,get({{store}}/RULESET`%i0`STAKES)),/mode,if(strmatch(get({{store}}/RULESET`%i0`MODE),add),Adds its rules,Replaces the rules)),%b,%r)))%r[u(WEB`JSON`MEMBER,places,u(WEB`JSON`ARRAY,iter(squish(iter(lattr({{store}}/WHERE`**),if(u(FN`SET`EXISTS,get({{store}}/%i0)),%i0))),json_fill(v(DATA`TEMPLATE`WEB`ROW`PLACE),/place,[name(u(FN`PLACE`OBJ,%i0))] %([num(u(FN`PLACE`OBJ,%i0))]%),/kind,capstr(lcstr(extract(%i0,2,1,`))),/set,u(FN`SET`TITLE,get({{store}}/%i0))),%b,%r)))]%r[u(WEB`STRING,default_set,lcstr(u(FN`SET`DEFAULT)))]%r[u(WEB`STRING,Event,u(FN`EVENT`SENTENCE))]%r[u(WEB`STRING,event_set,lcstr(firstof(u(FN`EVENT`LIVE),u(FN`SET`DEFAULT))))]%r[u(WEB`JSON`MEMBER,event_hours,json(number,0))]%r[u(WEB`STRING,place,)]%r[u(WEB`STRING,place_kind,room)]%r[u(WEB`STRING,place_set,)]%r[u(WEB`STRING,new_key,)]%r[u(WEB`STRING,new_title,)])
+      WEB`DATA`RULESET: |-
+        if(u(FN`SET`EXISTS,%0),u(WEB`JSON`OBJECT,u(WEB`STRING,set,lcstr(%0))%r[u(WEB`STRING,title,get({{store}}/RULESET`%0))]%r[u(WEB`STRING,stakes,firstof(get({{store}}/RULESET`%0`STAKES),friendly))]%r[u(WEB`STRING,mode,firstof(get({{store}}/RULESET`%0`MODE),replace))]%r[u(WEB`JSON`MEMBER,rules,u(WEB`JSON`ARRAY,iter(get({{store}}/RULESET`%0`RULES),json(string,%i0),%b,%r)))]),json(object))
+
+      # actions: POST /http/ninefold/act, run with @force so the writes are this object's. %q<body> is the
+      # posted JSON: op and the page's fields; %<at> is the page. Each op leaves its answer in web_response.
+      # Everything posted goes into registers, never into a command's text.
+      WEB`ACT: |-
+        think setqm(web_response,u(WEB`ERROR,Something went wrong.),web_op,lcstr(u(WEB`BODY`GET,op)),web_viewer,%<viewer>,web_at,firstof(u(WEB`AT,%q<act_at>),u(WEB`ACT`PAGE,%q<web_op>))); @assert cand(strlen(%q<web_viewer>),hastype(%q<web_viewer>,player))=think setq(web_response,u(WEB`ERROR,Sign in with a character first.)); @assert member(deck save delete new default event endevent place newset saveset deleteset,%q<web_op>)=think setq(web_response,u(WEB`ERROR,There is no such action.)); @assert cor(strmatch(%q<web_op>,deck),u(WEB`STAFF,%q<web_viewer>))=think setq(web_response,u(WEB`ERROR,Permission denied. Only a card keeper can do that.)); @include %!/WEB`ACT`%q<web_op>
+      WEB`ACT`DECK: |-
+        think setqm(card_pk,u(FN`KEY,%q<web_viewer>),card_ids,u(WEB`BODY`WORDS,deck)); @assert every(FN`CARD`EXISTS,%q<card_ids>)=think setq(web_response,u(WEB`ERROR,One of those cards does not exist.)); @assert lte(words(%q<card_ids>),5)=think setq(web_response,u(WEB`ERROR,A hand is five cards. You chose [words(%q<card_ids>)].)); @assert u(FN`DECK`AFFORD,%q<card_pk>,%q<card_ids>)=think setq(web_response,u(WEB`ERROR,You do not have [u(FN`CARD`NAME,%q<card_short>)].)); &DECK`%q<card_pk> {{store}}=if(strmatch(setunion(%q<card_ids>,),setunion(u(FN`DECK`HAND,%q<card_pk>),)),get({{store}}/DECK`%q<card_pk>),%q<card_ids>); think setq(web_response,u(WEB`DONE,Your hand is [itemize(iter(u(FN`DECK`HAND,%q<card_pk>),u(FN`CARD`NAME,%i0),%b,|),|)].))
+      # The card editor's Save: every field checked first, then all of them written.
+      WEB`ACT`SAVE: |-
+        think setqm(card_id,u(WEB`BODY`GET,card),card_name,trim(u(WEB`BODY`GET,name)),card_short,trim(u(WEB`BODY`GET,short)),card_tier,u(WEB`BODY`GET,tier),card_aff,lcstr(u(WEB`BODY`GET,affinity)),card_starter,firstof(u(WEB`BODY`GET,starter),0),card_values,u(FN`VALUES`PARSE,iter(top right bottom left,u(WEB`BODY`GET,%i0))),card_image,trim(u(WEB`BODY`GET,image)),card_art,u(WEB`BODY`GET,art),card_ascii,u(WEB`BODY`GET,art_ascii)); @assert u(FN`CARD`EXISTS,%q<card_id>)=think setq(web_response,u(WEB`ERROR,There is no such card.)); @assert strlen(%q<card_values>)=think setq(web_response,u(WEB`ERROR,Each edge is a whole number from 1 to 10.)); @assert u(WEB`NAME`OK,%q<card_name>,%q<card_id>)=think setq(web_response,u(WEB`ERROR,%q<web_problem>)); @assert cand(lte(strlen(%q<card_short>),5),not(pos(|,%q<card_short>)))=think setq(web_response,u(WEB`ERROR,The name on the board is up to 5 characters.)); @assert member(1 2 3 4 5,%q<card_tier>)=think setq(web_response,u(WEB`ERROR,A tier is 1 to 5.)); @assert cor(not(strlen(%q<card_aff>)),member(v(DATA`AFFINITIES),%q<card_aff>))=think setq(web_response,u(WEB`ERROR,That is not an affinity.)); @assert cand(isint(%q<card_starter>),gte(%q<card_starter>,0),lte(%q<card_starter>,9))=think setq(web_response,u(WEB`ERROR,The starter set holds 0 to 9 copies.)); @assert cor(not(strlen(%q<card_image>)),u(FN`IMAGE`VALID,%q<card_image>))=think setq(web_response,u(WEB`ERROR,A picture is an https:// address or a path on this game.)); @assert u(FN`ART`VALID,%q<card_art>)=think setq(web_response,u(WEB`ERROR,u(FN`ART`LIMIT))); @assert u(FN`ART`VALID,%q<card_ascii>)=think setq(web_response,u(WEB`ERROR,u(FN`ART`LIMIT))); @assert u(FN`ART`ASCII,%q<card_ascii>)=think setq(web_response,u(WEB`ERROR,The ASCII art uses only the characters on a US keyboard.)); &CARD`%q<card_id> {{store}}=%q<card_name>; &CARD`%q<card_id>`SHORT {{store}}=%q<card_short>; &CARD`%q<card_id>`TIER {{store}}=%q<card_tier>; &CARD`%q<card_id>`AFFINITY {{store}}=%q<card_aff>; &CARD`%q<card_id>`STARTER {{store}}=if(%q<card_starter>,%q<card_starter>); &CARD`%q<card_id>`IMAGE {{store}}=%q<card_image>; &CARD`%q<card_id>`ART {{store}}=%q<card_art>; &CARD`%q<card_id>`ART`ASCII {{store}}=%q<card_ascii>; @include %!/INC`CARD`VALUES; think setq(web_response,u(WEB`DONE,Saved %q<card_name>.))
+      # %0 a card name, %1 the card it is for (or nothing): 1 when it may be used; web_problem says why not.
+      WEB`NAME`OK: |-
+        setq(web_problem,cond(not(cand(strlen(%0),lte(strlen(%0),30),not(isint(%0)),not(pos(|,%0)),not(pos(`,%0)),not(pos(%,,%0)))),A card name is up to 30 characters%, not a number%, without | or a comma.,cor(not(strlen(setr(web_twin,u(FN`CARD`EXACT,%0)))),strmatch(%q<web_twin>,%1)),,1,Card %q<web_twin> is called %0 already.))[not(strlen(%q<web_problem>))]
+      WEB`ACT`DELETE: |-
+        think setq(card_id,u(WEB`BODY`GET,card)); @assert u(FN`CARD`EXISTS,%q<card_id>)=think setq(web_response,u(WEB`ERROR,There is no such card.)); @assert not(u(FN`CARD`INPLAY,%q<card_id>))=think setq(web_response,u(WEB`ERROR,[u(FN`CARD`NAME,%q<card_id>)] is in a game now. Delete it when the game is over.)); think setq(card_old,u(FN`CARD`NAME,%q<card_id>)); @dolist/inline u(FN`CARD`HOLDERS,%q<card_id>)={&OWN`##`%q<card_id> {{store}}}; @wipe {{store}}/CARD`%q<card_id>`**; &CARD`%q<card_id> {{store}}; think setq(web_response,u(WEB`GO,Deleted %q<card_old>.,/apps/ninefold/cards))
+      WEB`ACT`NEW: |-
+        think setqm(card_name,trim(u(WEB`BODY`GET,new_name)),card_values,u(FN`VALUES`PARSE,u(WEB`BODY`GET,new_edges))); @assert u(WEB`NAME`OK,%q<card_name>,)=think setq(web_response,u(WEB`ERROR,%q<web_problem>)); @assert strlen(%q<card_values>)=think setq(web_response,u(WEB`ERROR,Give four edges%, top right bottom left%, each 1 to 9 or A: 5 3 7 2.)); think setq(card_id,inc(get({{store}}/NEXTCARD))); &NEXTCARD {{store}}=%q<card_id>; &CARD`%q<card_id> {{store}}=%q<card_name>; @include %!/INC`CARD`VALUES; &CARD`%q<card_id>`TIER {{store}}=u(FN`TIER`OF,%q<card_values>); think setq(web_response,u(WEB`GO,Made %q<card_name>.,/apps/ninefold/card/%q<card_id>))
+      WEB`ACT`DEFAULT: |-
+        think setq(set_key,ucstr(u(WEB`BODY`GET,default_set))); @assert u(FN`SET`EXISTS,%q<set_key>)=think setq(web_response,u(WEB`ERROR,Choose a rule set.)); &DEFAULT {{store}}=%q<set_key>; think setq(web_response,u(WEB`DONE,Games play [u(FN`SET`TITLE,%q<set_key>)] where nothing else applies.))
+      WEB`ACT`EVENT: |-
+        think setqm(set_key,ucstr(u(WEB`BODY`GET,event_set)),set_hours,firstof(u(WEB`BODY`GET,event_hours),0)); @assert u(FN`SET`EXISTS,%q<set_key>)=think setq(web_response,u(WEB`ERROR,Choose a rule set for the event.)); @assert cand(isint(%q<set_hours>),gte(%q<set_hours>,0),lte(%q<set_hours>,2160))=think setq(web_response,u(WEB`ERROR,Hours is a whole number from 0 to 2160.)); &EVENT {{store}}=%q<set_key>; &EVENT`UNTIL {{store}}=if(%q<set_hours>,add(secs(),mul(%q<set_hours>,3600)),0); think setq(web_response,u(WEB`DONE,u(FN`EVENT`SENTENCE)))
+      WEB`ACT`ENDEVENT: |-
+        &EVENT {{store}}; &EVENT`UNTIL {{store}}; think setq(web_response,u(WEB`DONE,There is no event now.))
+      WEB`ACT`PLACE: |-
+        think setqm(set_kind,ucstr(u(WEB`BODY`GET,place_kind)),set_obj,locate(%q<web_viewer>,trim(u(WEB`BODY`GET,place)),*),set_key,ucstr(u(WEB`BODY`GET,place_set))); @assert match(ROOM ZONE,%q<set_kind>)=think setq(web_response,u(WEB`ERROR,Say whether it is a room or a zone.)); @assert isdbref(%q<set_obj>)=think setq(web_response,u(WEB`ERROR,There is nothing called [u(WEB`BODY`GET,place)]. Give its dbref%, such as #123.)); @assert cor(strmatch(%q<set_kind>,ZONE),hastype(%q<set_obj>,room))=think setq(web_response,u(WEB`ERROR,[name(%q<set_obj>)] is not a room.)); @assert cor(not(strlen(%q<set_key>)),u(FN`SET`EXISTS,%q<set_key>))=think setq(web_response,u(WEB`ERROR,There is no such rule set.)); &WHERE`%q<set_kind>`[u(FN`KEY,%q<set_obj>)] {{store}}=%q<set_key>; think setq(web_response,u(WEB`DONE,if(strlen(%q<set_key>),[name(%q<set_obj>)] plays [u(FN`SET`TITLE,%q<set_key>)] now.,[name(%q<set_obj>)] has no rule set of its own now.)))
+      WEB`ACT`NEWSET: |-
+        think setqm(set_text,trim(u(WEB`BODY`GET,new_key)),set_title,trim(u(WEB`BODY`GET,new_title)),set_key,ucstr(%q<set_text>)); @assert u(FN`SET`KEYOK,%q<set_text>)=think setq(web_response,u(WEB`ERROR,A key is one word of letters%, digits%, - and _%, up to 20.)); @assert not(u(FN`SET`EXISTS,%q<set_key>))=think setq(web_response,u(WEB`ERROR,There is a rule set [lcstr(%q<set_key>)] already.)); @assert cand(strlen(%q<set_title>),lte(strlen(%q<set_title>),40),not(pos(|,%q<set_title>)))=think setq(web_response,u(WEB`ERROR,Give it a title of up to 40 characters%, without |.)); &RULESET`%q<set_key> {{store}}=%q<set_title>; &RULESET`%q<set_key>`STAKES {{store}}=friendly; &RULESET`%q<set_key>`MODE {{store}}=replace; think setq(web_response,u(WEB`GO,Made %q<set_title>.,/apps/ninefold/rules/[lcstr(%q<set_key>)]))
+      WEB`ACT`SAVESET: |-
+        think setqm(set_key,ucstr(u(WEB`BODY`GET,set)),set_title,trim(u(WEB`BODY`GET,title)),set_rules,lcstr(u(WEB`BODY`WORDS,rules)),set_stakes,lcstr(u(WEB`BODY`GET,stakes)),set_mode,lcstr(u(WEB`BODY`GET,mode))); @assert u(FN`SET`EXISTS,%q<set_key>)=think setq(web_response,u(WEB`ERROR,There is no such rule set.)); @assert cand(strlen(%q<set_title>),lte(strlen(%q<set_title>),40),not(pos(|,%q<set_title>)))=think setq(web_response,u(WEB`ERROR,Give it a title of up to 40 characters%, without |.)); @assert every(FN`RULE`KNOWN,%q<set_rules>)=think setq(web_response,u(WEB`ERROR,One of those is not a rule.)); @assert member(v(DATA`STAKES),%q<set_stakes>)=think setq(web_response,u(WEB`ERROR,Choose the stakes.)); @assert member(replace add,%q<set_mode>)=think setq(web_response,u(WEB`ERROR,Choose what it does as an event.)); &RULESET`%q<set_key> {{store}}=%q<set_title>; &RULESET`%q<set_key>`RULES {{store}}=u(FN`RULES`ORDER,%q<set_rules>); &RULESET`%q<set_key>`STAKES {{store}}=%q<set_stakes>; &RULESET`%q<set_key>`MODE {{store}}=%q<set_mode>; think setq(web_response,u(WEB`DONE,Saved %q<set_title>.))
+      WEB`ACT`DELETESET: |-
+        think setq(set_key,ucstr(u(WEB`BODY`GET,set))); @assert u(FN`SET`EXISTS,%q<set_key>)=think setq(web_response,u(WEB`ERROR,There is no such rule set.)); @assert comp(get({{store}}/DEFAULT),%q<set_key>)=think setq(web_response,u(WEB`ERROR,This is the default rule set. Choose another default first.)); @assert comp(u(FN`EVENT`LIVE),%q<set_key>)=think setq(web_response,u(WEB`ERROR,This is the running event. End it first.)); @dolist/inline u(FN`SET`PLACES,%q<set_key>)={&## {{store}}}; think setq(set_old,get({{store}}/RULESET`%q<set_key>)); @wipe {{store}}/RULESET`%q<set_key>`**; &RULESET`%q<set_key> {{store}}; think setq(web_response,u(WEB`GO,Deleted %q<set_old>.,/apps/ninefold/rules))
+
+  # The cards, who owns what, the rule sets and the games.
+  #
+  # CARD`<n> the cards (see FN`CARD` above), NEXTCARD the last number given. OWN`<player>`<card> copies held,
+  # STARTED`<player> when they were first written down, DECK`<player> the chosen hand. RULESET`<KEY> the rule
+  # sets, DEFAULT, WHERE`ROOM`<room>, WHERE`ZONE`<zone>, EVENT and EVENT`UNTIL. MATCH`<n> the games,
+  # NEXTMATCH, IN`<player>, CLAIM`<player>. LOG`<n> the card log, NEXTLOG.
+  - ref: store
+    type: thing
+    name: Ninefold Store
+    location: "{{ninefold}}"
+    flags: [NO_COMMAND]
+    attributes:
+      CARD: |-
+        Every card, one branch each.
+      OWN: |-
+        The cards each player holds.
+      MATCH: |-
+        The games, one branch each.
+      LOG: |-
+        Changes to what players hold.
+      NEXTMATCH: |-
+        0
+      NEXTLOG: |-
+        0
+      DEFAULT: |-
+        STANDARD
+      RULESET`STANDARD: |-
+        Standard
+      RULESET`STANDARD`RULES: |-
+        faceup
+      RULESET`STANDARD`STAKES: |-
+        friendly
+      RULESET`STANDARD`MODE: |-
+        replace
+      RULESET`TAVERN: |-
+        Tavern Rules
+      RULESET`TAVERN`RULES: |-
+        faceup twin
+      RULESET`TAVERN`STAKES: |-
+        pick
+      RULESET`TAVERN`MODE: |-
+        replace
+      RULESET`HIGHSTAKES: |-
+        High Stakes
+      RULESET`HIGHSTAKES`RULES: |-
+        twin balance cascade walls
+      RULESET`HIGHSTAKES`STAKES: |-
+        spoils
+      RULESET`HIGHSTAKES`MODE: |-
+        replace
+      RULESET`FESTIVAL: |-
+        Festival of Elements
+      RULESET`FESTIVAL`RULES: |-
+        terrain overtime
+      RULESET`FESTIVAL`STAKES: |-
+        friendly
+      RULESET`FESTIVAL`MODE: |-
+        add
+      CARD`1: "Lantern Moth"
+      CARD`1`SHORT: "Moth"
+      CARD`1`TOP: "1"
+      CARD`1`RIGHT: "5"
+      CARD`1`BOTTOM: "4"
+      CARD`1`LEFT: "1"
+      CARD`1`TIER: "1"
+      CARD`1`AFFINITY: "gale"
+      CARD`1`STARTER: "1"
+      CARD`1`ART: |2-
+         \  .-.  /
+          >( o )<
+         /  '-'  \
+      CARD`2: "Puddle Imp"
+      CARD`2`SHORT: "Imp"
+      CARD`2`TOP: "5"
+      CARD`2`RIGHT: "1"
+      CARD`2`BOTTOM: "1"
+      CARD`2`LEFT: "3"
+      CARD`2`TIER: "1"
+      CARD`2`AFFINITY: "tide"
+      CARD`2`STARTER: "1"
+      CARD`2`ART: |2-
+           ,^,
+          (o o)
+         ~~\_/~~
+      CARD`3: "Cinder Newt"
+      CARD`3`SHORT: "Newt"
+      CARD`3`TOP: "1"
+      CARD`3`RIGHT: "3"
+      CARD`3`BOTTOM: "3"
+      CARD`3`LEFT: "5"
+      CARD`3`TIER: "1"
+      CARD`3`AFFINITY: "ember"
+      CARD`3`STARTER: "1"
+      CARD`3`ART: |2-
+            __
+         .-'oo)~~
+         '-..-'
+      CARD`4: "Pebble Golem"
+      CARD`4`SHORT: "Pebbl"
+      CARD`4`TOP: "6"
+      CARD`4`RIGHT: "2"
+      CARD`4`BOTTOM: "1"
+      CARD`4`LEFT: "2"
+      CARD`4`TIER: "1"
+      CARD`4`AFFINITY: "stone"
+      CARD`4`STARTER: "1"
+      CARD`4`ART: |2-
+          [o o]
+         /[___]\
+          || ||
+      CARD`5: "Thistle Sprite"
+      CARD`5`SHORT: "Sprit"
+      CARD`5`TOP: "2"
+      CARD`5`RIGHT: "3"
+      CARD`5`BOTTOM: "1"
+      CARD`5`LEFT: "5"
+      CARD`5`TIER: "1"
+      CARD`5`AFFINITY: "bloom"
+      CARD`5`STARTER: "1"
+      CARD`5`ART: |2-
+          \*/ \*/
+           (^.^)
+           /| |\
+      CARD`6: "Hollow Crow"
+      CARD`6`SHORT: "Crow"
+      CARD`6`TOP: "2"
+      CARD`6`RIGHT: "1"
+      CARD`6`BOTTOM: "6"
+      CARD`6`LEFT: "1"
+      CARD`6`TIER: "1"
+      CARD`6`AFFINITY: "shade"
+      CARD`6`STARTER: "1"
+      CARD`6`ART: |2-
+           __
+         <(o )___
+          ( ._> /
+           '---'
+      CARD`7: "Brass Beetle"
+      CARD`7`SHORT: "Beetl"
+      CARD`7`TOP: "4"
+      CARD`7`RIGHT: "2"
+      CARD`7`BOTTOM: "4"
+      CARD`7`LEFT: "5"
+      CARD`7`TIER: "2"
+      CARD`7`AFFINITY: "stone"
+      CARD`7`STARTER: "1"
+      CARD`7`ART: |2-
+          \_/
+         (o.o)
+         /|=|\
+          ^ ^
+      CARD`8: "Marsh Wisp"
+      CARD`8`SHORT: "Wisp"
+      CARD`8`TOP: "2"
+      CARD`8`RIGHT: "6"
+      CARD`8`BOTTOM: "1"
+      CARD`8`LEFT: "6"
+      CARD`8`TIER: "2"
+      CARD`8`AFFINITY: "shade"
+      CARD`8`ART: |2-
+           .~.
+          ( * )
+           '~'
+          ~ ~ ~
+      CARD`9: "Kiln Hound"
+      CARD`9`SHORT: "Hound"
+      CARD`9`TOP: "5"
+      CARD`9`RIGHT: "3"
+      CARD`9`BOTTOM: "5"
+      CARD`9`LEFT: "2"
+      CARD`9`TIER: "2"
+      CARD`9`AFFINITY: "ember"
+      CARD`9`ART: |2-
+          /\_/\
+         ( o.o )~
+          )=v=(
+         (__|__)
+      CARD`10: "Reed Dancer"
+      CARD`10`SHORT: "Dancr"
+      CARD`10`TOP: "3"
+      CARD`10`RIGHT: "5"
+      CARD`10`BOTTOM: "2"
+      CARD`10`LEFT: "5"
+      CARD`10`TIER: "2"
+      CARD`10`AFFINITY: "gale"
+      CARD`10`STARTER: "1"
+      CARD`10`ART: |2-
+           o
+          /|\~
+          / \
+         ||||||
+      CARD`11: "Moss Tortoise"
+      CARD`11`SHORT: "Tortz"
+      CARD`11`TOP: "6"
+      CARD`11`RIGHT: "2"
+      CARD`11`BOTTOM: "6"
+      CARD`11`LEFT: "1"
+      CARD`11`TIER: "2"
+      CARD`11`AFFINITY: "bloom"
+      CARD`11`ART: |2-
+           ____
+          /####\_
+         |######o)
+          d d  d d
+      CARD`12: "Tidepool Crab"
+      CARD`12`SHORT: "Crab"
+      CARD`12`TOP: "4"
+      CARD`12`RIGHT: "4"
+      CARD`12`BOTTOM: "4"
+      CARD`12`LEFT: "3"
+      CARD`12`TIER: "2"
+      CARD`12`AFFINITY: "tide"
+      CARD`12`ART: |2-
+         (\/) (\/)
+          \_o_o_/
+          /_/ \_\
+      CARD`13: "Ash Wyrmling"
+      CARD`13`SHORT: "Wyrml"
+      CARD`13`TOP: "6"
+      CARD`13`RIGHT: "5"
+      CARD`13`BOTTOM: "2"
+      CARD`13`LEFT: "6"
+      CARD`13`TIER: "3"
+      CARD`13`AFFINITY: "ember"
+      CARD`13`ART: |2-
+           /\_
+          <o  >==
+           \/^\/
+            ~~
+      CARD`14: "Gale Harrier"
+      CARD`14`SHORT: "Harr"
+      CARD`14`TOP: "3"
+      CARD`14`RIGHT: "7"
+      CARD`14`BOTTOM: "5"
+      CARD`14`LEFT: "4"
+      CARD`14`TIER: "3"
+      CARD`14`AFFINITY: "gale"
+      CARD`14`ART: |2-
+         \\  //
+          \(o>
+          /  \
+         ~~  ~~
+      CARD`15: "Barrow Knight"
+      CARD`15`SHORT: "Knigt"
+      CARD`15`TOP: "7"
+      CARD`15`RIGHT: "3"
+      CARD`15`BOTTOM: "6"
+      CARD`15`LEFT: "3"
+      CARD`15`TIER: "3"
+      CARD`15`AFFINITY: "shade"
+      CARD`15`ART: |2-
+           _|_
+          [o_o]
+         /|###|\
+          /   \
+      CARD`16: "Coral Sentinel"
+      CARD`16`SHORT: "Coral"
+      CARD`16`TOP: "5"
+      CARD`16`RIGHT: "6"
+      CARD`16`BOTTOM: "3"
+      CARD`16`LEFT: "5"
+      CARD`16`TIER: "3"
+      CARD`16`AFFINITY: "tide"
+      CARD`16`ART: |2-
+          Y Y Y
+          (o_o)
+          |~~~|
+         ~~~~~~~
+      CARD`17: "Quarry Troll"
+      CARD`17`SHORT: "Troll"
+      CARD`17`TOP: "7"
+      CARD`17`RIGHT: "2"
+      CARD`17`BOTTOM: "7"
+      CARD`17`LEFT: "3"
+      CARD`17`TIER: "3"
+      CARD`17`AFFINITY: "stone"
+      CARD`17`ART: |2-
+           ___
+          (O O)
+         /|___|\
+          d   b
+      CARD`18: "Orchard Warden"
+      CARD`18`SHORT: "Wardn"
+      CARD`18`TOP: "4"
+      CARD`18`RIGHT: "5"
+      CARD`18`BOTTOM: "6"
+      CARD`18`LEFT: "4"
+      CARD`18`TIER: "3"
+      CARD`18`AFFINITY: "bloom"
+      CARD`18`ART: |2-
+          @@@@@
+         @(o o)@
+           |=|
+          _|_|_
+      CARD`19: "Storm Heron"
+      CARD`19`SHORT: "Heron"
+      CARD`19`TOP: "6"
+      CARD`19`RIGHT: "7"
+      CARD`19`BOTTOM: "3"
+      CARD`19`LEFT: "7"
+      CARD`19`TIER: "4"
+      CARD`19`AFFINITY: "gale"
+      CARD`19`ART: |2-
+           _ /
+          (o>~~
+          //
+         //  ~~
+      CARD`20: "Deepwater Eel"
+      CARD`20`SHORT: "Eel"
+      CARD`20`TOP: "7"
+      CARD`20`RIGHT: "3"
+      CARD`20`BOTTOM: "7"
+      CARD`20`LEFT: "6"
+      CARD`20`TIER: "4"
+      CARD`20`AFFINITY: "tide"
+      CARD`20`ART: |2-
+          __
+         (o \_____
+          \_______>
+         ~~~~~~~~~
+      CARD`21: "Forge Giant"
+      CARD`21`SHORT: "Giant"
+      CARD`21`TOP: "8"
+      CARD`21`RIGHT: "6"
+      CARD`21`BOTTOM: "2"
+      CARD`21`LEFT: "7"
+      CARD`21`TIER: "4"
+      CARD`21`AFFINITY: "ember"
+      CARD`21`ART: |2-
+           (O O)
+          /|===|\
+         T |###|
+           d   b
+      CARD`22: "Ironbark Elk"
+      CARD`22`SHORT: "Elk"
+      CARD`22`TOP: "5"
+      CARD`22`RIGHT: "8"
+      CARD`22`BOTTOM: "6"
+      CARD`22`LEFT: "4"
+      CARD`22`TIER: "4"
+      CARD`22`AFFINITY: "bloom"
+      CARD`22`ART: |2-
+         \|/ \|/
+          (o o)
+           \ /
+          /| |\
+      CARD`23: "Gloom Matron"
+      CARD`23`SHORT: "Glum"
+      CARD`23`TOP: "3"
+      CARD`23`RIGHT: "6"
+      CARD`23`BOTTOM: "8"
+      CARD`23`LEFT: "6"
+      CARD`23`TIER: "4"
+      CARD`23`AFFINITY: "shade"
+      CARD`23`ART: |2-
+          .---.
+         ( - - )
+          )   (
+         /'''''\
+      CARD`24: "Bastion Golem"
+      CARD`24`SHORT: "Bastn"
+      CARD`24`TOP: "8"
+      CARD`24`RIGHT: "4"
+      CARD`24`BOTTOM: "8"
+      CARD`24`LEFT: "3"
+      CARD`24`TIER: "4"
+      CARD`24`AFFINITY: "stone"
+      CARD`24`ART: |2-
+         [#####]
+         [ o o ]
+         [#|_|#]
+          || ||
+      CARD`25: "Sunwell Phoenix"
+      CARD`25`SHORT: "Phnix"
+      CARD`25`TOP: "9"
+      CARD`25`RIGHT: "6"
+      CARD`25`BOTTOM: "10"
+      CARD`25`LEFT: "3"
+      CARD`25`TIER: "5"
+      CARD`25`AFFINITY: "ember"
+      CARD`25`ART: |2-
+         \ \|/ /
+          -(o)-
+         //^^^\\
+           / \
+      CARD`26: "Abyssal Leviathan"
+      CARD`26`SHORT: "Levi"
+      CARD`26`TOP: "10"
+      CARD`26`RIGHT: "4"
+      CARD`26`BOTTOM: "6"
+      CARD`26`LEFT: "8"
+      CARD`26`TIER: "5"
+      CARD`26`AFFINITY: "tide"
+      CARD`26`ART: |2-
+           __/\__
+         <(o)     >
+           ~\/\/~
+         ~~~~~~~~~
+      CARD`27: "Tempest Roc"
+      CARD`27`SHORT: "Roc"
+      CARD`27`TOP: "6"
+      CARD`27`RIGHT: "9"
+      CARD`27`BOTTOM: "4"
+      CARD`27`LEFT: "9"
+      CARD`27`TIER: "5"
+      CARD`27`AFFINITY: "gale"
+      CARD`27`ART: |2-
+         \\\\ ////
+          \(oo)/
+           /  \
+          ~ ~~ ~
+      CARD`28: "Mountain Heart"
+      CARD`28`SHORT: "Heart"
+      CARD`28`TOP: "8"
+      CARD`28`RIGHT: "8"
+      CARD`28`BOTTOM: "8"
+      CARD`28`LEFT: "4"
+      CARD`28`TIER: "5"
+      CARD`28`AFFINITY: "stone"
+      CARD`28`ART: |2-
+            /\
+           /<>\
+          / <> \
+         /______\
+      CARD`29: "Elder Grove"
+      CARD`29`SHORT: "Grove"
+      CARD`29`TOP: "4"
+      CARD`29`RIGHT: "10"
+      CARD`29`BOTTOM: "7"
+      CARD`29`LEFT: "7"
+      CARD`29`TIER: "5"
+      CARD`29`AFFINITY: "bloom"
+      CARD`29`ART: |2-
+          @@@@@@
+         @@(oo)@@
+           |  |
+          /|  |\
+      CARD`30: "Night Queen"
+      CARD`30`SHORT: "Queen"
+      CARD`30`TOP: "7"
+      CARD`30`RIGHT: "7"
+      CARD`30`BOTTOM: "4"
+      CARD`30`LEFT: "10"
+      CARD`30`TIER: "5"
+      CARD`30`AFFINITY: "shade"
+      CARD`30`ART: |2-
+           w w w
+          ( -.- )
+          /)   (\
+          '''''''
+      NEXTCARD: "30"
+
+  # Routes on the HTTP handler, as children of http-handler's GET and POST verbs. The ninefold-app package reads
+  # /http/ninefold/schema and /http/ninefold/data with ?at= set to the address after /apps/ninefold/, and posts
+  # to /http/ninefold/act. %<viewer> is the character the portal signed in as. The handler must be WIZARD (the
+  # seeded one is) to @force the Ninefold object, which does the work so its "Set." lines never reach the
+  # response. Each POST puts %<body> in %q<body>: a forced command's arguments lose a value's outer braces.
+  - ref: routes
+    target: "{{$http_handler}}"
+    attributes:
+      GET`NINEFOLD`SCHEMA: |-
+        @respond/type application/json; think uargs({{ninefold}}/WEB`SCHEMA,viewer,%<viewer>,at,%q<form.at>)
+      GET`NINEFOLD`DATA: |-
+        @respond/type application/json; think uargs({{ninefold}}/WEB`DATA,viewer,%<viewer>,at,%q<form.at>)
+      POST`NINEFOLD`ACT: |-
+        think setq(body,%<body>,act_at,%q<form.at>); @force {{ninefold}}=@include/args/nobreak {{ninefold}}/WEB`ACT=viewer,%<viewer>; @respond/type application/json; think %q<web_response>
+
+  # The +help topics, on a plain thing: the librarian cannot u() a privileged object's attributes. Bodies are
+  # evaluated, so brackets and percent signs are escaped.
+  - ref: ninefold_help
+    type: thing
+    name: Ninefold Help
+    location: "{{ninefold}}"
+    attributes:
+      HELP: |-
+        Ninefold: a card game for two on a board of nine squares.
+      HELP`NINEFOLD: |-
+        **Ninefold** is a card game for two, in the spirit of the card games tucked inside classic JRPGs. Each
+        player brings a hand of five cards. A card has four edges, top, right, bottom and left, each 1 to 10
+        (10 is shown as A).
+
+        Players take turns putting a card on an empty square of a three-by-three board. A card takes every
+        touching card of the other player's colour whose facing edge is lower: it turns to the player's colour.
+        When the board is full, each player scores the cards of their colour on the board and the one left in
+        their hand. The higher score wins.
+
+        - `+nf/challenge <player>` challenges someone in the room. They answer `+nf/accept` or `+nf/decline`,
+          and you can take it back with `+nf/withdraw`. The player who accepts goes first.
+        - `+nf` or `+nf/board` shows the game: the board, the score, the rules and your hand.
+        - `+nf/play <card>=<square>` puts a card down. Give the card by its number in your hand or its name.
+          Squares are 1 to 9, left to right from the top.
+        - `+nf/forfeit` gives the game up. The other player wins.
+
+        `+ninefold` is the same command as `+nf`.
+
+        Example:
+
+        `+nf/play 2=5`
+
+        Output: `\[NINEFOLD\] Ann plays Kiln Hound on square 5. It takes Hollow Crow.`
+      HELP`NINEFOLD`BOARD: |-
+        On the board each card shows the player whose colour it has (A, who challenged, or B, who accepted),
+        its four edges as they count there, and the first letters of its name:
+
+        ```
+        +---------+---------+
+        |A%b%b%b7%b%b%b%b|%b%b%b%b%b%b%b%b%b|
+        |3 Hound 5|%b%b%b(2)%b%b%b|
+        |%b%b%b%b2%b%b+ |%b%bember%b%b|
+        +---------+---------+
+        ```
+
+        An empty square shows its number, and under the Terrain rule its affinity. A `+` or `-` by a card's
+        bottom edge says the square's terrain raises or lowers its edges.
+      HELP`NINEFOLD`CARDS: |-
+        Every player starts with the game's starter set of cards. Staff can give out more, and some games let
+        the winner take cards from the loser.
+
+        - `+nf/cards` lists your cards: their edges, tier and affinity, how many you have and which are in your
+          hand of five. Lists give the edges top/right/bottom/left: `7/3/2/5` is 7 on top, 3 on the right, 2 on
+          the bottom and 5 on the left.
+        - `+nf/card <card>` shows one card as a card: its name and tier on top, its picture in the middle (or its
+          text art where pictures are not shown) with an edge on each side, its affinity at the bottom right,
+          and how many you own under it.
+        - `+nf/deck` shows your hand of five. `+nf/deck <card>, <card>, ...` chooses it; name a card twice to
+          take two copies. Places you leave empty, or cards you no longer have, are filled in with your
+          strongest cards.
+
+        The portal page **Ninefold** shows your cards and lets you choose your hand there too.
+
+        Example:
+
+        `+nf/deck Kiln Hound, Reed Dancer, Brass Beetle`
+
+        Output: `\[NINEFOLD\] Done: Your hand is Kiln Hound, Reed Dancer, Brass Beetle, Pebble Golem and Cinder Newt.`
+      HELP`NINEFOLD`RULES: |-
+        The rules of a game depend on where it is played. `+nf/rules` shows the rule set that applies where you
+        stand and why. A game keeps the rules it was challenged under.
+
+        - **Face Up**: both hands are shown to both players.
+        - **Blind Draw**: each hand is five cards dealt at random from the player's cards.
+        - **Twin**: a card whose edges equal the edges they touch on two or more cards takes those cards.
+        - **Balance**: a card whose edge sums with two or more touching cards are the same takes those cards.
+        - **Cascade**: cards taken by Twin or Balance go on to take the cards they beat.
+        - **Hard Edges**: for Twin, the edge of the board counts as an A.
+        - **Terrain**: a few squares carry an affinity. A card of that affinity gains 1 on every edge there,
+          any other card loses 1.
+        - **Overtime**: a draw is played again, each player holding the cards of their colour.
+
+        The **stakes** say what the winner gets: **Friendly**, nothing; **Winner Picks**, one card of their
+        choice from the loser's hand, taken with `+nf/claim <card>`; **Spoils**, every card on the board goes
+        to the player whose colour it shows.
+      HELP`NINEFOLD`RULES`WHERE: |-
+        A game uses the first of these that applies:
+
+        1. A game-wide event that replaces the rules.
+        2. The room's own rule set.
+        3. The rule set of the room's zone. A room in several zones uses its first zone that has one.
+        4. The game's default rule set.
+
+        An event can instead add its rules to whichever of 2 to 4 applies; the stakes stay that rule set's.
+
+        Example:
+
+        `+nf/rules`
+
+        Output: a box titled `Rules here` with `Rule set: Tavern Rules`,
+        `Why: It is the rule set of the zone Harbor District.` and a line for each rule.
+      HELP`NINEFOLD`KEEPER: |-
+        A card keeper (the `softcode.ninefold.admin` permission, held by the Card Keeper role) keeps the cards.
+        The portal's Ninefold page edits cards, pictures and rule sets; giving out cards, the log and ending
+        games are commands.
+
+        - `+nf/grant <player>=<card>\[,<count>\]` gives a player cards; `+nf/revoke <player>=<card>\[,<count>\]`
+          takes them back. Both are recorded: `+nf/log \[<player>\]` shows the last 20 changes.
+        - `+nf/collection <player>` shows a player's cards.
+        - `+nf/new <name>=<top> <right> <bottom> <left>` makes a card. Edges are 1 to 9 or A.
+        - `+nf/set <card>/<field>=<value>` changes one: `name`, `short` (the name on the board, 5 letters),
+          `edges`, `tier` (1 to 5), `affinity`, `starter` (copies every new player starts with), `image` (a
+          picture's address), `art` (text art, `\%r` between lines) or `ascii` (the same art in ASCII, for clients
+          without UTF-8; empty folds `art` to ASCII). In art, type `\\\\` for a backslash and `\%b` for a space
+          at the start of a line or after another space; the portal's editor takes art as typed.
+        - Art fits the art box, 32 characters by 16 lines unless the Ninefold settings change it, and is centred
+          in it. A client that shows pictures shows the card's picture in the box instead.
+        - `+nf/delete <card>=yes` removes a card and every copy players hold.
+        - `+nf/games` lists the games being played; `+nf/end <game>` stops one without paying its stakes.
+
+        A card keeps its number when it is renamed, so what players hold never breaks.
+
+        Example:
+
+        `+nf/grant Ann=Night Queen`
+
+        Output: `\[NINEFOLD\] Done: You give Ann 1 copy of Night Queen. They have 1 now.`
+      HELP`NINEFOLD`RULESETS: |-
+        Card keepers choose the rules played where.
+
+        - `+nf/rulesets` lists the rule sets and where each applies.
+        - `+nf/ruleset <key>=<title>` makes a rule set or renames it. `+nf/ruleset <key>` shows one.
+        - `+nf/ruleset <key>/rules=<rules>` sets its rules: `faceup blind twin balance cascade walls terrain
+          overtime`. `/stakes=` sets `friendly`, `pick` or `spoils`. `/mode=` says what it does as an event:
+          `replace` the local rules or `add` its rules to them. `/delete=yes` removes it.
+        - `+nf/default <rule set>` is played where nothing else applies.
+        - `+nf/room <room>=<rule set>` and `+nf/zone <zone>=<rule set>` give a room or every room of a zone a
+          rule set. Nothing after `=` clears it.
+        - `+nf/event <rule set>=<how long>` runs an event game-wide, such as `=3h` or `=2d`; leave the time out
+          to run it until `+nf/event none`. `+nf/event` shows it.
+
+        Example:
+
+        `+nf/zone #45=tavern`
+
+        Output: `\[NINEFOLD\] Done: Games in rooms of the zone Harbor District play Tavern Rules now.`
