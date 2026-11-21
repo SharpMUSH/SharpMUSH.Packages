@@ -706,7 +706,7 @@ objects:
       # The card's picture, with its art in the art box standing in for it where pictures are not shown, and
       # its numbers beside it.
       FN`SCREEN`CARD: |-
-        box(figure(get({{store}}/CARD`%0`IMAGE),u(FN`CARD`NAME,%0),firstof(u(FN`ART`CANVAS,%0),%(no art yet%)),left,fields(,Edges,u(FN`CARD`EDGES,%0),Tier,u(FN`CARD`TIER,%0),Affinity,firstof(u(FN`CARD`AFFINITY,%0),none),You own,u(FN`OWN`COUNT,u(FN`KEY,%1),%0))),u(FN`CARD`NAME,%0) %(#%0%))
+        box(figure(get({{store}}/CARD`%0`IMAGE),u(FN`CARD`NAME,%0),firstof(u(FN`ART`CANVAS,%0),%(no art yet%)),left,fields(,Edges,u(FN`CARD`CROSS,%0),Tier,u(FN`CARD`TIER,%0),Affinity,firstof(u(FN`CARD`AFFINITY,%0),none),You own,u(FN`OWN`COUNT,u(FN`KEY,%1),%0))),u(FN`CARD`NAME,%0) %(#%0%))
       FN`ART`TEXT: |-
         firstof(get({{store}}/CARD`%0`ART),%(no art yet%))
       # %0 a card: its art centred in the art box, every line as wide as the box. A line of the ASCII art stands
@@ -1549,8 +1549,8 @@ objects:
         - `+nf/set <card>/<field>=<value>` changes one: `name`, `short` (the name on the board, 5 letters),
           `edges`, `tier` (1 to 5), `affinity`, `starter` (copies every new player starts with), `image` (a
           picture's address), `art` (text art, `\%r` between lines) or `ascii` (the same art in ASCII, for clients
-          without UTF-8; empty folds `art` to ASCII). In art, type `\\\\` for a backslash and `\%b` for a space at
-          the start of a line; the portal's editor takes art as typed.
+          without UTF-8; empty folds `art` to ASCII). In art, type `\\\\` for a backslash and `\%b` for a space
+          at the start of a line or after another space; the portal's editor takes art as typed.
         - Art fits the art box, 32 characters by 16 lines unless the Ninefold settings change it, and is centred
           in it. A client that shows pictures shows the card's picture in the box instead.
         - `+nf/delete <card>=yes` removes a card and every copy players hold.
