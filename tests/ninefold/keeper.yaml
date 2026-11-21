@@ -47,7 +47,7 @@ steps:
     sees: ${fox} has new ASCII art.
   - as: keeper
     run: +nf/card ${fox}
-    sees: [<◉>, "Edges:    ┌─4─┐", "4   4", "└─4─┘"]
+    sees: [<◉>, "· Tier", "You own"]
   - as: keeper
     run: +nf/set ${fox}/ascii=<✓>
     sees: The ASCII art uses only the characters on a US keyboard.

@@ -474,14 +474,11 @@ objects:
         firstof(get({{store}}/CARD`%0`TIER),1)
       FN`CARD`TOTAL: |-
         add(u(FN`CARD`SIDE,%0,1),u(FN`CARD`SIDE,%0,2),u(FN`CARD`SIDE,%0,3),u(FN`CARD`SIDE,%0,4))
-      # The edges in a sentence; in the short form tables use, top/right/bottom/left: 7/3/2/5; and as a small
-      # card with each number on its side, three lines, a client without UTF-8 getting +-7-+ for the corners.
+      # The edges in a sentence, and in the short form lists use, top/right/bottom/left: 7/3/2/5.
       FN`CARD`EDGES: |-
         top [u(FN`SHOW,u(FN`CARD`SIDE,%0,1))], right [u(FN`SHOW,u(FN`CARD`SIDE,%0,2))], bottom [u(FN`SHOW,u(FN`CARD`SIDE,%0,3))], left [u(FN`SHOW,u(FN`CARD`SIDE,%0,4))]
       FN`CARD`CROSS: |-
         [u(FN`SHOW,u(FN`CARD`SIDE,%0,1))]/[u(FN`SHOW,u(FN`CARD`SIDE,%0,2))]/[u(FN`SHOW,u(FN`CARD`SIDE,%0,3))]/[u(FN`SHOW,u(FN`CARD`SIDE,%0,4))]
-      FN`CARD`SIDES: |-
-        setqm(cs_t,u(FN`SHOW,u(FN`CARD`SIDE,%0,1)),cs_b,u(FN`SHOW,u(FN`CARD`SIDE,%0,3)))[standin(┌─%q<cs_t>─┐,+-%q<cs_t>-+)]%r[u(FN`SHOW,u(FN`CARD`SIDE,%0,4))][space(3)][u(FN`SHOW,u(FN`CARD`SIDE,%0,2))]%r[standin(└─%q<cs_b>─┘,+-%q<cs_b>-+)]
       # A card by its number, its whole name, or the start of one name only.
       FN`CARD`FIND: |-
         cond(u(FN`CARD`EXISTS,%0),%0,strlen(setr(cf_id,u(FN`CARD`EXACT,%0))),%q<cf_id>,1,u(FN`CARD`PREFIX,%0))
@@ -708,17 +705,17 @@ objects:
       # %0 a player, %1 the title.
       FN`SCREEN`COLLECTION: |-
         setqm(sc_pk,u(FN`KEY,%0),sc_ids,u(FN`OWN`CARDS,%q<sc_pk>),sc_hand,u(FN`DECK`HAND,%q<sc_pk>))[box(if(words(%q<sc_ids>),ldatatable(,#|Card|Edges|Tier|Affinity|Owned|In hand,iter(%q<sc_ids>,%i0|[u(FN`CARD`NAME,%i0)]|[u(FN`CARD`CROSS,%i0)]|[u(FN`CARD`TIER,%i0)]|[firstof(u(FN`CARD`AFFINITY,%i0),-)]|[u(FN`OWN`COUNT,%q<sc_pk>,%i0)]|[if(member(%q<sc_hand>,%i0),words(graball(%q<sc_hand>,%i0)),-)],,%*<^>),%*<^>),No cards yet.)%r[rule()]%r[words(u(FN`OWN`COPIES,%q<sc_pk>))] cards%, [words(%q<sc_ids>)] different. Edges read top/right/bottom/left. +nf/card <card> shows one%, +nf/deck chooses the hand of five.,%1)]
-      # The card's picture, with its art in the art box standing in for it where pictures are not shown, and
-      # its numbers beside it.
+      # %0 a card, %1 the player looking: the card as a card. Its name and tier on top; its edges round the
+      # picture, or round the art standing in for it where pictures are not shown; its affinity at the bottom
+      # right; how many the player owns under it. A side edge sits on the art box's middle line.
       FN`SCREEN`CARD: |-
-        box(figure(get({{store}}/CARD`%0`IMAGE),u(FN`CARD`NAME,%0),firstof(u(FN`ART`CANVAS,%0),%(no art yet%)),left,fields(,Edges,u(FN`CARD`SIDES,%0),Tier,u(FN`CARD`TIER,%0),Affinity,firstof(u(FN`CARD`AFFINITY,%0),none),You own,u(FN`OWN`COUNT,u(FN`KEY,%1),%0))),u(FN`CARD`NAME,%0) %(#%0%))
+        setqm(scd_w,v(DATA`CONFIG`ARTWIDTH),scd_h,v(DATA`CONFIG`ARTHEIGHT))[setqm(scd_in,add(%q<scd_w>,8),scd_mid,repeat(%r,div(dec(%q<scd_h>),2)),scd_at,space(add(4,div(dec(%q<scd_w>),2))))][box(%q<scd_at>[u(FN`SHOW,u(FN`CARD`SIDE,%0,1))]%r[flex(,item(%q<scd_mid>[u(FN`SHOW,u(FN`CARD`SIDE,%0,4))],2),item(figure(get({{store}}/CARD`%0`IMAGE),u(FN`CARD`NAME,%0),u(FN`ART`CANVAS,%0)),%q<scd_w>),item(%q<scd_mid>[u(FN`SHOW,u(FN`CARD`SIDE,%0,2))],>2))]%r%q<scd_at>[u(FN`SHOW,u(FN`CARD`SIDE,%0,3))]%r[rjust(firstof(u(FN`CARD`AFFINITY,%0),no affinity),%q<scd_in>)]%r[rule()]%rYou own [u(FN`OWN`COUNT,u(FN`KEY,%1),%0)].,[u(FN`CARD`NAME,%0)] %(#%0%) · Tier [u(FN`CARD`TIER,%0)],add(%q<scd_w>,12))]
       FN`ART`TEXT: |-
         firstof(get({{store}}/CARD`%0`ART),%(no art yet%))
       # %0 a card: its art centred in the art box, every line as wide as the box. A line of the ASCII art stands
-      # in for its line of the art where the client is not sent UTF-8. A card with a picture and no art gets the
-      # box with "(no art yet)" in it, so the picture still fills it; with neither, nothing.
+      # in for its line of the art where the client is not sent UTF-8. A card with no art gets "(no art yet)".
       FN`ART`CANVAS: |-
-        setqm(ac_art,firstof(get({{store}}/CARD`%0`ART),if(strlen(get({{store}}/CARD`%0`IMAGE)),%(no art yet%))),ac_ascii,get({{store}}/CARD`%0`ART`ASCII),ac_w,v(DATA`CONFIG`ARTWIDTH),ac_h,v(DATA`CONFIG`ARTHEIGHT))[if(strlen(%q<ac_art>),u(FN`ART`BOXED))]
+        setqm(ac_art,firstof(get({{store}}/CARD`%0`ART),%(no art yet%)),ac_ascii,get({{store}}/CARD`%0`ART`ASCII),ac_w,v(DATA`CONFIG`ARTWIDTH),ac_h,v(DATA`CONFIG`ARTHEIGHT))[u(FN`ART`BOXED)]
       FN`ART`BOXED: |-
         setqm(ac_n,max(words(%q<ac_art>,%r),words(%q<ac_ascii>,%r)),ac_mw,max(lmax(iter(%q<ac_art>,strlen(%i0),%r)),if(strlen(%q<ac_ascii>),lmax(iter(%q<ac_ascii>,strlen(%i0),%r)),0)))[setqm(ac_lp,max(0,div(sub(%q<ac_w>,%q<ac_mw>),2)),ac_tp,max(0,div(sub(%q<ac_h>,%q<ac_n>),2)))][iter(lnum(1,%q<ac_h>),u(FN`ART`ROW,sub(%i0,%q<ac_tp>)),%b,%r)]
       # %0 a line of the art, counted from 1; outside it, a blank line.
@@ -1498,14 +1495,9 @@ objects:
         - `+nf/cards` lists your cards: their edges, tier and affinity, how many you have and which are in your
           hand of five. Lists give the edges top/right/bottom/left: `7/3/2/5` is 7 on top, 3 on the right, 2 on
           the bottom and 5 on the left.
-        - `+nf/card <card>` shows one card: its picture, or its text art where pictures are not shown, and its
-          numbers, the edges drawn on the sides of a small card:
-
-        ```
-        Edges:%b%b%b%b+-7-+
-        %b%b%b%b%b%b%b%b%b%b5%b%b%b3
-        %b%b%b%b%b%b%b%b%b%b+-2-+
-        ```
+        - `+nf/card <card>` shows one card as a card: its name and tier on top, its picture in the middle (or its
+          text art where pictures are not shown) with an edge on each side, its affinity at the bottom right,
+          and how many you own under it.
         - `+nf/deck` shows your hand of five. `+nf/deck <card>, <card>, ...` chooses it; name a card twice to
           take two copies. Places you leave empty, or cards you no longer have, are filled in with your
           strongest cards.
