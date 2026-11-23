@@ -1,6 +1,6 @@
 # Rule elements and licence filter
 
-Foundry pf2e commit `d2be8e53704e3d87c53498c504620337ccd61fa2`.
+Foundry pf2e commit `a70593f7d52ba6357c3bdc05c09dcb9d4f2765dc`.
 
 Every rule element kind in the feed, with how often it appears and on how many items. The pf2e package
 applies the kinds it has a handler for and shows the others as unsupported on the sheet.
@@ -8,12 +8,12 @@ applies the kinds it has a handler for and shows the others as unsupported on th
 | Kind | Rule elements | Items |
 | --- | --- | --- |
 | FlatModifier | 1181 | 917 |
-| RollOption | 689 | 561 |
-| ItemAlteration | 529 | 330 |
+| RollOption | 691 | 563 |
+| ItemAlteration | 532 | 332 |
 | ActiveEffectLike | 504 | 356 |
-| GrantItem | 399 | 325 |
+| GrantItem | 400 | 326 |
 | Note | 354 | 268 |
-| ChoiceSet | 326 | 278 |
+| ChoiceSet | 327 | 279 |
 | DamageDice | 229 | 195 |
 | AdjustModifier | 169 | 114 |
 | Resistance | 161 | 116 |
@@ -49,9 +49,9 @@ applies the kinds it has a handler for and shows the others as unsupported on th
 
 | Licence | Book | Items |
 | --- | --- | --- |
-| ORC | Pathfinder Impossible Magic | 1260 |
-| ORC | Pathfinder Treasure Vault (Remastered) | 1252 |
-| ORC | Pathfinder Guns & Gears | 771 |
+| ORC | Pathfinder Impossible Magic | 1262 |
+| ORC | Pathfinder Treasure Vault (Remastered) | 1259 |
+| ORC | Pathfinder Guns & Gears | 773 |
 | ORC | Pathfinder Battlecry! | 757 |
 | ORC | Pathfinder War of Immortals | 638 |
 | OGL | Pathfinder Rage of Elements | 589 |
@@ -60,8 +60,8 @@ applies the kinds it has a handler for and shows the others as unsupported on th
 | ORC | Pathfinder Lost Omens Tian Xia Character Guide | 508 |
 | OGL | Pathfinder Lost Omens The Grand Bazaar | 398 |
 | OGL | Pathfinder Lost Omens Ancestry Guide | 316 |
-| OGL | Pathfinder Core Rulebook | 298 |
-| ORC | Pathfinder Feybound | 274 |
+| OGL | Pathfinder Core Rulebook | 299 |
+| ORC | Pathfinder Feybound | 279 |
 | ORC | Pathfinder Lost Omens Cheliax, Infernal Inheritance | 274 |
 | OGL | Pathfinder Lost Omens Impossible Lands | 272 |
 | ORC | Pathfinder Lost Omens Divine Mysteries | 267 |
@@ -82,7 +82,7 @@ applies the kinds it has a handler for and shows the others as unsupported on th
 | OGL | Pathfinder Lost Omens The Mwangi Expanse | 100 |
 | ORC | Pathfinder #202: Severed at the Root | 89 |
 | ORC | Pathfinder #219: Lord of the Trinity Star | 85 |
-| ORC | Pathfinder Adventure Path: Hellbreakers | 81 |
+| ORC | Pathfinder #222: Hellbreakers | 81 |
 | ORC | Pathfinder Adventure Path: Gatewalkers | 75 |
 | OGL | Pathfinder Lost Omens Highhelm | 72 |
 | OGL | Pathfinder Lost Omens Legends | 60 |
@@ -92,7 +92,7 @@ applies the kinds it has a handler for and shows the others as unsupported on th
 | OGL | Pathfinder Lost Omens Monsters of Myth | 47 |
 | OGL | Pathfinder Guns & Gears | 42 |
 | OGL | Pathfinder #194: Cult of the Cave Worm | 40 |
-| ORC | Pathfinder Adventure Path #225: Vaultlines | 39 |
+| ORC | Pathfinder #225: Vaultlines | 39 |
 | OGL | Pathfinder #153: Life's Long Shadows | 38 |
 | OGL | Pathfinder #176: Lost Mammoth Valley | 37 |
 | OGL | Pathfinder Lost Omens Absalom, City of Lost Omens | 36 |
@@ -104,7 +104,7 @@ applies the kinds it has a handler for and shows the others as unsupported on th
 | ORC | Pathfinder #203: Shepherd of Decay | 33 |
 | ORC | Pathfinder Claws of the Tyrant | 33 |
 | OGL | Pathfinder Lost Omens Gods & Magic | 32 |
-| ORC | Pathfinder Adventure Path: Bastion of Blasphemies | 32 |
+| ORC | Pathfinder #224: Bastion of Blasphemies | 32 |
 | OGL | Pathfinder #156: The Apocalypse Prophet | 31 |
 | OGL | Pathfinder Stolen Fate Player's Guide | 31 |
 | OGL | Pathfinder #171: Hurricane's Howl | 30 |
@@ -113,7 +113,7 @@ applies the kinds it has a handler for and shows the others as unsupported on th
 | OGL | Pathfinder Lost Omens Travel Guide | 30 |
 | OGL | Pathfinder #152: Legacy of the Lost God | 29 |
 | OGL | Pathfinder #175: Broken Tusk Moon | 29 |
-| ORC | Pathfinder Adventure Path: Hell's Destiny | 28 |
+| ORC | Pathfinder #223: Hell's Destiny | 29 |
 | OGL | Pathfinder #179: Cradle of Quartz | 27 |
 | ORC | Pathfinder #204: Stage Fright | 27 |
 | ORC | Pathfinder #220: Crypt of Runes | 27 |
@@ -132,13 +132,13 @@ applies the kinds it has a handler for and shows the others as unsupported on th
 | OGL | Pathfinder Adventure: The Slithering | 21 |
 | OGL | Pathfinder Special: Fumbus! | 21 |
 | OGL | Pathfinder Treasure Vault | 21 |
+| ORC | Pathfinder #201: Pactbreaker | 21 |
 | OGL | Pathfinder #165: Eyes of Empty Death | 20 |
 | OGL | Pathfinder #182: Graveclaw | 20 |
 | OGL | Pathfinder #190: The Choosing | 20 |
 | OGL | Pathfinder Adventure: Crown of the Kobold King | 20 |
 | OGL | Pathfinder Adventure: Night of the Gray Death | 20 |
 | OGL | Pathfinder Dark Archive | 20 |
-| ORC | Pathfinder #201: Pactbreaker | 20 |
 | ORC | Pathfinder #207: The Resurrection Flood | 20 |
 | ORC | Pathfinder #216: The Acropolis Pyre | 20 |
 | ORC | Pathfinder NPC Core | 20 |
@@ -194,7 +194,7 @@ applies the kinds it has a handler for and shows the others as unsupported on th
 | OGL | Pathfinder Wake the Dead #4 | 9 |
 | ORC | Pathfinder #214: The Broken Palace | 9 |
 | ORC | Pathfinder Bastion of Blasphemies Player's Guide | 9 |
-| ORC | Pathfinder Vautlines Player's Guide | 9 |
+| ORC | Pathfinder Vaultlines Player's Guide | 9 |
 | OGL | Pathfinder Bestiary | 8 |
 | OGL | Pathfinder Seven Dooms for Sandpoint Player's Guide | 8 |
 | OGL | Pathfinder Treasure Vault (Remastered) | 8 |
@@ -257,8 +257,6 @@ applies the kinds it has a handler for and shows the others as unsupported on th
 | OGL | Pathfinder Society Scenario #1-24: Lightning Strikes, Stars Fall | 1 |
 | OGL | Pathfinder Society Scenario #2-22: Breaking the Storm: Excising Ruination | 1 |
 | OGL | Pathfinder Society Scenario #4-11: Prisoners of the Electric Castle | 1 |
-| ORC |  Pathfinder Treasure Vault (Remastered) | 1 |
-| ORC | Pathfinder #223: Hell's Destiny | 1 |
 | ORC | Pathfinder Lost Omens Legends | 1 |
 | ORC | Pathfinder Lost Omens Pathfinder Society Guide | 1 |
 | ORC | Starfinder Player Core | 1 |
