@@ -1,0 +1,42 @@
+/* Harbor Night: lamplight over a dark harbour. The picture sits behind the page, darkened toward the bottom so text
+   on it stays readable; cards are frosted panes with a lamp-coloured edge. */
+
+.phosphor-shell {
+	background:
+		linear-gradient(color-mix(in srgb, var(--bg) 35%, transparent), color-mix(in srgb, var(--bg) 82%, transparent)),
+		url(images/harbor-night.svg) center bottom / cover no-repeat fixed,
+		var(--bg);
+}
+
+.phosphor-rail,
+.phosphor-sidebar,
+.phosphor-pagebar {
+	background: color-mix(in srgb, var(--rail-bg) 86%, transparent);
+	backdrop-filter: blur(8px);
+}
+
+.phosphor-topbar {
+	background: color-mix(in srgb, var(--bg) 70%, transparent);
+	backdrop-filter: blur(8px);
+	border-bottom: 1px solid var(--border-soft);
+}
+
+.kit-card.kit-card {
+	background: color-mix(in srgb, var(--surface) 86%, transparent);
+	backdrop-filter: blur(6px);
+	border-top: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.kit-page-head.kit-page-head {
+	background: url(images/compass.svg) right center / 64px no-repeat;
+	padding-right: calc(64px + var(--space-5));
+}
+
+.kit-page-kicker.kit-page-kicker {
+	color: var(--accent-2);
+	letter-spacing: 0.18em;
+}
+
+.kit-page-title.kit-page-title {
+	text-shadow: 0 0 24px color-mix(in srgb, var(--accent) 30%, transparent);
+}

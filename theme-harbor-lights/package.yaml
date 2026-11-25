@@ -1,0 +1,86 @@
+format: "1.21"
+package: theme-harbor-lights
+title: Harbor Lights
+version: 1.0.0
+kind: theme
+authors: [SharpMUSH]
+description: "Two portal themes for a seaside game: Harbor Night, lamplight over a dark harbour under a lighthouse, and Harbor Morning, the same harbour at first light."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH.Packages
+keywords: [theme, portal, harbor, sea, nautical]
+category: Themes
+requires_server: ">=1.2"
+verified_server: "1.2"
+
+# A theme package ships portal themes only. Each theme is the colours and style choices the Themes editor saves,
+# a stylesheet, and the pictures that stylesheet names by their path in this folder. Installing it adds both themes
+# to every character's theme menu; a new version replaces them, and uninstalling removes them.
+themes:
+  - id: harbor-night
+    name: Harbor Night
+    dark: true
+    tokens:
+      bg: "#0b1622"
+      surface: "#11202f"
+      surface-2: "#172a3c"
+      surface-3: "#0e1c2a"
+      rail-bg: "#07101a"
+      text: "#e8eef3"
+      text-dim: "#a9bccb"
+      text-faint: "#8ea3b4"
+      border: "#27425b"
+      border-soft: "#1b3145"
+      accent: "#ffc56b"
+      warn: "#ff9f6b"
+      link-missing: "#ff8f8f"
+      accent-2: "#5fb7c9"
+      accent-3: "#f2d79b"
+      font-display: marcellus
+      font-body: ui
+      corners: soft
+      texture: none
+      ornament: rule
+      frame: lifted
+      titles: normal
+      imagery: dusk
+      atmosphere: beacon
+      motion: calm
+      mode: custom
+    stylesheet: harbor-night.css
+    images:
+      - images/harbor-night.svg
+      - images/compass.svg
+  - id: harbor-morning
+    name: Harbor Morning
+    dark: false
+    tokens:
+      bg: "#f4f1ea"
+      surface: "#ffffff"
+      surface-2: "#edf1f2"
+      surface-3: "#e8eef0"
+      rail-bg: "#dce5e8"
+      text: "#14212c"
+      text-dim: "#3a4d5c"
+      text-faint: "#526474"
+      border: "#c6d2d8"
+      border-soft: "#dbe3e7"
+      accent: "#0a6175"
+      warn: "#8a4b00"
+      link-missing: "#b3261e"
+      accent-2: "#e39b4f"
+      accent-3: "#6aa3b0"
+      font-display: marcellus
+      font-body: ui
+      corners: soft
+      texture: none
+      ornament: rule
+      frame: lifted
+      titles: normal
+      imagery: airy
+      atmosphere: none
+      motion: calm
+      mode: custom
+    stylesheet: harbor-morning.css
+    images:
+      - images/harbor-morning.svg
+      - images/compass.svg
