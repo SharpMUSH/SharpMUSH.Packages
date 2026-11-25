@@ -18,7 +18,7 @@ without a reload, and in Admin → Themes with a **Package** tag. To make one th
 A new version of the package replaces both themes. Uninstalling removes them; it is refused while either is the
 game's default for its mode. Characters who chose a removed theme see the game's default.
 
-Needs SharpMUSH 1.2 or later (package format 1.21).
+Needs SharpMUSH 1.2 or later (package format 1.22).
 
 ## Changing it
 
