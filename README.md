@@ -131,6 +131,7 @@ The table is generated from [`index.yaml`](index.yaml); edit that file, then run
 | [`ninefold-help/`](ninefold-help/) | 1.0.0 | Puts the Ninefold topics into +help |
 | [`ninefold-config/`](ninefold-config/) | 1.0.0 | Puts the Ninefold settings into +config |
 | [`ninefold-app/`](ninefold-app/) | 1.0.0 | Registers Ninefold as a portal page at /apps/ninefold, with the card and rule set editors |
+| [`theme-harbor-lights/`](theme-harbor-lights/) | 1.0.0 | Two portal themes for a seaside game, Harbor Night (dark) and Harbor Morning (light), with their own harbour pictures |
 <!-- packages-table:end -->
 
 Packages bundled with SharpMUSH (`+who`/`+where`, the HTTP handler, the
